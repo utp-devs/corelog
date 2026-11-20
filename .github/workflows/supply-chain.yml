@@ -1,0 +1,96 @@
+name: Supply Chain
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+concurrency:
+  group: supply-chain-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  npm-integrity:
+    name: npm-integrity
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ui
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: ui/package-lock.json
+
+      - name: Validate lockfile sources
+        run: >-
+          npx --yes lockfile-lint@5.1.0
+          --path package-lock.json
+          --type npm
+          --allowed-hosts npm
+          --validate-https
+          --validate-integrity
+          --validate-package-names
+
+      - name: Install dependencies without lifecycle scripts
+        run: npm ci --ignore-scripts
+
+      - name: Verify registry signatures and provenance
+        run: npm audit signatures
+
+  go-integrity:
+    name: go-integrity
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Go
+        uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Verify module checksums
+        run: go mod verify
+
+      - name: Ensure go.mod and go.sum are tidy
+        run: go mod tidy -diff
+
+  pinned-actions:
+    name: pinned-actions
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Require third-party actions pinned to a commit SHA
+        run: |
+          set -euo pipefail
+          unpinned="$(grep -rnE '^\s*-?\s*uses:\s*' .github/workflows \
+            | grep -vE 'uses:\s*\./' \
+            | grep -vE 'uses:\s*docker://' \
+            | grep -vE '@[0-9a-f]{40}(\s|$)' || true)"
+          if [ -n "${unpinned}" ]; then
+            echo "The following actions are not pinned to a full commit SHA:"
+            echo "${unpinned}"
+            exit 1
+          fi
+          echo "All actions are pinned to a commit SHA."
