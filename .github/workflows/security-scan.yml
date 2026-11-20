@@ -21,16 +21,60 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Set up Go
-        uses: actions/setup-go@v7
+        uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
         with:
           go-version-file: go.mod
           cache: true
 
       - name: Run govulncheck
-        run: go run golang.org/x/vuln/cmd/govulncheck@latest ./...
+        run: go run golang.org/x/vuln/cmd/govulncheck@v1.10.0 ./...
+
+  nancy:
+    name: nancy
+    runs-on: ubuntu-latest
+    env:
+      NANCY_VERSION: "2.1.1"
+      NANCY_SHA256: "734e73e47b0ffc37b7c4ce399c06454680d17bd38347aca08e968a163a05d581"
+      GUIDE_TOKEN: ${{ secrets.GUIDE_TOKEN }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Go
+        uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Check Sonatype Guide token
+        id: token
+        run: |
+          if [ -z "${GUIDE_TOKEN}" ]; then
+            echo "::warning title=nancy skipped::Add the GUIDE_TOKEN repository secret (https://guide.sonatype.com) to enable the nancy scan."
+            echo "available=false" >> "${GITHUB_OUTPUT}"
+          else
+            echo "available=true" >> "${GITHUB_OUTPUT}"
+          fi
+
+      - name: Install nancy
+        if: steps.token.outputs.available == 'true'
+        run: |
+          set -euo pipefail
+          curl -sSfL "https://github.com/sonatype-nexus-community/nancy/releases/download/v${NANCY_VERSION}/nancy-v${NANCY_VERSION}-linux-amd64" -o /tmp/nancy
+          echo "${NANCY_SHA256}  /tmp/nancy" | sha256sum --check --strict
+          sudo install -m 0755 /tmp/nancy /usr/local/bin/nancy
+          nancy --version
+
+      - name: Scan Go dependencies with nancy
+        if: steps.token.outputs.available == 'true'
+        run: go list -json -deps ./... | nancy sleuth --skip-update-check
 
   npm-audit:
     name: npm-audit
@@ -40,17 +84,19 @@ jobs:
         working-directory: ui
     steps:
       - name: Check out repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Set up Node.js
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 24
           cache: npm
           cache-dependency-path: ui/package-lock.json
 
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --ignore-scripts
 
       - name: Audit dependencies
         run: npm audit --audit-level=high

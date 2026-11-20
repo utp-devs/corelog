@@ -1,7 +1,7 @@
 <h1 align="center">CoreLog</h1>
 
 <p align="center">
-  <img alt="Go" src="https://img.shields.io/badge/Go-1.27.3-00ADD8?style=for-the-badge&logo=go&logoColor=white">
+  <img alt="Go" src="https://img.shields.io/badge/Go-1.27.4-00ADD8?style=for-the-badge&logo=go&logoColor=white">
   <img alt="chi" src="https://img.shields.io/badge/chi-v5.5.0-007ec6?style=for-the-badge">
   <img alt="sqlx" src="https://img.shields.io/badge/sqlx-v1.4.0-007ec6?style=for-the-badge">
   <img alt="golang-jwt" src="https://img.shields.io/badge/golang--jwt-v5.3.1-000000?style=for-the-badge&logo=jsonwebtokens&logoColor=white">
