@@ -1,0 +1,24 @@
+# Default reviewers: every pull request is automatically routed to both.
+* @jhonsferg @DalethCorreaAngeles
+
+# Repository governance: workflows, templates and Dependabot configuration.
+/.github/ @jhonsferg @DalethCorreaAngeles @JhonatanNav6
+
+# Backend: Go composition root, hexagonal modules and migrations.
+/cmd/ @jhonsferg @eltiton0-0
+/internal/ @jhonsferg @eltiton0-0
+/migrations/ @jhonsferg @eltiton0-0
+
+# Frontend: React application.
+/ui/ @jhonsferg @DalethCorreaAngeles
+
+# Deployment and local setup.
+/docker/ @jhonsferg @tk27jp
+/scripts/ @jhonsferg @tk27jp
+/docker-compose.yaml @jhonsferg @tk27jp
+/Makefile @jhonsferg @tk27jp
+
+# Documentation and API contract.
+/docs/ @jhonsferg @tk27jp
+/README.md @jhonsferg @tk27jp
+/openapi.yaml @jhonsferg @tk27jp
