@@ -1,9 +1,10 @@
 package domain
 
 import (
-	"time"
+    "strings"
+    "time"
 
-	"github.com/google/uuid"
+    "github.com/google/uuid"
 )
 
 type Team struct {
@@ -14,9 +15,9 @@ type Team struct {
 }
 
 func NewTeam(name string) (*Team, error) {
-	if name == "" {
-		return nil, ErrInvalidName
-	}
+    if strings.TrimSpace(name) == "" {
+        return nil, ErrInvalidName
+    }
 
 	now := time.Now().UTC()
 	return &Team{
@@ -28,9 +29,9 @@ func NewTeam(name string) (*Team, error) {
 }
 
 func (t *Team) Rename(name string) error {
-	if name == "" {
-		return ErrInvalidName
-	}
+    if strings.TrimSpace(name) == "" {
+        return ErrInvalidName
+    }
 	t.Name = name
 	t.UpdatedAt = time.Now().UTC()
 	return nil
