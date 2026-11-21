@@ -39,7 +39,7 @@ Seguir el orden numérico: cada documento asume los anteriores y termina con una
 | 03 | [Firewall (ufw)](03-firewall-ufw.md) | Todo bloqueado salvo 22/80/443; trampa de Docker y ufw |
 | 04 | [Endurecimiento del sistema](04-endurecimiento-del-sistema.md) | sysctl, actualizaciones automáticas, swap, rotación de logs |
 | 05 | [Docker desde el repositorio oficial](05-docker.md) | Docker CE fijado al repo oficial, logs acotados |
-| 06 | [Imagen Nginx compilada (`nginx-clang`)](06-imagen-nginx-clang.md) | Imagen mínima: Clang, OpenSSL, ModSecurity, GeoIP2, Brotli |
+| 06 | [Imagen Nginx compilada (`nginx-clang`)](06-imagen-nginx-clang.md) | Imagen mínima de ~32 MB: Clang, OpenSSL, ModSecurity, GeoIP2, Brotli; versionada `1.31.9-r2` |
 | 07 | [Configuración de Nginx](07-nginx-configuracion.md) | Estructura, vhosts, cabeceras, límites, logs en consola y archivos |
 | 08 | [WAF: ModSecurity + OWASP CRS](08-waf-modsecurity-crs.md) | WAF activo, ajuste de falsos positivos |
 | 09 | [Anubis (desafío anti-bots)](09-anubis.md) | Protección del frontend contra bots y scrapers |
@@ -49,6 +49,7 @@ Seguir el orden numérico: cada documento asume los anteriores y termina con una
 | 13 | [Usuario de despliegue y CI/CD](13-usuario-de-despliegue-y-cicd.md) | GitHub Actions despliega sin dar acceso de más |
 | 14 | [Backups, monitoreo y alertas](14-backups-monitoreo-y-alertas.md) | Copias diarias, alertas por cambio de estado |
 | 15 | [Verificación, auditoría y lecciones aprendidas](15-verificacion-y-auditoria.md) | Lista de comprobación final, mantenimiento, problemas conocidos |
+| 16 | [Mantenimiento y versionado de la imagen](16-mantenimiento-y-versionado-de-la-imagen.md) | Dockerfile versionado, dependencias al día, compilación rápida, limitaciones del toolchain |
 
 Archivos de configuración: [`recursos/`](recursos/README.md) (con el destino de cada archivo en el servidor).
 
@@ -59,7 +60,8 @@ Archivos de configuración: [`recursos/`](recursos/README.md) (con el destino de
 | Acceso | SSH solo con llave (`AuthenticationMethods publickey`), root sin contraseña, `AllowUsers`, 3 intentos |
 | Privilegios | Solo `root`; ningún usuario con `sudo`; usuario de CI limitado a Docker |
 | Red | ufw `deny incoming`; puertos de contenedores solo en `127.0.0.1` |
-| Aplicación | WAF (845 reglas CRS), GeoIP, bloqueo de rutas privadas, límite de tasa de login, Anubis |
+| Aplicación | WAF (845 reglas CRS), GeoIP, bloqueo de rutas privadas, límite de tasa de login, Anubis; workers de Nginx sin privilegios (`www-data`) |
+| Cadena de suministro | Imagen compilada desde fuentes con cada descarga fijada por SHA-256 (y firma GPG donde existe); dependencias auditadas contra upstream con un script; documentación comprobada contra el Dockerfile |
 | Reacción | fail2ban: 7 jails, baneo permanente para ataques y reincidentes |
 | Transporte | TLS 1.2/1.3, HSTS, certificado wildcard, SNI desconocido rechazado |
 | Datos | Backup diario (config + `pg_dump`), 14 días de retención |
@@ -68,4 +70,5 @@ Archivos de configuración: [`recursos/`](recursos/README.md) (con el destino de
 ## Cómo se verificó
 
 - **Servidor nuevo** (Debian 13): todo lo marcado como "verificado" se probó con tráfico real y simulaciones de ataque desde otro servidor dentro del país permitido.
-- **Servidor de referencia** (Debian 12, producción previa): origen de la imagen `nginx-clang`, de la unidad `systemd` que convierte al contenedor en el Nginx del host y de algunas variantes opcionales (`userns-remap`, SSH por WireGuard). Cada vez que se usa, se indica.
+- **Servidor de referencia** (Debian 12, producción previa): origen de la primera versión de la imagen `nginx-clang`, de la unidad `systemd` que convierte al contenedor en el Nginx del host y de algunas variantes opcionales (`userns-remap`, SSH por WireGuard). Cada vez que se usa, se indica.
+- La imagen vigente (`1.31.9-r2`) se **reconstruyó en el servidor nuevo** y su integración con el sistema (modo servicio del host) también está aplicada y verificada allí.

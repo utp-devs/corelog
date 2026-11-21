@@ -9,7 +9,7 @@
 # private keys (workers still drop to www-data, exactly like before).
 set -eu
 
-IMAGE="${NGINX_IMAGE:-nginx-clang:1.31.6}"
+IMAGE="${NGINX_IMAGE:-nginx-clang:1.31.9-r2}"
 NAME=nginx
 
 MOUNTS="

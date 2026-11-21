@@ -1,6 +1,6 @@
 services:
   nginx:
-    image: nginx-clang:1.31.6
+    image: nginx-clang:1.31.9-r2
     container_name: nginx
     network_mode: host
     restart: unless-stopped

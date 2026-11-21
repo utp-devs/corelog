@@ -6,16 +6,16 @@
 
 ## 1. Dos modos
 
-| | A · Compose (servidor nuevo) | B · Servicio `systemd` + envoltorio (servidor de referencia) |
+| | A · Compose (alternativa simple) | B · Servicio `systemd` + envoltorio (**aplicado**) |
 |---|---|---|
 | Cómo arranca | `restart: unless-stopped` en Docker | Unidad `nginx.service` de systemd |
 | `systemctl status nginx` | No (se usa `docker compose ps`) | Sí |
 | `nginx -t` en el host | No (`docker compose exec nginx nginx -t`) | Sí (envoltorio en `/usr/local/sbin/nginx`) |
 | certbot, logrotate y scripts que llaman a `nginx` | Hay que adaptarlos | Funcionan sin cambios |
 | Disposición de archivos | `/opt/nginx/…` | `/etc/nginx`, `/etc/letsencrypt`, `/var/www`, `/var/log/nginx` (rutas del sistema) |
-| Verificado en | Servidor nuevo (Debian 13) | Servidor de referencia (Debian 12), en producción |
+| Verificado en | Servidor nuevo (Debian 13), hasta la migración | Servidor de referencia (Debian 12) y servidor nuevo (Debian 13), ambos en producción |
 
-El modo A es el más simple y es el que corre en el servidor nuevo. El modo B es el que convierte al contenedor en "el Nginx por defecto del host"; se documenta completo para adoptarlo (no se aplicó en el servidor nuevo).
+Ambos servidores usan hoy el **modo B**: es el que convierte al contenedor en "el Nginx por defecto del host". El modo A (un `docker-compose.yml`, documento [07](07-nginx-configuracion.md), sección 2) es el punto de partida más simple y sigue siendo válido si no se necesita integración con el sistema; el servidor nuevo empezó así y se migró con la sección 3.
 
 ## 2. Modo B: el contenedor como servicio del sistema
 
@@ -35,7 +35,7 @@ El modo A es el más simple y es el que corre en el servidor nuevo. El modo B es
 # run:  arranca el contenedor en red host con la configuración, certificados, reglas WAF y logs del host
 # test: valida la configuración del host con la imagen, sin tocar el servicio
 set -eu
-IMAGE="${NGINX_IMAGE:-nginx-clang:1.31.6}"
+IMAGE="${NGINX_IMAGE:-nginx-clang:1.31.9-r2}"
 NAME=nginx
 
 MOUNTS="
@@ -121,7 +121,7 @@ systemctl daemon-reload
 systemctl enable --now nginx
 ```
 
-Antes: la configuración debe estar en las rutas del host (`/etc/nginx`, `/etc/modsecurity`, …) en lugar de `/opt/nginx`, o editar la lista `MOUNTS` de `nginx-container` para apuntar a `/opt/nginx`.
+Antes: la configuración debe estar en las rutas del host (`/etc/nginx`, `/etc/modsecurity`, …) en lugar de `/opt/nginx`, o editar la lista `MOUNTS` de `nginx-container` para apuntar a `/opt/nginx`. La sección 3 automatiza este paso.
 
 ### 2.6 Desplazar al Nginx de la distribución
 
@@ -134,20 +134,50 @@ apt-get purge -y 'nginx*'                # o apt-mark hold nginx para que no vue
 
 La unidad en `/etc/systemd/system/nginx.service` tiene prioridad sobre la de `/lib/systemd/system/`, por lo que **sustituye** a la de la distribución sin borrarla.
 
-## 3. Migrar un servidor en producción (con retroceso automático)
+## 3. Migrar a este modo (con retroceso automático)
 
-El servidor de referencia pasó de Nginx de paquete al contenedor con un script que garantiza volver atrás si algo cambia. Esqueleto:
+Script: [`recursos/scripts/migrate-nginx-to-host.sh`](recursos/scripts/migrate-nginx-to-host.sh). Se ejecuta como `root` **desde un archivo** (no por `stdin`; ver [15](15-verificacion-y-auditoria.md)) y antes hay que editar las variables `APP` y `API` con los dominios reales. Precondiciones: la imagen cargada (`docker images nginx-clang`), la configuración actual en `/opt/nginx` y que **no exista** `/etc/nginx`.
 
-1. **Antes de empezar**, registrar una *línea base*: por cada sitio, el código HTTP y HTTPS y el tamaño de la respuesta (`curl -sk --resolve host:443:127.0.0.1 …`).
-2. **Copia de seguridad** de la unidad actual (`systemctl cat nginx`), de `nginx -V` y de `logrotate.d/nginx`.
-3. **Pre-vuelo**: `nginx-container test` valida la configuración *viva* con la imagen. Si falla, no se toca nada.
-4. **Parar** el Nginx del paquete (aquí empieza el corte) y anotar la hora.
-5. **Instalar** wrapper, script, unidad y logrotate; `daemon-reload`; `systemctl start nginx`.
-6. **Esperar** a que escuche el 443 y calcular e imprimir el tiempo de corte (el script lo mide; conviene anotarlo).
-7. **Verificar cada sitio** contra la línea base: mismo código y tamaño. Comprobar también WebSocket (`101 Switching Protocols`), túneles TLS en `stream`, `nginx -t` por el envoltorio y `systemctl reload nginx`.
-8. **Retroceso automático** si cualquier comprobación difiere: parar y borrar el contenedor, quitar unidad y envoltorios, restaurar el logrotate original y arrancar el Nginx del paquete.
+Qué hace, en orden:
 
-Los datos de retroceso se conservan en un directorio con fecha.
+1. **Línea base.** Mide el servicio actual: HTTP→HTTPS, frontend, `robots.txt`, API sin token, SQLi y XSS (WAF), ruta privada (444), SNI desconocido, CSP del frontend y HSTS de la API.
+2. **Respaldo** de `/opt/nginx`, del logrotate, del gancho de certbot y del script de backup, en `/root/nginx-pre-systemd-<fecha>/`.
+3. **Disposición del sistema.** Copia `conf.d`, `sites-enabled`, `snippets`, `geoip`, `nginx.conf` y `mime.types` a `/etc/nginx`; crea `/var/www/{acme,default}`; añade `user www-data;` al `nginx.conf`; da a `www-data` la propiedad de `/var/log/modsecurity` y `/var/log/modsec_audit.log` (los *workers* ya no son `nobody`).
+4. **Instala** `nginx-container`, el envoltorio y la unidad, y recarga systemd.
+5. **Pre-vuelo.** `nginx-container test` valida la configuración nueva con la imagen. Si falla, **deshace todo** y sale sin tocar el servicio.
+6. **Conmuta**: `docker compose down` del servicio anterior y `systemctl enable --now nginx`. Mide e imprime el tiempo de corte.
+7. **Compara** las mismas pruebas con la línea base. Si **cualquiera difiere**, retrocede automáticamente: para y deshabilita la unidad, borra el envoltorio, y levanta de nuevo el contenedor anterior con su configuración. Comprueba además que `nginx` del `PATH` sea el envoltorio, `nginx -t`, `systemctl reload nginx` y que el sitio siga respondiendo tras la recarga.
+8. **Cierra:** actualiza las rutas del script de backup y el gancho de certbot (`systemctl reload nginx`), y renombra `/opt/nginx` a `/opt/nginx.pre-systemd` (queda para retroceder, no se borra).
+
+### Resultado verificado en el servidor nuevo
+
+| Prueba | Línea base | Después |
+|---|---|---|
+| `http://app` | 301 | 301 |
+| frontend (navegador) | 307 | 307 |
+| `robots.txt` | 200 | 200 |
+| API sin token | 401 | 401 |
+| SQLi / XSS contra la API | 403 / 403 | 403 / 403 |
+| `/.git/config` (444) | sin respuesta | sin respuesta |
+| SNI desconocido | sin respuesta | sin respuesta |
+| CSP frontend / HSTS API | 1 / 1 | 1 / 1 |
+
+- **Corte medido: 1,5 s.** Respuestas idénticas a la línea base; `nginx -t` y `systemctl reload nginx` funcionan desde el host.
+- Proceso maestro como `root` y **4 workers como `www-data`** (uid 33).
+- Después: el log de acceso y el de consola reciben cada petición, `modsec_audit.log` (de `www-data`) registra los bloqueos, la rotación de logs forzada reabre los archivos, `certbot renew --dry-run` pasa con el gancho nuevo, el backup incluye `/etc/nginx` y la unidad, y fail2ban sigue leyendo los mismos logs.
+
+> **Otros procesos `nginx` en `ps`.** El contenedor de la aplicación web (`corelog-ui`) es una imagen oficial de nginx sirviendo archivos estáticos; sus *workers* corren como uid 101, que el host muestra con el nombre de la cuenta que casualmente tiene ese uid (`uuidd`). **No** son el Nginx de este documento. El nuestro: maestro `root` con `nginx: master process /usr/sbin/nginx -g daemon off;` y workers `www-data`.
+
+### Retroceso manual
+
+```bash
+systemctl stop nginx && systemctl disable nginx
+docker rm -f nginx
+rm -f /etc/systemd/system/nginx.service /usr/local/sbin/nginx /usr/local/sbin/nginx-container && systemctl daemon-reload
+mv /opt/nginx.pre-systemd /opt/nginx && (cd /opt/nginx && docker compose up -d)
+```
+
+(La imagen anterior sigue cargada: ver la política de etiquetas en [16](16-mantenimiento-y-versionado-de-la-imagen.md).)
 
 ## 4. Operación diaria (modo B)
 
@@ -160,7 +190,9 @@ nginx -t                        # valida la configuración desde el host
 nginx -V                        # módulos y versión del binario del contenedor
 ```
 
-Cambiar de versión de la imagen: construir o cargar la etiqueta nueva, `NGINX_IMAGE=nginx-clang:NUEVA nginx-container test` y, si pasa, editar `IMAGE` en el script (o exportar `NGINX_IMAGE` en la unidad) y `systemctl restart nginx`.
+Cambiar de versión de la imagen: construir o cargar la etiqueta nueva, `NGINX_IMAGE=nginx-clang:NUEVA nginx-container test` y, si pasa, editar `IMAGE` en el script (o exportar `NGINX_IMAGE` en la unidad) y `systemctl restart nginx`. El procedimiento completo, con línea base y retroceso, está en [16, sección 7](16-mantenimiento-y-versionado-de-la-imagen.md#7-desplegar-una-revisión-nueva-y-volver-atrás).
+
+> **Editar la configuración.** `/etc/nginx` se monta `:ro` como **directorio** y la unidad hace `nginx -t` antes de recargar, así que `sed -i` y los editores funcionan con `systemctl reload nginx`. Ya no existe el problema del *bind mount* de un archivo suelto del modo A (ver [07](07-nginx-configuracion.md)).
 
 ## 5. Gancho de certbot
 
@@ -169,11 +201,10 @@ Tras renovar un certificado hay que recargar Nginx:
 ```sh
 # /etc/letsencrypt/renewal-hooks/deploy/reload-nginx.sh   (chmod 755)
 #!/bin/sh
-docker exec nginx nginx -s reload       # modo A
-# systemctl reload nginx                # modo B
+systemctl reload nginx
 ```
 
-Con el envoltorio del modo B también sirve `nginx -s reload`. Ver [12](12-dns-y-certificados-tls.md).
+Es el gancho que usa el servidor (modo B): valida la configuración y recarga. En el modo A se usaría `docker exec nginx nginx -s reload`. Verificado con `certbot renew --dry-run --no-random-sleep-on-renew`. Ver [12](12-dns-y-certificados-tls.md).
 
 ## 6. Verificación
 
@@ -183,8 +214,9 @@ Con el envoltorio del modo B también sirve `nginx -s reload`. Ver [12](12-dns-y
 | `systemctl cat nginx \| head -3` | Ruta `/etc/systemd/system/nginx.service` |
 | `command -v nginx` | `/usr/local/sbin/nginx` |
 | `nginx -V 2>&1 \| head -2` | `nginx/1.31.x`, `built by clang` |
-| `systemctl stop nginx; systemctl start nginx` | Vuelve y responde |
-| Reinicio del servidor | El servicio arranca solo |
-| Configuración rota a propósito + `systemctl reload nginx` | La recarga **falla** y el sitio sigue sirviendo con la configuración anterior |
+| `systemctl is-enabled nginx` | `enabled` (arranca con el sistema) |
+| Configuración rota a propósito + `systemctl reload nginx` | **Verificado:** la recarga falla (código 1), el servicio sigue `active` y el sitio responde con la configuración anterior |
+| `systemctl restart nginx` | Vuelve y responde en ~1-2 s |
+| Reinicio completo del servidor | El servicio debe arrancar solo. **No probado todavía** en el servidor nuevo (está habilitado y depende de `docker.service`); hacerlo en una ventana de mantenimiento |
 
 Continuar con [11 · fail2ban](11-fail2ban.md).

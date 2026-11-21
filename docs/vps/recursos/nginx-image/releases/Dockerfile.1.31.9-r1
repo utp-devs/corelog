@@ -1,0 +1,328 @@
+# syntax=docker/dockerfile:1
+#
+# nginx built with Clang/LLVM from upstream sources: the compiler, CMake,
+# OpenSSL, PCRE2, zlib, brotli, libmaxminddb, yajl, libxml2 and
+# libmodsecurity all come from their original projects, not from apt.
+# apt is used once, in the toolchain stage, for the glibc and libstdc++
+# development headers -- those define the system ABI and cannot be swapped.
+#
+# Differences from the first revision of this image (nginx 1.31.6):
+#   * Base is Debian 13 (glibc 2.41, GCC 14 runtime) instead of Debian 12.
+#   * nginx 1.31.9, which fixes several security issues (HTTP/2, HTTP/3,
+#     resolver, mail, stream).
+#   * Every downloaded source is pinned by SHA-256 on top of the GPG
+#     signature / upstream checksum checks the first revision already did.
+#   * Modules a reverse-proxy-only server never uses are not compiled
+#     (dav, flv, mp4, random_index, addition, autoindex, ssi, fastcgi,
+#     scgi, uwsgi), which shrinks the attack surface.
+#   * OCI labels describe the image.
+#   * LLVM stays on 23.1.3 on purpose: later 23.1.x releases no longer
+#     publish the detached GPG signature this build verifies.
+#
+# Target: any x86-64 host (no -march). The image carries its own glibc.
+#   docker build -t nginx-clang:1.31.9 .
+
+ARG DEBIAN=debian:13
+
+# ---------------------------------------------------------------------------
+FROM ${DEBIAN} AS toolchain
+ARG LLVM_VERSION=23.1.3
+ARG CMAKE_VERSION=4.5.1
+ARG PKGCONF_VERSION=3.0.8
+ARG PKGCONF_SHA256=943f0bc88bcaeceb630b00262e2a8ad5ea4fac3fba72a4267d8b9ec6b35d1194
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends \
+      libc6-dev libgcc-14-dev libstdc++-14-dev make perl xz-utils curl ca-certificates gnupg \
+ && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /src
+RUN set -eux; \
+    tar=LLVM-${LLVM_VERSION}-Linux-X64.tar.xz; \
+    base=https://github.com/llvm/llvm-project/releases/download/llvmorg-${LLVM_VERSION}; \
+    curl -fsSLO "$base/$tar"; curl -fsSLO "$base/$tar.sig"; \
+    curl -fsSL https://releases.llvm.org/release-keys.asc | gpg -q --import; \
+    gpg -q --verify "$tar.sig" "$tar"; \
+    tar -xJf "$tar" -C /opt; rm -f "$tar" "$tar.sig"; \
+    ln -s /opt/LLVM-${LLVM_VERSION}-Linux-X64 /opt/llvm; \
+    mkdir -p /opt/llvm-toolchain/bin; \
+    for t in ld:ld.lld ar:llvm-ar ranlib:llvm-ranlib nm:llvm-nm strip:llvm-strip objcopy:llvm-objcopy readelf:llvm-readelf; do \
+      ln -s "/opt/llvm/bin/${t#*:}" "/opt/llvm-toolchain/bin/${t%%:*}"; \
+    done
+
+RUN set -eux; \
+    tar=cmake-${CMAKE_VERSION}-linux-x86_64.tar.gz; \
+    base=https://github.com/Kitware/CMake/releases/download/v${CMAKE_VERSION}; \
+    curl -fsSLO "$base/$tar"; curl -fsSL -o cmake.sha256 "$base/cmake-${CMAKE_VERSION}-SHA-256.txt"; \
+    sha256sum --ignore-missing -c cmake.sha256; \
+    tar -xzf "$tar" -C /opt; rm -f "$tar" cmake.sha256; \
+    ln -s /opt/cmake-${CMAKE_VERSION}-linux-x86_64 /opt/cmake
+
+ENV PATH=/opt/llvm-toolchain/bin:/opt/llvm/bin:/opt/cmake/bin:/opt/pkgconf/bin:$PATH \
+    CC=clang CXX=clang++ AR=llvm-ar NM=llvm-nm RANLIB=llvm-ranlib \
+    CFLAGS="-O2 -fPIC -fstack-protector-strong" \
+    CXXFLAGS="-O2 -fPIC -fstack-protector-strong" \
+    PKG_CONFIG_PATH=/opt/nginx-deps/lib/pkgconfig:/opt/nginx-deps/lib64/pkgconfig
+
+# pkgconf (pkg-config implementation), needed by libmodsecurity's configure.
+RUN set -eux; \
+    curl -fsSLO https://distfiles.ariadne.space/pkgconf/pkgconf-${PKGCONF_VERSION}.tar.xz; \
+    echo "${PKGCONF_SHA256}  pkgconf-${PKGCONF_VERSION}.tar.xz" | sha256sum -c -; \
+    tar -xJf pkgconf-${PKGCONF_VERSION}.tar.xz; \
+    cd pkgconf-${PKGCONF_VERSION}; \
+    LDFLAGS="-fuse-ld=lld" ./configure --prefix=/opt/pkgconf --disable-shared; \
+    make -j"$(nproc)"; make install; \
+    ln -s pkgconf /opt/pkgconf/bin/pkg-config; \
+    cd /src; rm -rf pkgconf-${PKGCONF_VERSION}*; \
+    pkg-config --version
+
+# ---------------------------------------------------------------------------
+FROM toolchain AS deps
+ARG OPENSSL_VERSION=3.5.9
+ARG PCRE2_VERSION=10.49
+ARG PCRE2_SHA256=929f0b20e62879252a15886b06c89f1edef61a363cbd5826fb041080a5e557ae
+ARG ZLIB_VERSION=1.3.2
+ARG ZLIB_SHA256=bb329a0a2cd0274d05519d61c667c062e06990d72e125ee2dfa8de64f0119d16
+ARG MAXMINDDB_VERSION=1.14.1
+ARG MAXMINDDB_SHA256=ca5c87d41339f8bc4daabb53e8a9356b3c995f2d2419b85d7bff823b2ecc252d
+ARG BROTLI_VERSION=1.2.1
+ARG BROTLI_SHA256=98d35d11a78dc453aebb7d10c3748f3f73ff78c8267c0dc697b8631f67bf7e8f
+ARG YAJL_VERSION=2.1.0
+ARG YAJL_SHA256=3fb73364a5a30efe615046d07e6db9d09fd2b41c763c5f7d3bfb121cd5c5ac5a
+ARG LIBXML2_VERSION=2.15.4
+ARG MODSECURITY_VERSION=3.0.17
+ENV DEPS=/opt/nginx-deps
+WORKDIR /src
+
+# Sources consumed directly by nginx's configure (built static into nginx).
+RUN set -eux; \
+    curl -fsSLO https://github.com/openssl/openssl/releases/download/openssl-${OPENSSL_VERSION}/openssl-${OPENSSL_VERSION}.tar.gz; \
+    curl -fsSLO https://github.com/openssl/openssl/releases/download/openssl-${OPENSSL_VERSION}/openssl-${OPENSSL_VERSION}.tar.gz.sha256; \
+    echo "$(cut -d' ' -f1 openssl-${OPENSSL_VERSION}.tar.gz.sha256)  openssl-${OPENSSL_VERSION}.tar.gz" | sha256sum -c; \
+    curl -fsSLO https://github.com/PCRE2Project/pcre2/releases/download/pcre2-${PCRE2_VERSION}/pcre2-${PCRE2_VERSION}.tar.gz; \
+    echo "${PCRE2_SHA256}  pcre2-${PCRE2_VERSION}.tar.gz" | sha256sum -c -; \
+    curl -fsSLO https://github.com/madler/zlib/releases/download/v${ZLIB_VERSION}/zlib-${ZLIB_VERSION}.tar.gz; \
+    echo "${ZLIB_SHA256}  zlib-${ZLIB_VERSION}.tar.gz" | sha256sum -c -; \
+    for t in openssl-${OPENSSL_VERSION} pcre2-${PCRE2_VERSION} zlib-${ZLIB_VERSION}; do tar -xzf $t.tar.gz; done
+
+# PCRE2 again as a static PIC library, for libmodsecurity.
+RUN set -eux; \
+    cmake -S pcre2-${PCRE2_VERSION} -B build-pcre2 -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=$DEPS \
+      -DBUILD_SHARED_LIBS=OFF -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DPCRE2_SUPPORT_JIT=ON \
+      -DPCRE2_BUILD_PCRE2GREP=OFF -DPCRE2_BUILD_TESTS=OFF; \
+    cmake --build build-pcre2 -j"$(nproc)"; cmake --install build-pcre2; rm -rf build-pcre2
+
+RUN set -eux; \
+    curl -fsSLO https://github.com/maxmind/libmaxminddb/releases/download/${MAXMINDDB_VERSION}/libmaxminddb-${MAXMINDDB_VERSION}.tar.gz; \
+    echo "${MAXMINDDB_SHA256}  libmaxminddb-${MAXMINDDB_VERSION}.tar.gz" | sha256sum -c -; \
+    tar -xzf libmaxminddb-${MAXMINDDB_VERSION}.tar.gz; \
+    cmake -S libmaxminddb-${MAXMINDDB_VERSION} -B build-mmdb -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=$DEPS \
+      -DBUILD_SHARED_LIBS=OFF -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DBUILD_TESTING=OFF; \
+    cmake --build build-mmdb -j"$(nproc)"; cmake --install build-mmdb; rm -rf build-mmdb
+
+# yajl's 2014-era CMakeLists no longer configures with CMake 4, and the
+# library is a handful of C files: compile it directly.
+RUN set -eux; \
+    curl -fsSL -o yajl.tar.gz https://github.com/lloyd/yajl/archive/refs/tags/${YAJL_VERSION}.tar.gz; \
+    echo "${YAJL_SHA256}  yajl.tar.gz" | sha256sum -c -; \
+    tar -xzf yajl.tar.gz; \
+    mkdir -p $DEPS/include/yajl $DEPS/lib build-yajl; \
+    cp yajl-${YAJL_VERSION}/src/api/*.h $DEPS/include/yajl/; \
+    major=${YAJL_VERSION%%.*}; rest=${YAJL_VERSION#*.}; minor=${rest%%.*}; micro=${rest#*.}; \
+    sed -e "s/\${YAJL_MAJOR}/$major/" -e "s/\${YAJL_MINOR}/$minor/" -e "s/\${YAJL_MICRO}/$micro/" \
+      yajl-${YAJL_VERSION}/src/api/yajl_version.h.cmake > $DEPS/include/yajl/yajl_version.h; \
+    for f in yajl-${YAJL_VERSION}/src/*.c; do \
+      clang $CFLAGS -I$DEPS/include -c "$f" -o "build-yajl/$(basename "$f" .c).o"; \
+    done; \
+    llvm-ar rcs $DEPS/lib/libyajl.a build-yajl/*.o; \
+    rm -rf build-yajl; \
+    mkdir -p $DEPS/lib/pkgconfig; \
+    printf '%s\n' "prefix=$DEPS" 'libdir=${prefix}/lib' 'includedir=${prefix}/include' '' \
+      'Name: yajl' 'Description: Yet Another JSON Library' "Version: ${YAJL_VERSION}" \
+      'Cflags: -I${includedir}' 'Libs: -L${libdir} -lyajl' > $DEPS/lib/pkgconfig/yajl.pc; \
+    pkg-config --modversion yajl
+
+RUN set -eux; \
+    minor=${LIBXML2_VERSION%.*}; \
+    curl -fsSLO https://download.gnome.org/sources/libxml2/$minor/libxml2-${LIBXML2_VERSION}.tar.xz; \
+    curl -fsSLO https://download.gnome.org/sources/libxml2/$minor/libxml2-${LIBXML2_VERSION}.sha256sum; \
+    sha256sum --ignore-missing -c libxml2-${LIBXML2_VERSION}.sha256sum; \
+    tar -xJf libxml2-${LIBXML2_VERSION}.tar.xz; \
+    cmake -S libxml2-${LIBXML2_VERSION} -B build-xml2 -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=$DEPS \
+      -DBUILD_SHARED_LIBS=OFF -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
+      -DLIBXML2_WITH_PYTHON=OFF -DLIBXML2_WITH_ZLIB=OFF -DLIBXML2_WITH_LZMA=OFF -DLIBXML2_WITH_ICU=OFF \
+      -DLIBXML2_WITH_TESTS=OFF -DLIBXML2_WITH_PROGRAMS=OFF -DLIBXML2_WITH_DOCS=OFF; \
+    cmake --build build-xml2 -j"$(nproc)"; cmake --install build-xml2; rm -rf build-xml2
+
+RUN set -eux; \
+    curl -fsSL -o brotli.tar.gz https://github.com/google/brotli/archive/refs/tags/v${BROTLI_VERSION}.tar.gz; \
+    echo "${BROTLI_SHA256}  brotli.tar.gz" | sha256sum -c -; \
+    tar -xzf brotli.tar.gz
+
+# libmodsecurity as a shared library with its dependencies linked in
+# statically: the runtime image needs nothing but libstdc++.
+RUN set -eux; \
+    base=https://github.com/owasp-modsecurity/ModSecurity/releases/download/v${MODSECURITY_VERSION}; \
+    curl -fsSLO "$base/modsecurity-v${MODSECURITY_VERSION}.tar.gz"; \
+    curl -fsSLO "$base/modsecurity-v${MODSECURITY_VERSION}.tar.gz.sha256"; \
+    echo "$(cut -d' ' -f1 modsecurity-v${MODSECURITY_VERSION}.tar.gz.sha256)  modsecurity-v${MODSECURITY_VERSION}.tar.gz" | sha256sum -c; \
+    tar -xzf modsecurity-v${MODSECURITY_VERSION}.tar.gz; \
+    cd modsecurity-v${MODSECURITY_VERSION}; \
+    pkg-config --modversion libpcre2-8 libxml-2.0 yajl; \
+    PKG_CONFIG="pkg-config --static" \
+    LDFLAGS="-fuse-ld=lld -L$DEPS/lib" CPPFLAGS="-I$DEPS/include -I$DEPS/include/libxml2" \
+    ./configure --prefix=/opt/modsecurity \
+      --with-pcre2=$DEPS --with-yajl=$DEPS --with-libxml=$DEPS \
+      --without-lua --without-curl --without-geoip --without-maxmind --without-lmdb --without-ssdeep \
+      --disable-doxygen-doc --disable-examples --disable-dependency-tracking; \
+    make -j"$(nproc)"; make install; \
+    rm -f /opt/modsecurity/lib/*.la /opt/modsecurity/lib/*.a
+
+# ---------------------------------------------------------------------------
+FROM deps AS nginx
+ARG NGINX_VERSION=1.31.9
+ARG NGINX_SHA256=a11c5eeee2e257f4478f0e649f84b0040787d277d2d3e5233952aa6b6dcb80ad
+ARG OPENSSL_VERSION=3.5.9
+ARG PCRE2_VERSION=10.49
+ARG ZLIB_VERSION=1.3.2
+ARG BROTLI_VERSION=1.2.1
+ARG MODSEC_NGINX_VERSION=1.0.4
+ARG MODSEC_NGINX_SHA256=6bdc7570911be884c1e43aaf85046137f9fde0cfa0dd4a55b853c81c45a13313
+ARG HEADERS_MORE_VERSION=0.42
+ARG HEADERS_MORE_SHA256=6f0e023e40149b19c8f9548a648ac53ac010e27829aee109abe88106609c041f
+ARG GEOIP2_MODULE_VERSION=3.4
+ARG GEOIP2_MODULE_SHA256=ad72fc23348d715a330994984531fab9b3606e160483236737f9a4a6957d9452
+ARG NGX_BROTLI_COMMIT=a71f931
+ARG NGX_BROTLI_SHA256=1d21be34f3b7b6d05a8142945e59b3a47665edcdfe0f3ee3d3dbef121f90c08c
+ARG MODSECURITY_VERSION=3.0.17
+WORKDIR /src
+
+RUN set -eux; \
+    curl -fsSLO https://nginx.org/download/nginx-${NGINX_VERSION}.tar.gz; \
+    curl -fsSLO https://nginx.org/download/nginx-${NGINX_VERSION}.tar.gz.asc; \
+    echo "${NGINX_SHA256}  nginx-${NGINX_VERSION}.tar.gz" | sha256sum -c -; \
+    for key in arut pluknet sb thresh; do curl -fsSL https://nginx.org/keys/$key.key | gpg -q --import; done; \
+    gpg -q --verify nginx-${NGINX_VERSION}.tar.gz.asc nginx-${NGINX_VERSION}.tar.gz; \
+    tar -xzf nginx-${NGINX_VERSION}.tar.gz; \
+    curl -fsSLO https://github.com/owasp-modsecurity/ModSecurity-nginx/releases/download/v${MODSEC_NGINX_VERSION}/ModSecurity-nginx-v${MODSEC_NGINX_VERSION}.tar.gz; \
+    echo "${MODSEC_NGINX_SHA256}  ModSecurity-nginx-v${MODSEC_NGINX_VERSION}.tar.gz" | sha256sum -c -; \
+    tar -xzf ModSecurity-nginx-v${MODSEC_NGINX_VERSION}.tar.gz; \
+    curl -fsSL -o headers-more.tar.gz https://github.com/openresty/headers-more-nginx-module/archive/refs/tags/v${HEADERS_MORE_VERSION}.tar.gz; \
+    echo "${HEADERS_MORE_SHA256}  headers-more.tar.gz" | sha256sum -c -; \
+    tar -xzf headers-more.tar.gz; \
+    curl -fsSL -o geoip2.tar.gz https://github.com/leev/ngx_http_geoip2_module/archive/refs/tags/${GEOIP2_MODULE_VERSION}.tar.gz; \
+    echo "${GEOIP2_MODULE_SHA256}  geoip2.tar.gz" | sha256sum -c -; \
+    tar -xzf geoip2.tar.gz; \
+    curl -fsSL -o ngx_brotli.tar.gz https://github.com/google/ngx_brotli/archive/${NGX_BROTLI_COMMIT}.tar.gz; \
+    echo "${NGX_BROTLI_SHA256}  ngx_brotli.tar.gz" | sha256sum -c -; \
+    mkdir ngx_brotli && tar -xzf ngx_brotli.tar.gz -C ngx_brotli --strip-components=1; \
+    rm -rf ngx_brotli/deps/brotli && cp -a brotli-${BROTLI_VERSION} ngx_brotli/deps/brotli; \
+    cmake -S ngx_brotli/deps/brotli -B ngx_brotli/deps/brotli/out -DCMAKE_BUILD_TYPE=Release \
+      -DBUILD_SHARED_LIBS=OFF -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DBROTLI_DISABLE_TESTS=ON; \
+    cmake --build ngx_brotli/deps/brotli/out --target brotlienc brotlicommon -j"$(nproc)"
+
+RUN set -eux; \
+    cd nginx-${NGINX_VERSION}; \
+    MODSECURITY_INC=/opt/modsecurity/include MODSECURITY_LIB=/opt/modsecurity/lib \
+    ./configure \
+      --with-cc=clang \
+      --with-cc-opt="-O2 -flto=thin -fstack-protector-strong -D_FORTIFY_SOURCE=3 -fPIC -Wformat -Werror=format-security -I$DEPS/include" \
+      --with-ld-opt="-fuse-ld=lld -flto=thin -Wl,-z,relro -Wl,-z,now -fPIC -L$DEPS/lib -Wl,-rpath,/opt/modsecurity/lib" \
+      --with-openssl=/src/openssl-${OPENSSL_VERSION} \
+      --with-openssl-opt="no-tests no-docs no-ssl3 no-weak-ssl-ciphers" \
+      --with-pcre=/src/pcre2-${PCRE2_VERSION} \
+      --with-pcre-jit \
+      --with-zlib=/src/zlib-${ZLIB_VERSION} \
+      --prefix=/usr/share/nginx \
+      --conf-path=/etc/nginx/nginx.conf \
+      --http-log-path=/var/log/nginx/access.log \
+      --error-log-path=stderr \
+      --lock-path=/var/lock/nginx.lock \
+      --pid-path=/run/nginx.pid \
+      --modules-path=/usr/lib/nginx/modules \
+      --http-client-body-temp-path=/var/lib/nginx/body \
+      --http-proxy-temp-path=/var/lib/nginx/proxy \
+      --with-compat \
+      --with-threads \
+      --with-file-aio \
+      --with-http_ssl_module \
+      --with-http_v2_module \
+      --with-http_realip_module \
+      --with-http_stub_status_module \
+      --with-http_auth_request_module \
+      --with-http_gzip_static_module \
+      --with-http_gunzip_module \
+      --with-http_sub_module \
+      --with-http_slice_module \
+      --with-http_secure_link_module \
+      --without-http_autoindex_module \
+      --without-http_ssi_module \
+      --without-http_fastcgi_module \
+      --without-http_scgi_module \
+      --without-http_uwsgi_module \
+      --with-stream=dynamic \
+      --with-stream_ssl_module \
+      --with-stream_ssl_preread_module \
+      --with-stream_realip_module \
+      --add-dynamic-module=/src/ModSecurity-nginx-v${MODSEC_NGINX_VERSION} \
+      --add-dynamic-module=/src/headers-more-nginx-module-${HEADERS_MORE_VERSION} \
+      --add-dynamic-module=/src/ngx_brotli \
+      --add-dynamic-module=/src/ngx_http_geoip2_module-${GEOIP2_MODULE_VERSION}; \
+    make -j"$(nproc)"; \
+    llvm-strip --strip-unneeded objs/nginx objs/*.so; \
+    install -D -m 755 objs/nginx /out/usr/sbin/nginx; \
+    install -D -m 755 -t /out/usr/lib/nginx/modules objs/*.so; \
+    mkdir -p /out/opt/modsecurity/lib; \
+    cp -a /opt/modsecurity/lib/libmodsecurity.so* /out/opt/modsecurity/lib/; \
+    llvm-strip --strip-unneeded /out/opt/modsecurity/lib/libmodsecurity.so.3.*; \
+    install -D -m 644 /src/modsecurity-v${MODSECURITY_VERSION}/unicode.mapping /out/opt/modsecurity/unicode.mapping
+
+# ---------------------------------------------------------------------------
+# Minimal distroless-style root filesystem: only the shared libraries the
+# binaries actually load (glibc + libcrypt for nginx, libstdc++/libgcc for
+# libmodsecurity), taken from fully patched Debian 13 packages. Each package
+# is recorded in /var/lib/dpkg/status.d/ the way distroless does it, so
+# vulnerability scanners still see and report them. No shell, no package
+# manager, no system OpenSSL, no tzdata (the host's /etc/localtime is mounted).
+# glibc gconv modules are left out on purpose: libxml2 handles UTF-8/16,
+# Latin-1 and ASCII natively, and dropping them removes the attacker-reachable
+# iconv DoS paths (exotic encodings declared in XML request bodies).
+FROM ${DEBIAN} AS rootfs
+ENV DEBIAN_FRONTEND=noninteractive
+RUN set -eux; \
+    apt-get update; apt-get upgrade -y; \
+    mkdir -p /rootfs/var/lib/dpkg/status.d /rootfs/usr/lib /rootfs/usr/lib64 /rootfs/usr/bin /rootfs/usr/sbin; \
+    for d in lib lib64 bin sbin; do ln -s "usr/$d" "/rootfs/$d"; done; \
+    for pkg in libc6 libcrypt1 libgcc-s1 libstdc++6 gcc-14-base; do \
+      dpkg -L "$pkg" | while read -r path; do \
+        case "$path" in /usr/share/doc/*/changelog*|/usr/share/lintian/*|/usr/share/man/*|/usr/share/locale/*|*/gconv/*) continue;; esac; \
+        [ -d "$path" ] && [ ! -L "$path" ] && continue; \
+        [ -e "$path" ] || [ -L "$path" ] || continue; \
+        real="$(readlink -f "$(dirname "$path")")/$(basename "$path")"; \
+        cp -a --parents "$real" /rootfs; \
+      done; \
+      dpkg-query -s "$pkg" > "/rootfs/var/lib/dpkg/status.d/$pkg"; \
+    done; \
+    cp -a --parents /etc/os-release /usr/lib/os-release /etc/debian_version /rootfs; \
+    printf '%s\n' 'root:x:0:0:root:/root:/sbin/nologin' 'www-data:x:33:33:www-data:/var/www:/sbin/nologin' \
+      'nobody:x:65534:65534:nobody:/nonexistent:/sbin/nologin' > /rootfs/etc/passwd; \
+    printf '%s\n' 'root:x:0:' 'adm:x:4:' 'www-data:x:33:' 'nogroup:x:65534:' > /rootfs/etc/group; \
+    printf '%s\n' 'passwd: files' 'group: files' 'hosts: files dns' > /rootfs/etc/nsswitch.conf; \
+    install -d -m 1777 /rootfs/tmp; \
+    install -d /rootfs/run /rootfs/var/lock /rootfs/var/log/nginx /rootfs/etc/nginx /rootfs/usr/share/nginx; \
+    install -d -o 33 -g 0 /rootfs/var/lib/nginx/body /rootfs/var/lib/nginx/proxy; \
+    ln -s /usr/lib/nginx/modules /rootfs/usr/share/nginx/modules; \
+    rm -rf /var/lib/apt/lists/*
+
+# ---------------------------------------------------------------------------
+FROM scratch AS runtime
+ARG NGINX_VERSION=1.31.9
+LABEL org.opencontainers.image.title="nginx-clang" \
+      org.opencontainers.image.description="nginx built with Clang/LLVM with ModSecurity v3, GeoIP2, headers-more and Brotli; distroless-style root filesystem" \
+      org.opencontainers.image.version="${NGINX_VERSION}" \
+      org.opencontainers.image.base.name="scratch (rootfs from debian:13)" \
+      org.opencontainers.image.licenses="BSD-2-Clause"
+COPY --from=rootfs /rootfs/ /
+COPY --from=nginx /out/ /
+STOPSIGNAL SIGQUIT
+CMD ["/usr/sbin/nginx", "-g", "daemon off;"]

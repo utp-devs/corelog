@@ -113,7 +113,7 @@ Un **subdominio nuevo** del mismo nivel no necesita DNS ni certificado: basta un
 install -d /etc/letsencrypt/renewal-hooks/deploy
 cat > /etc/letsencrypt/renewal-hooks/deploy/reload-nginx.sh <<'EOF'
 #!/bin/sh
-docker exec nginx nginx -s reload
+systemctl reload nginx
 EOF
 chmod 755 /etc/letsencrypt/renewal-hooks/deploy/reload-nginx.sh
 ```

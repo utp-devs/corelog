@@ -2,13 +2,14 @@
 
 ← [06 Imagen Nginx](06-imagen-nginx-clang.md) · [Índice](README.md) · Siguiente: [08 WAF](08-waf-modsecurity-crs.md)
 
-**Objetivo:** dejar Nginx (en contenedor, imagen `nginx-clang`) sirviendo las aplicaciones con TLS, cabeceras de seguridad, límites de tasa, bloqueo geográfico y de rutas privadas, y **logs en archivos y en consola**.
+**Objetivo:** dejar Nginx (en contenedor, imagen `nginx-clang`, servicio del host) sirviendo las aplicaciones con TLS, cabeceras de seguridad, límites de tasa, bloqueo geográfico y de rutas privadas, y **logs en archivos y en consola**.
 
 ## 1. Estructura en el servidor
 
+Disposición del sistema (la del servidor, modo B de [10](10-nginx-como-servicio-del-host.md)):
+
 ```
-/opt/nginx/
-├── docker-compose.yml            ← cómo se ejecuta el contenedor
+/etc/nginx/
 ├── nginx.conf                    ← configuración principal
 ├── mime.types
 ├── conf.d/                       ← se incluye en el bloque http
@@ -20,24 +21,55 @@
 ├── sites-enabled/                ← un archivo por aplicación
 │   ├── 00-default.conf           ← servidor por defecto (host desconocido)
 │   └── app.conf
-├── geoip/GeoLite2-Country.mmdb
-└── www/{acme,default}/
+└── geoip/GeoLite2-Country.mmdb
+/var/www/{acme,default}/                   ← reto ACME y página por defecto
 /etc/modsecurity/modsecurity.conf          ← ver documento 08
 /usr/share/modsecurity-crs/                ← reglas OWASP CRS
 /etc/letsencrypt/                          ← certificados (documento 12)
 /var/log/nginx/  /var/log/modsecurity/  /var/log/modsec_audit.log
 ```
 
-Archivos listos en [`recursos/nginx/`](recursos/nginx/). Copiarlos a `/opt/nginx/` y reemplazar `example.com` por el dominio real.
+Archivos listos en [`recursos/nginx/`](recursos/nginx/). Copiarlos a `/etc/nginx/` y reemplazar `example.com` por el dominio real. (El modo Compose, más simple, usa `/opt/nginx/` con la misma estructura; ver la sección 2.)
 
 ## 2. El contenedor
 
-[`recursos/nginx/docker-compose.yml`](recursos/nginx/docker-compose.yml):
+El contenedor lo arranca la unidad `nginx.service` mediante [`nginx-container`](recursos/scripts/nginx-container) ([10](10-nginx-como-servicio-del-host.md)). Estos son los montajes que define:
+
+| Montaje (host → contenedor) | Modo | Para qué |
+|---|---|---|
+| `/etc/nginx` → `/etc/nginx` | `ro` | Configuración, mapas, snippets, base GeoIP |
+| `/etc/letsencrypt` → `/etc/letsencrypt` | `ro` | Certificados y llaves TLS |
+| `/etc/modsecurity` → `/etc/modsecurity` | `ro` | Configuración del WAF |
+| `/usr/share/modsecurity-crs` → igual | `ro` | Reglas OWASP CRS |
+| `/var/www` → `/var/www` | `ro` | Reto ACME y página por defecto |
+| `/var/log/nginx`, `/var/log/modsecurity`, `/var/log/modsec_audit.log` | lectura-escritura | Es lo único que Nginx y ModSecurity necesitan escribir |
+| `/etc/localtime`, `/etc/timezone` → igual | `ro` | La imagen no trae `tzdata` ([06](06-imagen-nginx-clang.md)) |
+
+Y las opciones de `docker run`: `--network host` (Nginx ve la IP real del cliente, sin NAT de Docker, escucha 80/443 directamente y alcanza a los demás contenedores por `127.0.0.1`), `--rm --init`, `--pull never` y `--userns host`.
+
+Preparar antes la base GeoIP, los directorios y los archivos de log:
+
+```bash
+mkdir -p /etc/nginx/{conf.d,sites-enabled,snippets,geoip} /var/www/{acme,default} /var/log/nginx /var/log/modsecurity
+touch /var/log/modsec_audit.log
+curl -fsSL https://raw.githubusercontent.com/nginx/nginx/master/conf/mime.types -o /etc/nginx/mime.types   # la imagen no lo trae
+chown -R www-data:www-data /var/log/modsec_audit.log /var/log/modsecurity ; chmod 750 /var/log/modsecurity ; chmod 640 /var/log/modsec_audit.log
+```
+
+### Workers sin privilegios (`user www-data`)
+
+`nginx.conf` empieza con `user www-data;`: el proceso maestro corre como `root` (necesita leer las llaves TLS y abrir los puertos) y los **workers como `www-data`** (uid 33, el mismo de la imagen y del host Debian). Verificado: `ps -eo user,args | grep 'nginx: worker'` muestra `www-data`.
+
+> **Dueño de los logs de ModSecurity.** Los *workers* escriben el log de auditoría, así que `/var/log/modsec_audit.log` y `/var/log/modsecurity` deben pertenecer a `www-data`. Si pertenecen a `root`, ModSecurity no puede escribir y el log queda vacío **sin dar error visible**. (Sin la directiva `user`, los workers correrían como `nobody` y el dueño tendría que ser `nobody:nogroup`.) El resto de logs (`access.log`, `error.log`, `attacks.log`, `geo_blocked.log`) los abre el proceso maestro como `root` y no necesitan cambio.
+
+### Alternativa: Docker Compose (modo A)
+
+Si no se necesita integración con el sistema, un `docker-compose.yml` es más simple ([`recursos/nginx/docker-compose.yml`](recursos/nginx/docker-compose.yml)). Monta lo mismo, pero con la configuración en `/opt/nginx/`:
 
 ```yaml
 services:
   nginx:
-    image: nginx-clang:1.31.6
+    image: nginx-clang:1.31.9-r2
     container_name: nginx
     network_mode: host
     restart: unless-stopped
@@ -59,30 +91,14 @@ services:
       - /etc/localtime:/etc/localtime:ro
 ```
 
-| Decisión | Motivo |
-|---|---|
-| `network_mode: host` | Nginx ve la IP real del cliente (sin NAT de Docker), escucha 80/443 directamente y alcanza a los demás contenedores por `127.0.0.1` |
-| Montajes `:ro` | La configuración, las reglas y los certificados no se pueden alterar desde dentro del contenedor |
-| `/var/log/*` en lectura-escritura | Es lo único que Nginx y ModSecurity necesitan escribir |
-| `/etc/localtime` | La imagen no trae `tzdata` (ver [06](06-imagen-nginx-clang.md)) |
-| `restart: unless-stopped` | Arranca con el sistema y tras un fallo; para convertirlo en el Nginx "del host" ver [10](10-nginx-como-servicio-del-host.md) |
-
-Preparar antes la base GeoIP, los directorios y el archivo de auditoría:
-
-```bash
-mkdir -p /opt/nginx/{conf.d,sites-enabled,snippets,geoip,www/acme,www/default} /var/log/nginx /var/log/modsecurity
-touch /var/log/modsec_audit.log
-curl -fsSL https://raw.githubusercontent.com/nginx/nginx/master/conf/mime.types -o /opt/nginx/mime.types   # la imagen no lo trae
-chown nobody:nogroup /var/log/modsec_audit.log /var/log/modsecurity   # ver nota
-```
-
-> **Dueño de los logs de ModSecurity.** La imagen no define `user`; los *workers* corren como `nobody`. Si `/var/log/modsec_audit.log` y `/var/log/modsecurity` pertenecen a `root`, ModSecurity no puede escribir y el log de auditoría queda vacío **sin dar error visible**. Se arregla con el `chown` anterior.
+Con Compose, `nginx.conf` y `mime.types` se montan como **archivos suelto** y eso tiene una trampa (sección 8). El servidor empezó con este modo y se migró al modo B.
 
 ## 3. `nginx.conf` comentado
 
 Archivo: [`recursos/nginx/nginx.conf`](recursos/nginx/nginx.conf).
 
 ```nginx
+user www-data;                             # workers sin privilegios (el maestro sigue como root)
 worker_processes auto;
 pid /run/nginx.pid;
 error_log /var/log/nginx/error.log warn;   # errores → archivo
@@ -284,22 +300,28 @@ La CSP es estricta porque la aplicación no carga nada externo: solo scripts pro
 
 > `add_header` dentro de un `location` **reemplaza** (no suma) a los del nivel superior. Por eso la página del desafío de Anubis lleva su propio snippet con HSTS y su CSP.
 
-## 8. Aplicar cambios: *reload* o recrear
+## 8. Aplicar cambios
+
+Modo B (servicio del host, el del servidor):
 
 ```bash
-cd /opt/nginx
-docker compose exec -T nginx nginx -t              # validar siempre primero
-docker compose exec -T nginx nginx -s reload       # sin cortar conexiones
+nginx -t                          # valida la configuración desde el host (envoltorio)
+systemctl reload nginx            # valida de nuevo y recarga sin cortar conexiones
+systemctl restart nginx           # parada ordenada + arranque (~1-2 s de corte)
 ```
 
-> **Trampa del *bind mount* de un solo archivo.** `nginx.conf` y `mime.types` se montan como **archivos**. Editores y `sed -i` crean un archivo **nuevo** (otro *inode*): el contenedor sigue viendo el anterior y el `reload` no aplica el cambio, sin ningún error. Tras editar `nginx.conf` hay que **recrear** el contenedor: `docker compose up -d --force-recreate`. Los directorios (`conf.d`, `sites-enabled`, `snippets`) sí se refrescan con un `reload`.
+La unidad ejecuta `nginx -t` **antes** de recargar: si la configuración es inválida la recarga **falla**, el servicio sigue activo y el sitio sigue sirviendo con la configuración anterior (verificado). `/etc/nginx` se monta como **directorio**, así que `sed -i` y los editores funcionan con un simple `reload`.
 
-> **`docker compose exec` en scripts.** Dentro de un script que se lee por `stdin` (por ejemplo `ssh host 'bash -s' < script.sh`), `docker compose exec` consume el resto del script como su entrada. Usar siempre `docker compose exec -T … </dev/null`.
+### Trampas del modo Compose (A)
+
+> **Trampa del *bind mount* de un solo archivo.** En el modo A, `nginx.conf` y `mime.types` se montan como **archivos**. Editores y `sed -i` crean un archivo **nuevo** (otro *inode*): el contenedor sigue viendo el anterior y el `reload` no aplica el cambio, sin ningún error. Tras editar `nginx.conf` hay que **recrear** el contenedor: `docker compose up -d --force-recreate`. Los directorios (`conf.d`, `sites-enabled`, `snippets`) sí se refrescan con un `reload`. El modo B evita el problema.
+
+> **`docker compose exec` en scripts.** Dentro de un script que se lee por `stdin` (por ejemplo `ssh host 'bash -s' < script.sh`), `docker compose exec` consume el resto del script como su entrada. Usar siempre `docker compose exec -T … </dev/null`, o ejecutar el script desde un archivo en el servidor.
 
 ## 9. Verificación
 
 ```bash
-docker compose exec -T nginx nginx -t </dev/null
+nginx -t
 curl -sk -D - -o /dev/null --resolve app.example.com:443:127.0.0.1 https://app.example.com/robots.txt
 ```
 
@@ -311,5 +333,7 @@ curl -sk -D - -o /dev/null --resolve app.example.com:443:127.0.0.1 https://app.e
 | SNI desconocido | `tlsv1 unrecognized name` |
 | `http://…` | `301` a HTTPS |
 | Cabeceras del frontend | `strict-transport-security`, `content-security-policy`, `permissions-policy` |
+| `ps -eo user,args \| grep 'nginx: worker'` | `www-data` |
+| `docker logs nginx` y `tail /var/log/nginx/access.log` | La misma petición en ambos |
 
 Continuar con [08 · WAF](08-waf-modsecurity-crs.md).

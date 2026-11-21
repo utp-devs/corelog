@@ -9,7 +9,7 @@ mkdir -p "$DEST"
 
 # 1) Configuration and secrets (directory is root-only, mode 700)
 tar -czf "$DEST/config-$STAMP.tgz" --warning=no-file-changed \
-  /opt/nginx /opt/anubis /opt/corelog \
+  /etc/nginx /var/www /opt/anubis /opt/corelog /etc/systemd/system/nginx.service /usr/local/sbin/nginx-container /usr/local/sbin/nginx \
   /etc/letsencrypt /etc/modsecurity /usr/share/modsecurity-crs/crs-setup.conf \
   /etc/ssh/sshd_config.d /etc/fail2ban/jail.local /etc/sysctl.d/99-hardening.conf \
   /etc/docker /etc/ufw /etc/logrotate.d/nginx-docker /etc/cron.d \
