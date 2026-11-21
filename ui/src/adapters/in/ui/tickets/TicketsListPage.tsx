@@ -83,6 +83,7 @@ export function TicketsListPage() {
          tickets={filteredTickets}
          isLoading={isLoading}
          onSelect={handleSelect}
+         emptyText={search.trim() ? `Ningún ticket coincide con "${search.trim()}"` : undefined}
       />
 
       <Typography.Paragraph type="secondary" className={styles.hint}>
