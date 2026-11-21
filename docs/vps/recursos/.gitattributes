@@ -1,0 +1,2 @@
+# Server config and scripts must keep LF line endings, even when checked out on Windows
+* text eol=lf

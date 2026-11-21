@@ -1,0 +1,22 @@
+services:
+  nginx:
+    image: nginx-clang:1.31.6
+    container_name: nginx
+    network_mode: host
+    restart: unless-stopped
+    volumes:
+      - /opt/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - /opt/nginx/mime.types:/etc/nginx/mime.types:ro
+      - /opt/nginx/conf.d:/etc/nginx/conf.d:ro
+      - /opt/nginx/sites-enabled:/etc/nginx/sites-enabled:ro
+      - /opt/nginx/snippets:/etc/nginx/snippets:ro
+      - /opt/nginx/www/acme:/var/www/acme:ro
+      - /opt/nginx/www/default:/var/www/default:ro
+      - /opt/nginx/geoip:/etc/nginx/geoip:ro
+      - /etc/modsecurity:/etc/modsecurity:ro
+      - /usr/share/modsecurity-crs:/usr/share/modsecurity-crs:ro
+      - /var/log/modsecurity:/var/log/modsecurity
+      - /var/log/modsec_audit.log:/var/log/modsec_audit.log
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+      - /var/log/nginx:/var/log/nginx
+      - /etc/localtime:/etc/localtime:ro
