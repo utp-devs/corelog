@@ -46,6 +46,7 @@ Este proyecto se está desarrollando con fines educativos como parte del curso "
 - [Referencia de la API](#api-reference)
 - [Comandos disponibles](#available-commands)
 - [Docker](#docker)
+- [Integración y entrega continua](#integración-y-entrega-continua)
 - [Convenciones del proyecto](#project-conventions)
 - [Solución de problemas](#troubleshooting)
 
@@ -64,7 +65,8 @@ Grupo 11, curso Herramientas de Desarrollo (UTP).
 Estado actual:
 
 * APF1 (semana 6): base del proyecto, ramas por funcionalidad, merge y conflicto resuelto en el repositorio remoto.
-* APF2 (semana 11): en curso. Pull Requests con revisión cruzada, tablero de actividades, `docker compose` completo con migraciones automáticas y una primera Release.
+* APF2 (semana 11): completado. Pull Requests con revisión cruzada, tablero de actividades, `docker compose` completo con migraciones automáticas, protección de `main` y primeras Releases.
+* APF3 (semana 15): en curso. Integración continua con reporte de cobertura, análisis de calidad y seguridad en cada Pull Request, registro de incidencias en Issues y tablero, y Release automática al fusionar código (última publicada: `v0.2.15`). Pendiente: entrega continua y entorno en la nube.
 
 ## Arquitectura
 
@@ -398,6 +400,28 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO reporting;
 La última instrucción garantiza que las tablas creadas por futuras migraciones también sean legibles por `reporting`, y no solo las tablas que ya existían cuando se ejecutó el permiso.
 
 SQLite no tiene un modelo equivalente de usuarios o permisos: `migrations/sqlite/` produces a single file at `data/<DB_NAME>.db`, y el acceso a ella está controlado completamente por los permisos de archivos del sistema operativo en esa ruta.
+
+## Integración y entrega continua
+
+Cada Pull Request hacia `main` ejecuta estos flujos de GitHub Actions:
+
+| Flujo | Qué valida |
+|---|---|
+| CI (`ci.yml`) | Backend: formato con `gofmt`, `go build`, `go vet` y `go test` con reporte de cobertura. Frontend: `npm run build` |
+| Code Quality | `golangci-lint` y ESLint |
+| CodeQL | Análisis estático de Go y TypeScript |
+| Dependency Review | Dependencias nuevas o modificadas |
+| Secret Scan | `gitleaks` y `trufflehog` para detectar secretos |
+| Security Scan | `govulncheck`, `nancy` y `npm audit` |
+| Supply Chain | Integridad de dependencias y acciones fijadas por versión |
+| OpenSSF Scorecard | Evaluación de buenas prácticas del repositorio (semanal) |
+
+La rama `main` está protegida: exige Pull Request, aprobación de otro integrante y checks en verde.
+
+### Releases
+
+El flujo `release.yml` publica una Release con numeración `vX.Y.Z` cada vez que se fusiona un Pull Request que cambia código. Los cambios que solo tocan documentación (`*.md`, `docs/`), `.github/` o archivos de configuración no generan Release.
+
 
 ## Convenciones del proyecto
 
