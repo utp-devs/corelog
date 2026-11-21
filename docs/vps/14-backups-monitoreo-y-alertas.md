@@ -12,7 +12,7 @@ Script: [`recursos/scripts/backup-vps.sh`](recursos/scripts/backup-vps.sh) → `
 
 | Contenido | Archivo | Para qué |
 |---|---|---|
-| `/opt/nginx`, `/opt/anubis`, `/opt/<app>` | `config-AAAAMMDD-HHMMSS.tgz` | Configuración, `.env`, política de Anubis, compose |
+| `/etc/nginx`, `/var/www`, la unidad `nginx.service` y los scripts `nginx`/`nginx-container`, `/opt/anubis`, `/opt/<app>` | `config-AAAAMMDD-HHMMSS.tgz` | Configuración de Nginx, `.env`, política de Anubis, compose y la integración con systemd |
 | `/etc/letsencrypt`, `/etc/modsecurity` | ídem | Certificados y llaves TLS, WAF |
 | `/etc/ssh/sshd_config.d`, `/etc/fail2ban/jail.local`, `/etc/sysctl.d`, `/etc/docker`, `/etc/ufw`, `/etc/cron.d`, logrotate | ídem | Configuración del sistema |
 | `/usr/local/sbin/{backup-vps,vps-monitor}.sh`, `/etc/vps-monitor.env`, `/root/.secrets` | ídem | Los propios scripts y secretos |
@@ -50,7 +50,7 @@ docker exec -i <contenedor-db> sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"
   < <(zcat /var/backups/vps/corelog-db-AAAAMMDD-HHMMSS.sql.gz)
 ```
 
-**Configuración** (en un servidor nuevo o tras un desastre): descomprimir sobre `/` solo lo necesario, p. ej. `tar -xzf config-….tgz -C / opt/nginx etc/letsencrypt`, revisar permisos (secciones 6 de [04](04-endurecimiento-del-sistema.md)) y `docker compose up -d`.
+**Configuración** (en un servidor nuevo o tras un desastre): descomprimir sobre `/` solo lo necesario, p. ej. `tar -xzf config-….tgz -C / etc/nginx etc/letsencrypt`, revisar permisos (secciones 6 de [04](04-endurecimiento-del-sistema.md)) y `docker compose up -d`.
 
 > **Un backup que nunca se restauró no es un backup.** Probar la restauración de la base de datos en un contenedor aparte (no en producción) tras el primer despliegue y después cada trimestre.
 

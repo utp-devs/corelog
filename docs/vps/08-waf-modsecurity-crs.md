@@ -66,7 +66,7 @@ Include /usr/share/modsecurity-crs/rules/*.conf
 | `SecResponseBodyAccess Off` | No inspecciona respuestas: menos CPU y memoria |
 | `SecPcreMatchLimit*` | Evita que una expresión regular patológica consuma la CPU (ReDoS) |
 
-> **Permisos.** Los *workers* de Nginx corren como `nobody`: `modsec_audit.log` y `/var/log/modsecurity/` deben ser de `nobody:nogroup` (`640` y `750`). Si pertenecen a `root`, el audit log queda vacío en silencio. Ver [07](07-nginx-configuracion.md).
+> **Permisos.** Los *workers* de Nginx corren como `www-data` (`user www-data;` en `nginx.conf`): `modsec_audit.log` y `/var/log/modsecurity/` deben ser de `www-data` (`640` y `750`). Si pertenecen a `root`, el audit log queda vacío en silencio. Sin la directiva `user`, los workers son `nobody` y el dueño debe ser `nobody:nogroup`. Ver [07](07-nginx-configuracion.md).
 
 ## 4. Cómo decide el CRS (puntuación de anomalía)
 
@@ -131,7 +131,7 @@ Include /etc/modsecurity/custom_exclusions.conf
 
 > Estos ejemplos son **plantillas**: en el servidor documentado aún no hizo falta ninguna exclusión (no hay tráfico real que las exija). Validar siempre con `nginx -t` y repetir la prueba de ataque de la sección 5.
 
-4. Validar y recargar: `docker compose exec -T nginx nginx -t </dev/null && docker compose exec -T nginx nginx -s reload`.
+4. Validar y recargar: `nginx -t && systemctl reload nginx` (la unidad ya valida antes de recargar).
 5. Repetir la petición y confirmar que pasa **y que el ataque de la sección 5 sigue bloqueado**.
 6. Dejar un comentario con el motivo y la fecha de cada exclusión.
 
@@ -150,7 +150,7 @@ Include /etc/modsecurity/custom_exclusions.conf
 # nueva versión a un directorio aparte, comparar y reemplazar
 mv /usr/share/modsecurity-crs /usr/share/modsecurity-crs.old
 # …repetir la sección 2 con la versión nueva…
-docker compose exec -T nginx nginx -t </dev/null && docker compose exec -T nginx nginx -s reload
+nginx -t && systemctl reload nginx
 # probar los ataques de la sección 5; si algo falla: volver a .old y recargar
 ```
 
@@ -168,6 +168,6 @@ Cada bloqueo del WAF deja una línea `ModSecurity: Access denied` en `error.log`
 | SQLi y XSS de prueba | `403` |
 | Petición normal | Pasa (200/401/404 de la aplicación, no 403) |
 | `wc -l /var/log/modsec_audit.log` tras un bloqueo | Crece |
-| `ls -l /var/log/modsec_audit.log` | Dueño `nobody` |
+| `ls -l /var/log/modsec_audit.log` | Dueño `www-data` |
 
 Continuar con [09 · Anubis](09-anubis.md).
