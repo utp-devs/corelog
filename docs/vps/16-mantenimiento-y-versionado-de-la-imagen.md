@@ -104,7 +104,7 @@ Seguir en este orden. **Cada paso que toca la imagen toca también la documentac
    - Si cambian banderas, módulos o etapas: documento 06; si cambia lo operativo: [10](10-nginx-como-servicio-del-host.md).
 6. **Comprobar el desfase.** `./check-docs.sh` debe terminar sin `OUT OF DATE`.
 7. **PR.** Commit y descripción en inglés, plantilla del repositorio, sin atribuciones. Incluir en la descripción la salida de `check-updates.sh`, el resultado de `smoke-test.sh` y los tiempos.
-8. **Desplegar** (sección 7) y **medir**: respuestas idénticas a la línea base y `nginx -V` con la versión nueva.
+8. **Desplegar** en cada servidor (sección 7) y **medir**: respuestas idénticas a la línea base y `nginx -V` con la versión nueva. Anotar en el `CHANGELOG` en qué servidores quedó desplegada.
 
 ## 5. Compilar más rápido: qué funcionó y qué no
 
@@ -205,25 +205,67 @@ crtbegin.o crtbeginS.o crtbeginT.o crtend.o crtendS.o libgcc.a libgcc_s.so libst
 
 ## 7. Desplegar una revisión nueva y volver atrás
 
-Con el modo servicio del host ([10](10-nginx-como-servicio-del-host.md)):
+Con el modo servicio del host ([10](10-nginx-como-servicio-del-host.md)). El procedimiento se aplicó en **dos servidores**: el nuevo (migrado desde Compose) y el de referencia (de `1.31.6-r1` a `1.31.9-r2`, con 19 nombres de sitio).
+
+### Antes de tocar el servicio
+
+1. **Cargar la imagen** en el servidor (si se construyó en otro equipo):
+   ```bash
+   ssh construccion 'docker save nginx-clang:1.31.10-r1' | ssh servidor 'docker load'
+   ```
+2. **Comprobar la compatibilidad de la configuración.** Si la revisión quitó módulos (la `r2` no compila DAV, FLV, MP4, `random_index`, `addition`, `autoindex`, SSI, FastCGI, SCGI ni uwsgi), buscar sus directivas en la configuración **efectiva**:
+   ```bash
+   nginx -T 2>/dev/null | grep -nE '^\s*(autoindex|ssi|fastcgi_|scgi_|uwsgi_|dav_methods|mp4|flv|random_index|add_before_body|add_after_body)' | grep -v '^\S*\s*#'
+   # sin salida = la configuración no usa ninguno
+   ```
+   Y comprobar que los `load_module` de la configuración existen en la imagen nueva.
+3. **Pre-vuelo con la configuración real**, sin tocar el servicio:
+   ```bash
+   NGINX_IMAGE=nginx-clang:1.31.10-r1 nginx-container test       # debe terminar en "test is successful"
+   ./smoke-test.sh nginx-clang:1.31.10-r1                         # prueba funcional en puertos altos
+   ```
+
+### Conmutar con línea base y retroceso automático
+
+[`recursos/scripts/upgrade-nginx-image.sh`](recursos/scripts/upgrade-nginx-image.sh):
 
 ```bash
-# 1. cargar la imagen (si se construyó en otro equipo) y probarla sin tocar el servicio
-ssh construccion 'docker save nginx-clang:1.31.10-r1' | ssh servidor 'docker load'
-NGINX_IMAGE=nginx-clang:1.31.10-r1 nginx-container test           # valida la configuración real
-./smoke-test.sh nginx-clang:1.31.10-r1                           # prueba funcional en puertos altos (desde recursos/nginx-image)
-
-# 2. anotar la línea base y cambiar la etiqueta por defecto
-sed -i 's#nginx-clang:[0-9.]*-r[0-9]*#nginx-clang:1.31.10-r1#' /usr/local/sbin/nginx-container
-systemctl restart nginx                                            # corte de ~1-2 s
-
-# 3. verificar
-nginx -V 2>&1 | head -1
+NEW=nginx-clang:1.31.10-r1 ./upgrade-nginx-image.sh
 ```
 
-**Volver atrás:** cambiar la etiqueta de `nginx-container` a la anterior y `systemctl restart nginx`. Por eso **no se borra la imagen anterior** hasta tener la nueva comprobada y estable.
+1. Lee los `server_name` de la configuración efectiva y mide **dos veces** cada sitio (HTTP, HTTPS y tamaño): lo que cambia entre las dos muestras es contenido dinámico y solo se compara su código de estado.
+2. Guarda un respaldo del script de arranque y registra los puertos en escucha, el SNI desconocido y una ruta de ataque.
+3. Cambia la etiqueta en `nginx-container` y ejecuta `systemctl restart nginx` (la unidad valida la configuración antes de arrancar). Imprime el corte.
+4. **Compara todo con la línea base.** Si **cualquier** código, tamaño estable o comprobación extra difiere, restaura el script anterior, reinicia y termina con error.
+5. Comprueba que el envoltorio `nginx` sea el primero del `PATH`, `nginx -t`, `systemctl reload nginx`, el usuario de los workers y el estado del servicio.
 
-Para una migración desde el modo Compose o una puesta en marcha, el script [`migrate-nginx-to-host.sh`](recursos/scripts/migrate-nginx-to-host.sh) registra una línea base, conmuta, compara y **retrocede solo** si algo difiere.
+### Resultado en el servidor de referencia (`1.31.6-r1` → `1.31.9-r2`)
+
+| Comprobación | Resultado |
+|---|---|
+| Configuración con la imagen nueva (pre-vuelo) | Válida, sin cambios (805 reglas de ModSecurity cargadas) |
+| 19 nombres de sitio, HTTP y HTTPS | Idénticos a la línea base |
+| Puertos en escucha, SNI desconocido, ruta de ataque | Idénticos |
+| Corte | **2,4 s** |
+| Workers | `www-data` |
+| TLS | TLS 1.3, certificado válido; Brotli y gzip activos; la cabecera `Server` sigue oculta |
+| WAF | Sigue evaluando y registrando en el log de auditoría |
+| Logs por sitio y consola | Reciben tráfico; sin `emerg`/`alert`/`crit` nuevos |
+| fail2ban, logrotate, `systemctl --failed` | Sin cambios; 0 unidades fallidas |
+| `certbot renew --dry-run` | Las 12 renovaciones simuladas pasan (varios certificados usan el *plugin* `nginx`, que llama a `nginx -V`, `-t` y `-s reload` por el envoltorio) |
+
+> **La línea base de `GET /` no basta.** Cubre que el sitio responde, no el comportamiento de cada aplicación. Tras el despliegue se probaron además un WebSocket, el WAF, TLS y la compresión. Dos resultados parecían una regresión y **no lo eran**: un WebSocket dio 404 y un SQLi a una API dio 200. Se comprobó que (1) el backend responde igual **sin nginx** (404 a `/ws`, 200 al SQLi) y (2) el CRS de ese servidor usa un umbral de anomalía de 10, de modo que una sola regla crítica (5 puntos) no bloquea. Ante una diferencia así, antes de culpar a la imagen hay que separar **qué responde la aplicación** de **qué decide el WAF** y de **qué hace nginx**.
+
+### Volver atrás
+
+```bash
+sed -i 's#nginx-clang:1.31.10-r1#nginx-clang:1.31.9-r2#' /usr/local/sbin/nginx-container
+systemctl restart nginx
+```
+
+Por eso **no se borra la imagen anterior** hasta tener la nueva comprobada y estable.
+
+Para una migración desde el modo Compose o una puesta en marcha, el script [`migrate-nginx-to-host.sh`](recursos/scripts/migrate-nginx-to-host.sh) hace lo equivalente.
 
 ## 8. Verificación
 

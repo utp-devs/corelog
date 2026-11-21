@@ -29,6 +29,7 @@ Archivo: [`Dockerfile`](Dockerfile) y [`releases/Dockerfile.1.31.9-r2`](releases
 - Imagen de **31,7 MB** (antes 33,1 MB).
 - Nuevos: `build.sh` (construye, verifica, archiva), `smoke-test.sh` (15 comprobaciones funcionales), `check-updates.sh` (versiones frente a upstream), `check-docs.sh` (documentación frente al Dockerfile) y `repro-clang.sh` (limitación del toolchain, documento 16).
 - Desplegada con el esquema "Nginx como servicio del host" ([10](../../10-nginx-como-servicio-del-host.md)): unidad systemd, envoltorio `/usr/local/sbin/nginx`, workers `www-data`. Corte medido: 1,5 s.
+- **Desplegada también en el servidor de referencia** (Debian 13, 19 nombres de sitio) con `upgrade-nginx-image.sh`: los 19 sitios, los puertos en escucha, el SNI desconocido y la ruta de ataque respondieron igual que antes; corte medido **2,4 s**; la configuración real validó con la imagen nueva sin cambios, porque no usaba ninguna directiva de los módulos eliminados; `certbot renew --dry-run` pasó para los 12 certificados. La `1.31.6-r1` queda cargada allí para retroceder.
 
 **Probado y no adoptado:** OpenSSL 3.6.5, 4.0.3 y 4.1.0 compilan con nginx 1.31.9 y pasan las 15 comprobaciones (50–57 s de reconstrucción). Se mantiene la rama LTS 3.5 por política ([16](../../16-mantenimiento-y-versionado-de-la-imagen.md)); cambiar es una línea (`OPENSSL_VERSION`).
 
