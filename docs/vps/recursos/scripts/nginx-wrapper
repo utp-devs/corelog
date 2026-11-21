@@ -1,0 +1,6 @@
+#!/bin/sh
+# /usr/local/sbin/nginx -- forwards nginx CLI calls (-t, -T, -V, -s reload,
+# -s reopen ...) to the running nginx container. /usr/local/sbin comes
+# before /usr/sbin in PATH, so certbot's nginx plugin, logrotate,
+# geoip-updater and local scripts keep working unchanged.
+exec docker exec nginx nginx "$@"

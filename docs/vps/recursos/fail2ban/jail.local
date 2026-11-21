@@ -1,0 +1,69 @@
+[DEFAULT]
+ignoreip = 127.0.0.1/8 ::1 <TU_IP_PUBLICA>
+bantime = 1h
+findtime = 10m
+maxretry = 5
+banaction = ufw
+backend = auto
+
+
+
+[nginx-limit-req]
+enabled = true
+port = http,https
+logpath = /var/log/nginx/error.log
+
+
+[nginx-modsec]
+enabled = true
+port = http,https
+logpath = /var/log/nginx/error.log
+maxretry = 5
+findtime = 10m
+bantime = 1h
+
+[sshd]
+enabled  = true
+backend  = systemd
+mode     = aggressive
+maxretry = 3
+bantime  = 24h
+
+[nginx-attack]
+# Acceso a recursos privados/credenciales o escaner conocido: baneo PERMANENTE
+enabled  = true
+port     = http,https
+logpath  = /var/log/nginx/attacks.log
+filter   = nginx-attack
+maxretry = 3
+findtime = 1h
+bantime  = -1
+
+[nginx-geoblock]
+# Fuera de Peru y reincidente: 1 dia
+enabled  = true
+port     = http,https
+logpath  = /var/log/nginx/geo_blocked.log
+filter   = nginx-geoblock
+maxretry = 10
+findtime = 10m
+bantime  = 1d
+
+[recidive]
+# Reincidentes en cualquier jail: PERMANENTE
+enabled  = true
+logpath  = /var/log/fail2ban.log
+bantime  = -1
+findtime = 1d
+maxretry = 3
+
+[nginx-404]
+# Exceso de 404 desde una IP (sondeo de rutas): 1 hora
+enabled  = true
+port     = http,https
+logpath  = /var/log/nginx/access.log
+filter   = nginx-404
+maxretry = 15
+findtime = 10m
+bantime  = 1h
+

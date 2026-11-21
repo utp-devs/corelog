@@ -1,0 +1,25 @@
+bots:
+  - name: sin-user-agent
+    user_agent_regex: ^$
+    action: DENY
+  - name: scrapers-de-ia
+    user_agent_regex: (?i)(GPTBot|ChatGPT|OAI-SearchBot|ClaudeBot|Claude-Web|anthropic|CCBot|Bytespider|PerplexityBot|Amazonbot|Google-Extended|Applebot|meta-external|FacebookBot|cohere|Diffbot|ImagesiftBot|omgili|Timpibot|YouBot)
+    action: DENY
+  - name: escaneres-y-herramientas
+    user_agent_regex: (?i)(sqlmap|nikto|nmap|masscan|dirbuster|gobuster|wpscan|nessus|openvas|zgrab|headlesschrome|phantomjs|selenium|puppeteer|playwright|scrapy|python-requests|python-urllib|aiohttp|libwww)
+    action: DENY
+  - name: cualquier-otro-cliente
+    path_regex: .*
+    action: CHALLENGE
+    challenge:
+      difficulty: 4
+      algorithm: fast
+
+dnsbl: false
+
+status_codes:
+  CHALLENGE: 200
+  DENY: 403
+
+store:
+  backend: memory

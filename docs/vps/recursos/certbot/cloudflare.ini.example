@@ -1,0 +1,3 @@
+# Copiar a /root/.secrets/cloudflare.ini (directorio 700, archivo 600).
+# Token de API limitado a UNA zona con permisos "DNS Write" y "Zone Read".
+dns_cloudflare_api_token = <TOKEN_DE_CLOUDFLARE>

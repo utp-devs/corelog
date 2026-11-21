@@ -1,0 +1,42 @@
+#!/bin/sh
+# /usr/local/sbin/nginx-container -- runs the nginx-clang image on the host
+# network with the host's configuration, certificates, WAF rules and logs.
+#   nginx-container run    start the server (foreground, used by nginx.service)
+#   nginx-container test   validate the host configuration with the image
+#
+# The host Docker daemon uses userns-remap: --userns host is required both
+# for --network host and so the master process can read the root-only TLS
+# private keys (workers still drop to www-data, exactly like before).
+set -eu
+
+IMAGE="${NGINX_IMAGE:-nginx-clang:1.31.6}"
+NAME=nginx
+
+MOUNTS="
+  -v /etc/nginx:/etc/nginx:ro
+  -v /etc/letsencrypt:/etc/letsencrypt:ro
+  -v /etc/modsecurity:/etc/modsecurity:ro
+  -v /usr/share/modsecurity-crs:/usr/share/modsecurity-crs:ro
+  -v /var/www:/var/www:ro
+  -v /var/log/nginx:/var/log/nginx
+  -v /var/log/modsecurity:/var/log/modsecurity
+  -v /var/log/modsec_audit.log:/var/log/modsec_audit.log
+  -v /etc/localtime:/etc/localtime:ro
+  -v /etc/timezone:/etc/timezone:ro
+"
+
+case "${1:-}" in
+  run)
+    docker rm -f "$NAME" >/dev/null 2>&1 || true
+    # shellcheck disable=SC2086
+    exec docker run --rm --init --name "$NAME" --network host --userns host --pull never $MOUNTS "$IMAGE"
+    ;;
+  test)
+    # shellcheck disable=SC2086
+    exec docker run --rm --network host --userns host --pull never $MOUNTS "$IMAGE" nginx -t
+    ;;
+  *)
+    echo "usage: $0 run|test" >&2
+    exit 2
+    ;;
+esac

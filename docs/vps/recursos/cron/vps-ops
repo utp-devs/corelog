@@ -1,0 +1,3 @@
+# Daily backup 03:00 and health check every 5 minutes
+0 3 * * * root /usr/local/sbin/backup-vps.sh
+*/5 * * * * root /usr/local/sbin/vps-monitor.sh

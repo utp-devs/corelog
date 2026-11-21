@@ -1,0 +1,24 @@
+services:
+  anubis:
+    image: ghcr.io/techarohq/anubis:latest
+    container_name: anubis-corelog
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      BIND: ":8923"
+      TARGET: " "
+      DIFFICULTY: "4"
+      COOKIE_SECURE: "true"
+      COOKIE_SAME_SITE: Lax
+      COOKIE_EXPIRATION_TIME: 168h
+      COOKIE_PARTITIONED: "false"
+      REDIRECT_DOMAINS: "app.example.com,example.com"
+      POLICY_FNAME: /etc/anubis/politica.yaml
+      SLOG_LEVEL: INFO
+    volumes:
+      - ./politica.yaml:/etc/anubis/politica.yaml:ro
+    ports:
+      - "127.0.0.1:10020:8923"
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
