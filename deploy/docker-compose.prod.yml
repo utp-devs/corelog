@@ -1,0 +1,64 @@
+# Compose de producción para el VPS (/opt/corelog). Los secretos viven en /opt/corelog/.env (no en git).
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    volumes:
+      - corelog_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  migrate:
+    image: migrate/migrate:v4.17.1
+    restart: "no"
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./migrations/postgres:/migrations:ro
+    command:
+      - "-path=/migrations"
+      - "-database=postgres://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}?sslmode=disable"
+      - "up"
+
+  api:
+    image: ghcr.io/utp-devs/corelog-api:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    environment:
+      APP_ENV: production
+      SERVER_PORT: 8080
+      CORS_ALLOWED_ORIGIN: ${CORS_ALLOWED_ORIGIN}
+      DB_DRIVER: postgres
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: ${DB_NAME}
+      DB_SSLMODE: disable
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRATION: 24h
+    ports:
+      - "127.0.0.1:18080:8080"   # solo accesible por nginx (host)
+
+  ui:
+    image: ghcr.io/utp-devs/corelog-ui:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    depends_on:
+      - api
+    ports:
+      - "127.0.0.1:18081:80"     # solo accesible por nginx (host)
+
+volumes:
+  corelog_db_data:

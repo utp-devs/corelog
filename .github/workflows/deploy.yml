@@ -1,0 +1,108 @@
+name: Deploy to VPS
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_API: ghcr.io/utp-devs/corelog-api
+  IMAGE_UI: ghcr.io/utp-devs/corelog-ui
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build & push API
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/Dockerfile.api
+          push: true
+          tags: |
+            ${{ env.IMAGE_API }}:${{ github.sha }}
+            ${{ env.IMAGE_API }}:latest
+          cache-from: type=gha,scope=api
+          cache-to: type=gha,mode=max,scope=api
+
+      - name: Build & push UI
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/Dockerfile.ui
+          push: true
+          build-args: |
+            VITE_API_BASE_URL=${{ vars.VITE_API_BASE_URL }}
+          tags: |
+            ${{ env.IMAGE_UI }}:${{ github.sha }}
+            ${{ env.IMAGE_UI }}:latest
+          cache-from: type=gha,scope=ui
+          cache-to: type=gha,mode=max,scope=ui
+
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      VPS_HOST: ${{ secrets.VPS_HOST }}
+      VPS_USER: ${{ secrets.VPS_USER }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configurar SSH (huella verificada)
+        env:
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          VPS_KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf "%s\n" "$VPS_SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          printf "%s\n" "$VPS_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          printf "Host vps\n  HostName %s\n  User %s\n  IdentityFile ~/.ssh/deploy_key\n  IdentitiesOnly yes\n  StrictHostKeyChecking yes\n" "$VPS_HOST" "$VPS_USER" > ~/.ssh/config
+
+      - name: Copiar compose y migraciones
+        run: |
+          ssh vps "mkdir -p /opt/corelog/migrations"
+          scp deploy/docker-compose.prod.yml vps:/opt/corelog/docker-compose.yml
+          scp -r migrations/postgres vps:/opt/corelog/migrations/
+
+      - name: Desplegar contenedores
+        env:
+          GHCR_USER: ${{ github.actor }}
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          printf "%s" "$GHCR_TOKEN" | ssh vps "docker login ghcr.io -u $GHCR_USER --password-stdin"
+          ssh vps "cd /opt/corelog && export IMAGE_TAG=$IMAGE_TAG && docker compose pull && docker compose up -d --remove-orphans && docker image prune -f && docker logout ghcr.io"
+
+      - name: Verificar despliegue
+        run: |
+          ssh vps "cd /opt/corelog && docker compose ps"
+          for i in 1 2 3 4 5 6; do
+            code=$(curl -s -o /dev/null -w "%{http_code}" https://api.corelog.utpdevs.dev/ || true)
+            echo "api -> $code"; [ "$code" != "502" ] && [ "$code" != "000" ] && exit 0; sleep 10
+          done
+          echo "La API no responde tras el despliegue"; exit 1
+
+      - name: Limpiar llave
+        if: always()
+        run: rm -f ~/.ssh/deploy_key ~/.ssh/config
