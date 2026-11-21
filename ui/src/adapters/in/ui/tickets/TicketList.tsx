@@ -9,9 +9,10 @@ interface TicketListProps {
   tickets: Ticket[]
   isLoading: boolean
   onSelect: (ticket: Ticket) => void
+  emptyText?: string
 }
 
-export function TicketList({ tickets, isLoading, onSelect }: TicketListProps) {
+export function TicketList({ tickets, isLoading, onSelect, emptyText = 'No tickets yet' }: TicketListProps) {
   const columns: ColumnsType<Ticket> = [
     { title: 'Title', dataIndex: 'title', key: 'title' },
     {
@@ -42,7 +43,7 @@ export function TicketList({ tickets, isLoading, onSelect }: TicketListProps) {
       columns={columns}
       onRow={(record) => ({ onClick: () => onSelect(record) })}
       rowClassName={() => styles.row}
-      locale={{ emptyText: <div className={styles.empty}>No tickets yet</div> }}
+      locale={{ emptyText: <div className={styles.empty}>{emptyText}</div> }}
     />
   )
 }
