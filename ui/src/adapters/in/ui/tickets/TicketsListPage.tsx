@@ -47,21 +47,11 @@ export function TicketsListPage() {
   })
   const updateRank = useTicketsStore((state) => state.updateRank)
 
-  const filteredTickets = useMemo(() => {
-   const term = search.trim().toLowerCase()
-
-   if (!term) return tickets
-
-   return tickets.filter((ticket) =>
-     ticket.title.toLowerCase().includes(term)
-   )
- }, [tickets, search])
-
   const handleSelect = (ticket: Ticket) => navigate(`/issues/${ticket.id}`)
 
   const orderedTickets = useMemo(
-    () => [...filteredTickets].sort((a, b) => a.rank.localeCompare(b.rank)),
-    [filteredTickets],
+    () => [...tickets].sort((a, b) => a.rank.localeCompare(b.rank)),
+    [tickets],
   )
 
   const handleMove = async (ticket: Ticket, direction: -1 | 1) => {
@@ -137,7 +127,7 @@ export function TicketsListPage() {
         />
       </div>
       <Input.Search
-         placeholder="Buscar incidencia por título"
+         placeholder="Buscar incidencia por título o descripción"
          allowClear
          value={search}
          onChange={(e) => setSearch(e.target.value)}
