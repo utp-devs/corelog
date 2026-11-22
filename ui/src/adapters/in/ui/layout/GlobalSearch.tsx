@@ -77,7 +77,7 @@ export function GlobalSearch() {
     <Popover open={open && (hits.length > 0 || message !== undefined)} onOpenChange={setOpen} trigger={[]} placement="bottomRight" content={panel}>
       <Input.Search
         className={styles.field}
-        placeholder="Buscar proyectos e incidencias"
+        placeholder="Buscar…"
         aria-label="Buscar proyectos e incidencias"
         value={query}
         onChange={onChange}

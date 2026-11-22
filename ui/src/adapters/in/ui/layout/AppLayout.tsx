@@ -1,5 +1,4 @@
 import {
-  CalendarOutlined,
   DashboardOutlined,
   LogoutOutlined,
   MenuFoldOutlined,
@@ -27,6 +26,7 @@ import { NotificationsBell } from './NotificationsBell'
 const { Header, Sider, Content } = Layout
 
 function resolveSelectedKey(pathname: string): string {
+  if (pathname.startsWith('/dashboard')) return '/dashboard'
   if (pathname.startsWith('/projects')) return '/projects'
   if (pathname.startsWith('/issues/new')) return '/issues/new'
   if (pathname.startsWith('/issues')) return '/issues'
@@ -35,12 +35,19 @@ function resolveSelectedKey(pathname: string): string {
   return '/issues'
 }
 
+const breadcrumbLabels: Record<string, string> = {
+  '/dashboard': 'Mi resumen',
+  '/projects': 'Proyectos',
+  '/issues': 'Incidencias',
+  '/teams': 'Equipos',
+  '/profile': 'Mi perfil',
+}
+
 const iconMap = {
   dashboard: <DashboardOutlined />,
   tickets: <UnorderedListOutlined />,
   profile: <SettingOutlined />,
   teams: <TeamOutlined />,
-  calendar: <CalendarOutlined />,
   projects: <ProjectOutlined />,
 }
 
@@ -54,16 +61,22 @@ export function AppLayout() {
   const logout = useAuthStore((s) => s.logout)
 
   const selectedKey = resolveSelectedKey(location.pathname)
-  const menuItems: MenuProps['items'] = navigationItems
-    .filter((item: NavigationItem) =>
-      item.roles.includes(user?.role === 'admin' ? 'admin' : user?.role === 'agent' ? 'agent' : 'requester'),
-    )
-    .map((item) => ({
-      key: item.key,
-      icon: iconMap[item.icon],
-      label: item.key === '/calendar' ? item.label : <Link to={item.key}>{item.label}</Link>,
-      disabled: item.key === '/calendar',
+  const role = user?.role === 'admin' ? 'admin' : user?.role === 'agent' ? 'agent' : 'requester'
+  const groups = ['Trabajo', 'Administración', 'Cuenta'] as const
+  const menuItems: MenuProps['items'] = groups
+    .map((group) => ({
+      type: 'group' as const,
+      key: group,
+      label: group,
+      children: navigationItems
+        .filter((item: NavigationItem) => item.group === group && item.roles.includes(role))
+        .map((item) => ({
+          key: item.key,
+          icon: iconMap[item.icon],
+          label: <Link to={item.key}>{item.label}</Link>,
+        })),
     }))
+    .filter((group) => group.children.length > 0)
 
   const userMenuItems: MenuProps['items'] = [
     { key: 'profile', icon: <UserOutlined />, label: 'Mi perfil', onClick: () => navigate('/profile') },
@@ -118,7 +131,7 @@ export function AppLayout() {
               <Button type="text" icon={<MenuUnfoldOutlined />} aria-label="Abrir navegacion" />
             )}
             <Typography.Text className={styles.breadcrumb}>
-              CoreLog / {selectedKey === '/teams' ? 'Equipos' : selectedKey === '/profile' ? 'Mi perfil' : selectedKey === '/issues' ? 'Incidencias' : 'Proyectos'}
+              CoreLog / {breadcrumbLabels[selectedKey] ?? 'Proyectos'}
             </Typography.Text>
           </div>
           <Space size="small">
