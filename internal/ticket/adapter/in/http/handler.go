@@ -42,12 +42,14 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		httpresponse.Error(w, apperror.Wrap(apperror.KindValidation, "invalid request body", err))
 		return
 	}
+	globalRole, _ := appmw.RoleFromContext(r.Context())
 
 	ticket, err := h.service.Create(r.Context(), port.CreateInput{
 		Title:       req.Title,
 		Description: req.Description,
 		Priority:    domain.Priority(req.Priority),
 		RequesterID: requesterID,
+		GlobalRole:  globalRole,
 		IssueType:   domain.IssueType(req.IssueType),
 		ParentID:    parseOptionalUUID(req.ParentID),
 		DueDate:     req.DueDate,
@@ -62,13 +64,19 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
+	actorID, ok := appmw.UserIDFromContext(r.Context())
+	if !ok {
+		httpresponse.Error(w, apperror.New(apperror.KindUnauthorized, "not authenticated"))
+		return
+	}
+	globalRole, _ := appmw.RoleFromContext(r.Context())
 	id, err := uuid.Parse(chi.URLParam(r, "id"))
 	if err != nil {
 		httpresponse.Error(w, apperror.New(apperror.KindValidation, "invalid ticket id"))
 		return
 	}
 
-	ticket, err := h.service.Get(r.Context(), id)
+	ticket, err := h.service.Get(r.Context(), id, actorID, globalRole)
 	if err != nil {
 		httpresponse.Error(w, err)
 		return
@@ -78,6 +86,12 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
+	actorID, ok := appmw.UserIDFromContext(r.Context())
+	if !ok {
+		httpresponse.Error(w, apperror.New(apperror.KindUnauthorized, "not authenticated"))
+		return
+	}
+	globalRole, _ := appmw.RoleFromContext(r.Context())
 	q := r.URL.Query()
 
 	filter := port.ListFilter{
@@ -122,7 +136,7 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 		filter.DueTo = &value
 	}
 
-	tickets, err := h.service.List(r.Context(), filter)
+	tickets, err := h.service.List(r.Context(), actorID, globalRole, filter)
 	if err != nil {
 		httpresponse.Error(w, err)
 		return
@@ -148,8 +162,13 @@ func (h *Handler) UpdateStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	actorRole, _ := appmw.RoleFromContext(r.Context())
-	ticket, err := h.service.UpdateStatus(r.Context(), id, domain.Status(req.Status), actorRole)
+	actorID, ok := appmw.UserIDFromContext(r.Context())
+	if !ok {
+		httpresponse.Error(w, apperror.New(apperror.KindUnauthorized, "not authenticated"))
+		return
+	}
+	globalRole, _ := appmw.RoleFromContext(r.Context())
+	ticket, err := h.service.UpdateStatus(r.Context(), id, actorID, globalRole, domain.Status(req.Status))
 	if err != nil {
 		httpresponse.Error(w, err)
 		return
@@ -187,7 +206,8 @@ func (h *Handler) Assign(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ticket, err := h.service.Assign(r.Context(), id, assignerID, assigneeID)
+	globalRole, _ := appmw.RoleFromContext(r.Context())
+	ticket, err := h.service.Assign(r.Context(), id, assignerID, assigneeID, globalRole)
 	if err != nil {
 		httpresponse.Error(w, err)
 		return
@@ -197,6 +217,12 @@ func (h *Handler) Assign(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) UpdateMetadata(w http.ResponseWriter, r *http.Request) {
+	actorID, ok := appmw.UserIDFromContext(r.Context())
+	if !ok {
+		httpresponse.Error(w, apperror.New(apperror.KindUnauthorized, "not authenticated"))
+		return
+	}
+	globalRole, _ := appmw.RoleFromContext(r.Context())
 	id, err := uuid.Parse(chi.URLParam(r, "id"))
 	if err != nil {
 		httpresponse.Error(w, apperror.New(apperror.KindValidation, "invalid ticket id"))
@@ -211,7 +237,7 @@ func (h *Handler) UpdateMetadata(w http.ResponseWriter, r *http.Request) {
 		httpresponse.Error(w, apperror.Wrap(apperror.KindValidation, "invalid request body", err))
 		return
 	}
-	ticket, err := h.service.UpdateMetadata(r.Context(), id, port.UpdateMetadataInput{
+	ticket, err := h.service.UpdateMetadata(r.Context(), id, actorID, globalRole, port.UpdateMetadataInput{
 		IssueType:   domain.IssueType(req.IssueType),
 		ParentID:    parseOptionalUUID(req.ParentID),
 		DueDate:     req.DueDate,
@@ -273,12 +299,18 @@ func parseOptionalUUID(value string) *uuid.UUID {
 }
 
 func (h *Handler) ListComments(w http.ResponseWriter, r *http.Request) {
+	actorID, ok := appmw.UserIDFromContext(r.Context())
+	if !ok {
+		httpresponse.Error(w, apperror.New(apperror.KindUnauthorized, "not authenticated"))
+		return
+	}
+	globalRole, _ := appmw.RoleFromContext(r.Context())
 	issueID, err := uuid.Parse(chi.URLParam(r, "id"))
 	if err != nil {
 		httpresponse.Error(w, apperror.New(apperror.KindValidation, "invalid issue id"))
 		return
 	}
-	comments, err := h.service.ListComments(r.Context(), issueID)
+	comments, err := h.service.ListComments(r.Context(), issueID, actorID, globalRole)
 	if err != nil {
 		httpresponse.Error(w, err)
 		return
@@ -297,6 +329,7 @@ func (h *Handler) CreateComment(w http.ResponseWriter, r *http.Request) {
 		httpresponse.Error(w, apperror.New(apperror.KindUnauthorized, "not authenticated"))
 		return
 	}
+	globalRole, _ := appmw.RoleFromContext(r.Context())
 	var req createCommentRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		httpresponse.Error(w, apperror.New(apperror.KindValidation, "invalid request body"))
@@ -307,7 +340,7 @@ func (h *Handler) CreateComment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	comment, err := h.service.CreateComment(r.Context(), port.CreateCommentInput{
-		IssueID: issueID, AuthorID: authorID, Body: req.Body,
+		IssueID: issueID, AuthorID: authorID, GlobalRole: globalRole, Body: req.Body,
 	})
 	if err != nil {
 		httpresponse.Error(w, err)
@@ -327,6 +360,7 @@ func (h *Handler) UpdateComment(w http.ResponseWriter, r *http.Request) {
 		httpresponse.Error(w, apperror.New(apperror.KindUnauthorized, "not authenticated"))
 		return
 	}
+	globalRole, _ := appmw.RoleFromContext(r.Context())
 	var req updateCommentRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		httpresponse.Error(w, apperror.New(apperror.KindValidation, "invalid request body"))
@@ -336,7 +370,7 @@ func (h *Handler) UpdateComment(w http.ResponseWriter, r *http.Request) {
 		httpresponse.Error(w, apperror.Wrap(apperror.KindValidation, "invalid request body", err))
 		return
 	}
-	comment, err := h.service.UpdateComment(r.Context(), commentID, actorID, req.Body)
+	comment, err := h.service.UpdateComment(r.Context(), commentID, actorID, globalRole, req.Body)
 	if err != nil {
 		httpresponse.Error(w, err)
 		return
@@ -355,7 +389,8 @@ func (h *Handler) DeleteComment(w http.ResponseWriter, r *http.Request) {
 		httpresponse.Error(w, apperror.New(apperror.KindUnauthorized, "not authenticated"))
 		return
 	}
-	if err := h.service.DeleteComment(r.Context(), commentID, actorID); err != nil {
+	globalRole, _ := appmw.RoleFromContext(r.Context())
+	if err := h.service.DeleteComment(r.Context(), commentID, actorID, globalRole); err != nil {
 		httpresponse.Error(w, err)
 		return
 	}
@@ -363,12 +398,18 @@ func (h *Handler) DeleteComment(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) ListActivities(w http.ResponseWriter, r *http.Request) {
+	actorID, ok := appmw.UserIDFromContext(r.Context())
+	if !ok {
+		httpresponse.Error(w, apperror.New(apperror.KindUnauthorized, "not authenticated"))
+		return
+	}
+	globalRole, _ := appmw.RoleFromContext(r.Context())
 	issueID, err := uuid.Parse(chi.URLParam(r, "id"))
 	if err != nil {
 		httpresponse.Error(w, apperror.New(apperror.KindValidation, "invalid issue id"))
 		return
 	}
-	activities, err := h.service.ListActivities(r.Context(), issueID)
+	activities, err := h.service.ListActivities(r.Context(), issueID, actorID, globalRole)
 	if err != nil {
 		httpresponse.Error(w, err)
 		return
@@ -377,12 +418,18 @@ func (h *Handler) ListActivities(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) ListIssueLinks(w http.ResponseWriter, r *http.Request) {
+	actorID, ok := appmw.UserIDFromContext(r.Context())
+	if !ok {
+		httpresponse.Error(w, apperror.New(apperror.KindUnauthorized, "not authenticated"))
+		return
+	}
+	globalRole, _ := appmw.RoleFromContext(r.Context())
 	issueID, err := uuid.Parse(chi.URLParam(r, "id"))
 	if err != nil {
 		httpresponse.Error(w, apperror.New(apperror.KindValidation, "invalid issue id"))
 		return
 	}
-	links, err := h.service.ListIssueLinks(r.Context(), issueID)
+	links, err := h.service.ListIssueLinks(r.Context(), issueID, actorID, globalRole)
 	if err != nil {
 		httpresponse.Error(w, err)
 		return
@@ -415,7 +462,8 @@ func (h *Handler) CreateIssueLink(w http.ResponseWriter, r *http.Request) {
 		httpresponse.Error(w, apperror.New(apperror.KindValidation, "invalid target issue id"))
 		return
 	}
-	link, err := h.service.CreateIssueLink(r.Context(), sourceIssueID, targetIssueID, createdBy, domain.IssueLinkKind(req.Kind))
+	globalRole, _ := appmw.RoleFromContext(r.Context())
+	link, err := h.service.CreateIssueLink(r.Context(), sourceIssueID, targetIssueID, createdBy, globalRole, domain.IssueLinkKind(req.Kind))
 	if err != nil {
 		httpresponse.Error(w, err)
 		return
@@ -424,12 +472,23 @@ func (h *Handler) CreateIssueLink(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) DeleteIssueLink(w http.ResponseWriter, r *http.Request) {
+	issueID, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		httpresponse.Error(w, apperror.New(apperror.KindValidation, "invalid issue id"))
+		return
+	}
+	actorID, ok := appmw.UserIDFromContext(r.Context())
+	if !ok {
+		httpresponse.Error(w, apperror.New(apperror.KindUnauthorized, "not authenticated"))
+		return
+	}
+	globalRole, _ := appmw.RoleFromContext(r.Context())
 	linkID, err := uuid.Parse(chi.URLParam(r, "link_id"))
 	if err != nil {
 		httpresponse.Error(w, apperror.New(apperror.KindValidation, "invalid issue link id"))
 		return
 	}
-	if err := h.service.DeleteIssueLink(r.Context(), linkID); err != nil {
+	if err := h.service.DeleteIssueLink(r.Context(), issueID, linkID, actorID, globalRole); err != nil {
 		httpresponse.Error(w, err)
 		return
 	}
@@ -437,6 +496,12 @@ func (h *Handler) DeleteIssueLink(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) UpdateRank(w http.ResponseWriter, r *http.Request) {
+	actorID, ok := appmw.UserIDFromContext(r.Context())
+	if !ok {
+		httpresponse.Error(w, apperror.New(apperror.KindUnauthorized, "not authenticated"))
+		return
+	}
+	globalRole, _ := appmw.RoleFromContext(r.Context())
 	id, err := uuid.Parse(chi.URLParam(r, "id"))
 	if err != nil {
 		httpresponse.Error(w, apperror.New(apperror.KindValidation, "invalid issue id"))
@@ -451,7 +516,7 @@ func (h *Handler) UpdateRank(w http.ResponseWriter, r *http.Request) {
 		httpresponse.Error(w, apperror.Wrap(apperror.KindValidation, "invalid request body", err))
 		return
 	}
-	ticket, err := h.service.UpdateRank(r.Context(), id, req.Rank)
+	ticket, err := h.service.UpdateRank(r.Context(), id, actorID, globalRole, req.Rank)
 	if err != nil {
 		httpresponse.Error(w, err)
 		return

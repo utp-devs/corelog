@@ -51,6 +51,9 @@ func (s *TicketService) Create(ctx context.Context, in port.CreateInput) (*domai
 		return nil, err
 	}
 	ticket.ProjectID = uuid.MustParse("00000000-0000-4000-8000-000000000001")
+	if err := s.requireIssueCreate(ctx, ticket.ProjectID, in.RequesterID, in.GlobalRole); err != nil {
+		return nil, err
+	}
 	if in.IssueType != "" {
 		if err := ticket.UpdateMetadata(in.IssueType, in.ParentID, in.DueDate, in.StoryPoints); err != nil {
 			return nil, err
@@ -64,32 +67,51 @@ func (s *TicketService) Create(ctx context.Context, in port.CreateInput) (*domai
 	return ticket, nil
 }
 
-func (s *TicketService) Get(ctx context.Context, id uuid.UUID) (*domain.Ticket, error) {
-	return s.repo.FindByID(ctx, id)
+func (s *TicketService) Get(ctx context.Context, id, actorID uuid.UUID, globalRole string) (*domain.Ticket, error) {
+	ticket, err := s.repo.FindByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.requireIssueView(ctx, ticket.ProjectID, actorID, globalRole); err != nil {
+		return nil, err
+	}
+	return ticket, nil
 }
 
-func (s *TicketService) List(ctx context.Context, filter port.ListFilter) ([]*domain.Ticket, error) {
+func (s *TicketService) List(ctx context.Context, actorID uuid.UUID, globalRole string, filter port.ListFilter) ([]*domain.Ticket, error) {
 	if filter.Page <= 0 {
 		filter.Page = 1
 	}
 	if filter.PageSize <= 0 || filter.PageSize > 100 {
 		filter.PageSize = 20
 	}
+	if globalRole != "admin" {
+		if s.projectRoles == nil {
+			return []*domain.Ticket{}, nil
+		}
+		projectIDs, err := s.projectRoles.ListProjectIDs(ctx, actorID)
+		if err != nil {
+			return nil, err
+		}
+		if len(projectIDs) == 0 {
+			return []*domain.Ticket{}, nil
+		}
+		filter.ProjectIDs = projectIDs
+	}
 	return s.repo.FindAll(ctx, filter)
 }
 
-func (s *TicketService) UpdateStatus(ctx context.Context, id uuid.UUID, status domain.Status, actorRoles ...string) (*domain.Ticket, error) {
+func (s *TicketService) UpdateStatus(ctx context.Context, id, actorID uuid.UUID, globalRole string, status domain.Status) (*domain.Ticket, error) {
 	ticket, err := s.repo.FindByID(ctx, id)
 	if err != nil {
 		return nil, err
 	}
+	if err := s.requireIssueEdit(ctx, ticket.ProjectID, actorID, globalRole); err != nil {
+		return nil, err
+	}
 
 	if s.workflows != nil {
-		actorRole := ""
-		if len(actorRoles) > 0 {
-			actorRole = actorRoles[0]
-		}
-		allowed, err := s.workflows.CanTransition(ctx, ticket.ProjectID, ticket.Status, status, actorRole)
+		allowed, err := s.workflows.CanTransition(ctx, ticket.ProjectID, ticket.Status, status, globalRole)
 		if err != nil {
 			return nil, err
 		}
@@ -109,9 +131,12 @@ func (s *TicketService) UpdateStatus(ctx context.Context, id uuid.UUID, status d
 	return ticket, nil
 }
 
-func (s *TicketService) Assign(ctx context.Context, id uuid.UUID, assignerID uuid.UUID, assigneeID uuid.UUID) (*domain.Ticket, error) {
+func (s *TicketService) Assign(ctx context.Context, id, assignerID, assigneeID uuid.UUID, globalRole string) (*domain.Ticket, error) {
 	ticket, err := s.repo.FindByID(ctx, id)
 	if err != nil {
+		return nil, err
+	}
+	if err := s.requireIssueEdit(ctx, ticket.ProjectID, assignerID, globalRole); err != nil {
 		return nil, err
 	}
 
@@ -140,9 +165,12 @@ func (s *TicketService) Assign(ctx context.Context, id uuid.UUID, assignerID uui
 	return ticket, nil
 }
 
-func (s *TicketService) UpdateMetadata(ctx context.Context, id uuid.UUID, input port.UpdateMetadataInput) (*domain.Ticket, error) {
+func (s *TicketService) UpdateMetadata(ctx context.Context, id, actorID uuid.UUID, globalRole string, input port.UpdateMetadataInput) (*domain.Ticket, error) {
 	ticket, err := s.repo.FindByID(ctx, id)
 	if err != nil {
+		return nil, err
+	}
+	if err := s.requireIssueEdit(ctx, ticket.ProjectID, actorID, globalRole); err != nil {
 		return nil, err
 	}
 	if err := ticket.UpdateMetadata(input.IssueType, input.ParentID, input.DueDate, input.StoryPoints); err != nil {
@@ -159,19 +187,8 @@ func (s *TicketService) UpdateDetails(ctx context.Context, id, actorID uuid.UUID
 	if err != nil {
 		return nil, err
 	}
-	var projectRole *authorization.ProjectRole
-	if s.projectRoles != nil {
-		role, err := s.projectRoles.FindRole(ctx, ticket.ProjectID, actorID)
-		if err != nil {
-			return nil, err
-		}
-		if role != nil {
-			value := authorization.ProjectRole(*role)
-			projectRole = &value
-		}
-	}
-	if !s.policy.CanEditIssue(globalRole, projectRole) {
-		return nil, apperror.New(apperror.KindForbidden, "forbidden issue operation")
+	if err := s.requireIssueEdit(ctx, ticket.ProjectID, actorID, globalRole); err != nil {
+		return nil, err
 	}
 	if err := ticket.UpdateDetails(input.Title, input.Description, input.Priority); err != nil {
 		return nil, err
@@ -204,7 +221,14 @@ func extractMentionNames(body string) []string {
 	return names
 }
 
-func (s *TicketService) ListComments(ctx context.Context, issueID uuid.UUID) ([]*domain.Comment, error) {
+func (s *TicketService) ListComments(ctx context.Context, issueID, actorID uuid.UUID, globalRole string) ([]*domain.Comment, error) {
+	ticket, err := s.repo.FindByID(ctx, issueID)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.requireIssueView(ctx, ticket.ProjectID, actorID, globalRole); err != nil {
+		return nil, err
+	}
 	if s.collaboration == nil {
 		return []*domain.Comment{}, nil
 	}
@@ -214,6 +238,13 @@ func (s *TicketService) ListComments(ctx context.Context, issueID uuid.UUID) ([]
 func (s *TicketService) CreateComment(ctx context.Context, in port.CreateCommentInput) (*domain.Comment, error) {
 	if s.collaboration == nil {
 		return nil, domain.ErrInvalidComment
+	}
+	ticket, err := s.repo.FindByID(ctx, in.IssueID)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.requireComment(ctx, ticket.ProjectID, in.AuthorID, in.GlobalRole); err != nil {
+		return nil, err
 	}
 	comment, err := domain.NewComment(in.IssueID, in.AuthorID, in.Body)
 	if err != nil {
@@ -229,9 +260,20 @@ func (s *TicketService) CreateComment(ctx context.Context, in port.CreateComment
 	return comment, nil
 }
 
-func (s *TicketService) UpdateComment(ctx context.Context, commentID, actorID uuid.UUID, body string) (*domain.Comment, error) {
+func (s *TicketService) UpdateComment(ctx context.Context, commentID, actorID uuid.UUID, globalRole, body string) (*domain.Comment, error) {
 	if s.collaboration == nil {
 		return nil, domain.ErrInvalidComment
+	}
+	existing, err := s.collaboration.FindComment(ctx, commentID)
+	if err != nil {
+		return nil, err
+	}
+	ticket, err := s.repo.FindByID(ctx, existing.IssueID)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.requireComment(ctx, ticket.ProjectID, actorID, globalRole); err != nil {
+		return nil, err
 	}
 	comment := &domain.Comment{ID: commentID, AuthorID: actorID}
 	if err := comment.Update(body); err != nil {
@@ -244,32 +286,71 @@ func (s *TicketService) UpdateComment(ctx context.Context, commentID, actorID uu
 	return comment, nil
 }
 
-func (s *TicketService) DeleteComment(ctx context.Context, commentID, actorID uuid.UUID) error {
+func (s *TicketService) DeleteComment(ctx context.Context, commentID, actorID uuid.UUID, globalRole string) error {
 	if s.collaboration == nil {
 		return domain.ErrInvalidComment
+	}
+	existing, err := s.collaboration.FindComment(ctx, commentID)
+	if err != nil {
+		return err
+	}
+	ticket, err := s.repo.FindByID(ctx, existing.IssueID)
+	if err != nil {
+		return err
+	}
+	if err := s.requireComment(ctx, ticket.ProjectID, actorID, globalRole); err != nil {
+		return err
 	}
 	comment := &domain.Comment{ID: commentID, AuthorID: actorID}
 	comment.Delete()
 	return s.collaboration.DeleteComment(ctx, comment)
 }
 
-func (s *TicketService) ListActivities(ctx context.Context, issueID uuid.UUID) ([]*domain.Activity, error) {
+func (s *TicketService) ListActivities(ctx context.Context, issueID, actorID uuid.UUID, globalRole string) ([]*domain.Activity, error) {
+	ticket, err := s.repo.FindByID(ctx, issueID)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.requireIssueView(ctx, ticket.ProjectID, actorID, globalRole); err != nil {
+		return nil, err
+	}
 	if s.collaboration == nil {
 		return []*domain.Activity{}, nil
 	}
 	return s.collaboration.FindActivities(ctx, issueID)
 }
 
-func (s *TicketService) ListIssueLinks(ctx context.Context, issueID uuid.UUID) ([]*domain.IssueLink, error) {
+func (s *TicketService) ListIssueLinks(ctx context.Context, issueID, actorID uuid.UUID, globalRole string) ([]*domain.IssueLink, error) {
+	ticket, err := s.repo.FindByID(ctx, issueID)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.requireIssueView(ctx, ticket.ProjectID, actorID, globalRole); err != nil {
+		return nil, err
+	}
 	if s.issueLinks == nil {
 		return []*domain.IssueLink{}, nil
 	}
 	return s.issueLinks.ListByIssue(ctx, issueID)
 }
 
-func (s *TicketService) CreateIssueLink(ctx context.Context, sourceIssueID, targetIssueID, createdBy uuid.UUID, kind domain.IssueLinkKind) (*domain.IssueLink, error) {
+func (s *TicketService) CreateIssueLink(ctx context.Context, sourceIssueID, targetIssueID, createdBy uuid.UUID, globalRole string, kind domain.IssueLinkKind) (*domain.IssueLink, error) {
 	if s.issueLinks == nil {
 		return nil, domain.ErrInvalidIssueLink
+	}
+	source, err := s.repo.FindByID(ctx, sourceIssueID)
+	if err != nil {
+		return nil, err
+	}
+	target, err := s.repo.FindByID(ctx, targetIssueID)
+	if err != nil {
+		return nil, err
+	}
+	if source.ProjectID != target.ProjectID {
+		return nil, domain.ErrInvalidIssueLink
+	}
+	if err := s.requireIssueEdit(ctx, source.ProjectID, createdBy, globalRole); err != nil {
+		return nil, err
 	}
 	link, err := domain.NewIssueLink(sourceIssueID, targetIssueID, createdBy, kind)
 	if err != nil {
@@ -281,16 +362,26 @@ func (s *TicketService) CreateIssueLink(ctx context.Context, sourceIssueID, targ
 	return link, nil
 }
 
-func (s *TicketService) DeleteIssueLink(ctx context.Context, linkID uuid.UUID) error {
+func (s *TicketService) DeleteIssueLink(ctx context.Context, issueID, linkID, actorID uuid.UUID, globalRole string) error {
 	if s.issueLinks == nil {
 		return domain.ErrInvalidIssueLink
 	}
-	return s.issueLinks.Delete(ctx, linkID)
+	ticket, err := s.repo.FindByID(ctx, issueID)
+	if err != nil {
+		return err
+	}
+	if err := s.requireIssueEdit(ctx, ticket.ProjectID, actorID, globalRole); err != nil {
+		return err
+	}
+	return s.issueLinks.Delete(ctx, issueID, linkID)
 }
 
-func (s *TicketService) UpdateRank(ctx context.Context, id uuid.UUID, rank string) (*domain.Ticket, error) {
+func (s *TicketService) UpdateRank(ctx context.Context, id, actorID uuid.UUID, globalRole, rank string) (*domain.Ticket, error) {
 	ticket, err := s.repo.FindByID(ctx, id)
 	if err != nil {
+		return nil, err
+	}
+	if err := s.requireIssueEdit(ctx, ticket.ProjectID, actorID, globalRole); err != nil {
 		return nil, err
 	}
 	if err := ticket.UpdateRank(rank); err != nil {
@@ -300,4 +391,60 @@ func (s *TicketService) UpdateRank(ctx context.Context, id uuid.UUID, rank strin
 		return nil, err
 	}
 	return ticket, nil
+}
+
+func (s *TicketService) requireIssueEdit(ctx context.Context, projectID, actorID uuid.UUID, globalRole string) error {
+	role, err := s.projectRole(ctx, projectID, actorID)
+	if err != nil {
+		return err
+	}
+	if !s.policy.CanEditIssue(globalRole, role) {
+		return apperror.New(apperror.KindForbidden, "forbidden issue operation")
+	}
+	return nil
+}
+
+func (s *TicketService) requireIssueView(ctx context.Context, projectID, actorID uuid.UUID, globalRole string) error {
+	role, err := s.projectRole(ctx, projectID, actorID)
+	if err != nil {
+		return err
+	}
+	if !s.policy.CanViewProject(globalRole, role) {
+		return apperror.New(apperror.KindForbidden, "forbidden project operation")
+	}
+	return nil
+}
+
+func (s *TicketService) requireIssueCreate(ctx context.Context, projectID, actorID uuid.UUID, globalRole string) error {
+	role, err := s.projectRole(ctx, projectID, actorID)
+	if err != nil {
+		return err
+	}
+	if !s.policy.CanCreateIssue(globalRole, role) {
+		return apperror.New(apperror.KindForbidden, "forbidden project operation")
+	}
+	return nil
+}
+
+func (s *TicketService) requireComment(ctx context.Context, projectID, actorID uuid.UUID, globalRole string) error {
+	role, err := s.projectRole(ctx, projectID, actorID)
+	if err != nil {
+		return err
+	}
+	if !s.policy.CanComment(globalRole, role) {
+		return apperror.New(apperror.KindForbidden, "forbidden issue operation")
+	}
+	return nil
+}
+
+func (s *TicketService) projectRole(ctx context.Context, projectID, actorID uuid.UUID) (*authorization.ProjectRole, error) {
+	if s.projectRoles == nil {
+		return nil, nil
+	}
+	role, err := s.projectRoles.FindRole(ctx, projectID, actorID)
+	if err != nil || role == nil {
+		return nil, err
+	}
+	value := authorization.ProjectRole(*role)
+	return &value, nil
 }

@@ -44,7 +44,16 @@ func (r *memoryTicketRepo) FindByID(_ context.Context, id uuid.UUID) (*domain.Ti
 
 func (r *memoryTicketRepo) FindAll(_ context.Context, filter ticketport.ListFilter) ([]*domain.Ticket, error) {
 	var list []*domain.Ticket
+	projectIDs := make(map[uuid.UUID]struct{}, len(filter.ProjectIDs))
+	for _, projectID := range filter.ProjectIDs {
+		projectIDs[projectID] = struct{}{}
+	}
 	for _, t := range r.tickets {
+		if len(projectIDs) > 0 {
+			if _, ok := projectIDs[t.ProjectID]; !ok {
+				continue
+			}
+		}
 		if filter.Status != "" && t.Status != filter.Status {
 			continue
 		}
@@ -70,6 +79,17 @@ type memoryDirectory struct {
 	teams map[uuid.UUID]*uuid.UUID
 }
 
+type projectRoleResolver struct{}
+
+func (projectRoleResolver) FindRole(context.Context, uuid.UUID, uuid.UUID) (*string, error) {
+	role := "contributor"
+	return &role, nil
+}
+
+func (projectRoleResolver) ListProjectIDs(context.Context, uuid.UUID) ([]uuid.UUID, error) {
+	return []uuid.UUID{uuid.MustParse("00000000-0000-4000-8000-000000000001")}, nil
+}
+
 func newMemoryDirectory() *memoryDirectory {
 	return &memoryDirectory{teams: make(map[uuid.UUID]*uuid.UUID)}
 }
@@ -86,7 +106,7 @@ func setupTicketRouter() (*chi.Mux, string, *memoryTicketRepo, *memoryDirectory)
 	jwtSecret := "test-secret-key-that-is-long-enough-32-bytes"
 	repo := newMemoryTicketRepo()
 	dir := newMemoryDirectory()
-	service := usecase.NewTicketService(repo, dir)
+	service := usecase.NewTicketService(repo, dir, projectRoleResolver{})
 	handler := tickethttp.NewHandler(service, jwtSecret)
 
 	r := chi.NewRouter()
@@ -152,6 +172,7 @@ func TestTicketHTTP_Handlers(t *testing.T) {
 
 	// Create a ticket for status & assign tests
 	ticket, _ := domain.NewTicket("Ticket for transitions", "Desc", domain.PriorityMedium, userA)
+	ticket.ProjectID = uuid.MustParse("00000000-0000-4000-8000-000000000001")
 	_ = repo.Save(context.Background(), ticket)
 
 	t.Run("GET /issues/{id} returns 200 for existing ticket", func(t *testing.T) {

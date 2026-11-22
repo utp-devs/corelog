@@ -27,6 +27,7 @@ type Member struct {
 
 type MemberRepository interface {
 	FindRole(ctx context.Context, projectID, userID uuid.UUID) (*string, error)
+	ListProjectIDs(ctx context.Context, userID uuid.UUID) ([]uuid.UUID, error)
 	List(ctx context.Context, projectID uuid.UUID) ([]Member, error)
 	Add(ctx context.Context, member Member) error
 	UpdateRole(ctx context.Context, projectID, userID uuid.UUID, role string) error

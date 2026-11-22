@@ -20,6 +20,7 @@ type UserDirectory interface {
 }
 
 type CollaborationRepository interface {
+	FindComment(ctx context.Context, commentID uuid.UUID) (*domain.Comment, error)
 	SaveComment(ctx context.Context, comment *domain.Comment) error
 	FindComments(ctx context.Context, issueID uuid.UUID) ([]*domain.Comment, error)
 	UpdateComment(ctx context.Context, comment *domain.Comment) error
@@ -32,7 +33,7 @@ type CollaborationRepository interface {
 type IssueLinkRepository interface {
 	Save(ctx context.Context, link *domain.IssueLink) error
 	ListByIssue(ctx context.Context, issueID uuid.UUID) ([]*domain.IssueLink, error)
-	Delete(ctx context.Context, linkID uuid.UUID) error
+	Delete(ctx context.Context, issueID, linkID uuid.UUID) error
 }
 
 type WorkflowRepository interface {
@@ -41,4 +42,5 @@ type WorkflowRepository interface {
 
 type ProjectRoleResolver interface {
 	FindRole(ctx context.Context, projectID, userID uuid.UUID) (*string, error)
+	ListProjectIDs(ctx context.Context, userID uuid.UUID) ([]uuid.UUID, error)
 }

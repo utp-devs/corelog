@@ -37,7 +37,16 @@ func (r *fakeTicketRepo) FindByID(_ context.Context, id uuid.UUID) (*domain.Tick
 
 func (r *fakeTicketRepo) FindAll(_ context.Context, filter port.ListFilter) ([]*domain.Ticket, error) {
 	var list []*domain.Ticket
+	projectIDs := make(map[uuid.UUID]struct{}, len(filter.ProjectIDs))
+	for _, projectID := range filter.ProjectIDs {
+		projectIDs[projectID] = struct{}{}
+	}
 	for _, t := range r.tickets {
+		if len(projectIDs) > 0 {
+			if _, ok := projectIDs[t.ProjectID]; !ok {
+				continue
+			}
+		}
 		if filter.Status != "" && t.Status != filter.Status {
 			continue
 		}
@@ -67,8 +76,23 @@ type fakeProjectRoleResolver struct {
 	role *string
 }
 
-func (r fakeProjectRoleResolver) FindRole(context.Context, uuid.UUID, uuid.UUID) (*string, error) {
+func (r fakeProjectRoleResolver) FindRole(_ context.Context, projectID, _ uuid.UUID) (*string, error) {
+	if projectID != uuid.MustParse("00000000-0000-4000-8000-000000000001") {
+		return nil, nil
+	}
 	return r.role, nil
+}
+
+func (r fakeProjectRoleResolver) ListProjectIDs(context.Context, uuid.UUID) ([]uuid.UUID, error) {
+	if r.role == nil {
+		return nil, nil
+	}
+	return []uuid.UUID{uuid.MustParse("00000000-0000-4000-8000-000000000001")}, nil
+}
+
+func contributorRoleResolver() fakeProjectRoleResolver {
+	role := "contributor"
+	return fakeProjectRoleResolver{role: &role}
 }
 
 func newFakeUserDirectory() *fakeUserDirectory {
@@ -87,7 +111,7 @@ func TestTicketService_Create(t *testing.T) {
 	ctx := context.Background()
 	repo := newFakeTicketRepo()
 	dir := newFakeUserDirectory()
-	svc := NewTicketService(repo, dir)
+	svc := NewTicketService(repo, dir, contributorRoleResolver())
 
 	requesterID := uuid.New()
 
@@ -135,7 +159,7 @@ func TestTicketService_GetAndList(t *testing.T) {
 	ctx := context.Background()
 	repo := newFakeTicketRepo()
 	dir := newFakeUserDirectory()
-	svc := NewTicketService(repo, dir)
+	svc := NewTicketService(repo, dir, contributorRoleResolver())
 
 	requesterID := uuid.New()
 	t1, _ := svc.Create(ctx, port.CreateInput{
@@ -150,8 +174,16 @@ func TestTicketService_GetAndList(t *testing.T) {
 		Priority:    domain.PriorityCritical,
 		RequesterID: requesterID,
 	})
+	privateProjectTicket, _ := domain.NewTicket("Private issue", "Hidden description", domain.PriorityLow, requesterID)
+	privateProjectTicket.ProjectID = uuid.New()
+	_ = privateProjectTicket.ChangeStatus(domain.StatusInProgress)
+	_ = privateProjectTicket.ChangeStatus(domain.StatusResolved)
+	if err := repo.Save(ctx, privateProjectTicket); err != nil {
+		t.Fatal(err)
+	}
 	_ = svc.repo.Update(ctx, &domain.Ticket{
 		ID:          t2.ID,
+		ProjectID:   t2.ProjectID,
 		Title:       t2.Title,
 		Description: t2.Description,
 		Status:      domain.StatusResolved,
@@ -162,7 +194,7 @@ func TestTicketService_GetAndList(t *testing.T) {
 	})
 
 	t.Run("Get returns ticket by ID", func(t *testing.T) {
-		got, err := svc.Get(ctx, t1.ID)
+		got, err := svc.Get(ctx, t1.ID, requesterID, "agent")
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -172,19 +204,26 @@ func TestTicketService_GetAndList(t *testing.T) {
 	})
 
 	t.Run("Get returns not found error for non-existent ticket", func(t *testing.T) {
-		_, err := svc.Get(ctx, uuid.New())
+		_, err := svc.Get(ctx, uuid.New(), requesterID, "agent")
 		if !errors.Is(err, domain.ErrTicketNotFound) {
 			t.Errorf("expected ErrTicketNotFound, got %v", err)
 		}
 	})
 
+	t.Run("Get forbids an issue outside the member's projects", func(t *testing.T) {
+		_, err := svc.Get(ctx, privateProjectTicket.ID, requesterID, "agent")
+		if apperror.KindOf(err) != apperror.KindForbidden {
+			t.Fatalf("got error kind %q, want forbidden", apperror.KindOf(err))
+		}
+	})
+
 	t.Run("List with default pagination and filter", func(t *testing.T) {
-		items, err := svc.List(ctx, port.ListFilter{Status: domain.StatusResolved})
+		items, err := svc.List(ctx, requesterID, "agent", port.ListFilter{Status: domain.StatusResolved})
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
 		if len(items) != 1 {
-			t.Fatalf("got %d items, want 1", len(items))
+			t.Fatalf("got %d items, want only the member project's issue", len(items))
 		}
 		if items[0].ID != t2.ID {
 			t.Errorf("got ticket ID %v, want %v", items[0].ID, t2.ID)
@@ -196,7 +235,7 @@ func TestTicketService_UpdateStatus(t *testing.T) {
 	ctx := context.Background()
 	repo := newFakeTicketRepo()
 	dir := newFakeUserDirectory()
-	svc := NewTicketService(repo, dir)
+	svc := NewTicketService(repo, dir, contributorRoleResolver())
 
 	requesterID := uuid.New()
 	t1, _ := svc.Create(ctx, port.CreateInput{
@@ -207,7 +246,7 @@ func TestTicketService_UpdateStatus(t *testing.T) {
 	})
 
 	t.Run("valid transition", func(t *testing.T) {
-		updated, err := svc.UpdateStatus(ctx, t1.ID, domain.StatusInProgress)
+		updated, err := svc.UpdateStatus(ctx, t1.ID, requesterID, "admin", domain.StatusInProgress)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -223,14 +262,14 @@ func TestTicketService_UpdateStatus(t *testing.T) {
 
 	t.Run("illegal transition", func(t *testing.T) {
 		// InProgress -> Open is illegal
-		_, err := svc.UpdateStatus(ctx, t1.ID, domain.StatusOpen)
+		_, err := svc.UpdateStatus(ctx, t1.ID, requesterID, "admin", domain.StatusOpen)
 		if !errors.Is(err, domain.ErrIllegalTransition) {
 			t.Errorf("expected ErrIllegalTransition, got %v", err)
 		}
 	})
 
 	t.Run("ticket not found", func(t *testing.T) {
-		_, err := svc.UpdateStatus(ctx, uuid.New(), domain.StatusClosed)
+		_, err := svc.UpdateStatus(ctx, uuid.New(), requesterID, "admin", domain.StatusClosed)
 		if !errors.Is(err, domain.ErrTicketNotFound) {
 			t.Errorf("expected ErrTicketNotFound, got %v", err)
 		}
@@ -241,7 +280,7 @@ func TestTicketService_UpdateRank(t *testing.T) {
 	ctx := context.Background()
 	repo := newFakeTicketRepo()
 	dir := newFakeUserDirectory()
-	svc := NewTicketService(repo, dir)
+	svc := NewTicketService(repo, dir, contributorRoleResolver())
 
 	ticket, _ := svc.Create(ctx, port.CreateInput{
 		Title:       "Ranked issue",
@@ -250,7 +289,7 @@ func TestTicketService_UpdateRank(t *testing.T) {
 		RequesterID: uuid.New(),
 	})
 
-	updated, err := svc.UpdateRank(ctx, ticket.ID, "00000001")
+	updated, err := svc.UpdateRank(ctx, ticket.ID, uuid.New(), "admin", "00000001")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -268,7 +307,7 @@ func TestTicketService_UpdateDetailsAuthorization(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ticket.ProjectID = uuid.New()
+	ticket.ProjectID = uuid.MustParse("00000000-0000-4000-8000-000000000001")
 	if err := repo.Save(ctx, ticket); err != nil {
 		t.Fatal(err)
 	}
@@ -328,7 +367,7 @@ func TestTicketService_WorkflowPolicy(t *testing.T) {
 	repo := newFakeTicketRepo()
 	dir := newFakeUserDirectory()
 	workflowRepo := &fakeWorkflowRepo{allowed: false}
-	svc := NewTicketService(repo, dir, workflowRepo)
+	svc := NewTicketService(repo, dir, workflowRepo, contributorRoleResolver())
 
 	ticket, _ := svc.Create(ctx, port.CreateInput{
 		Title:       "Workflow issue",
@@ -337,13 +376,13 @@ func TestTicketService_WorkflowPolicy(t *testing.T) {
 		RequesterID: uuid.New(),
 	})
 
-	_, err := svc.UpdateStatus(ctx, ticket.ID, domain.StatusInProgress, "requester")
+	_, err := svc.UpdateStatus(ctx, ticket.ID, uuid.New(), "admin", domain.StatusInProgress)
 	if !errors.Is(err, domain.ErrIllegalTransition) {
 		t.Fatalf("expected ErrIllegalTransition, got %v", err)
 	}
 
 	workflowRepo.allowed = true
-	updated, err := svc.UpdateStatus(ctx, ticket.ID, domain.StatusInProgress, "admin")
+	updated, err := svc.UpdateStatus(ctx, ticket.ID, uuid.New(), "admin", domain.StatusInProgress)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -356,7 +395,7 @@ func TestTicketService_Assign(t *testing.T) {
 	ctx := context.Background()
 	repo := newFakeTicketRepo()
 	dir := newFakeUserDirectory()
-	svc := NewTicketService(repo, dir)
+	svc := NewTicketService(repo, dir, contributorRoleResolver())
 
 	teamA := uuid.New()
 	teamB := uuid.New()
@@ -378,7 +417,7 @@ func TestTicketService_Assign(t *testing.T) {
 	})
 
 	t.Run("assigning to member of same team succeeds and moves open to in_progress", func(t *testing.T) {
-		assigned, err := svc.Assign(ctx, ticket.ID, assigner, assigneeTeamA)
+		assigned, err := svc.Assign(ctx, ticket.ID, assigner, assigneeTeamA, "admin")
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -391,21 +430,21 @@ func TestTicketService_Assign(t *testing.T) {
 	})
 
 	t.Run("rejects cross-team assignment", func(t *testing.T) {
-		_, err := svc.Assign(ctx, ticket.ID, assigner, assigneeTeamB)
+		_, err := svc.Assign(ctx, ticket.ID, assigner, assigneeTeamB, "admin")
 		if !errors.Is(err, domain.ErrCrossTeamAssignment) {
 			t.Errorf("expected ErrCrossTeamAssignment, got %v", err)
 		}
 	})
 
 	t.Run("rejects assignment when assignee has no team", func(t *testing.T) {
-		_, err := svc.Assign(ctx, ticket.ID, assigner, userNoTeam)
+		_, err := svc.Assign(ctx, ticket.ID, assigner, userNoTeam, "admin")
 		if !errors.Is(err, domain.ErrCrossTeamAssignment) {
 			t.Errorf("expected ErrCrossTeamAssignment, got %v", err)
 		}
 	})
 
 	t.Run("returns not found for non-existent ticket", func(t *testing.T) {
-		_, err := svc.Assign(ctx, uuid.New(), assigner, assigneeTeamA)
+		_, err := svc.Assign(ctx, uuid.New(), assigner, assigneeTeamA, "admin")
 		if !errors.Is(err, domain.ErrTicketNotFound) {
 			t.Errorf("expected ErrTicketNotFound, got %v", err)
 		}

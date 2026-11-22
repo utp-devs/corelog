@@ -626,6 +626,8 @@ paths:
                     $ref: '#/components/schemas/Ticket'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '422':
           $ref: '#/components/responses/ValidationError'
     get:
@@ -731,6 +733,8 @@ paths:
                     $ref: '#/components/schemas/Ticket'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
   /issues/{id}/status:
@@ -763,6 +767,8 @@ paths:
                     $ref: '#/components/schemas/Ticket'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
         '409':
@@ -804,11 +810,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
-          description: The assignee does not belong to the same team as the authenticated user
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
+          $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
         '422':
@@ -835,6 +837,8 @@ paths:
                       $ref: '#/components/schemas/IssueComment'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
     post:
       tags: [tickets]
       summary: Create an issue comment
@@ -858,6 +862,8 @@ paths:
                     $ref: '#/components/schemas/IssueComment'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '422':
           $ref: '#/components/responses/ValidationError'
   /issues/{id}/comments/{comment_id}:
@@ -885,6 +891,8 @@ paths:
           description: Comment updated
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
         '422':
@@ -899,6 +907,8 @@ paths:
           description: Comment deleted
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
   /issues/{id}/activities:
@@ -923,6 +933,8 @@ paths:
                       $ref: '#/components/schemas/IssueActivity'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
   /issues/{id}/links:
     parameters:
       - $ref: '#/components/parameters/TicketId'
@@ -945,6 +957,8 @@ paths:
                       $ref: '#/components/schemas/IssueLink'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
     post:
       tags: [tickets]
       summary: Create an issue link
@@ -968,6 +982,8 @@ paths:
                     $ref: '#/components/schemas/IssueLink'
         '409':
           $ref: '#/components/responses/Conflict'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '422':
           $ref: '#/components/responses/ValidationError'
   /issues/{id}/links/{link_id}:
@@ -987,6 +1003,8 @@ paths:
       responses:
         '204':
           description: Issue link deleted
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
   /issues/{id}/details:
@@ -1045,6 +1063,8 @@ paths:
                     $ref: '#/components/schemas/Ticket'
         '404':
           $ref: '#/components/responses/NotFound'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '422':
           $ref: '#/components/responses/ValidationError'
   /issues/{id}/metadata:
@@ -1074,6 +1094,8 @@ paths:
                     $ref: '#/components/schemas/Ticket'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
         '422':

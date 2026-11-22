@@ -51,7 +51,16 @@ func (r *TicketRepository) FindAll(_ context.Context, filter port.ListFilter) ([
 	defer r.mu.RUnlock()
 
 	matches := make([]*domain.Ticket, 0, len(r.tickets))
+	projectIDs := make(map[uuid.UUID]struct{}, len(filter.ProjectIDs))
+	for _, projectID := range filter.ProjectIDs {
+		projectIDs[projectID] = struct{}{}
+	}
 	for _, t := range r.tickets {
+		if len(projectIDs) > 0 {
+			if _, ok := projectIDs[t.ProjectID]; !ok {
+				continue
+			}
+		}
 		if filter.Status != "" && t.Status != filter.Status {
 			continue
 		}

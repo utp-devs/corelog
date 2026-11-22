@@ -67,8 +67,8 @@ func (r *IssueLinkRepository) ListByIssue(ctx context.Context, issueID uuid.UUID
 	return links, nil
 }
 
-func (r *IssueLinkRepository) Delete(ctx context.Context, linkID uuid.UUID) error {
-	result, err := r.db.ExecContext(ctx, `DELETE FROM issue_links WHERE id = $1`, linkID)
+func (r *IssueLinkRepository) Delete(ctx context.Context, issueID, linkID uuid.UUID) error {
+	result, err := r.db.ExecContext(ctx, `DELETE FROM issue_links WHERE id = $1 AND (source_issue_id = $2 OR target_issue_id = $2)`, linkID, issueID)
 	if err != nil {
 		return apperror.Wrap(apperror.KindInternal, "failed to delete issue link", err)
 	}

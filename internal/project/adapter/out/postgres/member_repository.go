@@ -47,6 +47,15 @@ func (r *MemberRepository) FindRole(ctx context.Context, projectID, userID uuid.
 	return &role, nil
 }
 
+func (r *MemberRepository) ListProjectIDs(ctx context.Context, userID uuid.UUID) ([]uuid.UUID, error) {
+	var projectIDs []uuid.UUID
+	if err := r.db.SelectContext(ctx, &projectIDs, `
+		SELECT project_id FROM project_members WHERE user_id = $1 ORDER BY project_id`, userID); err != nil {
+		return nil, apperror.Wrap(apperror.KindInternal, "failed to list user's projects", err)
+	}
+	return projectIDs, nil
+}
+
 func (r *MemberRepository) List(ctx context.Context, projectID uuid.UUID) ([]port.Member, error) {
 	var rows []memberRow
 	err := r.db.SelectContext(ctx, &rows, `

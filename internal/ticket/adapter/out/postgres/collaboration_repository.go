@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"context"
+	"database/sql"
 	"strconv"
 	"strings"
 	"time"
@@ -44,6 +45,22 @@ func NewCollaborationRepository(db *sqlx.DB) *CollaborationRepository {
 }
 
 var _ port.CollaborationRepository = (*CollaborationRepository)(nil)
+
+func (r *CollaborationRepository) FindComment(ctx context.Context, commentID uuid.UUID) (*domain.Comment, error) {
+	var row commentRow
+	if err := r.db.GetContext(ctx, &row, `
+		SELECT id, issue_id, author_id, body, created_at, updated_at, deleted_at
+		FROM comments WHERE id = $1`, commentID); err != nil {
+		if err == sql.ErrNoRows {
+			return nil, apperror.New(apperror.KindNotFound, "comment not found")
+		}
+		return nil, apperror.Wrap(apperror.KindInternal, "failed to find comment", err)
+	}
+	return &domain.Comment{
+		ID: row.ID, IssueID: row.IssueID, AuthorID: row.AuthorID, Body: row.Body,
+		CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt, DeletedAt: row.DeletedAt,
+	}, nil
+}
 
 func (r *CollaborationRepository) SaveComment(ctx context.Context, comment *domain.Comment) error {
 	_, err := r.db.ExecContext(ctx, `

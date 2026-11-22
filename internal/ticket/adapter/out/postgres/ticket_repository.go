@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -95,6 +96,14 @@ func (r *TicketRepository) FindAll(ctx context.Context, filter port.ListFilter) 
 		       due_date, story_points, rank, closed_at, requester_id, assignee_id, created_at, updated_at
 		FROM issues WHERE 1 = 1`
 	args := []any{}
+	if len(filter.ProjectIDs) > 0 {
+		placeholders := make([]string, 0, len(filter.ProjectIDs))
+		for _, projectID := range filter.ProjectIDs {
+			args = append(args, projectID)
+			placeholders = append(placeholders, fmt.Sprintf("$%d", len(args)))
+		}
+		query += " AND project_id IN (" + strings.Join(placeholders, ", ") + ")"
+	}
 
 	if filter.Status != "" {
 		args = append(args, filter.Status)
