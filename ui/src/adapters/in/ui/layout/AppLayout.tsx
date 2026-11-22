@@ -19,6 +19,7 @@ import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '@/adapters/in/state/auth.store'
 import { navigationItems, type NavigationGroup, type NavigationItem, type NavigationRole } from '@/app/navigation'
 import { useThemeMode } from '@/app/theme-context'
+import { useGlobalShortcuts } from '@/shared/hooks/useGlobalShortcuts'
 import styles from './AppLayout.module.css'
 import { GlobalSearch } from './GlobalSearch'
 import { NotificationsBell } from './NotificationsBell'
@@ -71,6 +72,7 @@ export function AppLayout() {
   const user = useAuthStore((s) => s.user)
   const logout = useAuthStore((s) => s.logout)
 
+  useGlobalShortcuts()
   const selectedKey = resolveSelectedKey(location.pathname)
   const role: NavigationRole = user?.role === 'admin' ? 'admin' : user?.role === 'agent' ? 'agent' : 'requester'
 
