@@ -43,7 +43,7 @@ describe('ProjectBoardPage', () => {
     )
 
     expect(await screen.findByText('No carga la pantalla')).toBeInTheDocument()
-    expect(screen.getByText('CORE · CoreLog')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Tablero' })).toBeInTheDocument()
     expect(screen.getByText(/Responsable: Ada Lovelace/)).toBeInTheDocument()
     expect(screen.getByText('3 puntos')).toBeInTheDocument()
     await waitFor(() => expect(repositories.getBoard).toHaveBeenCalledWith('project-1'))

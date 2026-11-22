@@ -1,12 +1,10 @@
 import { Alert, Button, Empty, Segmented, Skeleton, Space, Tag, Typography } from 'antd'
-import { ArrowLeftOutlined, LeftOutlined, RightOutlined } from '@ant-design/icons'
+import { LeftOutlined, RightOutlined } from '@ant-design/icons'
 import { useEffect, useMemo, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useParams } from 'react-router-dom'
 
 import { CalendarHttpRepository } from '@/adapters/out/http/calendar-http-repository'
-import { ProjectHttpRepository } from '@/adapters/out/http/project-http-repository'
 import type { CalendarEvent, CalendarEventKind } from '@/core/projects/domain/calendar'
-import type { Project } from '@/core/projects/domain/project'
 import { PageHeader } from '@/shared/ui/PageHeader'
 import styles from './ProjectCalendarPage.module.css'
 
@@ -45,13 +43,11 @@ function monthCells(monthStart: Date): (Date | null)[] {
 
 export function ProjectCalendarPage() {
   const { id = '' } = useParams()
-  const navigate = useNavigate()
   const [view, setView] = useState<View>('month')
   const [monthStart, setMonthStart] = useState(() => {
     const now = new Date()
     return new Date(now.getFullYear(), now.getMonth(), 1)
   })
-  const [project, setProject] = useState<Project | undefined>(undefined)
   // Resultado de la carga etiquetado con el mes al que pertenece: asi no hace falta limpiar estado en el efecto.
   const [loaded, setLoaded] = useState<{ key: string; events?: CalendarEvent[]; error?: string } | null>(null)
 
@@ -60,14 +56,6 @@ export function ProjectCalendarPage() {
     [monthStart],
   )
   const monthKey = `${id}/${isoDate(monthStart)}`
-
-  useEffect(() => {
-    let active = true
-    new ProjectHttpRepository().get(id)
-      .then((result) => { if (active) setProject(result) })
-      .catch(() => undefined)
-    return () => { active = false }
-  }, [id])
 
   useEffect(() => {
     let active = true
@@ -104,16 +92,7 @@ export function ProjectCalendarPage() {
 
   return (
     <div>
-      <PageHeader
-        title={project ? `${project.key} · Calendario` : 'Calendario del proyecto'}
-        description="Inicios y fines de sprint y fechas límite de incidencias."
-        actions={(
-          <Space>
-            <Button onClick={() => navigate(`/projects/${id}/sprints`)}>Sprints</Button>
-            <Button icon={<ArrowLeftOutlined />} onClick={() => navigate(`/projects/${id}/backlog`)}>Backlog</Button>
-          </Space>
-        )}
-      />
+      <PageHeader title="Calendario" description="Inicios y fines de sprint y fechas límite de incidencias." />
 
       <div className={styles.toolbar}>
         <Space>

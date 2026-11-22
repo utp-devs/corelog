@@ -1,14 +1,11 @@
 import { Alert, Button, Empty, Input, Radio, Select, Skeleton, Space, Statistic, Tag, Typography } from 'antd'
-import { ArrowLeftOutlined } from '@ant-design/icons'
 import { useEffect, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
 
 import { BacklogHttpRepository } from '@/adapters/out/http/backlog-http-repository'
-import { ProjectHttpRepository } from '@/adapters/out/http/project-http-repository'
 import { SprintHttpRepository } from '@/adapters/out/http/sprint-http-repository'
 import type { BacklogItem } from '@/core/projects/domain/backlog'
 import type { BurndownPoint, Sprint, SprintIssue, SprintStatus, VelocityPoint } from '@/core/projects/domain/sprint'
-import type { Project } from '@/core/projects/domain/project'
 import { PageHeader } from '@/shared/ui/PageHeader'
 import { BurndownChart } from './BurndownChart'
 import styles from './ProjectSprintsPage.module.css'
@@ -27,8 +24,6 @@ function sprintErrorMessage(error: unknown): string {
 
 export function ProjectSprintsPage() {
   const { id = '' } = useParams()
-  const navigate = useNavigate()
-  const [project, setProject] = useState<Project | undefined>(undefined)
   const [sprints, setSprints] = useState<Sprint[] | undefined>(undefined)
   const [velocity, setVelocity] = useState<VelocityPoint[]>([])
   const [loadError, setLoadError] = useState<string | undefined>(undefined)
@@ -62,10 +57,9 @@ export function ProjectSprintsPage() {
 
   useEffect(() => {
     let active = true
-    void Promise.all([new ProjectHttpRepository().get(id), sprintRepo.list(id), sprintRepo.velocity(id)])
-      .then(([loadedProject, loadedSprints, loadedVelocity]) => {
+    void Promise.all([sprintRepo.list(id), sprintRepo.velocity(id)])
+      .then(([loadedSprints, loadedVelocity]) => {
         if (!active) return
-        setProject(loadedProject)
         setSprints(loadedSprints)
         setVelocity(loadedVelocity)
         const first = loadedSprints.find((sprint) => sprint.status === 'active') ?? loadedSprints.find((sprint) => sprint.status === 'planned') ?? loadedSprints[0]
@@ -140,11 +134,7 @@ export function ProjectSprintsPage() {
 
   return (
     <div>
-      <PageHeader
-        title={project ? `${project.key} · Sprints` : 'Sprints del proyecto'}
-        description="Planifica el trabajo, activa un sprint y ciérralo al terminar."
-        actions={<Button icon={<ArrowLeftOutlined />} onClick={() => navigate(`/projects/${id}/backlog`)}>Backlog</Button>}
-      />
+      <PageHeader title="Sprints" description="Planifica el trabajo, activa un sprint y ciérralo al terminar." />
       {actionError && <Alert type="warning" showIcon closable message={actionError} onClose={() => setActionError(undefined)} className={styles.alert} />}
 
       {!sprints ? <Skeleton active paragraph={{ rows: 6 }} /> : (

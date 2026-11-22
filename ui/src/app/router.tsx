@@ -17,6 +17,7 @@ const TicketDetailPage = lazy(() => import('@/adapters/in/ui/tickets/TicketDetai
 const TicketsListPage = lazy(() => import('@/adapters/in/ui/tickets/TicketsListPage').then(m => ({ default: m.TicketsListPage })))
 const NotFoundPage = lazy(() => import('@/adapters/in/ui/common/NotFoundPage').then(m => ({ default: m.NotFoundPage })))
 const ProjectsPage = lazy(() => import('@/adapters/in/ui/projects/ProjectsPage').then(m => ({ default: m.ProjectsPage })))
+const ProjectWorkspace = lazy(() => import('@/adapters/in/ui/projects/ProjectWorkspace').then(m => ({ default: m.ProjectWorkspace })))
 const ProjectBoardPage = lazy(() => import('@/adapters/in/ui/projects/ProjectBoardPage').then(m => ({ default: m.ProjectBoardPage })))
 const ProjectBacklogPage = lazy(() => import('@/adapters/in/ui/projects/ProjectBacklogPage').then(m => ({ default: m.ProjectBacklogPage })))
 const ProjectSprintsPage = lazy(() => import('@/adapters/in/ui/projects/ProjectSprintsPage').then(m => ({ default: m.ProjectSprintsPage })))
@@ -52,10 +53,17 @@ export const router = createBrowserRouter([
           { path: 'issues/:id', element: <SuspenseWrapper><TicketDetailPage /></SuspenseWrapper> },
           { path: 'profile', element: <SuspenseWrapper><ProfilePage /></SuspenseWrapper> },
           { path: 'projects', element: <SuspenseWrapper><ProjectsPage /></SuspenseWrapper> },
-          { path: 'projects/:id/board', element: <SuspenseWrapper><ProjectBoardPage /></SuspenseWrapper> },
-          { path: 'projects/:id/backlog', element: <SuspenseWrapper><ProjectBacklogPage /></SuspenseWrapper> },
-          { path: 'projects/:id/sprints', element: <SuspenseWrapper><ProjectSprintsPage /></SuspenseWrapper> },
-          { path: 'projects/:id/calendar', element: <SuspenseWrapper><ProjectCalendarPage /></SuspenseWrapper> },
+          {
+            path: 'projects/:id',
+            element: <SuspenseWrapper><ProjectWorkspace /></SuspenseWrapper>,
+            children: [
+              { index: true, element: <Navigate to="board" replace /> },
+              { path: 'board', element: <SuspenseWrapper><ProjectBoardPage /></SuspenseWrapper> },
+              { path: 'backlog', element: <SuspenseWrapper><ProjectBacklogPage /></SuspenseWrapper> },
+              { path: 'sprints', element: <SuspenseWrapper><ProjectSprintsPage /></SuspenseWrapper> },
+              { path: 'calendar', element: <SuspenseWrapper><ProjectCalendarPage /></SuspenseWrapper> },
+            ],
+          },
           { path: 'dashboard', element: <SuspenseWrapper><MyDashboardPage /></SuspenseWrapper> },
           {
             element: <AdminRoute />,

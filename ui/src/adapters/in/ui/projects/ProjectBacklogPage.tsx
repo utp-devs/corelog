@@ -1,7 +1,7 @@
 import { Alert, Button, Empty, Skeleton, Space, Tag, Typography } from 'antd'
-import { ArrowDownOutlined, ArrowLeftOutlined, ArrowUpOutlined } from '@ant-design/icons'
+import { ArrowDownOutlined, ArrowUpOutlined } from '@ant-design/icons'
 import { useEffect, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useParams } from 'react-router-dom'
 
 import { BacklogHttpRepository } from '@/adapters/out/http/backlog-http-repository'
 import { ProjectHttpRepository } from '@/adapters/out/http/project-http-repository'
@@ -29,7 +29,6 @@ function backlogErrorMessage(error: unknown): string {
 
 export function ProjectBacklogPage() {
   const { id = '' } = useParams()
-  const navigate = useNavigate()
   const [result, setResult] = useState<{
     projectId: string
     project?: Project
@@ -72,18 +71,7 @@ export function ProjectBacklogPage() {
 
   return (
     <div>
-      <PageHeader
-        title={current?.project ? `${current.project.key} · Backlog` : 'Backlog del proyecto'}
-        description="Las incidencias de arriba se trabajan primero. Usa las flechas para reordenarlas."
-        actions={(
-          <Space>
-            <Button onClick={() => navigate(`/projects/${id}/board`)}>Tablero</Button>
-            <Button onClick={() => navigate(`/projects/${id}/sprints`)}>Sprints</Button>
-            <Button onClick={() => navigate(`/projects/${id}/calendar`)}>Calendario</Button>
-            <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/projects')}>Proyectos</Button>
-          </Space>
-        )}
-      />
+      <PageHeader title="Backlog" description="Las incidencias de arriba se trabajan primero. Usa las flechas para reordenarlas." />
       {moveError && (
         <Alert type="warning" showIcon closable message={moveError} onClose={() => setMoveError(undefined)} className={styles.alert} />
       )}

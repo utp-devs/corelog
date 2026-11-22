@@ -1,0 +1,51 @@
+.workspace {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cl-space-4);
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cl-space-2);
+  padding: var(--cl-space-4) var(--cl-space-5) 0;
+  border: 1px solid var(--cl-border);
+  border-bottom: none;
+  border-radius: var(--cl-radius-lg) var(--cl-radius-lg) 0 0;
+  background: var(--cl-bg-surface);
+}
+
+.back {
+  align-self: flex-start;
+  padding-inline: 0;
+}
+
+.identity {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cl-space-1);
+  padding-bottom: var(--cl-space-3);
+}
+
+.titleRow {
+  display: flex;
+  align-items: center;
+  gap: var(--cl-space-3);
+}
+
+.title {
+  margin: 0 !important;
+}
+
+.keyTag {
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.tabs {
+  margin-top: calc(var(--cl-space-2) * -1);
+  padding: 0 var(--cl-space-5);
+  border: 1px solid var(--cl-border);
+  border-radius: 0 0 var(--cl-radius-lg) var(--cl-radius-lg);
+  background: var(--cl-bg-surface);
+}

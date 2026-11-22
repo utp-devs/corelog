@@ -1,6 +1,5 @@
 import {
   Alert,
-  Button,
   Card,
   Empty,
   InputNumber,
@@ -9,7 +8,6 @@ import {
   Tag,
   Typography,
 } from 'antd'
-import { ArrowLeftOutlined } from '@ant-design/icons'
 import {
   DndContext,
   DragOverlay,
@@ -23,7 +21,7 @@ import {
   type DragStartEvent,
 } from '@dnd-kit/core'
 import { useEffect, useState, type ReactNode } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useParams } from 'react-router-dom'
 
 import { BoardHttpRepository } from '@/adapters/out/http/board-http-repository'
 import { ProjectHttpRepository } from '@/adapters/out/http/project-http-repository'
@@ -125,7 +123,6 @@ function DroppableColumn({ column, children, canManage, onSaveWip }: {
 
 export function ProjectBoardPage() {
   const { id = '' } = useParams()
-  const navigate = useNavigate()
   const [result, setResult] = useState<{
     projectId: string
     project?: Project
@@ -201,16 +198,7 @@ export function ProjectBoardPage() {
 
   return (
     <div>
-      <PageHeader
-        title={currentResult?.project ? `${currentResult.project.key} · ${currentResult.project.name}` : 'Tablero del proyecto'}
-        description="Arrastra una incidencia a otra columna para cambiar su estado."
-        actions={(
-          <Space>
-            <Button onClick={() => navigate(`/projects/${id}/backlog`)}>Backlog</Button>
-            <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/projects')}>Proyectos</Button>
-          </Space>
-        )}
-      />
+      <PageHeader title="Tablero" description="Arrastra una incidencia a otra columna para cambiar su estado." />
       {moveError && (
         <Alert type="warning" showIcon closable message={moveError} onClose={() => setMoveError(undefined)} className={styles.alert} />
       )}
