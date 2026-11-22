@@ -28,7 +28,7 @@ test.describe('sidebar de la aplicacion', () => {
   })
 
   test('colapsado muestra solo el icono', async ({ page }) => {
-    await page.locator('aside .ant-layout-sider-trigger').click()
+    await page.getByRole('button', { name: 'Contraer navegacion' }).click()
     await expect(page.locator('aside').first()).toHaveClass(/ant-layout-sider-collapsed/)
 
     const icon = page.locator('aside').first().locator('img[src*="corelog-icon-64"]')
