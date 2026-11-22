@@ -17,7 +17,7 @@ type ProjectService struct {
 	repo        port.Repository
 	memberRepo  port.MemberRepository
 	catalogRepo port.CatalogRepository
-	policy      authorization.Policy
+	authorizer  port.ProjectAuthorizer
 }
 
 func NewProjectService(repo port.Repository, memberRepo port.MemberRepository, catalogRepo ...port.CatalogRepository) *ProjectService {
@@ -25,7 +25,13 @@ func NewProjectService(repo port.Repository, memberRepo port.MemberRepository, c
 	if len(catalogRepo) > 0 {
 		catalog = catalogRepo[0]
 	}
-	return &ProjectService{repo: repo, memberRepo: memberRepo, catalogRepo: catalog, policy: authorization.Policy{}}
+	return &ProjectService{repo: repo, memberRepo: memberRepo, catalogRepo: catalog}
+}
+
+// WithAuthorizer conecta el autorizador de acciones de proyecto. Sin el, el servicio deniega.
+func (s *ProjectService) WithAuthorizer(authorizer port.ProjectAuthorizer) *ProjectService {
+	s.authorizer = authorizer
+	return s
 }
 
 var _ port.Service = (*ProjectService)(nil)
@@ -67,12 +73,8 @@ func (s *ProjectService) Get(ctx context.Context, actorID uuid.UUID, globalRole 
 	if err != nil {
 		return nil, err
 	}
-	projectRole, err := s.projectRole(ctx, id, actorID)
-	if err != nil {
+	if err := s.authorize(ctx, port.ActionViewProject, id, actorID, globalRole); err != nil {
 		return nil, err
-	}
-	if !s.policy.CanViewProject(globalRole, projectRole) {
-		return nil, apperror.New(apperror.KindForbidden, "forbidden project operation")
 	}
 	return project, nil
 }
@@ -87,11 +89,11 @@ func (s *ProjectService) List(ctx context.Context, actorID uuid.UUID, globalRole
 	}
 	visible := make([]*domain.Project, 0, len(projects))
 	for _, project := range projects {
-		projectRole, err := s.projectRole(ctx, project.ID, actorID)
+		ok, err := s.allowed(ctx, port.ActionViewProject, project.ID, actorID, globalRole)
 		if err != nil {
 			return nil, err
 		}
-		if s.policy.CanViewProject(globalRole, projectRole) {
+		if ok {
 			visible = append(visible, project)
 		}
 	}
@@ -103,12 +105,8 @@ func (s *ProjectService) Update(ctx context.Context, actorID uuid.UUID, globalRo
 	if err != nil {
 		return nil, err
 	}
-	projectRole, err := s.projectRole(ctx, id, actorID)
-	if err != nil {
+	if err := s.authorize(ctx, port.ActionEditProject, id, actorID, globalRole); err != nil {
 		return nil, err
-	}
-	if !s.policy.CanEditProject(globalRole, projectRole) {
-		return nil, apperror.New(apperror.KindForbidden, "forbidden project operation")
 	}
 	if err := project.Update(input); err != nil {
 		return nil, err
@@ -120,51 +118,42 @@ func (s *ProjectService) Update(ctx context.Context, actorID uuid.UUID, globalRo
 }
 
 func (s *ProjectService) Delete(ctx context.Context, actorID uuid.UUID, globalRole string, id uuid.UUID) error {
-	projectRole, err := s.projectRole(ctx, id, actorID)
-	if err != nil {
+	if err := s.authorize(ctx, port.ActionEditProject, id, actorID, globalRole); err != nil {
 		return err
-	}
-	if !s.policy.CanEditProject(globalRole, projectRole) {
-		return apperror.New(apperror.KindForbidden, "forbidden project operation")
 	}
 	return s.repo.Delete(ctx, id)
 }
 
-func (s *ProjectService) projectRole(ctx context.Context, projectID, actorID uuid.UUID) (*authorization.ProjectRole, error) {
-	role, err := s.memberRepo.FindRole(ctx, projectID, actorID)
-	if err != nil {
-		return nil, err
+// authorize delega la decision de acceso al autorizador. Sin autorizador se deniega.
+func (s *ProjectService) authorize(ctx context.Context, action string, projectID, actorID uuid.UUID, globalRole string) error {
+	if s.authorizer == nil {
+		return apperror.New(apperror.KindForbidden, "forbidden project operation")
 	}
-	if role == nil {
-		return nil, nil
+	return s.authorizer.Authorize(ctx, action, actorID, globalRole, projectID)
+}
+
+// allowed indica si la accion esta permitida; una denegacion no es un error para el llamador.
+func (s *ProjectService) allowed(ctx context.Context, action string, projectID, actorID uuid.UUID, globalRole string) (bool, error) {
+	err := s.authorize(ctx, action, projectID, actorID, globalRole)
+	if err == nil {
+		return true, nil
 	}
-	projectRole := authorization.ProjectRole(*role)
-	switch projectRole {
-	case authorization.ProjectRoleLead, authorization.ProjectRoleContributor, authorization.ProjectRoleViewer:
-		return &projectRole, nil
-	default:
-		return nil, apperror.New(apperror.KindValidation, "invalid project role")
+	if apperror.KindOf(err) == apperror.KindForbidden {
+		return false, nil
 	}
+	return false, err
 }
 
 func (s *ProjectService) requireMembersPermission(ctx context.Context, actorID uuid.UUID, globalRole string, projectID uuid.UUID) error {
-	projectRole, err := s.projectRole(ctx, projectID, actorID)
-	if err != nil {
+	if err := s.authorize(ctx, port.ActionManageMembers, projectID, actorID, globalRole); err != nil {
 		return err
-	}
-	if !s.policy.CanManageProjectMembers(globalRole, projectRole) {
-		return apperror.New(apperror.KindForbidden, "forbidden project operation")
 	}
 	return nil
 }
 
 func (s *ProjectService) ListMembers(ctx context.Context, actorID uuid.UUID, globalRole string, projectID uuid.UUID) ([]port.Member, error) {
-	projectRole, err := s.projectRole(ctx, projectID, actorID)
-	if err != nil {
+	if err := s.authorize(ctx, port.ActionViewProject, projectID, actorID, globalRole); err != nil {
 		return nil, err
-	}
-	if !s.policy.CanViewProject(globalRole, projectRole) {
-		return nil, apperror.New(apperror.KindForbidden, "forbidden project operation")
 	}
 	return s.memberRepo.List(ctx, projectID)
 }

@@ -47,3 +47,15 @@ type CatalogRepository interface {
 	CreateComponent(ctx context.Context, component *domain.Component) error
 	DeleteComponent(ctx context.Context, projectID, componentID uuid.UUID) error
 }
+
+// Acciones de proyecto que el modulo delega al autorizador. Usan los nombres de la matriz de permisos.
+const (
+	ActionViewProject   = "view_project"
+	ActionEditProject   = "edit_project"
+	ActionManageMembers = "manage_members"
+)
+
+// ProjectAuthorizer decide si un actor puede ejecutar una accion sobre un proyecto.
+type ProjectAuthorizer interface {
+	Authorize(ctx context.Context, action string, actorID uuid.UUID, globalRole string, projectID uuid.UUID) error
+}

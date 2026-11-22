@@ -74,7 +74,8 @@ func run() error {
 
 	userModule := user.NewModule(userRepo, cfg.Auth.JWTSecret, cfg.Auth.JWTExpiration)
 	teamModule := team.NewModule(teamRepo, cfg.Auth.JWTSecret)
-	projectModule := project.NewModule(projectRepo, projectMemberRepo, projectCatalogRepo, cfg.Auth.JWTSecret)
+	projectAuthorizer := projectAuthorizerAdapter{authorizer: authusecase.NewAuthorizer(authpostgres.NewRoleLookup(db))}
+	projectModule := project.NewModule(projectRepo, projectMemberRepo, projectCatalogRepo, cfg.Auth.JWTSecret, projectAuthorizer)
 	boardModule := board.NewModule(boardpostgres.NewBoardRepository(db), projectModule.Service, cfg.Auth.JWTSecret)
 
 	ticketRepo := ticketDBRepo
@@ -94,7 +95,6 @@ func run() error {
 	}
 	fileStorage := ticketfilesystem.New(attachmentRoot)
 	workflowRepo := ticketpostgres.NewWorkflowRepository(db)
-	projectAuthorizer := ticketProjectAuthorizer{authorizer: authusecase.NewAuthorizer(authpostgres.NewRoleLookup(db))}
 	ticketModule := ticket.NewModule(ticketRepo, userDirectory, collaborationRepo, issueLinkRepo, workflowRepo, watcherRepo, savedFilterRepo, cfg.Auth.JWTSecret, projectAuthorizer, projectMemberRepo)
 	ticketModule.Handler.WithAttachments(attachmentRepo, fileStorage)
 
