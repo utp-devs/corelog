@@ -105,7 +105,7 @@ func (r *TicketRepository) FindAll(ctx context.Context, filter port.ListFilter) 
 		query += fmt.Sprintf(" AND priority = $%d", len(args))
 	}
 
-	query += " ORDER BY created_at DESC"
+	query += " ORDER BY rank ASC, created_at DESC"
 
 	args = append(args, filter.PageSize)
 	query += fmt.Sprintf(" LIMIT $%d", len(args))
