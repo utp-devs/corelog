@@ -1,10 +1,14 @@
 .wrapper {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  max-width: 480px;
+  gap: var(--cl-space-4);
+  max-width: 640px;
 }
 
-.title {
-  margin-top: 0;
+.card {
+  box-shadow: var(--cl-shadow-1);
+}
+
+.hint {
+  margin-bottom: var(--cl-space-3);
 }

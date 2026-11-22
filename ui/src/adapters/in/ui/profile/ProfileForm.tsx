@@ -8,7 +8,7 @@ import styles from './ProfileForm.module.css'
 
 const schema = z.object({
   name: z.string().min(2, 'El nombre es demasiado corto'),
-  email: z.string().email('Introduce un correo valido'),
+  email: z.string().email('Introduce un correo válido'),
 })
 
 type FormValues = z.infer<typeof schema>
@@ -39,7 +39,7 @@ export function ProfileForm({ initialName, initialEmail, isSubmitting, onSubmit 
       <Form.Item label="Nombre" validateStatus={errors.name ? 'error' : ''} help={errors.name?.message}>
         <Controller name="name" control={control} render={({ field }) => <Input {...field} />} />
       </Form.Item>
-      <Form.Item label="Correo electronico" validateStatus={errors.email ? 'error' : ''} help={errors.email?.message}>
+      <Form.Item label="Correo electrónico" validateStatus={errors.email ? 'error' : ''} help={errors.email?.message}>
         <Controller name="email" control={control} render={({ field }) => <Input {...field} type="email" />} />
       </Form.Item>
       <Button type="primary" htmlType="submit" loading={isSubmitting}>
