@@ -2,12 +2,15 @@ package postgres
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
 
 	"github.com/jhonsferg/corelog/internal/platform/apperror"
+	"github.com/jhonsferg/corelog/internal/platform/database"
 	"github.com/jhonsferg/corelog/internal/project/application/port"
 	"github.com/jhonsferg/corelog/internal/project/domain"
 )
@@ -58,14 +61,21 @@ func (r *CatalogRepository) ListLabels(ctx context.Context, projectID uuid.UUID)
 }
 
 func (r *CatalogRepository) CreateLabel(ctx context.Context, label *domain.Label) error {
-	_, err := r.db.ExecContext(ctx, `
-		INSERT INTO labels (id, project_id, name, color, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6)
-		ON CONFLICT (project_id, name) DO NOTHING`,
-		label.ID, label.ProjectID, label.Name, label.Color, label.CreatedAt, label.UpdatedAt)
+	id, err := database.InsertReturningID(ctx, r.db, `
+		INSERT INTO labels (project_id, name, color, created_at, updated_at)
+		VALUES (:project_id, :name, :color, :created_at, :updated_at)
+		ON CONFLICT (project_id, name) DO NOTHING
+		RETURNING id`, map[string]interface{}{
+		"project_id": label.ProjectID, "name": label.Name, "color": label.Color,
+		"created_at": label.CreatedAt, "updated_at": label.UpdatedAt,
+	})
+	if errors.Is(err, sql.ErrNoRows) {
+		return apperror.New(apperror.KindConflict, "a label with this name already exists")
+	}
 	if err != nil {
 		return apperror.Wrap(apperror.KindInternal, "failed to create label", err)
 	}
+	label.ID = id
 	return nil
 }
 
@@ -102,15 +112,21 @@ func (r *CatalogRepository) ListComponents(ctx context.Context, projectID uuid.U
 }
 
 func (r *CatalogRepository) CreateComponent(ctx context.Context, component *domain.Component) error {
-	_, err := r.db.ExecContext(ctx, `
-		INSERT INTO components (id, project_id, name, description, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6)
-		ON CONFLICT (project_id, name) DO NOTHING`,
-		component.ID, component.ProjectID, component.Name, component.Description,
-		component.CreatedAt, component.UpdatedAt)
+	id, err := database.InsertReturningID(ctx, r.db, `
+		INSERT INTO components (project_id, name, description, created_at, updated_at)
+		VALUES (:project_id, :name, :description, :created_at, :updated_at)
+		ON CONFLICT (project_id, name) DO NOTHING
+		RETURNING id`, map[string]interface{}{
+		"project_id": component.ProjectID, "name": component.Name, "description": component.Description,
+		"created_at": component.CreatedAt, "updated_at": component.UpdatedAt,
+	})
+	if errors.Is(err, sql.ErrNoRows) {
+		return apperror.New(apperror.KindConflict, "a component with this name already exists")
+	}
 	if err != nil {
 		return apperror.Wrap(apperror.KindInternal, "failed to create component", err)
 	}
+	component.ID = id
 	return nil
 }
 

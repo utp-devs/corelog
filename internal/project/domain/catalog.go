@@ -30,7 +30,7 @@ func NewLabel(projectID uuid.UUID, name, color string) (*Label, error) {
 		color = "blue"
 	}
 	now := time.Now().UTC()
-	return &Label{ID: uuid.New(), ProjectID: projectID, Name: name, Color: color, CreatedAt: now, UpdatedAt: now}, nil
+	return &Label{ProjectID: projectID, Name: name, Color: color, CreatedAt: now, UpdatedAt: now}, nil
 }
 
 type Component struct {
@@ -49,7 +49,7 @@ func NewComponent(projectID uuid.UUID, name, description string) (*Component, er
 	}
 	now := time.Now().UTC()
 	return &Component{
-		ID: uuid.New(), ProjectID: projectID, Name: name,
+		ProjectID: projectID, Name: name,
 		Description: strings.TrimSpace(description), CreatedAt: now, UpdatedAt: now,
 	}, nil
 }
