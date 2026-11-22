@@ -98,7 +98,7 @@ func (r *memoryUserRepo) Search(_ context.Context, filter userport.SearchFilter)
 func setupUserRouter() (*chi.Mux, string, *memoryUserRepo) {
 	jwtSecret := "test-secret-key-that-is-long-enough-32-bytes"
 	repo := newMemoryUserRepo()
-	service := usecase.NewUserService(repo)
+	service := usecase.NewUserService(repo, newMemorySessionRepo())
 	handler := userhttp.NewHandler(service, jwtSecret, 24*time.Hour)
 
 	r := chi.NewRouter()

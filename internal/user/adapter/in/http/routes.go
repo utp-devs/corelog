@@ -10,6 +10,11 @@ func (h *Handler) RegisterRoutes(r chi.Router) {
 	r.Route("/auth", func(r chi.Router) {
 		r.Post("/register", h.Register)
 		r.Post("/login", h.Login)
+
+		r.Group(func(r chi.Router) {
+			r.Use(appmw.Authenticate(h.jwtSecret))
+			r.Post("/logout", h.Logout)
+		})
 	})
 
 	r.Route("/users", func(r chi.Router) {
@@ -18,6 +23,10 @@ func (h *Handler) RegisterRoutes(r chi.Router) {
 		r.Get("/me", h.Me)
 		r.Patch("/me", h.UpdateProfile)
 		r.Post("/me/password", h.ChangePassword)
+		r.Post("/me/deactivate", h.DeactivateAccount)
+		r.Get("/me/sessions", h.ListSessions)
+		r.Delete("/me/sessions/{id}", h.RevokeSession)
+		r.Post("/me/sessions/revoke-others", h.RevokeOtherSessions)
 		r.Get("/search", h.Search)
 
 		r.Group(func(r chi.Router) {

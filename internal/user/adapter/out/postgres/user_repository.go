@@ -16,7 +16,7 @@ import (
 )
 
 // team_id se deriva de team_members (fuente de verdad, ADR-002). La columna users.team_id se eliminó en la migracion 000019.
-const selectColumns = `id, name, email, password_hash, role, (SELECT tm.team_id FROM team_members tm WHERE tm.user_id = users.id ORDER BY tm.created_at LIMIT 1) AS team_id, created_at, updated_at`
+const selectColumns = `id, name, email, password_hash, role, (SELECT tm.team_id FROM team_members tm WHERE tm.user_id = users.id ORDER BY tm.created_at LIMIT 1) AS team_id, created_at, updated_at, deactivated_at`
 
 type UserRepository struct {
 	db *sqlx.DB
@@ -98,7 +98,7 @@ func (r *UserRepository) Update(ctx context.Context, u *domain.User) error {
 
 	const query = `
 		UPDATE users
-		SET name = :name, email = :email, password_hash = :password_hash, updated_at = :updated_at
+		SET name = :name, email = :email, password_hash = :password_hash, updated_at = :updated_at, deactivated_at = :deactivated_at
 		WHERE id = :id`
 
 	result, err := r.db.NamedExecContext(ctx, query, row)

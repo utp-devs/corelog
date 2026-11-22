@@ -26,6 +26,7 @@ import (
 	"github.com/jhonsferg/corelog/internal/platform/database"
 	"github.com/jhonsferg/corelog/internal/platform/httpserver"
 	"github.com/jhonsferg/corelog/internal/platform/logger"
+	appmw "github.com/jhonsferg/corelog/internal/platform/middleware"
 	"github.com/jhonsferg/corelog/internal/project"
 	projectpostgres "github.com/jhonsferg/corelog/internal/project/adapter/out/postgres"
 	projectport "github.com/jhonsferg/corelog/internal/project/application/port"
@@ -82,7 +83,11 @@ func run() error {
 	projectMemberRepo = projectpostgres.NewMemberRepository(db)
 	projectCatalogRepo := projectpostgres.NewCatalogRepository(db)
 
-	userModule := user.NewModule(userRepo, cfg.Auth.JWTSecret, cfg.Auth.JWTExpiration)
+	// Cada peticion autenticada confirma que su sesion sigue activa (revocacion y cuentas desactivadas).
+	sessionRepo := userpostgres.NewSessionRepository(db)
+	appmw.SetSessionValidator(sessionRepo.Validate)
+
+	userModule := user.NewModule(userRepo, sessionRepo, cfg.Auth.JWTSecret, cfg.Auth.JWTExpiration)
 	teamModule := team.NewModule(teamRepo, cfg.Auth.JWTSecret)
 	projectAuthorizer := projectAuthorizerAdapter{authorizer: authusecase.NewAuthorizer(authpostgres.NewRoleLookup(db))}
 	projectModule := project.NewModule(projectRepo, projectMemberRepo, projectCatalogRepo, cfg.Auth.JWTSecret, projectAuthorizer)

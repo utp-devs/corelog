@@ -44,6 +44,7 @@ func TestUserRepositoryTeamMembershipPostgres(t *testing.T) {
 			password_hash TEXT NOT NULL,
 			role VARCHAR(20) NOT NULL,
 			team_id UUID,
+			deactivated_at TIMESTAMPTZ,
 			created_at TIMESTAMPTZ NOT NULL,
 			updated_at TIMESTAMPTZ NOT NULL
 		)`,

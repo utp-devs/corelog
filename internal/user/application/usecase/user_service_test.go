@@ -90,7 +90,7 @@ func (r *fakeUserRepo) Search(_ context.Context, filter port.SearchFilter) ([]*d
 func TestUserService_Register(t *testing.T) {
 	ctx := context.Background()
 	repo := newFakeUserRepo()
-	svc := NewUserService(repo)
+	svc := NewUserService(repo, newFakeSessionRepo())
 
 	t.Run("first registered user becomes admin", func(t *testing.T) {
 		user, err := svc.Register(ctx, port.RegisterInput{
@@ -135,7 +135,7 @@ func TestUserService_Register(t *testing.T) {
 func TestUserService_Authenticate(t *testing.T) {
 	ctx := context.Background()
 	repo := newFakeUserRepo()
-	svc := NewUserService(repo)
+	svc := NewUserService(repo, newFakeSessionRepo())
 
 	user, _ := svc.Register(ctx, port.RegisterInput{
 		Name:     "Alice",
@@ -180,7 +180,7 @@ func TestUserService_Authenticate(t *testing.T) {
 func TestUserService_ProfileAndPassword(t *testing.T) {
 	ctx := context.Background()
 	repo := newFakeUserRepo()
-	svc := NewUserService(repo)
+	svc := NewUserService(repo, newFakeSessionRepo())
 
 	user1, _ := svc.Register(ctx, port.RegisterInput{
 		Name:     "User One",
@@ -249,7 +249,7 @@ func TestUserService_ProfileAndPassword(t *testing.T) {
 func TestUserService_TeamAndSearch(t *testing.T) {
 	ctx := context.Background()
 	repo := newFakeUserRepo()
-	svc := NewUserService(repo)
+	svc := NewUserService(repo, newFakeSessionRepo())
 
 	teamID := uuid.New()
 	u1, _ := svc.Register(ctx, port.RegisterInput{
