@@ -17,3 +17,23 @@
 .members {
   margin-top: var(--cl-space-6);
 }
+
+.memberInput {
+  width: 280px;
+}
+
+.fullWidth {
+  width: 100%;
+}
+
+.labelInput {
+  width: 220px;
+}
+
+.componentNameInput {
+  width: 220px;
+}
+
+.componentDescriptionInput {
+  width: 260px;
+}

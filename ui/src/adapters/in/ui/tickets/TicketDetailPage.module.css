@@ -20,6 +20,15 @@
 .assigneeInput {
   width: 320px;
 }
+
+.parentInput {
+  width: 280px;
+}
+
+.linkInput {
+  width: 280px;
+}
+
 .collaboration {
   width: 100%;
 }

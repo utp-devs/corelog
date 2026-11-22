@@ -232,7 +232,7 @@ export function TicketsListPage() {
           pageSize={20}
           total={tickets.length + (page - 1) * 20 + 20}
           onChange={setPage}
-          style={{ marginTop: 16 }}
+          className={styles.pagination}
         />
       )}
 

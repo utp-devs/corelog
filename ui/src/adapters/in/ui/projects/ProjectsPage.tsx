@@ -123,7 +123,7 @@ export function ProjectsPage() {
               value={memberUserId}
               onChange={(event) => setMemberUserId(event.target.value)}
               placeholder="UUID del usuario"
-              style={{ width: 280 }}
+              className={styles.memberInput}
             />
             <Select
               value={memberRole}
@@ -198,9 +198,9 @@ export function ProjectsPage() {
 
       {selectedProjectId && (
         <Card title="Etiquetas y componentes" className={styles.members}>
-          <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+          <Space direction="vertical" size="middle" className={styles.fullWidth}>
             <Space wrap>
-              <Input value={labelName} onChange={(event) => setLabelName(event.target.value)} placeholder="Nueva etiqueta" style={{ width: 220 }} />
+              <Input value={labelName} onChange={(event) => setLabelName(event.target.value)} placeholder="Nueva etiqueta" className={styles.labelInput} />
               <Select value={labelColor} onChange={setLabelColor} options={[
                 { value: 'blue', label: 'Azul' },
                 { value: 'green', label: 'Verde' },
@@ -233,8 +233,8 @@ export function ProjectsPage() {
               )}
             />
             <Space wrap>
-              <Input value={componentName} onChange={(event) => setComponentName(event.target.value)} placeholder="Nuevo componente" style={{ width: 220 }} />
-              <Input value={componentDescription} onChange={(event) => setComponentDescription(event.target.value)} placeholder="Descripcion" style={{ width: 260 }} />
+              <Input value={componentName} onChange={(event) => setComponentName(event.target.value)} placeholder="Nuevo componente" className={styles.componentNameInput} />
+              <Input value={componentDescription} onChange={(event) => setComponentDescription(event.target.value)} placeholder="Descripcion" className={styles.componentDescriptionInput} />
               <Button
                 type="primary"
                 disabled={!componentName.trim()}

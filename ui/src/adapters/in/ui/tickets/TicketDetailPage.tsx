@@ -70,7 +70,7 @@ function IssueEditor({ ticket, onSave }: IssueEditorProps) {
               { value: 'subtask', label: 'Subtarea' },
             ]}
           />
-          <Input value={parentId} onChange={(event) => setParentId(event.target.value)} placeholder="ID incidencia padre" style={{ width: 280 }} />
+          <Input value={parentId} onChange={(event) => setParentId(event.target.value)} placeholder="ID incidencia padre" className={styles.parentInput} />
           <DatePicker value={dueDate} onChange={(value) => setDueDate(value)} placeholder="Fecha limite" />
           <InputNumber value={storyPoints} onChange={setStoryPoints} min={0} max={999} placeholder="Puntos" />
           <Button
@@ -271,7 +271,7 @@ export function TicketDetailPage() {
             value={linkTargetId}
             onChange={(event) => setLinkTargetId(event.target.value)}
             placeholder="UUID de incidencia"
-            style={{ width: 280 }}
+            className={styles.linkInput}
           />
           <Select
             value={linkKind}
