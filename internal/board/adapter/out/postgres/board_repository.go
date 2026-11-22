@@ -98,3 +98,19 @@ func (r *BoardRepository) FindDefaultByProject(ctx context.Context, projectID uu
 	}
 	return board, nil
 }
+
+// UpdateWIPLimit fija o quita (nil) el limite WIP de una columna.
+func (r *BoardRepository) UpdateWIPLimit(ctx context.Context, columnID uuid.UUID, limit *int) error {
+	result, err := r.db.ExecContext(ctx, `UPDATE board_columns SET wip_limit = $2, updated_at = now() WHERE id = $1`, columnID, limit)
+	if err != nil {
+		return apperror.Wrap(apperror.KindInternal, "failed to update column", err)
+	}
+	affected, err := result.RowsAffected()
+	if err != nil {
+		return apperror.Wrap(apperror.KindInternal, "failed to update column", err)
+	}
+	if affected == 0 {
+		return domain.ErrColumnNotFound
+	}
+	return nil
+}

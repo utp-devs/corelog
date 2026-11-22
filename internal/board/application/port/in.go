@@ -13,6 +13,8 @@ type ProjectAuthorizer interface {
 
 type Service interface {
 	Get(ctx context.Context, projectID, actorID uuid.UUID, globalRole string) (*BoardView, error)
+	MoveCard(ctx context.Context, projectID, actorID uuid.UUID, globalRole string, issueID, columnID uuid.UUID) error
+	UpdateColumnWIP(ctx context.Context, projectID, actorID uuid.UUID, globalRole string, columnID uuid.UUID, limit *int) error
 }
 
 type BoardView struct {

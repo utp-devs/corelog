@@ -522,6 +522,94 @@ paths:
           $ref: '#/components/responses/NotFound'
         '422':
           $ref: '#/components/responses/ValidationError'
+  /projects/{id}/board/cards/{issue_id}/move:
+    post:
+      tags: [tickets]
+      operationId: moveBoardCard
+      summary: Mover una incidencia a otra columna del tablero
+      description: La columna destino define el estado de la incidencia (ADR-004). Requiere permiso de edicion de incidencias y respeta el flujo del proyecto y el limite WIP de la columna.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: issue_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [column_id]
+              properties:
+                column_id:
+                  type: string
+                  format: uuid
+      responses:
+        '200':
+          description: Tablero actualizado
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Sin permiso para editar incidencias del proyecto
+        '404':
+          description: Columna o incidencia no encontrada en el proyecto
+        '409':
+          description: La columna destino alcanzo su limite WIP o el cambio de estado no esta permitido por el flujo
+        '422':
+          $ref: '#/components/responses/ValidationError'
+  /projects/{id}/board/columns/{column_id}:
+    patch:
+      tags: [tickets]
+      operationId: updateBoardColumnWip
+      summary: Fijar o quitar el limite WIP de una columna
+      description: Solo el lider del proyecto o el administrador global. Enviar wip_limit null quita el limite.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: column_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                wip_limit:
+                  type: integer
+                  minimum: 1
+                  nullable: true
+      responses:
+        '200':
+          description: Tablero actualizado
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Solo lead o administrador global
+        '404':
+          description: Columna no encontrada en el proyecto
+        '422':
+          $ref: '#/components/responses/ValidationError'
   /projects/{id}/members:
     parameters:
       - name: id

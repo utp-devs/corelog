@@ -10,6 +10,8 @@ import (
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/jmoiron/sqlx"
 
+	"database/sql"
+	"errors"
 	"github.com/jhonsferg/corelog/internal/board/domain"
 )
 
@@ -78,5 +80,56 @@ func TestBoardRepositoryFindDefaultByProjectPostgres(t *testing.T) {
 	}
 	if _, err := repository.FindDefaultByProject(context.Background(), uuid.New()); err != domain.ErrBoardNotFound {
 		t.Fatalf("missing board error = %v, want %v", err, domain.ErrBoardNotFound)
+	}
+}
+
+// TestBoardRepositoryUpdateWIPLimitPostgres comprueba que se fija y se quita el limite WIP de una columna,
+// y que una columna inexistente responde no encontrada.
+func TestBoardRepositoryUpdateWIPLimitPostgres(t *testing.T) {
+	dsn := os.Getenv("CORELOG_TEST_DATABASE_URL")
+	if dsn == "" {
+		t.Skip("set CORELOG_TEST_DATABASE_URL to run PostgreSQL integration tests")
+	}
+	db, err := sqlx.Connect("pgx", dsn)
+	if err != nil {
+		t.Fatal(err)
+	}
+	db.SetMaxOpenConns(1)
+	t.Cleanup(func() { _ = db.Close() })
+
+	schema := "board_wip_test_" + strings.ReplaceAll(uuid.NewString(), "-", "")
+	if _, err := db.Exec(`CREATE SCHEMA ` + schema); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _, _ = db.Exec(`DROP SCHEMA ` + schema + ` CASCADE`) })
+	if _, err := db.Exec(`SET search_path TO ` + schema); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`CREATE TABLE board_columns (id UUID PRIMARY KEY, wip_limit INTEGER, updated_at TIMESTAMPTZ NOT NULL DEFAULT now())`); err != nil {
+		t.Fatal(err)
+	}
+	column := uuid.New()
+	if _, err := db.Exec(`INSERT INTO board_columns (id) VALUES ($1)`, column); err != nil {
+		t.Fatal(err)
+	}
+
+	repo := NewBoardRepository(db)
+	ctx := context.Background()
+	three := 3
+	if err := repo.UpdateWIPLimit(ctx, column, &three); err != nil {
+		t.Fatalf("set limit: %v", err)
+	}
+	var stored sql.NullInt64
+	if err := db.Get(&stored, `SELECT wip_limit FROM board_columns WHERE id = $1`, column); err != nil || !stored.Valid || stored.Int64 != 3 {
+		t.Fatalf("stored limit = %+v, %v; want 3", stored, err)
+	}
+	if err := repo.UpdateWIPLimit(ctx, column, nil); err != nil {
+		t.Fatalf("clear limit: %v", err)
+	}
+	if err := db.Get(&stored, `SELECT wip_limit FROM board_columns WHERE id = $1`, column); err != nil || stored.Valid {
+		t.Fatalf("limit after clear = %+v, %v; want NULL", stored, err)
+	}
+	if err := repo.UpdateWIPLimit(ctx, uuid.New(), &three); !errors.Is(err, domain.ErrColumnNotFound) {
+		t.Fatalf("unknown column: got %v, want ErrColumnNotFound", err)
 	}
 }
