@@ -46,6 +46,14 @@
 - [ ] Rol no permitido para la transición devuelve 409
 - [ ] Las menciones @usuario detectan miembros del proyecto
 - [ ] Actividad de issue lista cambios append-only
+- [ ] Un colaborador puede cargar un PDF, imagen o texto de hasta 10 MiB
+- [ ] Rechazar archivos vacios, mayores a 10 MiB y tipos no permitidos (incluido SVG/HTML)
+- [ ] El nombre presentado no permite rutas y se conserva como nombre descargable
+- [ ] Solo miembros con permiso de lectura listan y descargan; no miembros reciben 403
+- [ ] Solo colaboradores/lideres o admin cargan; viewer recibe 403
+- [ ] Un ID de adjunto de otro issue no permite descargarlo (404)
+- [ ] Los bytes permanecen disponibles tras reiniciar el contenedor API (volumen Docker)
+- [ ] Si falla la insercion de metadatos, se elimina el archivo guardado
 
 ## Automatizacion
 

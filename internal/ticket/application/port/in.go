@@ -72,6 +72,7 @@ type Service interface {
 	UpdateComment(ctx context.Context, commentID, actorID uuid.UUID, globalRole, body string) (*domain.Comment, error)
 	DeleteComment(ctx context.Context, commentID, actorID uuid.UUID, globalRole string) error
 	ListActivities(ctx context.Context, issueID, actorID uuid.UUID, globalRole string) ([]*domain.Activity, error)
+	AuthorizeIssueEdit(ctx context.Context, issueID, actorID uuid.UUID, globalRole string) error
 	ListIssueLinks(ctx context.Context, issueID, actorID uuid.UUID, globalRole string) ([]*domain.IssueLink, error)
 	CreateIssueLink(ctx context.Context, sourceIssueID, targetIssueID, createdBy uuid.UUID, globalRole string, kind domain.IssueLinkKind) (*domain.IssueLink, error)
 	DeleteIssueLink(ctx context.Context, issueID, linkID, actorID uuid.UUID, globalRole string) error

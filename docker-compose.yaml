@@ -51,8 +51,11 @@ services:
       DB_SSLMODE: disable
       JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
       JWT_EXPIRATION: 24h
+      ATTACHMENTS_DIR: /var/lib/corelog/attachments
     ports:
       - "8080:8080"
+    volumes:
+      - corelog_attachments:/var/lib/corelog/attachments
 
   ui:
     build:
@@ -68,3 +71,4 @@ services:
 
 volumes:
   corelog_db_data:
+  corelog_attachments:

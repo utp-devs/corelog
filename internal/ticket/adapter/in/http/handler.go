@@ -18,12 +18,19 @@ import (
 )
 
 type Handler struct {
-	service   port.Service
-	jwtSecret string
+	service     port.Service
+	jwtSecret   string
+	attachments port.AttachmentRepository
+	files       port.FileStorage
 }
 
 func NewHandler(service port.Service, jwtSecret string) *Handler {
 	return &Handler{service: service, jwtSecret: jwtSecret}
+}
+
+func (h *Handler) WithAttachments(repo port.AttachmentRepository, files port.FileStorage) *Handler {
+	h.attachments, h.files = repo, files
+	return h
 }
 
 func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {

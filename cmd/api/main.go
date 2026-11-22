@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 
 	"github.com/go-chi/chi/v5"
@@ -23,6 +24,7 @@ import (
 	teamport "github.com/jhonsferg/corelog/internal/team/application/port"
 	"github.com/jhonsferg/corelog/internal/ticket"
 	ticketdirectory "github.com/jhonsferg/corelog/internal/ticket/adapter/out/directory"
+	ticketfilesystem "github.com/jhonsferg/corelog/internal/ticket/adapter/out/filesystem"
 	ticketmemory "github.com/jhonsferg/corelog/internal/ticket/adapter/out/memory"
 	ticketpostgres "github.com/jhonsferg/corelog/internal/ticket/adapter/out/postgres"
 	ticketport "github.com/jhonsferg/corelog/internal/ticket/application/port"
@@ -78,8 +80,15 @@ func run() error {
 	userDirectory := ticketdirectory.NewUserDirectory(db)
 	collaborationRepo := ticketpostgres.NewCollaborationRepository(db)
 	issueLinkRepo := ticketpostgres.NewIssueLinkRepository(db)
+	attachmentRepo := ticketpostgres.NewAttachmentRepository(db)
+	attachmentRoot := os.Getenv("ATTACHMENTS_DIR")
+	if attachmentRoot == "" {
+		attachmentRoot = filepath.Join("data", "attachments")
+	}
+	fileStorage := ticketfilesystem.New(attachmentRoot)
 	workflowRepo := ticketpostgres.NewWorkflowRepository(db)
 	ticketModule := ticket.NewModule(ticketRepo, userDirectory, collaborationRepo, issueLinkRepo, workflowRepo, cfg.Auth.JWTSecret, projectMemberRepo)
+	ticketModule.Handler.WithAttachments(attachmentRepo, fileStorage)
 
 	router := httpserver.NewRouter(cfg.Server)
 	router.Route("/api/v1", func(r chi.Router) {

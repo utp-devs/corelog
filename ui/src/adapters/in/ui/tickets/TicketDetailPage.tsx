@@ -1,4 +1,4 @@
-import { App, Button, Card, DatePicker, Descriptions, Input, InputNumber, List, Select, Skeleton, Space, Tabs, Typography } from 'antd'
+import { App, Button, Card, DatePicker, Descriptions, Input, InputNumber, List, Select, Skeleton, Space, Tabs, Typography, Upload } from 'antd'
 import TextArea from 'antd/es/input/TextArea'
 import dayjs from 'dayjs'
 import { useEffect, useState } from 'react'
@@ -10,6 +10,10 @@ import { useTeammateSearch } from './hooks/useTeammateSearch'
 import { TicketBadge } from './TicketBadge'
 import styles from './TicketDetailPage.module.css'
 import { PageHeader } from '@/shared/ui/PageHeader'
+import type { IssueAttachment } from '@/core/tickets/domain/attachment'
+import { AttachmentHttpRepository } from '@/adapters/out/http/attachment-http-repository'
+
+const attachmentRepository = new AttachmentHttpRepository()
 
 const allStatuses: TicketStatus[] = ['open', 'in_progress', 'resolved', 'closed']
 
@@ -111,6 +115,9 @@ export function TicketDetailPage() {
   const [commentBody, setCommentBody] = useState('')
   const [linkTargetId, setLinkTargetId] = useState('')
   const [linkKind, setLinkKind] = useState<'blocks' | 'relates' | 'duplicates'>('relates')
+  const [attachments, setAttachments] = useState<IssueAttachment[]>([])
+  const [attachmentsIssueId, setAttachmentsIssueId] = useState<string | null>(null)
+  const attachmentsLoading = attachmentsIssueId !== selected?.id
   const teammateSearch = useTeammateSearch()
 
   useEffect(() => {
@@ -119,10 +126,24 @@ export function TicketDetailPage() {
 
   useEffect(() => {
     if (!id) return
+    let active = true
     void fetchComments(id)
     void fetchActivities(id)
     void fetchLinks(id)
-  }, [id, fetchComments, fetchActivities, fetchLinks])
+    void attachmentRepository.list(id).then((items) => {
+      if (active) {
+        setAttachments(items)
+        setAttachmentsIssueId(id)
+      }
+    }).catch((error: unknown) => {
+      if (active) {
+        setAttachments([])
+        setAttachmentsIssueId(id)
+        message.error(error instanceof Error ? error.message : 'No se pudieron cargar los archivos')
+      }
+    })
+    return () => { active = false }
+  }, [id, fetchComments, fetchActivities, fetchLinks, message])
 
   if (status === 'loading' || !selected) {
     return <Skeleton active />
@@ -368,6 +389,41 @@ export function TicketDetailPage() {
                     </List.Item>
                   )}
                 />
+              ),
+            },
+            {
+              key: 'attachments',
+              label: 'Archivos',
+              children: (
+                <Space direction="vertical" className={styles.collaboration}>
+                  <Upload
+                    maxCount={1}
+                    disabled={attachmentsLoading}
+                    showUploadList={false}
+                    beforeUpload={async (file) => {
+                      try {
+                        const attachment = await attachmentRepository.upload(selected.id, file)
+                        setAttachments((current) => [...current, attachment])
+                        message.success('Archivo adjuntado')
+                      } catch (error) {
+                        message.error(error instanceof Error ? error.message : 'No se pudo adjuntar el archivo')
+                      }
+                      return Upload.LIST_IGNORE
+                    }}
+                  >
+                    <Button>Cargar archivo (máximo 10 MB)</Button>
+                  </Upload>
+                  <List
+                    loading={attachmentsLoading}
+                    dataSource={attachments}
+                    locale={{ emptyText: 'Aún no hay archivos' }}
+                    renderItem={(attachment) => (
+                      <List.Item actions={[<Button key="download" onClick={() => void attachmentRepository.download(selected.id, attachment)}>Descargar</Button>]}>
+                        <List.Item.Meta title={attachment.fileName} description={`${attachment.contentType} · ${(attachment.sizeBytes / 1024).toFixed(1)} KB`} />
+                      </List.Item>
+                    )}
+                  />
+                </Space>
               ),
             },
           ]}

@@ -26,5 +26,8 @@ func (h *Handler) RegisterRoutes(r chi.Router) {
 		r.Get("/{id}/links", h.ListIssueLinks)
 		r.Post("/{id}/links", h.CreateIssueLink)
 		r.Delete("/{id}/links/{link_id}", h.DeleteIssueLink)
+		r.Get("/{id}/attachments", h.ListAttachments)
+		r.Post("/{id}/attachments", h.UploadAttachment)
+		r.Get("/{id}/attachments/{attachment_id}", h.DownloadAttachment)
 	})
 }

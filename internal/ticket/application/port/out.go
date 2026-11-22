@@ -2,6 +2,7 @@ package port
 
 import (
 	"context"
+	"io"
 
 	"github.com/google/uuid"
 
@@ -38,6 +39,19 @@ type IssueLinkRepository interface {
 
 type WorkflowRepository interface {
 	CanTransition(ctx context.Context, projectID uuid.UUID, fromStatus, toStatus domain.Status, actorRole string) (bool, error)
+}
+
+type AttachmentRepository interface {
+	SaveAttachment(context.Context, *domain.Attachment) error
+	FindAttachment(context.Context, uuid.UUID, uuid.UUID) (*domain.Attachment, error)
+	ListAttachments(context.Context, uuid.UUID) ([]*domain.Attachment, error)
+	DeleteAttachment(context.Context, uuid.UUID, uuid.UUID) error
+}
+
+type FileStorage interface {
+	Save(context.Context, string, io.Reader) (int64, error)
+	Open(context.Context, string) (io.ReadCloser, error)
+	Delete(context.Context, string) error
 }
 
 type ProjectRoleResolver interface {

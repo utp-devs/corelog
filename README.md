@@ -121,6 +121,10 @@ Las migraciones versionadas viven en `migrations/postgres/` y se aplican mediant
 
 El ticket hexagon admite opcionalmente `TICKET_REPOSITORY=memory` para demos y pruebas aisladas. Esta opción no sustituye PostgreSQL para el resto de módulos.
 
+Los adjuntos de issues se almacenan en `data/attachments` en desarrollo local. Docker Compose monta el volumen persistente `corelog_attachments` en `/var/lib/corelog/attachments`; `ATTACHMENTS_DIR` permite configurar otra ruta. La API acepta PDF, PNG, JPEG, GIF, WebP, texto plano y CSV de hasta 10 MiB por archivo.
+
+La prueba de integración del repositorio de adjuntos usa PostgreSQL real y se activa con `CORELOG_TEST_DATABASE_URL`; crea y elimina un esquema temporal aislado.
+
 ### Equipos y asignación
 
 Every user optionally belongs to one team, tracked as a nullable `team_id` on the user. Teams themselves are a small, independent hexagon under `internal/team`, managed by administrators through the `/teams` endpoints.

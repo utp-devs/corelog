@@ -28,7 +28,7 @@ src/
 │   └── users/                       search and team-assignment for other users, reuses the auth User type
 ├── adapters/
 │   ├── out/                         driven adapters that implement core ports
-│   │   ├── http/                         axios-based repositories plus the shared api-client
+│   │   ├── http/                         axios-based repositories, attachment transfer, and shared api-client
 │   │   └── storage/                      localStorage-backed token storage
 │   └── in/                          driving adapters that call the core
 │       ├── state/                        zustand stores bridging UI and application services

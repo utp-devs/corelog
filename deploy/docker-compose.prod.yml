@@ -48,8 +48,11 @@ services:
       DB_SSLMODE: disable
       JWT_SECRET: ${JWT_SECRET}
       JWT_EXPIRATION: 24h
+      ATTACHMENTS_DIR: /var/lib/corelog/attachments
     ports:
       - "127.0.0.1:18080:8080"   # reachable only by nginx on the host
+    volumes:
+      - corelog_attachments:/var/lib/corelog/attachments
 
   ui:
     image: ghcr.io/utp-devs/corelog-ui:${IMAGE_TAG:-latest}
@@ -61,3 +64,4 @@ services:
 
 volumes:
   corelog_db_data:
+  corelog_attachments:

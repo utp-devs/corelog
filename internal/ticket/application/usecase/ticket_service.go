@@ -78,6 +78,14 @@ func (s *TicketService) Get(ctx context.Context, id, actorID uuid.UUID, globalRo
 	return ticket, nil
 }
 
+func (s *TicketService) AuthorizeIssueEdit(ctx context.Context, id, actorID uuid.UUID, globalRole string) error {
+	ticket, err := s.repo.FindByID(ctx, id)
+	if err != nil {
+		return err
+	}
+	return s.requireIssueEdit(ctx, ticket.ProjectID, actorID, globalRole)
+}
+
 func (s *TicketService) List(ctx context.Context, actorID uuid.UUID, globalRole string, filter port.ListFilter) ([]*domain.Ticket, error) {
 	if filter.Page <= 0 {
 		filter.Page = 1
