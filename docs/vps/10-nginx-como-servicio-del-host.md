@@ -13,7 +13,7 @@
 | `nginx -t` en el host | No (`docker compose exec nginx nginx -t`) | Sí (envoltorio en `/usr/local/sbin/nginx`) |
 | certbot, logrotate y scripts que llaman a `nginx` | Hay que adaptarlos | Funcionan sin cambios |
 | Disposición de archivos | `/opt/nginx/…` | `/etc/nginx`, `/etc/letsencrypt`, `/var/www`, `/var/log/nginx` (rutas del sistema) |
-| Verificado en | Servidor nuevo (Debian 13), hasta la migración | Servidor de referencia (Debian 12) y servidor nuevo (Debian 13), ambos en producción |
+| Verificado en | Servidor nuevo (Debian 13), hasta la migración | Servidor de referencia y servidor nuevo (ambos Debian 13), en producción |
 
 Ambos servidores usan hoy el **modo B**: es el que convierte al contenedor en "el Nginx por defecto del host". El modo A (un `docker-compose.yml`, documento [07](07-nginx-configuracion.md), sección 2) es el punto de partida más simple y sigue siendo válido si no se necesita integración con el sistema; el servidor nuevo empezó así y se migró con la sección 3.
 

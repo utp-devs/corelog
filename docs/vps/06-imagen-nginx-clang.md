@@ -6,7 +6,7 @@
 
 - Dockerfile vigente: [`recursos/nginx-image/Dockerfile`](recursos/nginx-image/Dockerfile). Todas las revisiones publicadas están archivadas en [`releases/`](recursos/nginx-image/releases/) y descritas en el [`CHANGELOG`](recursos/nginx-image/CHANGELOG.md).
 - Etiqueta vigente: **`nginx-clang:1.31.9-r2`** (`<versión de nginx>-r<revisión>`; el esquema de versionado está en [16](16-mantenimiento-y-versionado-de-la-imagen.md)).
-- Origen: la primera versión (`1.31.6-r1`) viene del proyecto `warlay` (`tools/nginx-image/`) y corría en el servidor de referencia. La revisión actual se **reconstruyó en el servidor nuevo** (Debian 13), con las dependencias actualizadas y un diseño de build más rápido.
+- Origen: la primera versión (`1.31.6-r1`) viene del proyecto `warlay` (`tools/nginx-image/`) y corría en el servidor de referencia. La revisión actual se **reconstruyó en el servidor nuevo** (Debian 13), con las dependencias actualizadas y un diseño de build más rápido, y **se desplegó en ambos servidores** (el nuevo y el de referencia).
 
 ## 1. Por qué compilarla
 
@@ -219,7 +219,7 @@ Resultado de la revisión vigente: **15 de 15**.
 
 ## 8. Mover la imagen entre servidores (sin recompilar)
 
-La imagen es autocontenida (trae su propia glibc), así que **no depende del sistema operativo del host**: la compilada sobre Debian 12 corrió en Debian 13, y viceversa.
+La imagen es autocontenida (trae su propia glibc), así que **no depende del sistema operativo del host**: la `1.31.6-r1` (construida sobre Debian 12) corría en un servidor Debian 13, y la `1.31.9-r2` (Debian 13) corre en dos servidores Debian 13. Ejecutar una imagen de Debian 13 en un host Debian 12 no se ha probado.
 
 ```bash
 ssh origen 'docker save nginx-clang:1.31.9-r2' | ssh destino 'docker load'
