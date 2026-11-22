@@ -80,3 +80,11 @@ func (Policy) CanManageBoard(globalRole string, projectRole *ProjectRole) bool {
 	}
 	return projectRole != nil && *projectRole == ProjectRoleLead
 }
+
+// CanManageWorkflow: gestionar el flujo de estados del proyecto es exclusivo del lider del proyecto.
+func (Policy) CanManageWorkflow(globalRole string, projectRole *ProjectRole) bool {
+	if globalRole == "admin" {
+		return true
+	}
+	return projectRole != nil && *projectRole == ProjectRoleLead
+}

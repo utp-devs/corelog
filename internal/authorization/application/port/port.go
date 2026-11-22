@@ -12,16 +12,17 @@ import (
 type Action string
 
 const (
-	ActionViewProject   Action = "view_project"
-	ActionEditProject   Action = "edit_project"
-	ActionDeleteProject Action = "delete_project"
-	ActionManageMembers Action = "manage_members"
-	ActionCreateIssue   Action = "create_issue"
-	ActionEditIssue     Action = "edit_issue"
-	ActionComment       Action = "comment"
-	ActionWatchIssue    Action = "watch_issue"
-	ActionMoveCards     Action = "move_cards"
-	ActionManageBoard   Action = "manage_board"
+	ActionViewProject    Action = "view_project"
+	ActionEditProject    Action = "edit_project"
+	ActionDeleteProject  Action = "delete_project"
+	ActionManageMembers  Action = "manage_members"
+	ActionCreateIssue    Action = "create_issue"
+	ActionEditIssue      Action = "edit_issue"
+	ActionComment        Action = "comment"
+	ActionWatchIssue     Action = "watch_issue"
+	ActionMoveCards      Action = "move_cards"
+	ActionManageBoard    Action = "manage_board"
+	ActionManageWorkflow Action = "manage_workflow"
 )
 
 // Actions lista todas las acciones de la matriz de permisos.
@@ -36,6 +37,7 @@ var Actions = []Action{
 	ActionWatchIssue,
 	ActionMoveCards,
 	ActionManageBoard,
+	ActionManageWorkflow,
 }
 
 // RoleLookup es el puerto de salida que devuelve el rol de un usuario en un proyecto.

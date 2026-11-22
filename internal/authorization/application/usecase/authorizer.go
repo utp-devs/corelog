@@ -60,6 +60,8 @@ func (a *Authorizer) allowed(action port.Action, globalRole string, role *domain
 		return a.policy.CanMoveCards(globalRole, role)
 	case port.ActionManageBoard:
 		return a.policy.CanManageBoard(globalRole, role)
+	case port.ActionManageWorkflow:
+		return a.policy.CanManageWorkflow(globalRole, role)
 	default:
 		return false
 	}

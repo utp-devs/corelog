@@ -46,6 +46,8 @@ func TestAuthorizerDecisionsByRole(t *testing.T) {
 		{"viewer cannot move cards", port.ActionMoveCards, roleOf(domain.ProjectRoleViewer), false},
 		{"contributor cannot manage the board", port.ActionManageBoard, roleOf(domain.ProjectRoleContributor), false},
 		{"lead manages the board", port.ActionManageBoard, roleOf(domain.ProjectRoleLead), true},
+		{"lead manages the workflow", port.ActionManageWorkflow, roleOf(domain.ProjectRoleLead), true},
+		{"contributor cannot manage the workflow", port.ActionManageWorkflow, roleOf(domain.ProjectRoleContributor), false},
 		{"non member cannot view the project", port.ActionViewProject, nil, false},
 	}
 
