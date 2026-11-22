@@ -28,4 +28,5 @@ export interface ProjectBoard {
   name: string
   type: 'kanban' | 'scrum'
   columns: BoardColumn[]
+  canManageBoard: boolean
 }

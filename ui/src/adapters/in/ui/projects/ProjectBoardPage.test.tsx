@@ -2,7 +2,7 @@ import { render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-const repositories = vi.hoisted(() => ({ getProject: vi.fn(), getBoard: vi.fn() }))
+const repositories = vi.hoisted(() => ({ getProject: vi.fn(), getBoard: vi.fn(), updateWip: vi.fn() }))
 
 vi.mock('@/adapters/out/http/project-http-repository', () => ({
   ProjectHttpRepository: class {
@@ -13,6 +13,7 @@ vi.mock('@/adapters/out/http/project-http-repository', () => ({
 vi.mock('@/adapters/out/http/board-http-repository', () => ({
   BoardHttpRepository: class {
     getProjectBoard = repositories.getBoard
+    updateColumnWip = repositories.updateWip
   },
 }))
 
@@ -78,5 +79,34 @@ describe('ProjectBoardPage', () => {
 
     expect(await screen.findByText('2 / 2')).toBeInTheDocument()
     expect(screen.getByText('Trabajo en curso')).toBeInTheDocument()
+  })
+
+  it('lets a manager edit the wip limit of a column', async () => {
+    repositories.getBoard.mockResolvedValue({
+      id: 'board-1', projectId: 'project-1', name: 'Default', type: 'kanban', canManageBoard: true,
+      columns: [{ id: 'column-2', name: 'En progreso', status: 'in_progress', position: 1, count: 0, cards: [] }],
+    })
+    render(
+      <MemoryRouter initialEntries={['/projects/project-1/board']}>
+        <Routes><Route path="/projects/:id/board" element={<ProjectBoardPage />} /></Routes>
+      </MemoryRouter>,
+    )
+
+    expect(await screen.findByLabelText('Límite WIP de En progreso')).toBeInTheDocument()
+  })
+
+  it('hides the wip editor from users who cannot manage the board', async () => {
+    repositories.getBoard.mockResolvedValue({
+      id: 'board-1', projectId: 'project-1', name: 'Default', type: 'kanban', canManageBoard: false,
+      columns: [{ id: 'column-2', name: 'En progreso', status: 'in_progress', position: 1, count: 0, cards: [] }],
+    })
+    render(
+      <MemoryRouter initialEntries={['/projects/project-1/board']}>
+        <Routes><Route path="/projects/:id/board" element={<ProjectBoardPage />} /></Routes>
+      </MemoryRouter>,
+    )
+
+    expect(await screen.findByText('En progreso')).toBeInTheDocument()
+    expect(screen.queryByLabelText('Límite WIP de En progreso')).not.toBeInTheDocument()
   })
 })

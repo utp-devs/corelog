@@ -80,3 +80,6 @@
 .columnFull {
   border-color: var(--cl-danger);
 }
+.wipInput {
+  width: 96px;
+}

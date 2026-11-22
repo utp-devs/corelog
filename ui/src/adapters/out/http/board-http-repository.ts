@@ -31,6 +31,7 @@ interface BoardDto {
   name: string
   type: 'kanban' | 'scrum'
   columns: BoardColumnDto[]
+  can_manage_board?: boolean
 }
 
 function toCard(card: BoardCardDto): BoardCard {
@@ -66,6 +67,7 @@ export function toProjectBoard(board: BoardDto): ProjectBoard {
     name: board.name,
     type: board.type,
     columns: board.columns.map(toColumn),
+    canManageBoard: board.can_manage_board === true,
   }
 }
 

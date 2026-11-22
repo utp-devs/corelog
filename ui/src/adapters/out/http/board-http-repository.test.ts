@@ -8,6 +8,7 @@ const boardDto = {
   project_id: 'project-1',
   name: 'Default',
   type: 'kanban' as const,
+  can_manage_board: true,
   columns: [{
     id: 'column-1',
     name: 'En curso',
@@ -44,6 +45,7 @@ describe('BoardHttpRepository', () => {
     expect(column.wipLimit).toBe(5)
     expect(column.cards[0].storyPoints).toBe(3)
     expect(column.cards[0].assigneeId).toBe('user-1')
+    expect(board.canManageBoard).toBe(true)
   })
 
   it('sends the move request with column_id and returns the updated board', async () => {

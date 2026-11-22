@@ -3,6 +3,7 @@ import {
   Button,
   Card,
   Empty,
+  InputNumber,
   Skeleton,
   Space,
   Tag,
@@ -42,6 +43,13 @@ function moveErrorMessage(error: unknown): string {
 }
 
 // Una columna está llena cuando tiene límite WIP y ya alcanza ese límite.
+// Mensajes en español para guardar el límite WIP de una columna.
+function wipErrorMessage(error: unknown): string {
+  const status = (error as { response?: { status?: number } }).response?.status
+  if (status === 403) return 'Solo el lead del proyecto o el administrador pueden cambiar el límite WIP.'
+  return 'No se pudo guardar el límite WIP. Intenta de nuevo.'
+}
+
 function isColumnFull(column: BoardColumn): boolean {
   return column.wipLimit !== undefined && column.count >= column.wipLimit
 }
@@ -76,7 +84,12 @@ function DraggableCard({ card }: { card: BoardCard }) {
   )
 }
 
-function DroppableColumn({ column, children }: { column: BoardColumn; children: ReactNode }) {
+function DroppableColumn({ column, children, canManage, onSaveWip }: {
+  column: BoardColumn
+  children: ReactNode
+  canManage: boolean
+  onSaveWip: (columnId: string, raw: string) => void
+}) {
   const full = isColumnFull(column)
   const { setNodeRef, isOver } = useDroppable({ id: column.id, disabled: full })
   const classes = [styles.column, isOver && !full ? styles.columnOver : '', full ? styles.columnFull : ''].filter(Boolean).join(' ')
@@ -86,9 +99,24 @@ function DroppableColumn({ column, children }: { column: BoardColumn; children: 
         <Typography.Title level={5} id={`column-${column.id}`} className={styles.columnTitle}>
           {column.name}
         </Typography.Title>
-        <Tag color={full ? 'error' : undefined}>
-          {column.wipLimit !== undefined ? `${column.count} / ${column.wipLimit}` : column.count}
-        </Tag>
+        <Space size={[6, 6]} wrap>
+          {canManage && (
+            <InputNumber
+              key={`${column.id}-${column.wipLimit ?? 'none'}`}
+              size="small"
+              min={1}
+              defaultValue={column.wipLimit}
+              placeholder="Sin límite"
+              aria-label={`Límite WIP de ${column.name}`}
+              className={styles.wipInput}
+              onBlur={(event) => onSaveWip(column.id, event.target.value)}
+              onPressEnter={(event) => onSaveWip(column.id, event.currentTarget.value)}
+            />
+          )}
+          <Tag color={full ? 'error' : undefined}>
+            {column.wipLimit !== undefined ? `${column.count} / ${column.wipLimit}` : column.count}
+          </Tag>
+        </Space>
       </div>
       {children}
     </section>
@@ -154,12 +182,34 @@ export function ProjectBoardPage() {
 
   const activeCard = board?.columns.flatMap((column) => column.cards).find((card) => card.id === activeCardId)
 
+  // Fija el limite WIP de una columna. Cadena vacia quita el limite; solo se llama a la API si cambia.
+  const saveWip = (columnId: string, raw: string) => {
+    if (!board) return
+    const column = board.columns.find((candidate) => candidate.id === columnId)
+    const value = raw.trim() === '' ? null : Number(raw)
+    if (value !== null && (!Number.isInteger(value) || value < 1)) {
+      setMoveError('El límite WIP debe ser un número entero mayor que 0.')
+      return
+    }
+    if (!column || (value ?? undefined) === column.wipLimit) return
+    setMoveError(undefined)
+    new BoardHttpRepository()
+      .updateColumnWip(id, columnId, value)
+      .then((updated) => setResult((previous) => (previous && previous.projectId === id ? { ...previous, board: updated } : previous)))
+      .catch((error: unknown) => setMoveError(wipErrorMessage(error)))
+  }
+
   return (
     <div>
       <PageHeader
         title={currentResult?.project ? `${currentResult.project.key} · ${currentResult.project.name}` : 'Tablero del proyecto'}
         description="Arrastra una incidencia a otra columna para cambiar su estado."
-        actions={<Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/projects')}>Proyectos</Button>}
+        actions={(
+          <Space>
+            <Button onClick={() => navigate(`/projects/${id}/backlog`)}>Backlog</Button>
+            <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/projects')}>Proyectos</Button>
+          </Space>
+        )}
       />
       {moveError && (
         <Alert type="warning" showIcon closable message={moveError} onClose={() => setMoveError(undefined)} className={styles.alert} />
@@ -168,7 +218,7 @@ export function ProjectBoardPage() {
         <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd} onDragCancel={() => setActiveCardId(null)}>
           <div className={styles.board} aria-label={`Tablero ${board.name}`}>
             {board.columns.map((column) => (
-              <DroppableColumn key={column.id} column={column}>
+              <DroppableColumn key={column.id} column={column} canManage={board.canManageBoard} onSaveWip={saveWip}>
                 <div className={styles.cards}>
                   {column.cards.length === 0 ? <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Sin incidencias" /> : column.cards.map((card) => (
                     <DraggableCard key={card.id} card={card} />
