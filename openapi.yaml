@@ -78,6 +78,18 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
         '422':
           $ref: '#/components/responses/ValidationError'
+  /auth/logout:
+    post:
+      tags: [users]
+      summary: Cerrar la sesion actual (revoca el token)
+      operationId: logout
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: La sesion se cerro; el token deja de ser valido
+        '401':
+          $ref: '#/components/responses/Unauthorized'
   /users/me:
     get:
       tags: [users]
@@ -147,6 +159,96 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
         '422':
           $ref: '#/components/responses/ValidationError'
+  /users/me/deactivate:
+    post:
+      tags: [users]
+      summary: Desactivar la cuenta propia (borrado logico)
+      description: >-
+        Requiere la contrasena actual. La cuenta deja de poder iniciar sesion y todas sus sesiones
+        quedan revocadas. Los datos se conservan para no romper el historial de incidencias.
+      operationId: deactivateAccount
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [password]
+              properties:
+                password:
+                  type: string
+      responses:
+        '204':
+          description: La cuenta quedo desactivada
+        '401':
+          description: No autenticado, o la contrasena no coincide
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+  /users/me/sessions:
+    get:
+      tags: [users]
+      summary: Listar las sesiones activas de la cuenta propia
+      operationId: listSessions
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Sesiones activas; la marcada como current es la de la peticion
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id: {type: string, format: uuid}
+                    user_agent: {type: string}
+                    created_at: {type: string, format: date-time}
+                    last_seen_at: {type: string, format: date-time}
+                    current: {type: boolean}
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /users/me/sessions/revoke-others:
+    post:
+      tags: [users]
+      summary: Cerrar todas las sesiones salvo la actual
+      operationId: revokeOtherSessions
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: Las demas sesiones quedaron revocadas
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /users/me/sessions/{id}:
+    delete:
+      tags: [users]
+      summary: Cerrar una sesion de la cuenta propia
+      operationId: revokeSession
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: {type: string, format: uuid}
+      responses:
+        '204':
+          description: La sesion quedo revocada
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: La sesion no existe o pertenece a otro usuario
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /users/search:
     get:
       tags: [users]
@@ -366,7 +468,365 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
-  /tickets:
+  /projects:
+    get:
+      tags: [projects]
+      summary: List projects
+      operationId: listProjects
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Projects visible to the authenticated user
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Project'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      tags: [projects]
+      summary: Create a project
+      operationId: createProject
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateProjectRequest'
+      responses:
+        '201':
+          description: Project created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Project'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+  /projects/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      tags: [projects]
+      summary: Get a project
+      operationId: getProject
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Project details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Project'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      tags: [projects]
+      summary: Update a project
+      operationId: updateProject
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProjectRequest'
+      responses:
+        '200':
+          description: Project updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Project'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+    delete:
+      tags: [projects]
+      summary: Delete a project
+      operationId: deleteProject
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: Project deleted successfully
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /projects/{id}/board:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      tags: [projects]
+      summary: Get the default board for a project
+      description: Incluye can_manage_board, true si el actor puede editar el tablero y sus columnas (lead o administrador global).
+      operationId: getProjectBoard
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Board columns and their issue cards
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/ProjectBoard'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+  /projects/{id}/board/cards/{issue_id}/move:
+    post:
+      tags: [tickets]
+      operationId: moveBoardCard
+      summary: Mover una incidencia a otra columna del tablero
+      description: La columna destino define el estado de la incidencia (ADR-004). Requiere permiso de edicion de incidencias y respeta el flujo del proyecto y el limite WIP de la columna.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: issue_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [column_id]
+              properties:
+                column_id:
+                  type: string
+                  format: uuid
+      responses:
+        '200':
+          description: Tablero actualizado
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Sin permiso para editar incidencias del proyecto
+        '404':
+          description: Columna o incidencia no encontrada en el proyecto
+        '409':
+          description: La columna destino alcanzo su limite WIP o el cambio de estado no esta permitido por el flujo
+        '422':
+          $ref: '#/components/responses/ValidationError'
+  /projects/{id}/board/columns/{column_id}:
+    patch:
+      tags: [tickets]
+      operationId: updateBoardColumnWip
+      summary: Fijar o quitar el limite WIP de una columna
+      description: Solo el lider del proyecto o el administrador global. Enviar wip_limit null quita el limite.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: column_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                wip_limit:
+                  type: integer
+                  minimum: 1
+                  nullable: true
+      responses:
+        '200':
+          description: Tablero actualizado
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Solo lead o administrador global
+        '404':
+          description: Columna no encontrada en el proyecto
+        '422':
+          $ref: '#/components/responses/ValidationError'
+  /projects/{id}/members:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      tags: [projects]
+      summary: List project members
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Project members
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ProjectMember'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags: [projects]
+      summary: Add or update a project member
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddProjectMemberRequest'
+      responses:
+        '201':
+          description: Project member added
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/ProjectMember'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+  /projects/{id}/members/{user_id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: user_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    patch:
+      tags: [projects]
+      summary: Change a project member role
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProjectMemberRequest'
+      responses:
+        '200':
+          description: Project member role updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/ProjectMember'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+    delete:
+      tags: [projects]
+      summary: Remove a project member
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: Project member removed
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /issues:
     post:
       tags: [tickets]
       summary: Create a ticket
@@ -389,6 +849,8 @@ paths:
                     $ref: '#/components/schemas/Ticket'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '422':
           $ref: '#/components/responses/ValidationError'
     get:
@@ -408,6 +870,42 @@ paths:
           description: Filter by ticket priority. When absent, tickets of every priority are returned.
           schema:
             $ref: '#/components/schemas/TicketPriority'
+        - name: q
+          in: query
+          required: false
+          description: Text search across title and description.
+          schema:
+            type: string
+        - name: issue_type
+          in: query
+          required: false
+          description: Filter by issue type.
+          schema:
+            $ref: '#/components/schemas/IssueType'
+        - name: label_id
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - name: assignee_id
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - name: due_from
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+        - name: due_to
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
         - name: page
           in: query
           required: false
@@ -427,7 +925,7 @@ paths:
             default: 20
       responses:
         '200':
-          description: A page of tickets matching the given filters
+          description: A page of tickets matching the given filters, with the total across all pages
           content:
             application/json:
               schema:
@@ -437,9 +935,734 @@ paths:
                     type: array
                     items:
                       $ref: '#/components/schemas/Ticket'
+                  meta:
+                    $ref: '#/components/schemas/PageMeta'
         '401':
           $ref: '#/components/responses/Unauthorized'
-  /tickets/{id}:
+  /backlog:
+    get:
+      tags: [tickets]
+      operationId: listBacklog
+      summary: Backlog de un proyecto ordenado por rank
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: project_id
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Incidencias en orden de backlog
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Sin permiso para ver el proyecto
+  /backlog/{issue_id}:
+    put:
+      tags: [tickets]
+      operationId: moveInBacklog
+      summary: Colocar una incidencia en una posicion del backlog
+      description: Requiere permiso de mover tarjetas (lead o contributor). Renumera el rank de las incidencias del proyecto con el orden resultante y devuelve el backlog.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: issue_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: project_id
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [position]
+              properties:
+                position:
+                  type: integer
+                  minimum: 0
+      responses:
+        '200':
+          description: Backlog actualizado
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Sin permiso para mover incidencias del proyecto
+        '404':
+          description: Incidencia no encontrada en el proyecto
+        '422':
+          $ref: '#/components/responses/ValidationError'
+  /sprints:
+    get:
+      tags: [tickets]
+      operationId: listSprints
+      summary: Sprints de un proyecto
+      description: Requiere poder ver el proyecto.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: project_id
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Sprints del proyecto
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Sin permiso para ver el proyecto
+    post:
+      tags: [tickets]
+      operationId: createSprint
+      summary: Planificar un sprint
+      description: Solo el lead del proyecto o el administrador global. Las fechas son opcionales; si se dan, el fin no puede ser anterior al inicio.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: project_id
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+                  maxLength: 80
+                goal:
+                  type: string
+                  maxLength: 500
+                start_date:
+                  type: string
+                  format: date
+                end_date:
+                  type: string
+                  format: date
+      responses:
+        '201':
+          description: Sprint creado en estado planned
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Solo lead o administrador global
+        '422':
+          $ref: '#/components/responses/ValidationError'
+  /sprints/velocity:
+    get:
+      tags: [tickets]
+      operationId: getSprintVelocity
+      summary: Velocidad del proyecto en sus ultimos sprints cerrados
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: project_id
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 20
+            default: 5
+      responses:
+        '200':
+          description: Puntos completados por sprint, del mas reciente al mas antiguo
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Sin permiso para ver el proyecto
+  /sprints/{id}/start:
+    post:
+      tags: [tickets]
+      operationId: startSprint
+      summary: Activar un sprint planificado
+      description: Un proyecto solo puede tener un sprint activo. Si ya hay otro activo responde 409.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: project_id
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Sprint activo
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Solo lead o administrador global
+        '404':
+          description: Sprint no encontrado en el proyecto
+        '409':
+          description: El sprint no esta planificado o ya hay otro sprint activo
+  /sprints/{id}/close:
+    post:
+      tags: [tickets]
+      operationId: closeSprint
+      summary: Cerrar un sprint activo
+      description: unfinished decide que pasa con las incidencias no cerradas. backlog las quita del sprint; sprint las mueve a target_sprint_id, que debe ser un sprint planificado del mismo proyecto.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: project_id
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [unfinished]
+              properties:
+                unfinished:
+                  type: string
+                  enum: [backlog, sprint]
+                target_sprint_id:
+                  type: string
+                  format: uuid
+                  nullable: true
+      responses:
+        '200':
+          description: Sprint cerrado
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Solo lead o administrador global
+        '404':
+          description: Sprint no encontrado en el proyecto
+        '409':
+          description: El sprint no esta activo
+        '422':
+          $ref: '#/components/responses/ValidationError'
+  /sprints/{id}/issues:
+    get:
+      tags: [tickets]
+      operationId: listSprintIssues
+      summary: Incidencias de un sprint
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: project_id
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Incidencias del sprint
+        '403':
+          description: Sin permiso para ver el proyecto
+        '404':
+          description: Sprint no encontrado en el proyecto
+  /sprints/{id}/issues/{issue_id}:
+    put:
+      tags: [tickets]
+      operationId: assignSprintIssue
+      summary: Asignar una incidencia al sprint
+      description: Solo lead o administrador global. Un sprint cerrado no admite cambios.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: issue_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: project_id
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Asignada
+        '403':
+          description: Solo lead o administrador global
+        '404':
+          description: Sprint o incidencia no encontrados en el proyecto
+        '409':
+          description: El sprint esta cerrado
+    delete:
+      tags: [tickets]
+      operationId: removeSprintIssue
+      summary: Quitar una incidencia del sprint
+      description: Solo lead o administrador global. La incidencia vuelve al backlog.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: issue_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: project_id
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Quitada
+        '403':
+          description: Solo lead o administrador global
+        '404':
+          description: La incidencia no esta en este sprint del proyecto
+        '409':
+          description: El sprint esta cerrado
+  /sprints/{id}/burndown:
+    get:
+      tags: [tickets]
+      operationId: getSprintBurndown
+      summary: Burndown del sprint por dia
+      description: Trabajo restante real frente a la linea ideal que baja a cero. El sprint necesita fechas.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: project_id
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Un punto por dia entre el inicio y el fin del sprint
+        '403':
+          description: Sin permiso para ver el proyecto
+        '404':
+          description: Sprint no encontrado en el proyecto
+        '422':
+          description: El sprint no tiene fechas
+  /notifications:
+    get:
+      tags: [tickets]
+      operationId: listNotifications
+      summary: Notificaciones del usuario, las mas recientes primero
+      description: Devuelve hasta 50 avisos in-app del usuario autenticado. La interfaz consulta el contador cada 30 segundos (sondeo, D-6).
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Notificaciones
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /notifications/preferences:
+    get:
+      tags: [tickets]
+      summary: Preferencias de avisos del usuario
+      operationId: getNotificationPreferences
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Preferencias; sin configurar, los avisos en la aplicacion estan activos
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  in_app: {type: boolean}
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    put:
+      tags: [tickets]
+      summary: Actualizar las preferencias de avisos
+      description: >-
+        Con in_app en false no se guardan avisos nuevos en la aplicacion. El correo electronico
+        todavia no esta implementado.
+      operationId: updateNotificationPreferences
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [in_app]
+              properties:
+                in_app: {type: boolean}
+      responses:
+        '200':
+          description: Preferencias guardadas
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+  /notifications/unread-count:
+    get:
+      tags: [tickets]
+      operationId: getUnreadNotificationCount
+      summary: Numero de notificaciones no leidas
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Contador
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /notifications/{id}/read:
+    post:
+      tags: [tickets]
+      operationId: markNotificationRead
+      summary: Marcar una notificacion como leida
+      description: Solo el dueno puede marcarla. Una notificacion ajena responde no encontrada.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Marcada
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: Notificacion no encontrada para este usuario
+  /notifications/read-all:
+    post:
+      tags: [tickets]
+      operationId: markAllNotificationsRead
+      summary: Marcar todas las notificaciones como leidas
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: Marcadas
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /calendar/events:
+    get:
+      tags: [tickets]
+      operationId: listCalendarEvents
+      summary: Hitos del proyecto entre dos fechas
+      description: Inicio y fin de sprint, y fechas limite de incidencias. El rango puede tener como maximo un ano.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: project_id
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: from
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+        - name: to
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Hitos ordenados por fecha
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Sin permiso para ver el proyecto
+        '422':
+          $ref: '#/components/responses/ValidationError'
+  /search:
+    get:
+      tags: [tickets]
+      operationId: globalSearch
+      summary: Busqueda global de proyectos e incidencias
+      description: Busca por texto en nombre y clave de proyecto, y en titulo y descripcion de incidencia. Solo devuelve lo visible para el usuario (admin global, o miembro del proyecto). Los comodines se buscan literalmente.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 2
+            maxLength: 100
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 25
+            default: 10
+      responses:
+        '200':
+          description: Proyectos primero, luego incidencias
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+  /dashboard/me:
+    get:
+      tags: [tickets]
+      operationId: getMyDashboard
+      summary: Resumen personal del usuario
+      description: Trabajo asignado por estado, incidencias vencidas, proyectos en los que es miembro, sprints activos de esos proyectos y las 5 incidencias abiertas mas urgentes.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Resumen personal
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /workflows:
+    get:
+      tags: [tickets]
+      operationId: getDefaultWorkflow
+      summary: Flujo por defecto de un proyecto
+      description: Devuelve las transiciones de estado permitidas y los roles de proyecto que pueden ejecutarlas. Requiere poder ver el proyecto.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: project_id
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Flujo por defecto
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                      project_id:
+                        type: string
+                        format: uuid
+                      name:
+                        type: string
+                      transitions:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            from_status:
+                              type: string
+                            to_status:
+                              type: string
+                            allowed_roles:
+                              type: array
+                              items:
+                                type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Sin permiso para ver el proyecto
+        '404':
+          description: El proyecto no tiene flujo por defecto
+    put:
+      tags: [tickets]
+      operationId: updateDefaultWorkflow
+      summary: Reemplazar las transiciones del flujo por defecto
+      description: Solo el lider del proyecto o el administrador global. Valida estados, roles permitidos (admin, lead, contributor, viewer) y transiciones duplicadas o sin cambio de estado.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: project_id
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [transitions]
+              properties:
+                transitions:
+                  type: array
+                  items:
+                    type: object
+                    required: [from_status, to_status, allowed_roles]
+                    properties:
+                      from_status:
+                        type: string
+                        enum: [open, in_progress, resolved, closed]
+                      to_status:
+                        type: string
+                        enum: [open, in_progress, resolved, closed]
+                      allowed_roles:
+                        type: array
+                        minItems: 1
+                        items:
+                          type: string
+                          enum: [admin, lead, contributor, viewer]
+      responses:
+        '200':
+          description: Flujo actualizado
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Solo lead o administrador global
+        '404':
+          description: El proyecto no tiene flujo por defecto
+        '422':
+          $ref: '#/components/responses/ValidationError'
+  /saved-filters:
+    get:
+      tags: [tickets]
+      summary: List the authenticated user's saved issue filters
+      operationId: listSavedIssueFilters
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Saved filters owned by the authenticated user
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/SavedIssueFilter'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      tags: [tickets]
+      summary: Save a personal issue filter
+      operationId: createSavedIssueFilter
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSavedIssueFilterRequest'
+      responses:
+        '201':
+          description: Saved filter created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/SavedIssueFilter'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          description: A saved filter with this name already exists for the user
+        '422':
+          $ref: '#/components/responses/ValidationError'
+  /saved-filters/{filter_id}:
+    delete:
+      tags: [tickets]
+      summary: Delete a personal issue filter
+      operationId: deleteSavedIssueFilter
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: filter_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Saved filter deleted
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /issues/{id}:
     parameters:
       - $ref: '#/components/parameters/TicketId'
     get:
@@ -458,18 +1681,21 @@ paths:
                     $ref: '#/components/schemas/Ticket'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
-  /tickets/{id}/status:
+  /issues/{id}/status:
     parameters:
       - $ref: '#/components/parameters/TicketId'
     patch:
       tags: [tickets]
       summary: Transition a ticket's status
       description: >-
-        Valid transitions are open to in_progress, open to closed, in_progress to resolved,
-        in_progress to closed, resolved to closed, and resolved to in_progress. Any other
-        transition is rejected with 409.
+        The transition must exist in the project's default workflow and be allowed for the
+        authenticated role. Valid transitions are open to in_progress, open to closed,
+        in_progress to resolved, in_progress to closed, resolved to closed, and resolved to
+        in_progress. Any other transition is rejected with 409.
       operationId: updateTicketStatus
       requestBody:
         required: true
@@ -489,6 +1715,8 @@ paths:
                     $ref: '#/components/schemas/Ticket'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
         '409':
@@ -499,7 +1727,7 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
         '422':
           $ref: '#/components/responses/ValidationError'
-  /tickets/{id}/assign:
+  /issues/{id}/assign:
     parameters:
       - $ref: '#/components/parameters/TicketId'
     patch:
@@ -509,7 +1737,7 @@ paths:
         Assigning an open ticket also transitions its status to in_progress. Assigning a
         ticket in any other status only changes the assignee. The assignee must belong to
         the same team as the authenticated user making the request, otherwise this returns
-        403.
+        403. The assignee is added to the issue watchers in the same database transaction.
       operationId: assignTicket
       requestBody:
         required: true
@@ -530,15 +1758,593 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
-          description: The assignee does not belong to the same team as the authenticated user
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
+          $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
         '422':
           $ref: '#/components/responses/ValidationError'
+  /issues/{id}/comments:
+    parameters:
+      - $ref: '#/components/parameters/TicketId'
+    get:
+      tags: [tickets]
+      summary: List issue comments
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Comments ordered by creation time
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/IssueComment'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags: [tickets]
+      summary: Create an issue comment
+      description: The comment author is added to the issue watchers in the same database transaction.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateIssueCommentRequest'
+      responses:
+        '201':
+          description: Comment created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/IssueComment'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+  /issues/{id}/comments/{comment_id}:
+    parameters:
+      - $ref: '#/components/parameters/TicketId'
+      - name: comment_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    patch:
+      tags: [tickets]
+      summary: Update a comment owned by the authenticated user
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateIssueCommentRequest'
+      responses:
+        '200':
+          description: Comment updated
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+    delete:
+      tags: [tickets]
+      summary: Delete a comment owned by the authenticated user
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: Comment deleted
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /issues/{id}/activities:
+    parameters:
+      - $ref: '#/components/parameters/TicketId'
+    get:
+      tags: [tickets]
+      summary: List issue activity
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Issue field activity ordered by creation time
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/IssueActivity'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /issues/{id}/attachments:
+    parameters:
+      - $ref: '#/components/parameters/TicketId'
+    get:
+      tags: [tickets]
+      summary: List issue attachments
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Attachments available to project members
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/IssueAttachment'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags: [tickets]
+      summary: Upload an issue attachment
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '201':
+          description: Attachment stored
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/IssueAttachment'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+  /issues/{id}/attachments/{attachment_id}:
+    parameters:
+      - $ref: '#/components/parameters/TicketId'
+      - name: attachment_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      tags: [tickets]
+      summary: Download an issue attachment
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Original file bytes
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+            image/png:
+              schema:
+                type: string
+                format: binary
+            image/jpeg:
+              schema:
+                type: string
+                format: binary
+            image/gif:
+              schema:
+                type: string
+                format: binary
+            image/webp:
+              schema:
+                type: string
+                format: binary
+            text/plain:
+              schema:
+                type: string
+                format: binary
+            text/csv:
+              schema:
+                type: string
+                format: binary
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /issues/{id}/watchers:
+    parameters:
+      - $ref: '#/components/parameters/TicketId'
+    get:
+      tags: [tickets]
+      summary: Get the authenticated user's issue watcher state
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Whether the current user follows the issue and the total follower count
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/IssueWatcherState'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags: [tickets]
+      summary: Follow an issue
+      description: Idempotently add the authenticated project member as an issue watcher.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Updated watcher state and follower count
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/IssueWatcherState'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [tickets]
+      summary: Unfollow an issue
+      description: Idempotently remove the authenticated user from the issue watchers.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Updated watcher state and follower count
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/IssueWatcherState'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /issues/{id}/links:
+    parameters:
+      - $ref: '#/components/parameters/TicketId'
+    get:
+      tags: [tickets]
+      summary: List issue links
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Links connected to the issue
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/IssueLink'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags: [tickets]
+      summary: Create an issue link
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateIssueLinkRequest'
+      responses:
+        '201':
+          description: Issue link created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/IssueLink'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+  /issues/{id}/links/{link_id}:
+    parameters:
+      - $ref: '#/components/parameters/TicketId'
+      - name: link_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    delete:
+      tags: [tickets]
+      summary: Delete an issue link
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: Issue link deleted
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /issues/{id}/details:
+    parameters:
+      - $ref: '#/components/parameters/TicketId'
+    patch:
+      tags: [tickets]
+      summary: Update complete issue details
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateIssueDetailsRequest'
+      responses:
+        '200':
+          description: Issue details updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Ticket'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+  /issues/{id}/rank:
+    parameters:
+      - $ref: '#/components/parameters/TicketId'
+    patch:
+      tags: [tickets]
+      summary: Update issue rank
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateIssueRankRequest'
+      responses:
+        '200':
+          description: Issue rank updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Ticket'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+  /issues/{id}/metadata:
+    parameters:
+      - $ref: '#/components/parameters/TicketId'
+    patch:
+      tags: [tickets]
+      summary: Update rich issue metadata
+      operationId: updateIssueMetadata
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateIssueMetadataRequest'
+      responses:
+        '200':
+          description: The issue with updated metadata
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Ticket'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+  /projects/{id}/labels:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      tags: [projects]
+      summary: List project labels
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Project labels
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      tags: [projects]
+      summary: Create project label
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateProjectLabelRequest'
+      responses:
+        '201':
+          description: Label created
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+  /projects/{id}/labels/{label_id}:
+    delete:
+      tags: [projects]
+      summary: Delete project label
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: label_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Label deleted
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /projects/{id}/components:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      tags: [projects]
+      summary: List project components
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Project components
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      tags: [projects]
+      summary: Create project component
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateProjectComponentRequest'
+      responses:
+        '201':
+          description: Component created
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+  /projects/{id}/components/{component_id}:
+    delete:
+      tags: [projects]
+      summary: Delete project component
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: component_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Component deleted
+        '404':
+          $ref: '#/components/responses/NotFound'
   /health:
     get:
       tags: [health]
@@ -616,6 +2422,12 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/ErrorResponse'
+    Conflict:
+      description: The operation conflicts with the current resource state
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
   schemas:
     Role:
       type: string
@@ -626,6 +2438,9 @@ components:
     TicketPriority:
       type: string
       enum: [low, medium, high, critical]
+    IssueType:
+      type: string
+      enum: [task, bug, story, epic, subtask]
     RegisterRequest:
       type: object
       required: [name, email, password]
@@ -733,6 +2548,216 @@ components:
           type: string
           minLength: 2
           maxLength: 120
+    Project:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        key:
+          type: string
+          minLength: 1
+          maxLength: 20
+        name:
+          type: string
+          minLength: 2
+          maxLength: 120
+        description:
+          type: string
+        type:
+          type: string
+          enum: [kanban, scrum]
+        lead_id:
+          type: string
+          format: uuid
+        visibility:
+          type: string
+          enum: [private, team]
+    ProjectBoard:
+      type: object
+      required: [id, project_id, name, type, columns]
+      properties:
+        id:
+          type: string
+          format: uuid
+        project_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        type:
+          type: string
+          enum: [kanban, scrum]
+        columns:
+          type: array
+          items:
+            $ref: '#/components/schemas/BoardColumn'
+    BoardColumn:
+      type: object
+      required: [id, name, status, position, count, cards]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        status:
+          type: string
+          enum: [open, in_progress, resolved, closed]
+        position:
+          type: integer
+          minimum: 0
+        wip_limit:
+          type: integer
+          minimum: 1
+          nullable: true
+        count:
+          type: integer
+          minimum: 0
+        cards:
+          type: array
+          items:
+            $ref: '#/components/schemas/BoardCard'
+    BoardCard:
+      type: object
+      required: [id, type, summary, status, priority, rank]
+      properties:
+        id:
+          type: string
+          format: uuid
+        type:
+          type: string
+          enum: [task, bug, story, epic, subtask]
+        summary:
+          type: string
+        status:
+          type: string
+          enum: [open, in_progress, resolved, closed]
+        priority:
+          type: string
+          enum: [low, medium, high, critical]
+        assignee_id:
+          type: string
+          format: uuid
+          nullable: true
+        assignee:
+          type: string
+          nullable: true
+        story_points:
+          type: number
+          format: float
+          nullable: true
+        rank:
+          type: string
+          maxLength: 64
+    ProjectMember:
+      type: object
+      properties:
+        project_id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        role:
+          type: string
+          enum: [lead, contributor, viewer]
+        created_at:
+          type: string
+          format: date-time
+    AddProjectMemberRequest:
+      type: object
+      required: [user_id, role]
+      properties:
+        user_id:
+          type: string
+          format: uuid
+        role:
+          type: string
+          enum: [lead, contributor, viewer]
+    UpdateProjectMemberRequest:
+      type: object
+      required: [role]
+      properties:
+        role:
+          type: string
+          enum: [lead, contributor, viewer]
+        archived_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    CreateProjectRequest:
+      type: object
+      required: [key, name, type, lead_id, visibility]
+      properties:
+        key:
+          type: string
+          minLength: 1
+          maxLength: 20
+        name:
+          type: string
+          minLength: 2
+          maxLength: 120
+        description:
+          type: string
+          maxLength: 5000
+        type:
+          type: string
+          enum: [kanban, scrum]
+        lead_id:
+          type: string
+          format: uuid
+        visibility:
+          type: string
+          enum: [private, team]
+    UpdateProjectRequest:
+      type: object
+      required: [name, type, lead_id, visibility]
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 120
+        description:
+          type: string
+          maxLength: 5000
+        type:
+          type: string
+          enum: [kanban, scrum]
+        lead_id:
+          type: string
+          format: uuid
+        visibility:
+          type: string
+          enum: [private, team]
+    CreateProjectLabelRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 40
+        color:
+          type: string
+          maxLength: 20
+    CreateProjectComponentRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 80
+        description:
+          type: string
+          maxLength: 5000
     AuthSession:
       type: object
       properties:
@@ -741,6 +2766,21 @@ components:
           description: A signed JWT access token, valid for the duration configured by JWT_EXPIRATION on the server.
         user:
           $ref: '#/components/schemas/User'
+    PageMeta:
+      type: object
+      required: [page, page_size, total]
+      properties:
+        page:
+          type: integer
+          minimum: 1
+        page_size:
+          type: integer
+          minimum: 1
+          maximum: 100
+        total:
+          type: integer
+          minimum: 0
+          description: Number of tickets matching the filters, across all pages.
     CreateTicketRequest:
       type: object
       required: [title, description, priority]
@@ -754,6 +2794,25 @@ components:
           minLength: 3
         priority:
           $ref: '#/components/schemas/TicketPriority'
+        project_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: Proyecto del ticket. Si se omite, se usa el proyecto por defecto (CORE).
+        issue_type:
+          $ref: '#/components/schemas/IssueType'
+        parent_id:
+          type: string
+          format: uuid
+          nullable: true
+        due_date:
+          type: string
+          format: date-time
+          nullable: true
+        story_points:
+          type: number
+          format: double
+          nullable: true
     UpdateTicketStatusRequest:
       type: object
       required: [status]
@@ -767,9 +2826,248 @@ components:
         assignee_id:
           type: string
           format: uuid
+    UpdateIssueDetailsRequest:
+      type: object
+      required: [title, description, priority, issue_type]
+      properties:
+        title:
+          type: string
+          minLength: 3
+          maxLength: 200
+        description:
+          type: string
+          minLength: 3
+        priority:
+          $ref: '#/components/schemas/TicketPriority'
+        issue_type:
+          $ref: '#/components/schemas/IssueType'
+        parent_id:
+          type: string
+          format: uuid
+          nullable: true
+        due_date:
+          type: string
+          format: date-time
+          nullable: true
+        story_points:
+          type: number
+          format: double
+          nullable: true
+    UpdateIssueRankRequest:
+      type: object
+      required: [rank]
+      properties:
+        rank:
+          type: string
+          minLength: 1
+          maxLength: 64
+    UpdateIssueMetadataRequest:
+      type: object
+      required: [issue_type]
+      properties:
+        issue_type:
+          $ref: '#/components/schemas/IssueType'
+        parent_id:
+          type: string
+          format: uuid
+          nullable: true
+        due_date:
+          type: string
+          format: date-time
+          nullable: true
+        story_points:
+          type: number
+          format: double
+          nullable: true
+    IssueComment:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        issue_id:
+          type: string
+          format: uuid
+        author_id:
+          type: string
+          format: uuid
+        body:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        deleted_at:
+          type: string
+          format: date-time
+          nullable: true
+    IssueAttachment:
+      type: object
+      required: [id, issue_id, uploader_id, file_name, content_type, size_bytes, created_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        issue_id:
+          type: string
+          format: uuid
+        uploader_id:
+          type: string
+          format: uuid
+        file_name:
+          type: string
+          maxLength: 255
+        content_type:
+          type: string
+          enum: [application/pdf, image/png, image/jpeg, image/gif, image/webp, text/plain, text/csv]
+        size_bytes:
+          type: integer
+          minimum: 1
+          maximum: 10485760
+        created_at:
+          type: string
+          format: date-time
+    IssueWatcherState:
+      type: object
+      required: [is_watching, count]
+      properties:
+        is_watching:
+          type: boolean
+        count:
+          type: integer
+          minimum: 0
+    SavedIssueFilterCriteria:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [open, in_progress, resolved, closed]
+        priority:
+          type: string
+          enum: [low, medium, high, critical]
+        query:
+          type: string
+          maxLength: 200
+        issue_type:
+          type: string
+          enum: [task, bug, story, epic, subtask]
+        due_from:
+          type: string
+          format: date-time
+        due_to:
+          type: string
+          format: date-time
+    CreateSavedIssueFilterRequest:
+      type: object
+      required: [name, filters]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 80
+        filters:
+          $ref: '#/components/schemas/SavedIssueFilterCriteria'
+    SavedIssueFilter:
+      type: object
+      required: [id, name, filters, created_at, updated_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        filters:
+          $ref: '#/components/schemas/SavedIssueFilterCriteria'
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+    CreateIssueCommentRequest:
+      type: object
+      required: [body]
+      properties:
+        body:
+          type: string
+          minLength: 1
+          maxLength: 5000
+    UpdateIssueCommentRequest:
+      type: object
+      required: [body]
+      properties:
+        body:
+          type: string
+          minLength: 1
+          maxLength: 5000
+    IssueLink:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        source_issue_id:
+          type: string
+          format: uuid
+        target_issue_id:
+          type: string
+          format: uuid
+        kind:
+          type: string
+          enum: [blocks, relates, duplicates]
+        created_by:
+          type: string
+          format: uuid
+        created_at:
+          type: string
+          format: date-time
+    CreateIssueLinkRequest:
+      type: object
+      required: [target_issue_id, kind]
+      properties:
+        target_issue_id:
+          type: string
+          format: uuid
+        kind:
+          type: string
+          enum: [blocks, relates, duplicates]
+    IssueActivity:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        issue_id:
+          type: string
+          format: uuid
+        actor_id:
+          type: string
+          format: uuid
+        action:
+          type: string
+        field_name:
+          type: string
+          nullable: true
+        old_value:
+          type: string
+          nullable: true
+        new_value:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
     Ticket:
       type: object
       properties:
+        requester_name:
+          type: string
+          description: Display name of the requester.
+        assignee_name:
+          type: string
+          nullable: true
+          description: Display name of the assignee; absent when unassigned.
         id:
           type: string
           format: uuid

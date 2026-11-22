@@ -10,11 +10,13 @@ import (
 	"github.com/jmoiron/sqlx"
 
 	"github.com/jhonsferg/corelog/internal/platform/apperror"
+	"github.com/jhonsferg/corelog/internal/platform/database"
 	"github.com/jhonsferg/corelog/internal/user/application/port"
 	"github.com/jhonsferg/corelog/internal/user/domain"
 )
 
-const selectColumns = `id, name, email, password_hash, role, team_id, created_at, updated_at`
+// team_id se deriva de team_members (fuente de verdad, ADR-002). La columna users.team_id se eliminó en la migracion 000019.
+const selectColumns = `id, name, email, password_hash, role, (SELECT tm.team_id FROM team_members tm WHERE tm.user_id = users.id ORDER BY tm.created_at LIMIT 1) AS team_id, created_at, updated_at, deactivated_at`
 
 type UserRepository struct {
 	db *sqlx.DB
@@ -30,10 +32,32 @@ func (r *UserRepository) Save(ctx context.Context, u *domain.User) error {
 	row := fromDomain(u)
 
 	const query = `
-		INSERT INTO users (id, name, email, password_hash, role, team_id, created_at, updated_at)
-		VALUES (:id, :name, :email, :password_hash, :role, :team_id, :created_at, :updated_at)`
+		INSERT INTO users (name, email, password_hash, role, created_at, updated_at)
+		VALUES (:name, :email, :password_hash, :role, :created_at, :updated_at)
+		RETURNING id`
 
-	if _, err := r.db.NamedExecContext(ctx, query, row); err != nil {
+	tx, err := r.db.BeginTxx(ctx, nil)
+	if err != nil {
+		return apperror.Wrap(apperror.KindInternal, "failed to save user", err)
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	id, err := database.InsertReturningID(ctx, tx, query, row)
+	if err != nil {
+		return apperror.Wrap(apperror.KindInternal, "failed to save user", err)
+	}
+	u.ID = id
+	if u.TeamID != nil {
+		if _, err := tx.ExecContext(ctx, `
+			INSERT INTO team_members (team_id, user_id, role, created_at)
+			VALUES ($1, $2, 'member', $3)
+			ON CONFLICT (team_id, user_id) DO NOTHING`,
+			u.TeamID, u.ID, u.CreatedAt,
+		); err != nil {
+			return apperror.Wrap(apperror.KindInternal, "failed to sync team membership", err)
+		}
+	}
+	if err := tx.Commit(); err != nil {
 		return apperror.Wrap(apperror.KindInternal, "failed to save user", err)
 	}
 	return nil
@@ -74,7 +98,7 @@ func (r *UserRepository) Update(ctx context.Context, u *domain.User) error {
 
 	const query = `
 		UPDATE users
-		SET name = :name, email = :email, password_hash = :password_hash, team_id = :team_id, updated_at = :updated_at
+		SET name = :name, email = :email, password_hash = :password_hash, updated_at = :updated_at, deactivated_at = :deactivated_at
 		WHERE id = :id`
 
 	result, err := r.db.NamedExecContext(ctx, query, row)
@@ -88,6 +112,22 @@ func (r *UserRepository) Update(ctx context.Context, u *domain.User) error {
 	}
 	if affected == 0 {
 		return domain.ErrUserNotFound
+	}
+
+	if _, err := r.db.ExecContext(ctx, `DELETE FROM team_members WHERE user_id = $1`, u.ID); err != nil {
+		return apperror.Wrap(apperror.KindInternal, "failed to sync team membership", err)
+	}
+	if u.TeamID != nil {
+		if _, err := r.db.ExecContext(ctx, `
+			INSERT INTO team_members (team_id, user_id, role, created_at)
+			VALUES ($1, $2, 'member', $3)
+			ON CONFLICT (team_id, user_id) DO NOTHING`,
+			u.TeamID,
+			u.ID,
+			u.UpdatedAt,
+		); err != nil {
+			return apperror.Wrap(apperror.KindInternal, "failed to sync team membership", err)
+		}
 	}
 
 	return nil
@@ -111,7 +151,7 @@ func (r *UserRepository) Search(ctx context.Context, filter port.SearchFilter) (
 	}
 	if filter.TeamID != nil {
 		args = append(args, *filter.TeamID)
-		query += fmt.Sprintf(" AND team_id = $%d", len(args))
+		query += fmt.Sprintf(" AND EXISTS (SELECT 1 FROM team_members tm WHERE tm.user_id = users.id AND tm.team_id = $%d)", len(args))
 	}
 
 	query += " ORDER BY name ASC LIMIT 20"

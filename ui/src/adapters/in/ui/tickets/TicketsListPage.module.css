@@ -1,24 +1,26 @@
-.header {
+.savedRow {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
-  margin-bottom: 16px;
-}
-
-.title {
-  margin: 0;
-}
-
-.filters {
-  display: flex;
-  gap: 12px;
-  margin-bottom: 16px;
+  gap: var(--cl-space-2);
+  margin-bottom: var(--cl-space-4);
 }
 
 .filterSelect {
   width: 200px;
 }
 
+.pagination {
+  margin-top: var(--cl-space-4);
+  text-align: right;
+}
+
 .hint {
-  margin-top: 8px;
+  margin-top: var(--cl-space-2);
+}
+
+.advancedToggle {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: var(--cl-space-3);
 }

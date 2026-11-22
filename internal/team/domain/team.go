@@ -21,7 +21,6 @@ func NewTeam(name string) (*Team, error) {
 
 	now := time.Now().UTC()
 	return &Team{
-		ID:        uuid.New(),
 		Name:      name,
 		CreatedAt: now,
 		UpdatedAt: now,

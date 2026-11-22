@@ -11,8 +11,15 @@ type Module struct {
 	Handler *httpadapter.Handler
 }
 
-func NewModule(repo port.Repository, directory port.UserDirectory, jwtSecret string) *Module {
-	service := usecase.NewTicketService(repo, directory)
+func NewModule(repo port.Repository, directory port.UserDirectory, collaboration port.CollaborationRepository, issueLinks port.IssueLinkRepository, workflows port.WorkflowRepository, watchers port.IssueWatcherRepository, savedFilters port.SavedFilterRepository, jwtSecret string, authorizer port.ProjectAuthorizer, notifier port.Notifier, projectRoles ...port.ProjectRoleResolver) *Module {
+	dependencies := []any{collaboration, issueLinks, workflows, watchers, savedFilters, repo}
+	if authorizer != nil {
+		dependencies = append(dependencies, authorizer)
+	}
+	for _, resolver := range projectRoles {
+		dependencies = append(dependencies, resolver)
+	}
+	service := usecase.NewTicketService(repo, directory, dependencies...).WithNotifier(notifier)
 	handler := httpadapter.NewHandler(service, jwtSecret)
 
 	return &Module{

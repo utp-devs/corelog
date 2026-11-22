@@ -13,8 +13,8 @@ type Module struct {
 	Handler *httpadapter.Handler
 }
 
-func NewModule(repo port.Repository, jwtSecret string, jwtExpiration time.Duration) *Module {
-	service := usecase.NewUserService(repo)
+func NewModule(repo port.Repository, sessions port.SessionRepository, jwtSecret string, jwtExpiration time.Duration) *Module {
+	service := usecase.NewUserService(repo, sessions)
 	handler := httpadapter.NewHandler(service, jwtSecret, jwtExpiration)
 
 	return &Module{

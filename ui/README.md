@@ -28,7 +28,7 @@ src/
 │   └── users/                       search and team-assignment for other users, reuses the auth User type
 ├── adapters/
 │   ├── out/                         driven adapters that implement core ports
-│   │   ├── http/                         axios-based repositories plus the shared api-client
+│   │   ├── http/                         axios-based repositories, attachment transfer, and shared api-client
 │   │   └── storage/                      localStorage-backed token storage
 │   └── in/                          driving adapters that call the core
 │       ├── state/                        zustand stores bridging UI and application services
@@ -44,6 +44,8 @@ src/
 ├── shared/                         cross-cutting config, env
 └── styles/                         global, non-component CSS
 ```
+
+El detalle de una incidencia agrupa sus campos y acciones, comentarios, actividad y archivos en pestañas, e incluye controles para seguir la incidencia. El listado permite guardar, cargar y eliminar filtros personales. Las cargas asociadas a una incidencia se descartan al navegar a otra para no mostrar datos obsoletos.
 
 **Dependency rule**: `adapters/in/ui` → `adapters/in/state` → `core/*/application` → `core/*/domain`, and `core/*/application` → `core/*/ports` ← `adapters/out/*`. Nothing under `core/` imports React, Axios, or Ant Design. It is plain, framework-free TypeScript that could be unit-tested or reused outside a browser.
 
@@ -96,7 +98,7 @@ npm install
 npm run dev
 ```
 
-The API base URL defaults to `http://localhost:8080/api/v1`. Override it via `VITE_API_BASE_URL` in `.env` if the backend runs elsewhere. See the repository root [`README.md`](../README.md) for running the backend with either PostgreSQL or SQLite.
+The API base URL defaults to `http://localhost:8080/api/v1`. Override it via `VITE_API_BASE_URL` in `.env` if the backend runs elsewhere. See the repository root [`README.md`](../README.md) for running the backend with PostgreSQL.
 
 ## Available scripts
 
@@ -105,6 +107,7 @@ The API base URL defaults to `http://localhost:8080/api/v1`. Override it via `VI
 | `npm run dev`     | Start the Vite dev server with HMR               |
 | `npm run build`   | Type-check via `tsc -b` and build for production |
 | `npm run lint`    | Run ESLint                                       |
+| `npm test`        | Run the Vitest and React Testing Library suite   |
 | `npm run preview` | Serve the production build locally               |
 
 ## Environment variables
@@ -116,3 +119,5 @@ The API base URL defaults to `http://localhost:8080/api/v1`. Override it via `VI
 ## Styling conventions
 
 Every component owns its own `<Component>.module.css`, imported as `styles` and referenced via `className={styles.foo}`. Never use global CSS or inline `style={{}}` props for anything reusable. `src/styles/global.css` is the only global stylesheet and is limited to resets and root-level tokens. It is loaded once, in `main.tsx`.
+
+The F1 design foundation lives in `src/shared/theme/tokens.ts` and `src/styles/tokens.css`. It defines the light and dark CoreLog tokens used by Ant Design and CSS Modules. Navigation is centralized in `src/app/navigation.ts`, and the theme is persisted under `corelog.theme` in `localStorage`.

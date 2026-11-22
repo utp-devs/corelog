@@ -12,4 +12,6 @@ var (
 	ErrEmailAlreadyTaken  = apperror.New(apperror.KindConflict, "email is already registered")
 	ErrInvalidCredentials = apperror.New(apperror.KindUnauthorized, "invalid email or password")
 	ErrIncorrectPassword  = apperror.New(apperror.KindUnauthorized, "current password is incorrect")
+
+	ErrSessionNotFound = apperror.New(apperror.KindNotFound, "session not found")
 )

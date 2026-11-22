@@ -3,6 +3,7 @@ package usecase
 import (
 	"context"
 	"errors"
+	"time"
 
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
@@ -13,11 +14,12 @@ import (
 )
 
 type UserService struct {
-	repo port.Repository
+	repo     port.Repository
+	sessions port.SessionRepository
 }
 
-func NewUserService(repo port.Repository) *UserService {
-	return &UserService{repo: repo}
+func NewUserService(repo port.Repository, sessions port.SessionRepository) *UserService {
+	return &UserService{repo: repo, sessions: sessions}
 }
 
 var _ port.Service = (*UserService)(nil)
@@ -69,6 +71,11 @@ func (s *UserService) Authenticate(ctx context.Context, in port.AuthenticateInpu
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(in.Password)); err != nil {
+		return nil, domain.ErrInvalidCredentials
+	}
+
+	// Una cuenta desactivada responde igual que una contrasena incorrecta: no revela que existio.
+	if !user.IsActive() {
 		return nil, domain.ErrInvalidCredentials
 	}
 
@@ -154,4 +161,69 @@ func (s *UserService) SearchTeammates(ctx context.Context, actorID uuid.UUID, qu
 
 func (s *UserService) Search(ctx context.Context, filter port.SearchFilter) ([]*domain.User, error) {
 	return s.repo.Search(ctx, filter)
+}
+
+const maxUserAgentLength = 300
+
+func (s *UserService) OpenSession(ctx context.Context, userID uuid.UUID, userAgent string, expiresAt time.Time) (uuid.UUID, error) {
+	now := time.Now().UTC()
+	if ua := []rune(userAgent); len(ua) > maxUserAgentLength {
+		userAgent = string(ua[:maxUserAgentLength])
+	}
+	session := &domain.Session{
+		ID:         uuid.New(),
+		UserID:     userID,
+		UserAgent:  userAgent,
+		CreatedAt:  now,
+		LastSeenAt: now,
+		ExpiresAt:  expiresAt,
+	}
+	if err := s.sessions.Create(ctx, session); err != nil {
+		return uuid.Nil, err
+	}
+	return session.ID, nil
+}
+
+func (s *UserService) ListSessions(ctx context.Context, userID, currentSessionID uuid.UUID) ([]port.SessionView, error) {
+	sessions, err := s.sessions.ListActive(ctx, userID, time.Now().UTC())
+	if err != nil {
+		return nil, err
+	}
+	views := make([]port.SessionView, 0, len(sessions))
+	for _, session := range sessions {
+		views = append(views, port.SessionView{
+			ID:         session.ID.String(),
+			UserAgent:  session.UserAgent,
+			CreatedAt:  session.CreatedAt.Format(time.RFC3339),
+			LastSeenAt: session.LastSeenAt.Format(time.RFC3339),
+			Current:    session.ID == currentSessionID,
+		})
+	}
+	return views, nil
+}
+
+func (s *UserService) RevokeSession(ctx context.Context, userID, sessionID uuid.UUID) error {
+	return s.sessions.Revoke(ctx, userID, sessionID, time.Now().UTC())
+}
+
+func (s *UserService) RevokeOtherSessions(ctx context.Context, userID, currentSessionID uuid.UUID) error {
+	return s.sessions.RevokeExcept(ctx, userID, &currentSessionID, time.Now().UTC())
+}
+
+// DeactivateAccount cierra la cuenta tras confirmar la contrasena y revoca todas sus sesiones.
+func (s *UserService) DeactivateAccount(ctx context.Context, userID uuid.UUID, password string) error {
+	user, err := s.repo.FindByID(ctx, userID)
+	if err != nil {
+		return err
+	}
+	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password)); err != nil {
+		return domain.ErrIncorrectPassword
+	}
+
+	now := time.Now().UTC()
+	user.Deactivate(now)
+	if err := s.repo.Update(ctx, user); err != nil {
+		return err
+	}
+	return s.sessions.RevokeExcept(ctx, userID, nil, now)
 }

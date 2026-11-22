@@ -6,7 +6,7 @@ export function AdminRoute() {
   const role = useAuthStore((s) => s.user?.role)
 
   if (role !== 'admin') {
-    return <Navigate to="/tickets" replace />
+    return <Navigate to="/issues" replace />
   }
 
   return <Outlet />

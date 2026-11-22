@@ -2,8 +2,6 @@ package directory
 
 import (
 	"context"
-	"database/sql"
-	"errors"
 
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
@@ -22,25 +20,39 @@ func NewUserDirectory(db *sqlx.DB) *UserDirectory {
 
 var _ port.UserDirectory = (*UserDirectory)(nil)
 
-func (d *UserDirectory) TeamOf(ctx context.Context, userID uuid.UUID) (*uuid.UUID, error) {
-	query := d.db.Rebind(`SELECT team_id FROM users WHERE id = ?`)
-
-	var teamID sql.NullString
-	if err := d.db.GetContext(ctx, &teamID, query, userID); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, apperror.New(apperror.KindValidation, "user does not exist")
-		}
-		return nil, apperror.Wrap(apperror.KindInternal, "failed to look up user team", err)
+// NamesOf devuelve el nombre de los usuarios indicados. Los ids que no existen no aparecen en el mapa.
+func (d *UserDirectory) NamesOf(ctx context.Context, userIDs []uuid.UUID) (map[uuid.UUID]string, error) {
+	names := make(map[uuid.UUID]string, len(userIDs))
+	if len(userIDs) == 0 {
+		return names, nil
 	}
-
-	if !teamID.Valid {
-		return nil, nil
-	}
-
-	parsed, err := uuid.Parse(teamID.String)
+	query, args, err := sqlx.In(`SELECT id, name FROM users WHERE id IN (?)`, userIDs)
 	if err != nil {
-		return nil, apperror.Wrap(apperror.KindInternal, "failed to decode team id", err)
+		return nil, apperror.Wrap(apperror.KindInternal, "failed to build user names query", err)
 	}
+	var rows []struct {
+		ID   uuid.UUID `db:"id"`
+		Name string    `db:"name"`
+	}
+	if err := d.db.SelectContext(ctx, &rows, d.db.Rebind(query), args...); err != nil {
+		return nil, apperror.Wrap(apperror.KindInternal, "failed to load user names", err)
+	}
+	for _, row := range rows {
+		names[row.ID] = row.Name
+	}
+	return names, nil
+}
 
-	return &parsed, nil
+// SharesTeam indica si los dos usuarios comparten al menos un equipo, segun la tabla team_members.
+func (d *UserDirectory) SharesTeam(ctx context.Context, userA, userB uuid.UUID) (bool, error) {
+	var shared bool
+	query := d.db.Rebind(`SELECT EXISTS (
+		SELECT 1 FROM team_members a
+		JOIN team_members b ON b.team_id = a.team_id
+		WHERE a.user_id = ? AND b.user_id = ?
+	)`)
+	if err := d.db.GetContext(ctx, &shared, query, userA, userB); err != nil {
+		return false, apperror.Wrap(apperror.KindInternal, "failed to check shared teams", err)
+	}
+	return shared, nil
 }

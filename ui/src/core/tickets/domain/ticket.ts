@@ -1,5 +1,6 @@
 export type TicketStatus = 'open' | 'in_progress' | 'resolved' | 'closed'
 export type TicketPriority = 'low' | 'medium' | 'high' | 'critical'
+export type IssueType = 'task' | 'bug' | 'story' | 'epic' | 'subtask'
 
 export interface Ticket {
   id: string
@@ -7,8 +8,17 @@ export interface Ticket {
   description: string
   status: TicketStatus
   priority: TicketPriority
+  projectId: string
+  issueType: IssueType
+  parentId: string | null
+  dueDate: string | null
+  storyPoints: number | null
+  rank: string
+  closedAt: string | null
   requesterId: string
+  requesterName: string
   assigneeId: string | null
+  assigneeName: string | null
   createdAt: string
   updatedAt: string
 }

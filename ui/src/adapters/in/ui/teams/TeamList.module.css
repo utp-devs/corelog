@@ -4,5 +4,5 @@
 
 .selectedRow {
   cursor: pointer;
-  background: #f5f0ff;
+  background: var(--cl-brand-subtle);
 }

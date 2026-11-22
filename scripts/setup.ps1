@@ -76,7 +76,7 @@ function Test-Migrate {
         Write-Log "check" "golang-migrate found: $(migrate -version 2>&1)"
         return $true
     }
-    Write-Log "check" "golang-migrate not found, only required for manual PostgreSQL or SQLite migration commands"
+    Write-Log "check" "golang-migrate not found, only required for manual PostgreSQL migration commands"
     return $false
 }
 
@@ -107,11 +107,18 @@ function Invoke-Env {
 }
 
 function Invoke-Dev {
-    Write-Log "dev" "Preparing the local development environment, SQLite backend, no Docker required"
+    Write-Log "dev" "Preparing the PostgreSQL development environment"
+    if (-not (Test-Docker)) {
+        Write-Failure "Docker and the Docker Compose plugin are required"
+    }
     if (-not (Test-Go)) {
         Write-Failure "Go is required for local development, install it and re-run this command"
     }
     Invoke-Env
+    Push-Location $RootDir
+    docker compose up -d db migrate
+    Assert-LastExitCode "docker compose up failed"
+    Pop-Location
     Write-Log "dev" "Downloading Go module dependencies"
     Push-Location $RootDir
     go mod download
@@ -139,11 +146,10 @@ function Invoke-Prod {
     $createdEnv = -not (Test-Path $envPath)
     Invoke-Env
     if ($createdEnv) {
-        (Get-Content $envPath) -replace '^DB_DRIVER=.*', 'DB_DRIVER=postgres' | Set-Content $envPath
-        Write-Log "prod" "Set DB_DRIVER=postgres in the newly created .env"
+        Write-Log "prod" "Created .env from the PostgreSQL example"
     }
     else {
-        Write-Log "prod" "Existing .env left untouched, confirm DB_DRIVER=postgres yourself if needed"
+        Write-Log "prod" "Existing .env left untouched"
     }
     Write-Log "prod" "Starting the db and api containers"
     Push-Location $RootDir
@@ -229,7 +235,7 @@ function Show-Usage {
     Write-Host "Commands:"
     Write-Host "  check     Report whether Go, Node, npm, Docker, and golang-migrate are available"
     Write-Host "  env       Create .env and ui/.env from their example files if missing"
-    Write-Host "  dev       Prepare a local development environment backed by SQLite, no Docker required"
+    Write-Host "      dev       Prepare a PostgreSQL development environment with Docker"
     Write-Host "  prod      Prepare a production-like environment backed by PostgreSQL via Docker"
     Write-Host "  build     Compile the backend binary and build the frontend"
     Write-Host "  package   Build and assemble a distributable archive under dist/"

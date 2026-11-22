@@ -50,9 +50,6 @@ go.work.sum
 *.db-journal
 *.db-shm
 *.db-wal
-*.sqlite
-*.sqlite3
-*.sqlite-journal
 
 # ---------------------------------------------------------------------
 # Secrets and machine-local configuration
@@ -66,8 +63,25 @@ go.work.sum
 *.p12
 *.pfx
 *.keystore
+*.crt
+*.cer
+*.jks
+*.p8
+*.kdbx
 secrets/
+secrets.json
+*.secret
+secrets.*.json
 credentials.json
+.netrc
+.npmrc
+id_rsa
+id_ed25519
+id_ecdsa
+# Local test accounts list with passwords (never versioned)
+/users.txt
+# Browser storage states and auth tokens captured by Playwright
+**/playwright/.auth/
 
 # ---------------------------------------------------------------------
 # Node.js, npm and Vite (see ui/.gitignore for the frontend-specific set)
@@ -83,6 +97,15 @@ dist-ssr/
 .vite/
 .next/
 .nuxt/
+/build/
+/target/
+/out/
+*.o
+*.a
+
+# Installed dependencies vendored outside node_modules and Go vendoring
+vendor/
+packages/
 
 # Caches
 .cache/
@@ -102,6 +125,50 @@ lerna-debug.log*
 # ---------------------------------------------------------------------
 *.log
 logs/
+*.session.log
+*.transcript
+
+# ---------------------------------------------------------------------
+# Memory dumps, temporary and backup files
+# ---------------------------------------------------------------------
+*.dmp
+*.hprof
+*.tmp
+*.temp
+*.bak
+*.orig
+*.rej
+
+# ---------------------------------------------------------------------
+# Database dumps and backups (migrations under migrations/ stay tracked)
+# ---------------------------------------------------------------------
+*.dump
+*.sqldump
+*.backup
+*.sql.gz
+*_dump.sql
+dump*.sql
+backups/
+
+# ---------------------------------------------------------------------
+# Playwright artifacts (screenshots of failed runs, traces, HTML report)
+# ---------------------------------------------------------------------
+/ui/test-results/
+/ui/playwright-report/
+/ui/blob-report/
+/ui/playwright/.cache/
+
+# ---------------------------------------------------------------------
+# Python tooling (scripts/ with uv-managed virtualenv)
+# ---------------------------------------------------------------------
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
 
 # ---------------------------------------------------------------------
 # Editors and operating systems
@@ -124,3 +191,40 @@ desktop.ini
 /corelog-package.zip
 docker/**/*.local.yml
 docker-compose.local.yml
+
+# ---------------------------------------------------------------------
+# AI coding agents: instructions, planning documents, local state
+# Never versioned. Shared project rules live in the tracked docs and in
+# the commit conventions; these folders are personal to each contributor.
+# ---------------------------------------------------------------------
+# Claude Code (project instructions, rules, settings, local memory)
+.claude/
+.claude.json
+CLAUDE.md
+CLAUDE.local.md
+# Planning and working documents for agents
+.agents/
+# Generic agent instruction files
+AGENTS.md
+GEMINI.md
+.cursorrules
+.github/copilot-instructions.md
+# Editor and assistant configuration folders
+.cursor/
+.windsurf/
+.continue/
+.codex/
+.cline/
+.roo/
+.gemini/
+.kiro/
+.opencode/
+.trae/
+.copilot/
+.aider*
+# MCP client configuration (often holds tokens or local paths)
+.mcp.json
+# Worktrees and session state created by coding agents
+.claude-flow/
+.swarm/
+*.agent-session

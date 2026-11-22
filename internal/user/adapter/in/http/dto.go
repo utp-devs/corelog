@@ -3,6 +3,7 @@ package http
 import (
 	"time"
 
+	"github.com/jhonsferg/corelog/internal/user/application/port"
 	"github.com/jhonsferg/corelog/internal/user/domain"
 )
 
@@ -25,6 +26,22 @@ type updateProfileRequest struct {
 type changePasswordRequest struct {
 	CurrentPassword string `json:"current_password" validate:"required"`
 	NewPassword     string `json:"new_password" validate:"required,min=8"`
+}
+
+type deactivateRequest struct {
+	Password string `json:"password" validate:"required"`
+}
+
+type sessionResponse struct {
+	ID         string `json:"id"`
+	UserAgent  string `json:"user_agent"`
+	CreatedAt  string `json:"created_at"`
+	LastSeenAt string `json:"last_seen_at"`
+	Current    bool   `json:"current"`
+}
+
+func toSessionResponse(v port.SessionView) sessionResponse {
+	return sessionResponse{ID: v.ID, UserAgent: v.UserAgent, CreatedAt: v.CreatedAt, LastSeenAt: v.LastSeenAt, Current: v.Current}
 }
 
 type setTeamRequest struct {

@@ -1,8 +1,9 @@
 .wrapper {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  max-width: 720px;
+  gap: var(--cl-space-4);
+  width: 100%;
+  max-width: 1280px;
 }
 
 .backButton {
@@ -14,9 +15,71 @@
 }
 
 .statusSelect {
-  width: 200px;
+  width: 100%;
 }
 
 .assigneeInput {
-  width: 320px;
+  width: 100%;
+}
+
+.parentInput {
+  width: 100%;
+}
+
+.linkInput {
+  width: 100%;
+}
+
+.collaboration {
+  width: 100%;
+}
+
+.editor {
+  width: 100%;
+}
+
+.detailTabs {
+  width: 100%;
+  min-width: 0;
+}
+
+.columns {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(280px, 1fr);
+  gap: var(--cl-space-4);
+  align-items: start;
+}
+
+.mainColumn,
+.sideColumn {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cl-space-4);
+  min-width: 0;
+}
+
+@media (max-width: 991px) {
+  .columns {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Fila de controles de una tarjeta: envuelve y cada control ocupa el ancho disponible. */
+.controlRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--cl-space-2);
+  width: 100%;
+  min-width: 0;
+}
+
+.controlRow > * {
+  flex: 1 1 180px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.controlRow > button {
+  flex: 0 0 auto;
 }

@@ -1,0 +1,25 @@
+.tile {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cl-space-1);
+  padding: var(--cl-space-4);
+  border-radius: var(--cl-radius-md);
+  background: var(--cl-bg-surface);
+  border: 1px solid var(--cl-border);
+}
+
+.label {
+  font-size: var(--cl-font-small);
+  color: var(--cl-text-subtle);
+}
+
+.value {
+  font-size: var(--cl-font-h2);
+  font-weight: 600;
+  color: var(--cl-text);
+}
+
+.hint {
+  font-size: var(--cl-font-small);
+  color: var(--cl-text-subtle);
+}

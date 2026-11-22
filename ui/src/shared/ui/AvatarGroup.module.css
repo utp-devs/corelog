@@ -1,0 +1,9 @@
+.group {
+  display: inline-flex;
+}
+
+.avatar {
+  background: var(--cl-brand-subtle);
+  color: var(--cl-brand);
+  font-weight: 600;
+}

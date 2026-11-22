@@ -43,7 +43,6 @@ services:
       APP_ENV: development
       SERVER_PORT: 8080
       CORS_ALLOWED_ORIGIN: http://localhost:5173
-      DB_DRIVER: postgres
       DB_HOST: db
       DB_PORT: 5432
       DB_USER: ${DB_USER:-corelog}
@@ -52,8 +51,11 @@ services:
       DB_SSLMODE: disable
       JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
       JWT_EXPIRATION: 24h
+      ATTACHMENTS_DIR: /var/lib/corelog/attachments
     ports:
       - "8080:8080"
+    volumes:
+      - corelog_attachments:/var/lib/corelog/attachments
 
   ui:
     build:
@@ -69,3 +71,4 @@ services:
 
 volumes:
   corelog_db_data:
+  corelog_attachments:

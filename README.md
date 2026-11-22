@@ -1,4 +1,13 @@
-<h1 align="center">CoreLog</h1>
+<p align="center">
+  <img alt="CoreLog" src="docs/assets/corelog-banner.png" width="640">
+</p>
+
+<h1 align="center">CoreLog - Pequeño pero poderoso gestor de tickets</h1>
+
+<p align="center">
+  Gestión de incidencias y proyectos para equipos de soporte: tableros kanban y scrum, flujos de trabajo,
+  comentarios, adjuntos y control de acceso por equipo y rol, todo en una sola aplicación.
+</p>
 
 <p align="center">
   <img alt="Go" src="https://img.shields.io/badge/Go-1.27.4-00ADD8?style=for-the-badge&logo=go&logoColor=white">
@@ -7,7 +16,6 @@
   <img alt="golang-jwt" src="https://img.shields.io/badge/golang--jwt-v5.3.1-000000?style=for-the-badge&logo=jsonwebtokens&logoColor=white">
   <img alt="go-playground validator" src="https://img.shields.io/badge/go--playground_validator-v10.30.5-007ec6?style=for-the-badge">
   <img alt="godotenv" src="https://img.shields.io/badge/godotenv-v1.5.1-007ec6?style=for-the-badge">
-  <img alt="modernc SQLite" src="https://img.shields.io/badge/modernc_SQLite-v1.61.0-003B57?style=for-the-badge&logo=sqlite&logoColor=white">
   <img alt="React" src="https://img.shields.io/badge/React-19.3.1-61DAFB?style=for-the-badge&logo=react&logoColor=black">
   <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-6.0.3-3178C6?style=for-the-badge&logo=typescript&logoColor=white">
   <img alt="Vite" src="https://img.shields.io/badge/Vite-8.3.5-646CFF?style=for-the-badge&logo=vite&logoColor=white">
@@ -70,7 +78,7 @@ Estado actual:
 
 ## Arquitectura
 
-Tanto el backend como el frontend siguen una arquitectura hexagonal, es decir, basada en puertos y adaptadores. La lógica de negocio, incluido el dominio y los casos de uso, no tiene conocimiento de mecanismos de entrega como HTTP, SQL, React o Axios. Los adaptadores se conectan al núcleo mediante interfaces explícitas llamadas puertos, lo que mantiene el sistema testeable y permite intercambiar cualquier adaptador, por ejemplo PostgreSQL por SQLite o REST por GraphQL, sin modificar las reglas de negocio.
+Tanto el backend como el frontend siguen una arquitectura hexagonal, es decir, basada en puertos y adaptadores. La lógica de negocio, incluido el dominio y los casos de uso, no tiene conocimiento de mecanismos de entrega como HTTP, SQL, React o Axios. Los adaptadores se conectan al núcleo mediante interfaces explícitas llamadas puertos.
 
 
 ```
@@ -87,13 +95,11 @@ corelog/
 │   │   ├── adapter/
 │   │   │   ├── in/http/              adaptador de entrada: handlers HTTP, DTOs y rutas
 │   │   │   ├── out/postgres/         adaptador de salida: repositorio basado en sqlx para producción
-│   │   │   └── out/sqlite/           adaptador de salida: repositorio basado en sqlx para desarrollo local
 │   │   └── module.go                 conecta el dominio, la aplicación y el adaptador
 │   ├── team/                    hexágono de equipos para agrupar usuarios, misma estructura que user
 │   └── ticket/                  hexágono de tickets para incidentes, misma estructura que user, además de adapter/out/memory y adapter/out/directory
 ├── migrations/
 │   ├── postgres/                 migraciones SQL versionadas para producción, aplicadas con golang-migrate
-│   └── sqlite/                   migraciones SQL versionadas para desarrollo local, integradas en el binario y aplicadas automáticamente al iniciar
 ├── docker/                      Dockerfiles y configuración de nginx
 ├── docker-compose.yaml           PostgreSQL, migraciones automáticas, API y UI con un solo comando
 ├── openapi.yaml                  Contrato AbreAPI 3 para toda la API, mantenido sincronizado con la referencia de API de abajo
@@ -104,7 +110,7 @@ corelog/
 
 ### Flujo de solicitud, ejemplo: crear ticket
 
-`HTTP request -> adapter/in/http as the Handler -> application/port/in as the Service interface -> application/usecase for business orchestration -> domain for Ticket invariants -> application/port/out as the Repository interface -> adapter/out/postgres or adapter/out/sqlite via sqlx`
+`HTTP request -> adapter/in/http as the Handler -> application/port/in as the Service interface -> application/usecase for business orchestration -> domain for Ticket invariants -> application/port/out as the Repository interface -> adapter/out/postgres via sqlx`
 
 ## Tecnologías del backend
 
@@ -116,24 +122,27 @@ corelog/
 - **Validación**: [go-playground/validator](https://github.com/go-playground/validator)
 - **Migraciones**: SQL files under `migrations/postgres/`, run with [golang-migrate](https://github.com/golang-migrate/migrate)
 
-### Dos bases de datos, un solo conjunto de reglas de negocio
+### PostgreSQL, conjunto único de persistencia
 
-`internal/user/module.go` and `internal/ticket/module.go` both take a `port.Repository` by injection instead of building one themselves. The composition root, `cmd/api/main.go`, decides which driven adapter to wire in, based on `DB_DRIVER`:
+`internal/user/module.go`, `internal/team/module.go`, `internal/project/module.go` y `internal/ticket/module.go` reciben repositorios PostgreSQL mediante puertos. El composition root de `cmd/api/main.go` usa `database.NewPostgres` y los adaptadores `adapter/out/postgres`.
 
-| `DB_DRIVER` | Uso previsto | Adapter package | Esquema |
-| --- | --- | --- | --- |
-| `postgres`, the default | Producción | `adapter/out/postgres` | Tracked migrations in `migrations/postgres/`, applied manually with `golang-migrate` |
-| `sqlite` | Desarrollo local | `adapter/out/sqlite` | Tracked migrations in `migrations/sqlite/`, embedded into the binary via `go:embed` and applied automatically on every startup, zero setup, no server required |
+Las migraciones versionadas viven en `migrations/postgres/` y se aplican mediante golang-migrate en Docker o desde la CLI. PostgreSQL es obligatorio tanto en desarrollo como en producción.
 
-The SQLite driver is [`modernc.org/sqlite`](https://modernc.org/sqlite), a pure-Go implementation with no CGO requirement, so `go run ./cmd/api` works out of the box on any platform without a C toolchain. Both adapters implement the exact same `port.Repository` interface per hexagon, so the domain, use cases, and HTTP handlers never change based on which database is active. The SQL itself differs between `migrations/postgres/` and `migrations/sqlite/` because the two engines use different column types, for example `UUID` and `TIMESTAMPTZ` in PostgreSQL against `TEXT` in SQLite, but each numbered pair of files creates the same two tables with the same constraints.
+El ticket hexagon admite opcionalmente `TICKET_REPOSITORY=memory` para demos y pruebas aisladas. Esta opción no sustituye PostgreSQL para el resto de módulos.
 
-The ticket hexagon additionally supports `TICKET_REPOSITORY=memory`, which forces `adapter/out/memory`, an in-memory, pre-seeded, thread-safe repository, regardless of `DB_DRIVER`. This is useful for demos or tests that should not touch disk at all.
+Los adjuntos de issues se almacenan en `data/attachments` en desarrollo local. Docker Compose monta el volumen persistente `corelog_attachments` en `/var/lib/corelog/attachments`; `ATTACHMENTS_DIR` permite configurar otra ruta. La API acepta PDF, PNG, JPEG, GIF, WebP, texto plano y CSV de hasta 10 MiB por archivo.
+
+Los miembros de un proyecto pueden seguir o dejar de seguir sus issues. Quien comenta y la persona asignada se agregan automáticamente a los seguidores. Cada usuario puede guardar filtros personales de estado, prioridad, tipo, fechas y texto para reutilizarlos en el listado.
+
+Cada proyecto recibe un tablero predeterminado con columnas para abierto, en progreso, resuelto y cerrado. La migración crea tableros iniciales para los proyectos existentes; la creación de nuevos proyectos guarda el proyecto, su líder, el tablero, sus columnas y el flujo de estados predeterminado en una sola transacción. La vista protegida `GET /api/v1/projects/{id}/board` devuelve las columnas ordenadas, tarjetas con tipo, resumen, responsable, prioridad y puntos, además del conteo por columna. En la UI se abre desde la tarjeta de cada proyecto.
+
+Las pruebas de integración de adjuntos, seguidores, filtros guardados y tableros usan PostgreSQL real y se activan con `CORELOG_TEST_DATABASE_URL`; crean y eliminan esquemas temporales aislados.
 
 ### Equipos y asignación
 
 Every user optionally belongs to one team, tracked as a nullable `team_id` on the user. Teams themselves are a small, independent hexagon under `internal/team`, managed by administrators through the `/teams` endpoints.
 
-When a ticket is assigned, `internal/ticket/application/usecase/ticket_service.go` checks that the user performing the assignment and the user being assigned share the same team, using an outbound port, `ticket/application/port.UserDirectory`, implemented once in `internal/ticket/adapter/out/directory` for both PostgreSQL and SQLite via `sqlx.DB.Rebind`. A user with no team can neither assign tickets nor be assigned one, and a mismatched team returns `403`. This keeps the ticket hexagon decoupled from the user hexagon's internal types: it only depends on a narrow interface it declares itself.
+When a ticket is assigned, `internal/ticket/application/usecase/ticket_service.go` checks that the user performing the assignment and the user being assigned share the same team, using an outbound port, `ticket/application/port.UserDirectory`, implemented in `internal/ticket/adapter/out/directory` sobre PostgreSQL via `sqlx.DB.Rebind`. A user with no team can neither assign tickets nor be assigned one, and a mismatched team returns `403`.
 
 There is no dedicated admin bootstrap step: the very first account ever registered becomes an admin automatically, and every account after that defaults to requester. Admins manage teams and assign other users to them from the Teams screen in the frontend.
 
@@ -145,8 +154,8 @@ See [`ui/README.md`](ui/README.md) for the frontend's hexagonal layout. Stack: R
 
 - Go 1.27 or newer
 - Node.js 24 or newer, and npm
-- Docker and Docker Compose, needed only for the PostgreSQL production path
-- [golang-migrate](https://github.com/golang-migrate/migrate) CLI, needed only to run PostgreSQL migrations manually or to use the optional `make migrate-sqlite-*` commands; the application itself applies SQLite migrations automatically without this CLI
+- Docker and Docker Compose
+- [golang-migrate](https://github.com/golang-migrate/migrate) CLI, needed only to run PostgreSQL migrations manually
 
 ## Primeros pasos
 
@@ -154,36 +163,11 @@ Ejecutar CoreLog localmente significa ejecutar dos procesos al mismo tiempo: la 
 
 ### 1. Iniciar el backend
 
-Elige una de las dos opciones de base de datos siguientes y luego inicia la API. Ejecuta estos comandos desde la raíz del repositorio.
-
-#### Option A: SQLite, configuración cero, recomendado para desarrollo local
+Usa PostgreSQL tanto en desarrollo como en producción. Ejecuta estos comandos desde la raíz del repositorio.
 
 ```sh
 cp .env.example .env
-
-```
-
-`.env.example` already sets `DB_DRIVER=sqlite`, so no further edits to `.env` are required. Inicia la API:
-
-```sh
-make run
-
-```
-
-La API crea `./data/<DB_NAME>.db`, `./data/corelog.db` with the default `.env.example` value, and its schema automatically on first run. No Docker, no Postgres, and no migration step are required. Deja este proceso ejecutándose: la API ahora está escuchando en `http://localhost:8080`.
-
-#### Option B: PostgreSQL mediante Docker, similar a producción
-
-```sh
-cp .env.example .env
-
-```
-
-Edit `.env` and set `DB_DRIVER=postgres`, luego inicia todo con un solo comando. Docker Compose levanta la base de datos, aplica las migraciones versionadas de forma automática, inicia la API y sirve el frontend:
-
-```sh
 make docker-up
-
 ```
 
 La API queda escuchando en `http://localhost:8080` y el frontend en `http://localhost:5173`. No hace falta correr `make migrate-up` ni el paso 2.
@@ -223,8 +207,8 @@ Esto devuelve `{"status":"ok"}` cuando la API es accesible.
 | --- | --- |
 | `check` | Indica si Go, Node, npm, Docker y golang-migrate están disponibles |
 | `env` | Create `.env` and `ui/.env` from their example files if missing, without overwriting existing ones |
-| `dev` | Prepare a local development environment backed by SQLite: runs `env`, downloads Go modules, installs frontend dependencies. No Docker required |
-| `prod` | Prepare a similar a producción environment backed by PostgreSQL via Docker: verifies Docker is available, runs `env`, sets `DB_DRIVER=postgres` in a freshly created `.env`, starts the `db` and `api` containers, and applies migrations when the `migrate` CLI is installed |
+| `dev` | Prepare a local development environment backed by PostgreSQL: runs `env`, starts PostgreSQL and migrations, downloads Go modules and installs frontend dependencies |
+| `prod` | Prepare a producción environment backed by PostgreSQL via Docker: verifies Docker, runs `env`, starts the `db` and `api` containers and applies migrations |
 | `build` | Compila el binario del backend en `bin/api`, `bin/api.exe` on Windows, y compila el frontend en `ui/dist` |
 | `package` | Run `build`, then assemble a distributable archive under `dist/` que contiene el binario del backend, las migraciones de PostgreSQL y la compilación del frontend, y comprímelo como `corelog-package.tar.gz` in bash or `corelog-package.zip` in PowerShell |
 | `clean` | Elimina `bin/`, `ui/dist/`, `dist/`, and the packaged archive |
@@ -258,13 +242,12 @@ All variables live in `.env`, copied from `.env.example`. See [`ui/.env.example`
 | `SERVER_READ_TIMEOUT` and `SERVER_WRITE_TIMEOUT` | `10s` | Tiempos de espera del servidor HTTP |
 | `SERVER_SHUTDOWN_TIMEOUT` | `15s` | Período de gracia para solicitudes en curso durante el apagado |
 | `CORS_ALLOWED_ORIGIN` | `http://localhost:5173` | Lista separada por comas de orígenes autorizados para llamar a la API desde el navegador |
-| `DB_DRIVER` | `sqlite` in the example file, `postgres` as the code default | `postgres` or `sqlite` |
-| `DB_NAME` | `corelog` | Nombre de base de datos independiente del motor. Para PostgreSQL, es la base de datos dentro del servidor. Para SQLite, es el archivo `data/<DB_NAME>.db`; there is no separate SQLite-only path variable |
-| `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_SSLMODE` | `localhost`, `5432`, `corelog`, `corelog`, `disable` | Conexión a PostgreSQL, utilizada solo cuando `DB_DRIVER=postgres` |
+| `DB_NAME` | `corelog` | Nombre de la base de datos PostgreSQL |
+| `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_SSLMODE` | `localhost`, `5432`, `corelog`, `corelog`, `disable` | Conexión a PostgreSQL |
 | `DB_MAX_OPEN_CONNS`, `DB_MAX_IDLE_CONNS`, `DB_CONN_MAX_LIFETIME` | `25`, `25`, `5m` | Configuración del pool de conexiones de PostgreSQL |
 | `JWT_SECRET` | `change-me-in-production` | Secreto de firma HMAC para los tokens de acceso; establece un secreto real fuera del desarrollo local |
 | `JWT_EXPIRATION` | `24h` | Duración del token de acceso |
-| `TICKET_REPOSITORY` | `postgres` | `postgres` follows `DB_DRIVER` despite the name, or `memory` forces the in-memory ticket adapter |
+| `TICKET_REPOSITORY` | `postgres` | `postgres` uses PostgreSQL, or `memory` forces the in-memory ticket adapter |
 
 ## Referencia de la API
 
@@ -310,8 +293,6 @@ Backend, from the `Makefile` at the repo root:
 | `make docker-up`, `make docker-down`, `make docker-logs` | Administra el stack de Docker Compose de PostgreSQL y la API |
 | `make migrate-up`, `make migrate-down` | Aplica o revierte las migraciones de PostgreSQL |
 | `make migrate-create name=<name>` | Genera el par de archivos de una nueva migración de PostgreSQL |
-| `make migrate-sqlite-up`, `make migrate-sqlite-down` | Aplica o revierte las migraciones de SQLite sobre `data/<DB_NAME>.db` using the `migrate` CLI directly, as an alternative to the automatic startup migration; pass `DB_NAME=<name>` to target a database other than the default `corelog` |
-| `make migrate-sqlite-create name=<name>` | Genera el par de archivos de una nueva migración de SQLite |
 | `make ui-install`, `make ui-dev`, `make ui-build`, `make ui-lint` | Reenvía a los scripts npm del frontend |
 
 Frontend, from `ui/package.json`, run inside `ui/`: `npm run dev`, `npm run build`, `npm run lint`, `npm run preview`.
@@ -333,6 +314,20 @@ docker compose up -d --build
 | `ui` | Contenedor nginx que sirve el build de producción del frontend en `http://localhost:5173` |
 
 El frontend se compila con `VITE_API_BASE_URL`, cuyo valor por defecto es `http://localhost:8080/api/v1`. Para usar otra URL, defínela en `.env` antes de construir.
+
+Para ejecutar todo el proyecto en local con una configuración y volúmenes independientes, usa `docker-compose.local.yaml`:
+
+```sh
+docker compose -f docker-compose.local.yaml up -d --build
+```
+
+La UI queda disponible en `http://localhost:5173`, la API en `http://localhost:8080` y PostgreSQL en `localhost:5432`. La primera cuenta registrada obtiene el rol de administrador. La base de datos y los adjuntos persisten en volúmenes locales dedicados. Para detener los servicios sin borrar esos datos:
+
+```sh
+docker compose -f docker-compose.local.yaml down
+```
+
+Los puertos se pueden cambiar con `CORELOG_LOCAL_UI_PORT`, `CORELOG_LOCAL_API_PORT` y `CORELOG_LOCAL_DB_PORT`. Las credenciales de desarrollo tienen valores predeterminados; define `DB_USER`, `DB_PASSWORD`, `DB_NAME` y `JWT_SECRET` en el entorno o en un archivo `.env` si necesitas personalizarlas.
 
 ### Contenedor de base de datos: usuario, base de datos y permisos
 
@@ -399,8 +394,6 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO reporting;
 
 La última instrucción garantiza que las tablas creadas por futuras migraciones también sean legibles por `reporting`, y no solo las tablas que ya existían cuando se ejecutó el permiso.
 
-SQLite no tiene un modelo equivalente de usuarios o permisos: `migrations/sqlite/` produces a single file at `data/<DB_NAME>.db`, y el acceso a ella está controlado completamente por los permisos de archivos del sistema operativo en esa ruta.
-
 ## Integración y entrega continua
 
 Cada Pull Request hacia `main` ejecuta estos flujos de GitHub Actions:
@@ -427,13 +420,12 @@ El flujo `release.yml` publica una Release con numeración `vX.Y.Z` cada vez que
 
 * No comments in source code. Names, small functions, and the hexagonal layering carry the intent; this file and `ui/README.md` are where narrative documentation belongs.
 * Ports before adapters. Every use case depends on an interface declared in `application/port`, never directly on `adapter/out/*`. The composition root is the only place concrete adapters are chosen: `cmd/api/main.go` on the backend, `adapters/in/state/*.store.ts` on the frontend.
-* Un adaptador, una responsabilidad de persistencia. `adapter/out/postgres` and `adapter/out/sqlite` cada uno se encarga de su propio mapeo de filas al dominio; nunca comparten una estructura, por lo que cualquiera puede cambiar su representación de almacenamiento de forma independiente.
+* Un adaptador, una responsabilidad de persistencia. `adapter/out/postgres` mapea sus filas al dominio sin almacenar datos fuera de PostgreSQL.
 * Frontend imports use the `@/` alias, mapped to `ui/src`, for anything crossing a top-level boundary such as `app`, `core`, `adapters`, or `shared`. Same-directory and one-level-up imports stay relative. See `ui/README.md`.
 
 ## Solución de problemas
 
-* `database is locked` on SQLite: only one process should hold `./data/<DB_NAME>.db` a la vez. Detén cualquier otra instancia de la API que esté ejecutándose.
-* `migrate: command not found`: install [golang-migrate](https://www.google.com/search?q=https://github.com/golang-migrate/migrate%2523installation&utm_source=gemini). Solo es necesario para la ruta de PostgreSQL, no para SQLite.
+* `migrate: command not found`: install [golang-migrate](https://github.com/golang-migrate/migrate).
 * `relation "users" does not exist` con Docker: las migraciones no se aplicaron. Revisa `docker compose logs migrate`.
 * Errores de CORS en el navegador: asegúrate de que `CORS_ALLOWED_ORIGIN` coincida con el origen exacto en el que se ejecuta el frontend, cuyo valor predeterminado es `http://localhost:5173`.
 * `401 Unauthorized` on `/tickets`: the ticket and `/users/me` endpoints require `Authorization: Bearer <token>` from `POST /auth/login`.

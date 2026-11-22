@@ -7,8 +7,8 @@ import type { ChangePasswordPayload } from '@/core/auth/application/ports/auth-r
 import styles from './ProfileForm.module.css'
 
 const schema = z.object({
-  currentPassword: z.string().min(1, 'Current password is required'),
-  newPassword: z.string().min(8, 'New password must be at least 8 characters'),
+  currentPassword: z.string().min(1, 'La contraseña actual es obligatoria'),
+  newPassword: z.string().min(8, 'La nueva contraseña debe tener al menos 8 caracteres'),
 })
 
 type FormValues = z.infer<typeof schema>
@@ -41,21 +41,21 @@ export function PasswordForm({ isSubmitting, onSubmit }: PasswordFormProps) {
   return (
     <Form className={styles.form} layout="vertical" onFinish={submit}>
       <Form.Item
-        label="Current password"
+        label="Contraseña actual"
         validateStatus={errors.currentPassword ? 'error' : ''}
         help={errors.currentPassword?.message}
       >
         <Controller name="currentPassword" control={control} render={({ field }) => <Input.Password {...field} />} />
       </Form.Item>
       <Form.Item
-        label="New password"
+        label="Nueva contraseña"
         validateStatus={errors.newPassword ? 'error' : ''}
         help={errors.newPassword?.message}
       >
         <Controller name="newPassword" control={control} render={({ field }) => <Input.Password {...field} />} />
       </Form.Item>
-      <Button type="primary" htmlType="submit" loading={isSubmitting}>
-        Change password
+      <Button type="primary" htmlType="submit" loading={isSubmitting} className={styles.submit}>
+        Cambiar contraseña
       </Button>
     </Form>
   )

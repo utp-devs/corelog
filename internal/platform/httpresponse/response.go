@@ -31,6 +31,26 @@ func JSON(w http.ResponseWriter, status int, data any) {
 	}
 }
 
+// PageMeta describe una pagina de resultados en las respuestas de listado.
+type PageMeta struct {
+	Page     int `json:"page"`
+	PageSize int `json:"page_size"`
+	Total    int `json:"total"`
+}
+
+// Paginated escribe {data, meta} para listados paginados.
+func Paginated(w http.ResponseWriter, status int, data any, meta PageMeta) {
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.WriteHeader(status)
+	body := struct {
+		Data any      `json:"data"`
+		Meta PageMeta `json:"meta"`
+	}{Data: data, Meta: meta}
+	if err := json.NewEncoder(w).Encode(body); err != nil {
+		slog.Error("httpresponse: encode failed", "error", err)
+	}
+}
+
 func Error(w http.ResponseWriter, err error) {
 	status := statusFor(apperror.KindOf(err))
 	if status == http.StatusInternalServerError {

@@ -1,37 +1,76 @@
-import { Table } from 'antd'
+import { Button, Space, Table, Typography } from 'antd'
+import { DownOutlined, UpOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
+import dayjs from 'dayjs'
 
-import type { Ticket, TicketPriority, TicketStatus } from '@/core/tickets/domain/ticket'
-import { TicketBadge } from './TicketBadge'
+import type { Ticket } from '@/core/tickets/domain/ticket'
+import { AvatarGroup } from '@/shared/ui/AvatarGroup'
+import { EmptyState } from '@/shared/ui/EmptyState'
+import { IssueTypeIcon } from '@/shared/ui/IssueTypeIcon'
+import { PriorityTag } from '@/shared/ui/PriorityTag'
+import { StatusTag } from '@/shared/ui/StatusTag'
 import styles from './TicketList.module.css'
 
 interface TicketListProps {
   tickets: Ticket[]
   isLoading: boolean
   onSelect: (ticket: Ticket) => void
+  onMoveUp?: (ticket: Ticket) => void
+  onMoveDown?: (ticket: Ticket) => void
   emptyText?: string
 }
 
-export function TicketList({ tickets, isLoading, onSelect, emptyText = 'No tickets yet' }: TicketListProps) {
+export function TicketList({ tickets, isLoading, onSelect, onMoveUp, onMoveDown, emptyText = 'Aún no hay incidencias' }: TicketListProps) {
   const columns: ColumnsType<Ticket> = [
-    { title: 'Title', dataIndex: 'title', key: 'title' },
     {
-      title: 'Status',
-      dataIndex: 'status',
+      title: 'Tipo',
+      key: 'issueType',
+      width: 72,
+      render: (_, ticket) => <IssueTypeIcon type={ticket.issueType} />,
+    },
+    {
+      title: 'Título',
+      dataIndex: 'title',
+      key: 'title',
+      render: (value: string) => <span className={styles.titleText}>{value}</span>,
+    },
+    {
+      title: 'Estado',
       key: 'status',
-      render: (value: TicketStatus) => <TicketBadge kind="status" value={value} />,
+      render: (_, ticket) => <StatusTag status={ticket.status} />,
     },
     {
-      title: 'Priority',
-      dataIndex: 'priority',
+      title: 'Prioridad',
       key: 'priority',
-      render: (value: TicketPriority) => <TicketBadge kind="priority" value={value} />,
+      render: (_, ticket) => <PriorityTag priority={ticket.priority} />,
     },
     {
-      title: 'Created',
+      title: 'Responsable',
+      key: 'assignee',
+      render: (_, ticket) => ticket.assigneeId && ticket.assigneeName ? (
+        <Space size="small">
+          <AvatarGroup users={[{ id: ticket.assigneeId, name: ticket.assigneeName }]} />
+          <span>{ticket.assigneeName}</span>
+        </Space>
+      ) : (
+        <Typography.Text type="secondary">Sin asignar</Typography.Text>
+      ),
+    },
+    {
+      title: 'Creado',
       dataIndex: 'createdAt',
       key: 'createdAt',
-      render: (value: string) => new Date(value).toLocaleString(),
+      render: (value: string) => dayjs(value).format('DD/MM/YYYY HH:mm'),
+    },
+    {
+      title: 'Orden',
+      key: 'rank',
+      render: (_, ticket) => (
+        <Space>
+          <Button size="small" icon={<UpOutlined />} onClick={(event) => { event.stopPropagation(); onMoveUp?.(ticket) }} aria-label="Mover arriba" />
+          <Button size="small" icon={<DownOutlined />} onClick={(event) => { event.stopPropagation(); onMoveDown?.(ticket) }} aria-label="Mover abajo" />
+        </Space>
+      ),
     },
   ]
 
@@ -43,7 +82,8 @@ export function TicketList({ tickets, isLoading, onSelect, emptyText = 'No ticke
       columns={columns}
       onRow={(record) => ({ onClick: () => onSelect(record) })}
       rowClassName={() => styles.row}
-      locale={{ emptyText: <div className={styles.empty}>{emptyText}</div> }}
+      pagination={false}
+      locale={{ emptyText: <EmptyState title={emptyText} /> }}
     />
   )
 }

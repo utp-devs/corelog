@@ -33,9 +33,9 @@ export function TeamFormModal({ open, title, initialName, isSubmitting, onSubmit
   })
 
   return (
-    <Modal open={open} title={title} onCancel={onCancel} onOk={submit} confirmLoading={isSubmitting} okText="Save">
+    <Modal open={open} title={title} onCancel={onCancel} onOk={submit} confirmLoading={isSubmitting} okText="Guardar" cancelText="Cancelar">
       <Form layout="vertical">
-        <Form.Item label="Team name" validateStatus={errors.name ? 'error' : ''} help={errors.name?.message}>
+        <Form.Item label="Nombre del equipo" validateStatus={errors.name ? 'error' : ''} help={errors.name?.message}>
           <Controller name="name" control={control} render={({ field }) => <Input {...field} autoFocus />} />
         </Form.Item>
       </Form>

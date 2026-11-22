@@ -1,0 +1,14 @@
+.git
+.agents
+.codex
+.claude
+**/.env
+**/.env.*
+**/node_modules
+**/dist
+**/coverage
+**/.vite
+**/*.tsbuildinfo
+data
+tmp
+*.log

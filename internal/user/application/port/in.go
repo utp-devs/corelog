@@ -2,6 +2,7 @@ package port
 
 import (
 	"context"
+	"time"
 
 	"github.com/google/uuid"
 
@@ -35,7 +36,21 @@ type SearchFilter struct {
 	TeamID *uuid.UUID
 }
 
+type SessionView struct {
+	ID         string
+	UserAgent  string
+	CreatedAt  string
+	LastSeenAt string
+	Current    bool
+}
+
 type Service interface {
+	// OpenSession registra una sesion nueva al iniciar sesion y devuelve su id.
+	OpenSession(ctx context.Context, userID uuid.UUID, userAgent string, expiresAt time.Time) (uuid.UUID, error)
+	ListSessions(ctx context.Context, userID, currentSessionID uuid.UUID) ([]SessionView, error)
+	RevokeSession(ctx context.Context, userID, sessionID uuid.UUID) error
+	RevokeOtherSessions(ctx context.Context, userID, currentSessionID uuid.UUID) error
+	DeactivateAccount(ctx context.Context, userID uuid.UUID, password string) error
 	Register(ctx context.Context, in RegisterInput) (*domain.User, error)
 	Authenticate(ctx context.Context, in AuthenticateInput) (*domain.User, error)
 	GetByID(ctx context.Context, id uuid.UUID) (*domain.User, error)

@@ -1,8 +1,7 @@
-.PHONY: run build test lint tidy \
+.PHONY: run build test test-coverage lint tidy seed \
 	docker-up docker-down docker-logs \
 	migrate-up migrate-down migrate-create \
-	migrate-sqlite-up migrate-sqlite-down migrate-sqlite-create \
-	ui-install ui-dev ui-build ui-lint
+	ui-install ui-dev ui-build ui-lint ui-test
 
 run:
 	go run ./cmd/api
@@ -12,6 +11,13 @@ build:
 
 test:
 	go test ./...
+
+test-coverage:
+	go test -coverprofile=coverage.out ./internal/...
+	go run ./cmd/coverage-check -min 40
+
+seed:
+	go run ./cmd/seed
 
 lint:
 	go vet ./...
@@ -40,17 +46,6 @@ migrate-down:
 migrate-create:
 	migrate create -ext sql -dir migrations/postgres -seq $(name)
 
-SQLITE_DB_PATH ?= data/$(DB_NAME).db
-
-migrate-sqlite-up:
-	migrate -path migrations/sqlite -database "sqlite3://$(SQLITE_DB_PATH)" up
-
-migrate-sqlite-down:
-	migrate -path migrations/sqlite -database "sqlite3://$(SQLITE_DB_PATH)" down 1
-
-migrate-sqlite-create:
-	migrate create -ext sql -dir migrations/sqlite -seq $(name)
-
 ui-install:
 	cd ui && npm install
 
@@ -62,3 +57,6 @@ ui-build:
 
 ui-lint:
 	cd ui && npm run lint
+
+ui-test:
+	cd ui && npm test

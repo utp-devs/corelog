@@ -1,20 +1,9 @@
-.wrapper {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 100vh;
-  background: #f5f5f7;
+/* Estilos de los formularios de acceso (la plantilla visual esta en AuthLayout). */
+.form {
+  width: 100%;
 }
 
-.card {
-  width: 380px;
-}
-
-.title {
-  margin-top: 0;
-}
-
-.footer {
-  margin-top: 16px;
-  text-align: center;
+.form :global(.ant-form-item-label > label) {
+  font-weight: 600;
+  color: var(--cl-text);
 }

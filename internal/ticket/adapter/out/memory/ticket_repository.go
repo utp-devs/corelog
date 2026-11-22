@@ -2,6 +2,7 @@ package memory
 
 import (
 	"context"
+	"math"
 	"sort"
 	"sync"
 	"time"
@@ -31,6 +32,10 @@ func (r *TicketRepository) Save(_ context.Context, t *domain.Ticket) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
+	// Simula la BD: el identificador lo asigna el almacen si el ticket aun no lo tiene.
+	if t.ID == uuid.Nil {
+		t.ID = uuid.New()
+	}
 	r.tickets[t.ID] = cloneTicket(t)
 	return nil
 }
@@ -46,12 +51,33 @@ func (r *TicketRepository) FindByID(_ context.Context, id uuid.UUID) (*domain.Ti
 	return cloneTicket(t), nil
 }
 
+// Count cuenta las coincidencias del filtro sin paginar.
+func (r *TicketRepository) Count(ctx context.Context, filter port.ListFilter) (int, error) {
+	unpaged := filter
+	unpaged.Page = 1
+	unpaged.PageSize = math.MaxInt32
+	all, err := r.FindAll(ctx, unpaged)
+	if err != nil {
+		return 0, err
+	}
+	return len(all), nil
+}
+
 func (r *TicketRepository) FindAll(_ context.Context, filter port.ListFilter) ([]*domain.Ticket, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
 	matches := make([]*domain.Ticket, 0, len(r.tickets))
+	projectIDs := make(map[uuid.UUID]struct{}, len(filter.ProjectIDs))
+	for _, projectID := range filter.ProjectIDs {
+		projectIDs[projectID] = struct{}{}
+	}
 	for _, t := range r.tickets {
+		if len(projectIDs) > 0 {
+			if _, ok := projectIDs[t.ProjectID]; !ok {
+				continue
+			}
+		}
 		if filter.Status != "" && t.Status != filter.Status {
 			continue
 		}

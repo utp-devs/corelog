@@ -32,6 +32,8 @@ type User struct {
 	TeamID       *uuid.UUID
 	CreatedAt    time.Time
 	UpdatedAt    time.Time
+	// DeactivatedAt marca una cuenta cerrada por el propio usuario (borrado logico). Nil = activa.
+	DeactivatedAt *time.Time
 }
 
 func NewUser(name, email, passwordHash string, role Role) (*User, error) {
@@ -50,7 +52,6 @@ func NewUser(name, email, passwordHash string, role Role) (*User, error) {
 
 	now := time.Now().UTC()
 	return &User{
-		ID:           uuid.New(),
 		Name:         name,
 		Email:        email,
 		PasswordHash: passwordHash,
@@ -81,4 +82,19 @@ func (u *User) ChangePasswordHash(hash string) {
 func (u *User) AssignTeam(teamID *uuid.UUID) {
 	u.TeamID = teamID
 	u.UpdatedAt = time.Now().UTC()
+}
+
+// IsActive indica si la cuenta puede iniciar sesion y usar la API.
+func (u *User) IsActive() bool {
+	return u.DeactivatedAt == nil
+}
+
+// Deactivate cierra la cuenta. Es idempotente: una cuenta ya desactivada conserva su fecha.
+func (u *User) Deactivate(now time.Time) {
+	if u.DeactivatedAt != nil {
+		return
+	}
+	at := now.UTC()
+	u.DeactivatedAt = &at
+	u.UpdatedAt = at
 }

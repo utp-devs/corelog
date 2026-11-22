@@ -70,7 +70,13 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token, err := authtoken.Generate(h.jwtSecret, h.jwtExpiration, user.ID, string(user.Role))
+	sessionID, err := h.service.OpenSession(r.Context(), user.ID, r.UserAgent(), time.Now().Add(h.jwtExpiration))
+	if err != nil {
+		httpresponse.Error(w, err)
+		return
+	}
+
+	token, err := authtoken.GenerateWithSession(h.jwtSecret, h.jwtExpiration, user.ID, string(user.Role), sessionID)
 	if err != nil {
 		httpresponse.Error(w, apperror.Wrap(apperror.KindInternal, "failed to issue token", err))
 		return
@@ -223,4 +229,94 @@ func (h *Handler) SetTeam(w http.ResponseWriter, r *http.Request) {
 	}
 
 	httpresponse.JSON(w, http.StatusOK, toUserResponse(user))
+}
+
+// currentSession devuelve la sesion del token de la peticion. Sin validacion de sesiones devuelve uuid.Nil.
+func currentSession(r *http.Request) uuid.UUID {
+	id, _ := appmw.SessionIDFromContext(r.Context())
+	return id
+}
+
+func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
+	userID, ok := appmw.UserIDFromContext(r.Context())
+	if !ok {
+		httpresponse.Error(w, apperror.New(apperror.KindUnauthorized, "not authenticated"))
+		return
+	}
+	if err := h.service.RevokeSession(r.Context(), userID, currentSession(r)); err != nil {
+		httpresponse.Error(w, err)
+		return
+	}
+	httpresponse.JSON(w, http.StatusNoContent, nil)
+}
+
+func (h *Handler) ListSessions(w http.ResponseWriter, r *http.Request) {
+	userID, ok := appmw.UserIDFromContext(r.Context())
+	if !ok {
+		httpresponse.Error(w, apperror.New(apperror.KindUnauthorized, "not authenticated"))
+		return
+	}
+	views, err := h.service.ListSessions(r.Context(), userID, currentSession(r))
+	if err != nil {
+		httpresponse.Error(w, err)
+		return
+	}
+	out := make([]sessionResponse, 0, len(views))
+	for _, v := range views {
+		out = append(out, toSessionResponse(v))
+	}
+	httpresponse.JSON(w, http.StatusOK, out)
+}
+
+func (h *Handler) RevokeSession(w http.ResponseWriter, r *http.Request) {
+	userID, ok := appmw.UserIDFromContext(r.Context())
+	if !ok {
+		httpresponse.Error(w, apperror.New(apperror.KindUnauthorized, "not authenticated"))
+		return
+	}
+	sessionID, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		httpresponse.Error(w, apperror.New(apperror.KindValidation, "invalid session id"))
+		return
+	}
+	if err := h.service.RevokeSession(r.Context(), userID, sessionID); err != nil {
+		httpresponse.Error(w, err)
+		return
+	}
+	httpresponse.JSON(w, http.StatusNoContent, nil)
+}
+
+func (h *Handler) RevokeOtherSessions(w http.ResponseWriter, r *http.Request) {
+	userID, ok := appmw.UserIDFromContext(r.Context())
+	if !ok {
+		httpresponse.Error(w, apperror.New(apperror.KindUnauthorized, "not authenticated"))
+		return
+	}
+	if err := h.service.RevokeOtherSessions(r.Context(), userID, currentSession(r)); err != nil {
+		httpresponse.Error(w, err)
+		return
+	}
+	httpresponse.JSON(w, http.StatusNoContent, nil)
+}
+
+func (h *Handler) DeactivateAccount(w http.ResponseWriter, r *http.Request) {
+	userID, ok := appmw.UserIDFromContext(r.Context())
+	if !ok {
+		httpresponse.Error(w, apperror.New(apperror.KindUnauthorized, "not authenticated"))
+		return
+	}
+	var req deactivateRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		httpresponse.Error(w, apperror.New(apperror.KindValidation, "invalid request body"))
+		return
+	}
+	if err := validation.Struct(req); err != nil {
+		httpresponse.Error(w, apperror.Wrap(apperror.KindValidation, "invalid request body", err))
+		return
+	}
+	if err := h.service.DeactivateAccount(r.Context(), userID, req.Password); err != nil {
+		httpresponse.Error(w, err)
+		return
+	}
+	httpresponse.JSON(w, http.StatusNoContent, nil)
 }

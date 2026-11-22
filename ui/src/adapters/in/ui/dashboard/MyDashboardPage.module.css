@@ -1,0 +1,16 @@
+.stack {
+  width: 100%;
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: var(--cl-space-4);
+}
+
+.list {
+  display: grid;
+  gap: var(--cl-space-2);
+  margin: 0;
+  padding: 0 0 0 var(--cl-space-4);
+}
