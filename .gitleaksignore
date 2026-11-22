@@ -1,0 +1,7 @@
+6b7b5d7be68f95f0f1622f77938f83d5f7b28952:internal/ticket/adapter/in/http/attachment_handler_test.go:generic-api-key:79
+6b7b5d7be68f95f0f1622f77938f83d5f7b28952:internal/ticket/adapter/in/http/attachment_handler_test.go:generic-api-key:153
+6b7b5d7be68f95f0f1622f77938f83d5f7b28952:internal/ticket/adapter/in/http/attachment_handler_test.go:generic-api-key:183
+2d515e9571bc9e00ce37b110584edaa052ca722a:internal/ticket/adapter/in/http/handler_test.go:generic-api-key:86
+2d515e9571bc9e00ce37b110584edaa052ca722a:internal/team/adapter/in/http/handler_test.go:generic-api-key:80
+fbfc3799859902cf533cf3afebd62a20267755db:internal/platform/middleware/auth_test.go:generic-api-key:15
+2d515e9571bc9e00ce37b110584edaa052ca722a:internal/user/adapter/in/http/handler_test.go:generic-api-key:90
