@@ -8,10 +8,10 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-	"github.com/jmoiron/sqlx"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/jhonsferg/corelog/internal/platform/apperror"
 	"github.com/jhonsferg/corelog/internal/ticket/domain"
+	"github.com/jmoiron/sqlx"
 )
 
 func TestAttachmentRepositoryPostgresCRUD(t *testing.T) {

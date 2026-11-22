@@ -21,7 +21,9 @@ func newFakeUserRepo() *fakeUserRepo {
 }
 
 func (r *fakeUserRepo) Save(_ context.Context, u *domain.User) error {
-	if u.ID == uuid.Nil { u.ID = uuid.New() }
+	if u.ID == uuid.Nil {
+		u.ID = uuid.New()
+	}
 	copied := *u
 	r.users[u.ID] = &copied
 	return nil
@@ -32,7 +34,9 @@ func (r *fakeUserRepo) FindByID(_ context.Context, id uuid.UUID) (*domain.User, 
 	if !ok {
 		return nil, domain.ErrUserNotFound
 	}
-	if u.ID == uuid.Nil { u.ID = uuid.New() }
+	if u.ID == uuid.Nil {
+		u.ID = uuid.New()
+	}
 	copied := *u
 	return &copied, nil
 }
@@ -51,7 +55,9 @@ func (r *fakeUserRepo) Update(_ context.Context, u *domain.User) error {
 	if _, ok := r.users[u.ID]; !ok {
 		return domain.ErrUserNotFound
 	}
-	if u.ID == uuid.Nil { u.ID = uuid.New() }
+	if u.ID == uuid.Nil {
+		u.ID = uuid.New()
+	}
 	copied := *u
 	r.users[u.ID] = &copied
 	return nil

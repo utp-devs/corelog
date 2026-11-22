@@ -24,7 +24,9 @@ type testAttachments struct {
 }
 
 func (r *testAttachments) SaveAttachment(_ context.Context, a *domain.Attachment) error {
-	if a.ID == uuid.Nil { a.ID = uuid.New() }
+	if a.ID == uuid.Nil {
+		a.ID = uuid.New()
+	}
 	r.items[a.ID] = a
 	return nil
 }

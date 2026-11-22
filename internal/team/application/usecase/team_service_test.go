@@ -19,7 +19,9 @@ func newFakeTeamRepo() *fakeTeamRepo {
 }
 
 func (r *fakeTeamRepo) Save(_ context.Context, t *domain.Team) error {
-	if t.ID == uuid.Nil { t.ID = uuid.New() }
+	if t.ID == uuid.Nil {
+		t.ID = uuid.New()
+	}
 	copied := *t
 	r.teams[t.ID] = &copied
 	return nil
@@ -30,7 +32,9 @@ func (r *fakeTeamRepo) FindByID(_ context.Context, id uuid.UUID) (*domain.Team, 
 	if !ok {
 		return nil, domain.ErrTeamNotFound
 	}
-	if t.ID == uuid.Nil { t.ID = uuid.New() }
+	if t.ID == uuid.Nil {
+		t.ID = uuid.New()
+	}
 	copied := *t
 	return &copied, nil
 }
@@ -58,7 +62,9 @@ func (r *fakeTeamRepo) Update(_ context.Context, t *domain.Team) error {
 	if _, ok := r.teams[t.ID]; !ok {
 		return domain.ErrTeamNotFound
 	}
-	if t.ID == uuid.Nil { t.ID = uuid.New() }
+	if t.ID == uuid.Nil {
+		t.ID = uuid.New()
+	}
 	copied := *t
 	r.teams[t.ID] = &copied
 	return nil
