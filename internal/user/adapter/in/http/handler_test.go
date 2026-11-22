@@ -29,6 +29,7 @@ func newMemoryUserRepo() *memoryUserRepo {
 }
 
 func (r *memoryUserRepo) Save(_ context.Context, u *domain.User) error {
+	if u.ID == uuid.Nil { u.ID = uuid.New() }
 	copied := *u
 	r.users[u.ID] = &copied
 	return nil
@@ -39,6 +40,7 @@ func (r *memoryUserRepo) FindByID(_ context.Context, id uuid.UUID) (*domain.User
 	if !ok {
 		return nil, domain.ErrUserNotFound
 	}
+	if u.ID == uuid.Nil { u.ID = uuid.New() }
 	copied := *u
 	return &copied, nil
 }
@@ -57,6 +59,7 @@ func (r *memoryUserRepo) Update(_ context.Context, u *domain.User) error {
 	if _, ok := r.users[u.ID]; !ok {
 		return domain.ErrUserNotFound
 	}
+	if u.ID == uuid.Nil { u.ID = uuid.New() }
 	copied := *u
 	r.users[u.ID] = &copied
 	return nil

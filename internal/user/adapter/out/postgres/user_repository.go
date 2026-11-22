@@ -10,6 +10,7 @@ import (
 	"github.com/jmoiron/sqlx"
 
 	"github.com/jhonsferg/corelog/internal/platform/apperror"
+	"github.com/jhonsferg/corelog/internal/platform/database"
 	"github.com/jhonsferg/corelog/internal/user/application/port"
 	"github.com/jhonsferg/corelog/internal/user/domain"
 )
@@ -30,12 +31,15 @@ func (r *UserRepository) Save(ctx context.Context, u *domain.User) error {
 	row := fromDomain(u)
 
 	const query = `
-		INSERT INTO users (id, name, email, password_hash, role, team_id, created_at, updated_at)
-		VALUES (:id, :name, :email, :password_hash, :role, :team_id, :created_at, :updated_at)`
+		INSERT INTO users (name, email, password_hash, role, team_id, created_at, updated_at)
+		VALUES (:name, :email, :password_hash, :role, :team_id, :created_at, :updated_at)
+		RETURNING id`
 
-	if _, err := r.db.NamedExecContext(ctx, query, row); err != nil {
+	id, err := database.InsertReturningID(ctx, r.db, query, row)
+	if err != nil {
 		return apperror.Wrap(apperror.KindInternal, "failed to save user", err)
 	}
+	u.ID = id
 	return nil
 }
 

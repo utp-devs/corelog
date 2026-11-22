@@ -50,7 +50,6 @@ func NewUser(name, email, passwordHash string, role Role) (*User, error) {
 
 	now := time.Now().UTC()
 	return &User{
-		ID:           uuid.New(),
 		Name:         name,
 		Email:        email,
 		PasswordHash: passwordHash,

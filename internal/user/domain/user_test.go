@@ -37,8 +37,8 @@ func TestNewUser(t *testing.T) {
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
-		if user.ID == uuid.Nil {
-			t.Errorf("expected non-nil user ID")
+		if user.ID != uuid.Nil {
+			t.Errorf("constructor must leave ID for the database to generate, got %s", user.ID)
 		}
 		if user.Name != "Ada Lovelace" {
 			t.Errorf("got name %s, want 'Ada Lovelace'", user.Name)
