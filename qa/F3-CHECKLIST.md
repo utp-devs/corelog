@@ -2,8 +2,8 @@
 
 ## Entorno
 
-- Rama: `feat/f3-rich-issues`
-- Fecha: 2026-11-21
+- Rama: `feat/roadmap-clean`
+- Fecha: 2026-11-22
 
 ## Migraciones
 
@@ -68,6 +68,16 @@
 - [ ] No se permiten nombres vacios, duplicados por usuario ni criterios invalidos
 - [ ] La migracion 000013 crea `saved_filters` y su down elimina solo esa tabla
 
+## Errores tipados y autorizacion
+
+- [ ] Sin bearer token, los endpoints privados de issues, adjuntos, watchers y filtros guardados responden 401
+- [ ] Un usuario sin acceso al proyecto recibe 403 al consultar issues, comentarios, adjuntos o watchers
+- [ ] Un viewer no puede modificar issues, comentar, asignar, gestionar vínculos ni subir adjuntos (403)
+- [ ] IDs inexistentes o recursos de otro propietario responden 404 sin revelar datos ajenos
+- [ ] Una transición invalida del workflow y un nombre de filtro duplicado responden 409
+- [ ] Payloads invalidos de issue, comentario, adjunto y filtro guardado responden 422
+- [ ] Los errores usan el envoltorio `{ "error": { "message": "..." } }`
+
 ## Automatizacion
 
 - [x] `go test ./...`
@@ -76,3 +86,4 @@
 - [x] `npm run lint`
 - [x] `npm run build`
 - [x] `npm test`
+- [x] `postman spec lint --issueType=syntax --no-report-events openapi.yaml`
