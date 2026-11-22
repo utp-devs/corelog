@@ -1,14 +1,124 @@
-.wrapper {
+.page {
   display: flex;
   flex-direction: column;
+  gap: var(--cl-space-5);
+  max-width: 1120px;
+}
+
+/* Resumen de la cuenta: identidad y metadatos en una sola tarjeta. */
+.summary {
+  box-shadow: var(--cl-shadow-1);
+}
+
+.summaryMain {
+  display: flex;
+  align-items: center;
   gap: var(--cl-space-4);
-  max-width: 640px;
+  margin-bottom: var(--cl-space-3);
+}
+
+.avatar {
+  flex: none;
+  background: var(--cl-brand);
+  font-size: var(--cl-font-h2);
+  font-weight: 600;
+}
+
+.identity {
+  min-width: 0;
+}
+
+.name {
+  margin: 0 !important;
+}
+
+/* Layout de dos columnas: menu de secciones y contenido. */
+.layout {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: var(--cl-space-6);
+  align-items: start;
+}
+
+.sideNav {
+  position: sticky;
+  top: 0;
+}
+
+.menu {
+  border-inline-end: 0 !important;
+  background: transparent;
+}
+
+.sections {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cl-space-6);
+  min-width: 0;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cl-space-3);
+  scroll-margin-top: var(--cl-space-4);
+}
+
+.sectionTitle {
+  margin: 0 !important;
+  font-weight: 700;
 }
 
 .card {
   box-shadow: var(--cl-shadow-1);
 }
 
+.dangerCard {
+  border-color: var(--cl-danger);
+  box-shadow: var(--cl-shadow-1);
+}
+
 .hint {
-  margin-bottom: var(--cl-space-3);
+  margin-bottom: var(--cl-space-3) !important;
+}
+
+.rowBetween {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--cl-space-3);
+}
+
+.rowHint {
+  margin: var(--cl-space-1) 0 0 !important;
+}
+
+.okIcon {
+  color: var(--cl-success);
+}
+
+.languageSelect {
+  width: 160px;
+}
+
+.fullWidth {
+  width: 100%;
+}
+
+/* Responsive: en pantallas medias el menu pasa arriba y el contenido ocupa todo el ancho. */
+@media (max-width: 991px) {
+  .layout {
+    grid-template-columns: 1fr;
+    gap: var(--cl-space-4);
+  }
+
+  .sideNav {
+    position: static;
+    overflow-x: auto;
+  }
+
+  .menu {
+    white-space: nowrap;
+  }
 }
