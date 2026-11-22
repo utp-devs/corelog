@@ -1204,6 +1204,101 @@ paths:
           description: Sprint no encontrado en el proyecto
         '422':
           description: El sprint no tiene fechas
+  /notifications:
+    get:
+      tags: [tickets]
+      operationId: listNotifications
+      summary: Notificaciones del usuario, las mas recientes primero
+      description: Devuelve hasta 50 avisos in-app del usuario autenticado. La interfaz consulta el contador cada 30 segundos (sondeo, D-6).
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Notificaciones
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /notifications/unread-count:
+    get:
+      tags: [tickets]
+      operationId: getUnreadNotificationCount
+      summary: Numero de notificaciones no leidas
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Contador
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /notifications/{id}/read:
+    post:
+      tags: [tickets]
+      operationId: markNotificationRead
+      summary: Marcar una notificacion como leida
+      description: Solo el dueno puede marcarla. Una notificacion ajena responde no encontrada.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Marcada
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: Notificacion no encontrada para este usuario
+  /notifications/read-all:
+    post:
+      tags: [tickets]
+      operationId: markAllNotificationsRead
+      summary: Marcar todas las notificaciones como leidas
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: Marcadas
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /calendar/events:
+    get:
+      tags: [tickets]
+      operationId: listCalendarEvents
+      summary: Hitos del proyecto entre dos fechas
+      description: Inicio y fin de sprint, y fechas limite de incidencias. El rango puede tener como maximo un ano.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: project_id
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: from
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+        - name: to
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Hitos ordenados por fecha
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Sin permiso para ver el proyecto
+        '422':
+          $ref: '#/components/responses/ValidationError'
   /workflows:
     get:
       tags: [tickets]
