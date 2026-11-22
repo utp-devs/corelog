@@ -1,4 +1,4 @@
-import { App, Button, Card, DatePicker, Descriptions, InputNumber, List, Select, Skeleton, Space, Tabs, Typography } from 'antd'
+import { App, Button, Card, DatePicker, Descriptions, Input, InputNumber, List, Select, Skeleton, Space, Tabs, Typography } from 'antd'
 import TextArea from 'antd/es/input/TextArea'
 import dayjs from 'dayjs'
 import { useEffect, useState } from 'react'
@@ -30,12 +30,18 @@ export function TicketDetailPage() {
   const createComment = useTicketsStore((s) => s.createComment)
   const deleteComment = useTicketsStore((s) => s.deleteComment)
   const fetchActivities = useTicketsStore((s) => s.fetchActivities)
+  const links = useTicketsStore((s) => s.links)
+  const fetchLinks = useTicketsStore((s) => s.fetchLinks)
+  const createLink = useTicketsStore((s) => s.createLink)
+  const deleteLink = useTicketsStore((s) => s.deleteLink)
 
   const [assigneeId, setAssigneeId] = useState('')
   const [issueType, setIssueType] = useState<IssueType>(selected?.issueType ?? 'task')
   const [dueDate, setDueDate] = useState(selected?.dueDate ? dayjs(selected.dueDate) : null)
   const [storyPoints, setStoryPoints] = useState<number | null>(selected?.storyPoints ?? null)
   const [commentBody, setCommentBody] = useState('')
+  const [linkTargetId, setLinkTargetId] = useState('')
+  const [linkKind, setLinkKind] = useState<'blocks' | 'relates' | 'duplicates'>('relates')
   const teammateSearch = useTeammateSearch()
 
   useEffect(() => {
@@ -46,7 +52,8 @@ export function TicketDetailPage() {
     if (!id) return
     void fetchComments(id)
     void fetchActivities(id)
-  }, [id, fetchComments, fetchActivities])
+    void fetchLinks(id)
+  }, [id, fetchComments, fetchActivities, fetchLinks])
 
   if (status === 'loading' || !selected) {
     return <Skeleton active />
@@ -85,6 +92,61 @@ export function TicketDetailPage() {
           </Button>
         }
       />
+
+      <Card title="Vinculos">
+        <Space wrap>
+          <Input
+            value={linkTargetId}
+            onChange={(event) => setLinkTargetId(event.target.value)}
+            placeholder="UUID de incidencia"
+            style={{ width: 280 }}
+          />
+          <Select
+            value={linkKind}
+            onChange={setLinkKind}
+            options={[
+              { value: 'blocks', label: 'Bloquea' },
+              { value: 'relates', label: 'Se relaciona con' },
+              { value: 'duplicates', label: 'Duplica' },
+            ]}
+          />
+          <Button
+            type="primary"
+            disabled={!linkTargetId}
+            onClick={async () => {
+              try {
+                await createLink(selected.id, linkTargetId, linkKind)
+                setLinkTargetId('')
+                message.success('Vinculo creado')
+              } catch (error) {
+                message.error(error instanceof Error ? error.message : 'No se pudo crear el vinculo')
+              }
+            }}
+          >
+            Vincular
+          </Button>
+        </Space>
+        <List
+          dataSource={links}
+          locale={{ emptyText: 'Aun no hay vinculos' }}
+          renderItem={(link) => (
+            <List.Item
+              actions={[
+                <Button
+                  key="delete"
+                  danger
+                  size="small"
+                  onClick={() => void deleteLink(selected.id, link.id)}
+                >
+                  Eliminar
+                </Button>,
+              ]}
+            >
+              {link.kind} - {link.sourceIssueId === selected.id ? link.targetIssueId : link.sourceIssueId}
+            </List.Item>
+          )}
+        />
+      </Card>
 
       <Card>
         <Typography.Paragraph>{selected.description}</Typography.Paragraph>

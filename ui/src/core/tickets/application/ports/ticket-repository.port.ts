@@ -35,6 +35,9 @@ export interface TicketRepositoryPort {
   createComment(id: string, body: string): Promise<IssueComment>
   deleteComment(issueId: string, commentId: string): Promise<void>
   listActivities(id: string): Promise<IssueActivity[]>
+  listLinks(id: string): Promise<IssueLink[]>
+  createLink(id: string, targetIssueId: string, kind: IssueLinkKind): Promise<IssueLink>
+  deleteLink(id: string, linkId: string): Promise<void>
 }
 
 export interface IssueComment {
@@ -55,5 +58,16 @@ export interface IssueActivity {
   fieldName: string | null
   oldValue: string | null
   newValue: string | null
+  createdAt: string
+}
+
+export type IssueLinkKind = 'blocks' | 'relates' | 'duplicates'
+
+export interface IssueLink {
+  id: string
+  sourceIssueId: string
+  targetIssueId: string
+  kind: IssueLinkKind
+  createdBy: string
   createdAt: string
 }

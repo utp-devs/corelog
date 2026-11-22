@@ -886,6 +886,72 @@ paths:
                       $ref: '#/components/schemas/IssueActivity'
         '401':
           $ref: '#/components/responses/Unauthorized'
+  /issues/{id}/links:
+    parameters:
+      - $ref: '#/components/parameters/TicketId'
+    get:
+      tags: [tickets]
+      summary: List issue links
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Links connected to the issue
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/IssueLink'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      tags: [tickets]
+      summary: Create an issue link
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateIssueLinkRequest'
+      responses:
+        '201':
+          description: Issue link created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/IssueLink'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+  /issues/{id}/links/{link_id}:
+    parameters:
+      - $ref: '#/components/parameters/TicketId'
+      - name: link_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    delete:
+      tags: [tickets]
+      summary: Delete an issue link
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: Issue link deleted
+        '404':
+          $ref: '#/components/responses/NotFound'
   /issues/{id}/metadata:
     parameters:
       - $ref: '#/components/parameters/TicketId'
@@ -1499,6 +1565,37 @@ components:
           type: string
           minLength: 1
           maxLength: 5000
+    IssueLink:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        source_issue_id:
+          type: string
+          format: uuid
+        target_issue_id:
+          type: string
+          format: uuid
+        kind:
+          type: string
+          enum: [blocks, relates, duplicates]
+        created_by:
+          type: string
+          format: uuid
+        created_at:
+          type: string
+          format: date-time
+    CreateIssueLinkRequest:
+      type: object
+      required: [target_issue_id, kind]
+      properties:
+        target_issue_id:
+          type: string
+          format: uuid
+        kind:
+          type: string
+          enum: [blocks, relates, duplicates]
     IssueActivity:
       type: object
       properties:

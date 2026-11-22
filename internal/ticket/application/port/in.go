@@ -52,4 +52,7 @@ type Service interface {
 	UpdateComment(ctx context.Context, commentID, actorID uuid.UUID, body string) (*domain.Comment, error)
 	DeleteComment(ctx context.Context, commentID, actorID uuid.UUID) error
 	ListActivities(ctx context.Context, issueID uuid.UUID) ([]*domain.Activity, error)
+	ListIssueLinks(ctx context.Context, issueID uuid.UUID) ([]*domain.IssueLink, error)
+	CreateIssueLink(ctx context.Context, sourceIssueID, targetIssueID, createdBy uuid.UUID, kind domain.IssueLinkKind) (*domain.IssueLink, error)
+	DeleteIssueLink(ctx context.Context, linkID uuid.UUID) error
 }

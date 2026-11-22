@@ -30,6 +30,9 @@
 - [ ] Eliminar comentario propio oculta el registro
 - [ ] Crear y eliminar etiquetas desde la configuración de proyecto
 - [ ] Crear y eliminar componentes desde la configuración de proyecto
+- [ ] Crear vínculo blocks/relates/duplicates entre dos incidencias
+- [ ] No permitir vincular una incidencia consigo misma
+- [ ] Eliminar vínculo elimina solo la relación
 - [ ] Las menciones @usuario detectan miembros del proyecto
 - [ ] Actividad de issue lista cambios append-only
 

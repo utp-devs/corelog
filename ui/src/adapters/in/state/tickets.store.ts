@@ -7,6 +7,8 @@ import type {
   UpdateIssueMetadataInput,
   IssueComment,
   IssueActivity,
+  IssueLink,
+  IssueLinkKind,
 } from '@/core/tickets/application/ports/ticket-repository.port'
 import type { Ticket, TicketStatus } from '@/core/tickets/domain/ticket'
 import { TicketHttpRepository } from '@/adapters/out/http/ticket-http-repository'
@@ -21,6 +23,7 @@ interface TicketsState {
   selected: Ticket | null
   comments: IssueComment[]
   activities: IssueActivity[]
+  links: IssueLink[]
   status: Status
   error: string | null
   fetchTickets: (filter?: ListTicketsFilter) => Promise<void>
@@ -33,6 +36,9 @@ interface TicketsState {
   createComment: (id: string, body: string) => Promise<void>
   deleteComment: (issueId: string, commentId: string) => Promise<void>
   fetchActivities: (id: string) => Promise<void>
+  fetchLinks: (id: string) => Promise<void>
+  createLink: (id: string, targetIssueId: string, kind: IssueLinkKind) => Promise<void>
+  deleteLink: (id: string, linkId: string) => Promise<void>
 }
 
 export const useTicketsStore = create<TicketsState>((set, get) => ({
@@ -40,6 +46,7 @@ export const useTicketsStore = create<TicketsState>((set, get) => ({
   selected: null,
   comments: [],
   activities: [],
+  links: [],
   status: 'idle',
   error: null,
 
@@ -100,6 +107,20 @@ export const useTicketsStore = create<TicketsState>((set, get) => ({
 
   fetchActivities: async (id) => {
     set({ activities: await ticketService.listActivities(id) })
+  },
+
+  fetchLinks: async (id) => {
+    set({ links: await ticketService.listLinks(id) })
+  },
+
+  createLink: async (id, targetIssueId, kind) => {
+    const link = await ticketService.createLink(id, targetIssueId, kind)
+    set({ links: [...get().links, link] })
+  },
+
+  deleteLink: async (id, linkId) => {
+    await ticketService.deleteLink(id, linkId)
+    set({ links: get().links.filter((link) => link.id !== linkId) })
   },
 }))
 

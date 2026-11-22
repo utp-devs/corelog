@@ -21,5 +21,8 @@ func (h *Handler) RegisterRoutes(r chi.Router) {
 		r.Patch("/{id}/comments/{comment_id}", h.UpdateComment)
 		r.Delete("/{id}/comments/{comment_id}", h.DeleteComment)
 		r.Get("/{id}/activities", h.ListActivities)
+		r.Get("/{id}/links", h.ListIssueLinks)
+		r.Post("/{id}/links", h.CreateIssueLink)
+		r.Delete("/{id}/links/{link_id}", h.DeleteIssueLink)
 	})
 }

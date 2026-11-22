@@ -302,6 +302,66 @@ func (h *Handler) ListActivities(w http.ResponseWriter, r *http.Request) {
 	httpresponse.JSON(w, http.StatusOK, toActivityResponses(activities))
 }
 
+func (h *Handler) ListIssueLinks(w http.ResponseWriter, r *http.Request) {
+	issueID, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		httpresponse.Error(w, apperror.New(apperror.KindValidation, "invalid issue id"))
+		return
+	}
+	links, err := h.service.ListIssueLinks(r.Context(), issueID)
+	if err != nil {
+		httpresponse.Error(w, err)
+		return
+	}
+	httpresponse.JSON(w, http.StatusOK, toIssueLinkResponses(links))
+}
+
+func (h *Handler) CreateIssueLink(w http.ResponseWriter, r *http.Request) {
+	sourceIssueID, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		httpresponse.Error(w, apperror.New(apperror.KindValidation, "invalid issue id"))
+		return
+	}
+	createdBy, ok := appmw.UserIDFromContext(r.Context())
+	if !ok {
+		httpresponse.Error(w, apperror.New(apperror.KindUnauthorized, "not authenticated"))
+		return
+	}
+	var req createIssueLinkRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		httpresponse.Error(w, apperror.New(apperror.KindValidation, "invalid request body"))
+		return
+	}
+	if err := validation.Struct(req); err != nil {
+		httpresponse.Error(w, apperror.Wrap(apperror.KindValidation, "invalid request body", err))
+		return
+	}
+	targetIssueID, err := uuid.Parse(req.TargetIssueID)
+	if err != nil {
+		httpresponse.Error(w, apperror.New(apperror.KindValidation, "invalid target issue id"))
+		return
+	}
+	link, err := h.service.CreateIssueLink(r.Context(), sourceIssueID, targetIssueID, createdBy, domain.IssueLinkKind(req.Kind))
+	if err != nil {
+		httpresponse.Error(w, err)
+		return
+	}
+	httpresponse.JSON(w, http.StatusCreated, toIssueLinkResponse(link))
+}
+
+func (h *Handler) DeleteIssueLink(w http.ResponseWriter, r *http.Request) {
+	linkID, err := uuid.Parse(chi.URLParam(r, "link_id"))
+	if err != nil {
+		httpresponse.Error(w, apperror.New(apperror.KindValidation, "invalid issue link id"))
+		return
+	}
+	if err := h.service.DeleteIssueLink(r.Context(), linkID); err != nil {
+		httpresponse.Error(w, err)
+		return
+	}
+	httpresponse.JSON(w, http.StatusNoContent, nil)
+}
+
 func atoiOrDefault(s string, fallback int) int {
 	if s == "" {
 		return fallback

@@ -3,6 +3,7 @@ import type {
   ListTicketsFilter,
   TicketRepositoryPort,
   UpdateIssueMetadataInput,
+  IssueLinkKind,
 } from './ports/ticket-repository.port'
 import type { Ticket, TicketStatus } from '../domain/ticket'
 
@@ -51,5 +52,17 @@ export class TicketService {
 
   listActivities(id: string) {
     return this.repository.listActivities(id)
+  }
+
+  listLinks(id: string) {
+    return this.repository.listLinks(id)
+  }
+
+  createLink(id: string, targetIssueId: string, kind: IssueLinkKind) {
+    return this.repository.createLink(id, targetIssueId, kind)
+  }
+
+  deleteLink(id: string, linkId: string) {
+    return this.repository.deleteLink(id, linkId)
   }
 }

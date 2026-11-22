@@ -15,14 +15,21 @@ type TicketService struct {
 	repo          port.Repository
 	directory     port.UserDirectory
 	collaboration port.CollaborationRepository
+	issueLinks    port.IssueLinkRepository
 }
 
-func NewTicketService(repo port.Repository, directory port.UserDirectory, repositories ...port.CollaborationRepository) *TicketService {
+func NewTicketService(repo port.Repository, directory port.UserDirectory, repositories ...any) *TicketService {
 	var collaboration port.CollaborationRepository
-	if len(repositories) > 0 {
-		collaboration = repositories[0]
+	var issueLinks port.IssueLinkRepository
+	for _, repository := range repositories {
+		switch typed := repository.(type) {
+		case port.CollaborationRepository:
+			collaboration = typed
+		case port.IssueLinkRepository:
+			issueLinks = typed
+		}
 	}
-	return &TicketService{repo: repo, directory: directory, collaboration: collaboration}
+	return &TicketService{repo: repo, directory: directory, collaboration: collaboration, issueLinks: issueLinks}
 }
 
 var _ port.Service = (*TicketService)(nil)
@@ -195,4 +202,32 @@ func (s *TicketService) ListActivities(ctx context.Context, issueID uuid.UUID) (
 		return []*domain.Activity{}, nil
 	}
 	return s.collaboration.FindActivities(ctx, issueID)
+}
+
+func (s *TicketService) ListIssueLinks(ctx context.Context, issueID uuid.UUID) ([]*domain.IssueLink, error) {
+	if s.issueLinks == nil {
+		return []*domain.IssueLink{}, nil
+	}
+	return s.issueLinks.ListByIssue(ctx, issueID)
+}
+
+func (s *TicketService) CreateIssueLink(ctx context.Context, sourceIssueID, targetIssueID, createdBy uuid.UUID, kind domain.IssueLinkKind) (*domain.IssueLink, error) {
+	if s.issueLinks == nil {
+		return nil, domain.ErrInvalidIssueLink
+	}
+	link, err := domain.NewIssueLink(sourceIssueID, targetIssueID, createdBy, kind)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.issueLinks.Save(ctx, link); err != nil {
+		return nil, err
+	}
+	return link, nil
+}
+
+func (s *TicketService) DeleteIssueLink(ctx context.Context, linkID uuid.UUID) error {
+	if s.issueLinks == nil {
+		return domain.ErrInvalidIssueLink
+	}
+	return s.issueLinks.Delete(ctx, linkID)
 }

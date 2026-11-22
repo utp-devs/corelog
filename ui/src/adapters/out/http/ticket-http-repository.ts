@@ -5,6 +5,8 @@ import type {
   UpdateIssueMetadataInput,
   IssueComment,
   IssueActivity,
+  IssueLink,
+  IssueLinkKind,
 } from '@/core/tickets/application/ports/ticket-repository.port'
 import type { IssueType, Ticket, TicketPriority, TicketStatus } from '@/core/tickets/domain/ticket'
 import { apiClient } from './api-client'
@@ -49,6 +51,15 @@ interface ActivityDto {
   created_at: string
 }
 
+interface LinkDto {
+  id: string
+  source_issue_id: string
+  target_issue_id: string
+  kind: IssueLinkKind
+  created_by: string
+  created_at: string
+}
+
 function toComment(dto: CommentDto): IssueComment {
   return {
     id: dto.id,
@@ -70,6 +81,17 @@ function toActivity(dto: ActivityDto): IssueActivity {
     fieldName: dto.field_name,
     oldValue: dto.old_value,
     newValue: dto.new_value,
+    createdAt: dto.created_at,
+  }
+}
+
+function toLink(dto: LinkDto): IssueLink {
+  return {
+    id: dto.id,
+    sourceIssueId: dto.source_issue_id,
+    targetIssueId: dto.target_issue_id,
+    kind: dto.kind,
+    createdBy: dto.created_by,
     createdAt: dto.created_at,
   }
 }
@@ -165,5 +187,22 @@ export class TicketHttpRepository implements TicketRepositoryPort {
   async listActivities(id: string): Promise<IssueActivity[]> {
     const { data } = await apiClient.get<{ data: ActivityDto[] }>(`/issues/${id}/activities`)
     return data.data.map(toActivity)
+  }
+
+  async listLinks(id: string): Promise<IssueLink[]> {
+    const { data } = await apiClient.get<{ data: LinkDto[] }>(`/issues/${id}/links`)
+    return data.data.map(toLink)
+  }
+
+  async createLink(id: string, targetIssueId: string, kind: IssueLinkKind): Promise<IssueLink> {
+    const { data } = await apiClient.post<{ data: LinkDto }>(`/issues/${id}/links`, {
+      target_issue_id: targetIssueId,
+      kind,
+    })
+    return toLink(data.data)
+  }
+
+  async deleteLink(id: string, linkId: string): Promise<void> {
+    await apiClient.delete(`/issues/${id}/links/${linkId}`)
   }
 }

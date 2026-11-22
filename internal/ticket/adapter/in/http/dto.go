@@ -52,6 +52,20 @@ type activityResponse struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 
+type createIssueLinkRequest struct {
+	TargetIssueID string `json:"target_issue_id" validate:"required,uuid4"`
+	Kind          string `json:"kind" validate:"required,oneof=blocks relates duplicates"`
+}
+
+type issueLinkResponse struct {
+	ID            string    `json:"id"`
+	SourceIssueID string    `json:"source_issue_id"`
+	TargetIssueID string    `json:"target_issue_id"`
+	Kind          string    `json:"kind"`
+	CreatedBy     string    `json:"created_by"`
+	CreatedAt     time.Time `json:"created_at"`
+}
+
 type updateStatusRequest struct {
 	Status string `json:"status" validate:"required,oneof=open in_progress resolved closed"`
 }
@@ -139,6 +153,22 @@ func toActivityResponses(activities []*domain.Activity) []activityResponse {
 			Action: activity.Action, FieldName: activity.FieldName, OldValue: activity.OldValue,
 			NewValue: activity.NewValue, CreatedAt: activity.CreatedAt,
 		})
+	}
+	return out
+}
+
+func toIssueLinkResponse(link *domain.IssueLink) issueLinkResponse {
+	return issueLinkResponse{
+		ID: link.ID.String(), SourceIssueID: link.SourceIssueID.String(),
+		TargetIssueID: link.TargetIssueID.String(), Kind: string(link.Kind),
+		CreatedBy: link.CreatedBy.String(), CreatedAt: link.CreatedAt,
+	}
+}
+
+func toIssueLinkResponses(links []*domain.IssueLink) []issueLinkResponse {
+	out := make([]issueLinkResponse, 0, len(links))
+	for _, link := range links {
+		out = append(out, toIssueLinkResponse(link))
 	}
 	return out
 }

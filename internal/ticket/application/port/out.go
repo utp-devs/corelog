@@ -28,3 +28,9 @@ type CollaborationRepository interface {
 	FindActivities(ctx context.Context, issueID uuid.UUID) ([]*domain.Activity, error)
 	FindMentionIDs(ctx context.Context, issueID uuid.UUID, names []string) ([]uuid.UUID, error)
 }
+
+type IssueLinkRepository interface {
+	Save(ctx context.Context, link *domain.IssueLink) error
+	ListByIssue(ctx context.Context, issueID uuid.UUID) ([]*domain.IssueLink, error)
+	Delete(ctx context.Context, linkID uuid.UUID) error
+}
