@@ -33,4 +33,10 @@ func (h *Handler) RegisterRoutes(r chi.Router) {
 		r.Post("/{id}/watchers", h.WatchIssue)
 		r.Delete("/{id}/watchers", h.UnwatchIssue)
 	})
+	r.Route("/saved-filters", func(r chi.Router) {
+		r.Use(appmw.Authenticate(h.jwtSecret))
+		r.Get("/", h.ListSavedFilters)
+		r.Post("/", h.CreateSavedFilter)
+		r.Delete("/{filter_id}", h.DeleteSavedFilter)
+	})
 }

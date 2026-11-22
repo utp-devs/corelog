@@ -1,10 +1,13 @@
 import { PlusOutlined } from '@ant-design/icons'
-import { Button, DatePicker, Input, Pagination, Select, Typography } from 'antd'
+import { Alert, Button, DatePicker, Input, Modal, Pagination, Select, Typography, message as antdMessage } from 'antd'
 import type { IssueType } from '@/core/tickets/domain/ticket'
-import { useMemo, useState } from 'react'
+import dayjs from 'dayjs'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 
 import type { Ticket, TicketPriority, TicketStatus } from '@/core/tickets/domain/ticket'
+import type { SavedFilter, SavedFilterCriteria } from '@/core/tickets/domain/saved-filter'
+import { SavedFilterHttpRepository } from '@/adapters/out/http/saved-filter-http-repository'
 import { useTickets } from './hooks/useTickets'
 import { useTicketsStore } from '@/adapters/in/state/tickets.store'
 import { TicketList } from './TicketList'
@@ -25,6 +28,8 @@ const priorityOptions: { value: TicketPriority; label: string }[] = [
   { value: 'critical', label: 'Critica' },
 ]
 
+const savedFilterRepository = new SavedFilterHttpRepository()
+
 export function TicketsListPage() {
   const navigate = useNavigate()
   const [statusFilter, setStatusFilter] = useState<TicketStatus | undefined>()
@@ -34,6 +39,22 @@ export function TicketsListPage() {
   const [dueTo, setDueTo] = useState<string | undefined>()
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState('')
+  const [savedFilters, setSavedFilters] = useState<SavedFilter[]>([])
+  const [selectedSavedFilter, setSelectedSavedFilter] = useState<string>()
+  const [savedFilterName, setSavedFilterName] = useState('')
+  const [saveModalOpen, setSaveModalOpen] = useState(false)
+  const [savedFilterError, setSavedFilterError] = useState<string>()
+  const [messageApi, contextHolder] = antdMessage.useMessage()
+
+  useEffect(() => {
+    let active = true
+    void savedFilterRepository.list().then((filters) => {
+      if (active) setSavedFilters(filters)
+    }).catch(() => {
+      if (active) setSavedFilterError('No se pudieron cargar los filtros guardados.')
+    })
+    return () => { active = false }
+  }, [])
 
   const { tickets, isLoading } = useTickets({
     status: statusFilter,
@@ -48,6 +69,55 @@ export function TicketsListPage() {
   const updateRank = useTicketsStore((state) => state.updateRank)
 
   const handleSelect = (ticket: Ticket) => navigate(`/issues/${ticket.id}`)
+
+  const currentCriteria: SavedFilterCriteria = {
+    status: statusFilter,
+    priority: priorityFilter,
+    issueType: issueTypeFilter,
+    query: search.trim() || undefined,
+    dueFrom,
+    dueTo,
+  }
+
+  const applySavedFilter = (filterID?: string) => {
+    setSelectedSavedFilter(filterID)
+    const criteria = savedFilters.find((filter) => filter.id === filterID)?.criteria
+    setStatusFilter(criteria?.status)
+    setPriorityFilter(criteria?.priority)
+    setIssueTypeFilter(criteria?.issueType)
+    setSearch(criteria?.query ?? '')
+    setDueFrom(criteria?.dueFrom)
+    setDueTo(criteria?.dueTo)
+    setPage(1)
+  }
+
+  const saveCurrentFilter = async () => {
+    try {
+      const filter = await savedFilterRepository.create(savedFilterName, currentCriteria)
+      setSavedFilters((current) => [...current, filter].sort((a, b) => a.name.localeCompare(b.name)))
+      setSelectedSavedFilter(filter.id)
+      setSavedFilterName('')
+      setSaveModalOpen(false)
+      setSavedFilterError(undefined)
+      messageApi.success('Filtro guardado')
+    } catch {
+      setSavedFilterError('No se pudo guardar el filtro. Comprueba que el nombre no esté repetido.')
+    }
+  }
+
+  const deleteSelectedFilter = async () => {
+    const filter = savedFilters.find((item) => item.id === selectedSavedFilter)
+    if (!filter) return
+    try {
+      await savedFilterRepository.delete(filter.id)
+      setSavedFilters((current) => current.filter((item) => item.id !== filter.id))
+      setSelectedSavedFilter(undefined)
+      setSavedFilterError(undefined)
+      messageApi.success('Filtro eliminado')
+    } catch {
+      setSavedFilterError('No se pudo eliminar el filtro guardado.')
+    }
+  }
 
   const orderedTickets = useMemo(
     () => [...tickets].sort((a, b) => a.rank.localeCompare(b.rank)),
@@ -76,6 +146,7 @@ export function TicketsListPage() {
 
   return (
     <div>
+      {contextHolder}
       <PageHeader
         title="Incidencias"
         description="Consulta y administra los incidentes registrados."
@@ -87,6 +158,16 @@ export function TicketsListPage() {
       />
 
       <div className={styles.filters}>
+        <Select
+          allowClear
+          placeholder="Cargar filtro guardado"
+          className={styles.filterSelect}
+          value={selectedSavedFilter}
+          options={savedFilters.map((filter) => ({ value: filter.id, label: filter.name }))}
+          onChange={applySavedFilter}
+        />
+        <Button onClick={() => setSaveModalOpen(true)}>Guardar filtro actual</Button>
+        <Button danger disabled={!selectedSavedFilter} onClick={() => void deleteSelectedFilter()}>Eliminar filtro</Button>
         <Select
           allowClear
           placeholder="Filtrar por estado"
@@ -119,13 +200,16 @@ export function TicketsListPage() {
         />
         <DatePicker
           placeholder="Fecha desde"
+          value={dueFrom ? dayjs(dueFrom) : null}
           onChange={(value) => setDueFrom(value?.startOf('day').toISOString())}
         />
         <DatePicker
           placeholder="Fecha hasta"
+          value={dueTo ? dayjs(dueTo) : null}
           onChange={(value) => setDueTo(value?.endOf('day').toISOString())}
         />
       </div>
+      {savedFilterError && <Alert type="error" showIcon message={savedFilterError} closable onClose={() => setSavedFilterError(undefined)} />}
       <Input.Search
          placeholder="Buscar incidencia por título o descripción"
          allowClear
@@ -155,6 +239,24 @@ export function TicketsListPage() {
       <Typography.Paragraph type="secondary" className={styles.hint}>
         <Link to="/issues/new">Crear la primera incidencia</Link> si la lista esta vacia.
       </Typography.Paragraph>
+      <Modal
+        title="Guardar filtro"
+        open={saveModalOpen}
+        okText="Guardar"
+        cancelText="Cancelar"
+        onCancel={() => setSaveModalOpen(false)}
+        onOk={() => void saveCurrentFilter()}
+        okButtonProps={{ disabled: !savedFilterName.trim() || savedFilterName.length > 80 }}
+      >
+        <Input
+          autoFocus
+          maxLength={80}
+          value={savedFilterName}
+          onChange={(event) => setSavedFilterName(event.target.value)}
+          onPressEnter={() => { if (savedFilterName.trim()) void saveCurrentFilter() }}
+          placeholder="Nombre del filtro"
+        />
+      </Modal>
     </div>
   )
 }

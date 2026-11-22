@@ -3,6 +3,7 @@ package http_test
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -12,6 +13,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 
+	"github.com/jhonsferg/corelog/internal/platform/apperror"
 	"github.com/jhonsferg/corelog/internal/platform/authtoken"
 	tickethttp "github.com/jhonsferg/corelog/internal/ticket/adapter/in/http"
 	ticketport "github.com/jhonsferg/corelog/internal/ticket/application/port"
@@ -79,6 +81,42 @@ type memoryDirectory struct {
 	teams map[uuid.UUID]*uuid.UUID
 }
 
+type memorySavedFilterRepository struct {
+	filters map[uuid.UUID]*domain.SavedFilter
+}
+
+func (r *memorySavedFilterRepository) SaveSavedFilter(_ context.Context, filter *domain.SavedFilter) error {
+	if r.filters == nil {
+		r.filters = make(map[uuid.UUID]*domain.SavedFilter)
+	}
+	for _, existing := range r.filters {
+		if existing.OwnerID == filter.OwnerID && existing.Name == filter.Name {
+			return apperror.New(apperror.KindConflict, "duplicate name")
+		}
+	}
+	r.filters[filter.ID] = filter
+	return nil
+}
+
+func (r *memorySavedFilterRepository) ListSavedFilters(_ context.Context, ownerID uuid.UUID) ([]*domain.SavedFilter, error) {
+	filters := make([]*domain.SavedFilter, 0)
+	for _, filter := range r.filters {
+		if filter.OwnerID == ownerID {
+			filters = append(filters, filter)
+		}
+	}
+	return filters, nil
+}
+
+func (r *memorySavedFilterRepository) DeleteSavedFilter(_ context.Context, ownerID, filterID uuid.UUID) error {
+	filter, ok := r.filters[filterID]
+	if !ok || filter.OwnerID != ownerID {
+		return apperror.New(apperror.KindNotFound, "saved filter not found")
+	}
+	delete(r.filters, filterID)
+	return nil
+}
+
 type projectRoleResolver struct{}
 
 func (projectRoleResolver) FindRole(context.Context, uuid.UUID, uuid.UUID) (*string, error) {
@@ -106,7 +144,7 @@ func setupTicketRouter() (*chi.Mux, string, *memoryTicketRepo, *memoryDirectory)
 	jwtSecret := "test-secret-key-that-is-long-enough-32-bytes"
 	repo := newMemoryTicketRepo()
 	dir := newMemoryDirectory()
-	service := usecase.NewTicketService(repo, dir, projectRoleResolver{})
+	service := usecase.NewTicketService(repo, dir, projectRoleResolver{}, &memorySavedFilterRepository{})
 	handler := tickethttp.NewHandler(service, jwtSecret)
 
 	r := chi.NewRouter()
@@ -128,6 +166,7 @@ func TestTicketHTTP_Handlers(t *testing.T) {
 	dir.teams[userOtherTeam] = &team2
 
 	tokenUserA, _ := authtoken.Generate(jwtSecret, time.Hour, userA, "requester")
+	tokenUserB, _ := authtoken.Generate(jwtSecret, time.Hour, userB, "requester")
 
 	t.Run("POST /issues requires authentication (401)", func(t *testing.T) {
 		body := `{"title":"Issue","description":"Desc","priority":"high"}`
@@ -139,6 +178,15 @@ func TestTicketHTTP_Handlers(t *testing.T) {
 
 		if rec.Code != http.StatusUnauthorized {
 			t.Errorf("got status %d, want %d", rec.Code, http.StatusUnauthorized)
+		}
+	})
+
+	t.Run("GET /saved-filters requires authentication (401)", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/saved-filters", nil)
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+		if rec.Code != http.StatusUnauthorized {
+			t.Fatalf("got status %d, want %d", rec.Code, http.StatusUnauthorized)
 		}
 	})
 
@@ -167,6 +215,58 @@ func TestTicketHTTP_Handlers(t *testing.T) {
 
 		if rec.Code != http.StatusUnprocessableEntity {
 			t.Errorf("got status %d, want %d", rec.Code, http.StatusUnprocessableEntity)
+		}
+	})
+
+	t.Run("saved filters are private and deletions are owner-scoped", func(t *testing.T) {
+		body := `{"name":"Open bugs","filters":{"status":"open","issue_type":"bug","query":"timeout"}}`
+		createReq := httptest.NewRequest(http.MethodPost, "/saved-filters", bytes.NewBufferString(body))
+		createReq.Header.Set("Content-Type", "application/json")
+		createReq.Header.Set("Authorization", "Bearer "+tokenUserA)
+		createRec := httptest.NewRecorder()
+		router.ServeHTTP(createRec, createReq)
+		if createRec.Code != http.StatusCreated {
+			t.Fatalf("create saved filter status=%d body=%s", createRec.Code, createRec.Body.String())
+		}
+		var created struct {
+			Data struct {
+				ID string `json:"id"`
+			} `json:"data"`
+		}
+		if err := json.Unmarshal(createRec.Body.Bytes(), &created); err != nil {
+			t.Fatal(err)
+		}
+
+		listReq := httptest.NewRequest(http.MethodGet, "/saved-filters", nil)
+		listReq.Header.Set("Authorization", "Bearer "+tokenUserB)
+		listRec := httptest.NewRecorder()
+		router.ServeHTTP(listRec, listReq)
+		if listRec.Code != http.StatusOK || listRec.Body.String() != "{\"data\":[]}\n" {
+			t.Fatalf("other user's saved filters status=%d body=%s", listRec.Code, listRec.Body.String())
+		}
+
+		ownerListReq := httptest.NewRequest(http.MethodGet, "/saved-filters", nil)
+		ownerListReq.Header.Set("Authorization", "Bearer "+tokenUserA)
+		ownerListRec := httptest.NewRecorder()
+		router.ServeHTTP(ownerListRec, ownerListReq)
+		if ownerListRec.Code != http.StatusOK || !bytes.Contains(ownerListRec.Body.Bytes(), []byte("Open bugs")) {
+			t.Fatalf("owner's filter not returned: status=%d body=%s", ownerListRec.Code, ownerListRec.Body.String())
+		}
+
+		deleteOtherReq := httptest.NewRequest(http.MethodDelete, "/saved-filters/"+created.Data.ID, nil)
+		deleteOtherReq.Header.Set("Authorization", "Bearer "+tokenUserB)
+		deleteOtherRec := httptest.NewRecorder()
+		router.ServeHTTP(deleteOtherRec, deleteOtherReq)
+		if deleteOtherRec.Code != http.StatusNotFound {
+			t.Fatalf("cross-owner delete status=%d body=%s", deleteOtherRec.Code, deleteOtherRec.Body.String())
+		}
+
+		deleteOwnerReq := httptest.NewRequest(http.MethodDelete, "/saved-filters/"+created.Data.ID, nil)
+		deleteOwnerReq.Header.Set("Authorization", "Bearer "+tokenUserA)
+		deleteOwnerRec := httptest.NewRecorder()
+		router.ServeHTTP(deleteOwnerRec, deleteOwnerReq)
+		if deleteOwnerRec.Code != http.StatusNoContent {
+			t.Fatalf("owner delete status=%d body=%s", deleteOwnerRec.Code, deleteOwnerRec.Body.String())
 		}
 	})
 

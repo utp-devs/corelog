@@ -51,6 +51,12 @@ type AssigneeWatcherRepository interface {
 	UpdateAndWatchAssignee(context.Context, *domain.Ticket, uuid.UUID) error
 }
 
+type SavedFilterRepository interface {
+	SaveSavedFilter(context.Context, *domain.SavedFilter) error
+	ListSavedFilters(context.Context, uuid.UUID) ([]*domain.SavedFilter, error)
+	DeleteSavedFilter(context.Context, uuid.UUID, uuid.UUID) error
+}
+
 type WatcherState struct {
 	IsWatching bool
 	Count      int

@@ -99,6 +99,42 @@ type fakeWatcherRepository struct {
 	watching map[uuid.UUID]map[uuid.UUID]bool
 }
 
+type fakeSavedFilterRepository struct {
+	filters map[uuid.UUID]*domain.SavedFilter
+}
+
+func (r *fakeSavedFilterRepository) SaveSavedFilter(_ context.Context, filter *domain.SavedFilter) error {
+	if r.filters == nil {
+		r.filters = make(map[uuid.UUID]*domain.SavedFilter)
+	}
+	for _, existing := range r.filters {
+		if existing.OwnerID == filter.OwnerID && existing.Name == filter.Name {
+			return apperror.New(apperror.KindConflict, "duplicate filter")
+		}
+	}
+	r.filters[filter.ID] = filter
+	return nil
+}
+
+func (r *fakeSavedFilterRepository) ListSavedFilters(_ context.Context, ownerID uuid.UUID) ([]*domain.SavedFilter, error) {
+	filters := make([]*domain.SavedFilter, 0)
+	for _, filter := range r.filters {
+		if filter.OwnerID == ownerID {
+			filters = append(filters, filter)
+		}
+	}
+	return filters, nil
+}
+
+func (r *fakeSavedFilterRepository) DeleteSavedFilter(_ context.Context, ownerID, filterID uuid.UUID) error {
+	filter, ok := r.filters[filterID]
+	if !ok || filter.OwnerID != ownerID {
+		return apperror.New(apperror.KindNotFound, "saved filter not found")
+	}
+	delete(r.filters, filterID)
+	return nil
+}
+
 func newFakeWatcherRepository() *fakeWatcherRepository {
 	return &fakeWatcherRepository{watching: make(map[uuid.UUID]map[uuid.UUID]bool)}
 }
@@ -518,5 +554,29 @@ func TestTicketService_WatchIssueRequiresProjectVisibility(t *testing.T) {
 	_, err = nonMemberService.WatchIssue(ctx, ticket.ID, uuid.New(), "requester")
 	if apperror.KindOf(err) != apperror.KindForbidden {
 		t.Fatalf("non-member watch error=%v, want forbidden", err)
+	}
+}
+
+func TestTicketService_SavedFiltersArePrivateToOwner(t *testing.T) {
+	repository := &fakeSavedFilterRepository{}
+	service := NewTicketService(newFakeTicketRepo(), newFakeUserDirectory(), repository)
+	ownerID, otherID := uuid.New(), uuid.New()
+	filter, err := service.CreateSavedFilter(context.Background(), ownerID, "Open bugs", domain.SavedFilterCriteria{Status: domain.StatusOpen, IssueType: domain.IssueTypeBug})
+	if err != nil {
+		t.Fatal(err)
+	}
+	ownerFilters, err := service.ListSavedFilters(context.Background(), ownerID)
+	if err != nil || len(ownerFilters) != 1 || ownerFilters[0].ID != filter.ID {
+		t.Fatalf("owner filters=%+v err=%v", ownerFilters, err)
+	}
+	otherFilters, err := service.ListSavedFilters(context.Background(), otherID)
+	if err != nil || len(otherFilters) != 0 {
+		t.Fatalf("other user filters=%+v err=%v", otherFilters, err)
+	}
+	if err := service.DeleteSavedFilter(context.Background(), otherID, filter.ID); apperror.KindOf(err) != apperror.KindNotFound {
+		t.Fatalf("cross-owner delete error=%v, want not found", err)
+	}
+	if err := service.DeleteSavedFilter(context.Background(), ownerID, filter.ID); err != nil {
+		t.Fatal(err)
 	}
 }

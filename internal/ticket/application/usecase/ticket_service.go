@@ -22,6 +22,7 @@ type TicketService struct {
 	projectRoles  port.ProjectRoleResolver
 	watchers      port.IssueWatcherRepository
 	assigneeWatch port.AssigneeWatcherRepository
+	savedFilters  port.SavedFilterRepository
 	policy        authorization.Policy
 }
 
@@ -32,6 +33,7 @@ func NewTicketService(repo port.Repository, directory port.UserDirectory, reposi
 	var projectRoles port.ProjectRoleResolver
 	var watchers port.IssueWatcherRepository
 	var assigneeWatch port.AssigneeWatcherRepository
+	var savedFilters port.SavedFilterRepository
 	for _, repository := range repositories {
 		switch typed := repository.(type) {
 		case port.CollaborationRepository:
@@ -46,9 +48,11 @@ func NewTicketService(repo port.Repository, directory port.UserDirectory, reposi
 			watchers = typed
 		case port.AssigneeWatcherRepository:
 			assigneeWatch = typed
+		case port.SavedFilterRepository:
+			savedFilters = typed
 		}
 	}
-	return &TicketService{repo: repo, directory: directory, collaboration: collaboration, issueLinks: issueLinks, workflows: workflows, projectRoles: projectRoles, watchers: watchers, assigneeWatch: assigneeWatch}
+	return &TicketService{repo: repo, directory: directory, collaboration: collaboration, issueLinks: issueLinks, workflows: workflows, projectRoles: projectRoles, watchers: watchers, assigneeWatch: assigneeWatch, savedFilters: savedFilters}
 }
 
 var _ port.Service = (*TicketService)(nil)
@@ -140,6 +144,34 @@ func (s *TicketService) UnwatchIssue(ctx context.Context, issueID, actorID uuid.
 		return port.WatcherState{}, err
 	}
 	return s.watchers.State(ctx, issueID, actorID)
+}
+
+func (s *TicketService) CreateSavedFilter(ctx context.Context, ownerID uuid.UUID, name string, criteria domain.SavedFilterCriteria) (*domain.SavedFilter, error) {
+	if s.savedFilters == nil {
+		return nil, apperror.New(apperror.KindInternal, "saved filter repository is unavailable")
+	}
+	filter, err := domain.NewSavedFilter(ownerID, name, criteria)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.savedFilters.SaveSavedFilter(ctx, filter); err != nil {
+		return nil, err
+	}
+	return filter, nil
+}
+
+func (s *TicketService) ListSavedFilters(ctx context.Context, ownerID uuid.UUID) ([]*domain.SavedFilter, error) {
+	if s.savedFilters == nil {
+		return nil, apperror.New(apperror.KindInternal, "saved filter repository is unavailable")
+	}
+	return s.savedFilters.ListSavedFilters(ctx, ownerID)
+}
+
+func (s *TicketService) DeleteSavedFilter(ctx context.Context, ownerID, filterID uuid.UUID) error {
+	if s.savedFilters == nil {
+		return apperror.New(apperror.KindInternal, "saved filter repository is unavailable")
+	}
+	return s.savedFilters.DeleteSavedFilter(ctx, ownerID, filterID)
 }
 
 func (s *TicketService) List(ctx context.Context, actorID uuid.UUID, globalRole string, filter port.ListFilter) ([]*domain.Ticket, error) {

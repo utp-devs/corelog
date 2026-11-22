@@ -62,6 +62,11 @@
 - [ ] Comentar agrega al autor a watchers dentro de la transaccion del comentario
 - [ ] Asignar agrega al responsable como watcher dentro de la transaccion de asignacion
 - [ ] La migracion 000012 crea watchers y su down elimina solo esa tabla
+- [ ] Guardar un filtro conserva los criterios activos y aparece al volver a cargar el listado
+- [ ] Cargar un filtro restaura estado, prioridad, tipo, texto y fechas
+- [ ] Los filtros guardados son privados por usuario y no se pueden borrar entre usuarios
+- [ ] No se permiten nombres vacios, duplicados por usuario ni criterios invalidos
+- [ ] La migracion 000013 crea `saved_filters` y su down elimina solo esa tabla
 
 ## Automatizacion
 

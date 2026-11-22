@@ -152,6 +152,67 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 	httpresponse.JSON(w, http.StatusOK, toTicketResponses(tickets))
 }
 
+func (h *Handler) ListSavedFilters(w http.ResponseWriter, r *http.Request) {
+	ownerID, ok := appmw.UserIDFromContext(r.Context())
+	if !ok {
+		httpresponse.Error(w, apperror.New(apperror.KindUnauthorized, "not authenticated"))
+		return
+	}
+	filters, err := h.service.ListSavedFilters(r.Context(), ownerID)
+	if err != nil {
+		httpresponse.Error(w, err)
+		return
+	}
+	response := make([]savedFilterResponse, 0, len(filters))
+	for _, filter := range filters {
+		response = append(response, toSavedFilterResponse(filter))
+	}
+	httpresponse.JSON(w, http.StatusOK, response)
+}
+
+func (h *Handler) CreateSavedFilter(w http.ResponseWriter, r *http.Request) {
+	ownerID, ok := appmw.UserIDFromContext(r.Context())
+	if !ok {
+		httpresponse.Error(w, apperror.New(apperror.KindUnauthorized, "not authenticated"))
+		return
+	}
+	var req createSavedFilterRequest
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&req); err != nil {
+		httpresponse.Error(w, apperror.New(apperror.KindValidation, "invalid request body"))
+		return
+	}
+	if err := validation.Struct(req); err != nil {
+		httpresponse.Error(w, apperror.Wrap(apperror.KindValidation, "invalid request body", err))
+		return
+	}
+	filter, err := h.service.CreateSavedFilter(r.Context(), ownerID, req.Name, *req.Criteria)
+	if err != nil {
+		httpresponse.Error(w, err)
+		return
+	}
+	httpresponse.JSON(w, http.StatusCreated, toSavedFilterResponse(filter))
+}
+
+func (h *Handler) DeleteSavedFilter(w http.ResponseWriter, r *http.Request) {
+	ownerID, ok := appmw.UserIDFromContext(r.Context())
+	if !ok {
+		httpresponse.Error(w, apperror.New(apperror.KindUnauthorized, "not authenticated"))
+		return
+	}
+	filterID, err := uuid.Parse(chi.URLParam(r, "filter_id"))
+	if err != nil {
+		httpresponse.Error(w, apperror.New(apperror.KindValidation, "invalid saved filter id"))
+		return
+	}
+	if err := h.service.DeleteSavedFilter(r.Context(), ownerID, filterID); err != nil {
+		httpresponse.Error(w, err)
+		return
+	}
+	httpresponse.JSON(w, http.StatusNoContent, nil)
+}
+
 func (h *Handler) UpdateStatus(w http.ResponseWriter, r *http.Request) {
 	id, err := uuid.Parse(chi.URLParam(r, "id"))
 	if err != nil {

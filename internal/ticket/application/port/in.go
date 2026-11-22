@@ -76,6 +76,9 @@ type Service interface {
 	GetWatcherState(ctx context.Context, issueID, actorID uuid.UUID, globalRole string) (WatcherState, error)
 	WatchIssue(ctx context.Context, issueID, actorID uuid.UUID, globalRole string) (WatcherState, error)
 	UnwatchIssue(ctx context.Context, issueID, actorID uuid.UUID, globalRole string) (WatcherState, error)
+	CreateSavedFilter(ctx context.Context, ownerID uuid.UUID, name string, criteria domain.SavedFilterCriteria) (*domain.SavedFilter, error)
+	ListSavedFilters(ctx context.Context, ownerID uuid.UUID) ([]*domain.SavedFilter, error)
+	DeleteSavedFilter(ctx context.Context, ownerID, filterID uuid.UUID) error
 	ListIssueLinks(ctx context.Context, issueID, actorID uuid.UUID, globalRole string) ([]*domain.IssueLink, error)
 	CreateIssueLink(ctx context.Context, sourceIssueID, targetIssueID, createdBy uuid.UUID, globalRole string, kind domain.IssueLinkKind) (*domain.IssueLink, error)
 	DeleteIssueLink(ctx context.Context, issueID, linkID, actorID uuid.UUID, globalRole string) error

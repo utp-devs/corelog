@@ -3,8 +3,26 @@ package http
 import (
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/jhonsferg/corelog/internal/ticket/domain"
 )
+
+type createSavedFilterRequest struct {
+	Name     string                      `json:"name" validate:"required,max=80"`
+	Criteria *domain.SavedFilterCriteria `json:"filters" validate:"required"`
+}
+
+type savedFilterResponse struct {
+	ID        uuid.UUID                  `json:"id"`
+	Name      string                     `json:"name"`
+	Criteria  domain.SavedFilterCriteria `json:"filters"`
+	CreatedAt time.Time                  `json:"created_at"`
+	UpdatedAt time.Time                  `json:"updated_at"`
+}
+
+func toSavedFilterResponse(filter *domain.SavedFilter) savedFilterResponse {
+	return savedFilterResponse{ID: filter.ID, Name: filter.Name, Criteria: filter.Criteria, CreatedAt: filter.CreatedAt, UpdatedAt: filter.UpdatedAt}
+}
 
 type createTicketRequest struct {
 	Title       string     `json:"title" validate:"required,min=3,max=200"`
