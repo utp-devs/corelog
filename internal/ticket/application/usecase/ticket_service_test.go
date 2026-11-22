@@ -3,6 +3,7 @@ package usecase
 import (
 	"context"
 	"errors"
+	"math"
 	"testing"
 
 	"github.com/google/uuid"
@@ -41,6 +42,17 @@ func (r *fakeTicketRepo) FindByID(_ context.Context, id uuid.UUID) (*domain.Tick
 	return &copied, nil
 }
 
+func (r *fakeTicketRepo) Count(ctx context.Context, filter port.ListFilter) (int, error) {
+	unpaged := filter
+	unpaged.Page = 1
+	unpaged.PageSize = math.MaxInt32
+	all, err := r.FindAll(ctx, unpaged)
+	if err != nil {
+		return 0, err
+	}
+	return len(all), nil
+}
+
 func (r *fakeTicketRepo) FindAll(_ context.Context, filter port.ListFilter) ([]*domain.Ticket, error) {
 	var list []*domain.Ticket
 	projectIDs := make(map[uuid.UUID]struct{}, len(filter.ProjectIDs))
@@ -61,6 +73,20 @@ func (r *fakeTicketRepo) FindAll(_ context.Context, filter port.ListFilter) ([]*
 		}
 		copied := *t
 		list = append(list, &copied)
+	}
+	if filter.PageSize > 0 {
+		start := (filter.Page - 1) * filter.PageSize
+		if start < 0 {
+			start = 0
+		}
+		if start > len(list) {
+			start = len(list)
+		}
+		end := start + filter.PageSize
+		if end > len(list) {
+			end = len(list)
+		}
+		list = list[start:end]
 	}
 	return list, nil
 }
@@ -295,7 +321,8 @@ func TestTicketService_GetAndList(t *testing.T) {
 	})
 
 	t.Run("List with default pagination and filter", func(t *testing.T) {
-		items, err := svc.List(ctx, requesterID, "agent", port.ListFilter{Status: domain.StatusResolved})
+		result, err := svc.List(ctx, requesterID, "agent", port.ListFilter{Status: domain.StatusResolved})
+		items := result.Items
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -590,5 +617,36 @@ func TestTicketService_SavedFiltersArePrivateToOwner(t *testing.T) {
 	}
 	if err := service.DeleteSavedFilter(context.Background(), ownerID, filter.ID); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestTicketService_ListReportsTotalAcrossPages(t *testing.T) {
+	ctx := context.Background()
+	repo := newFakeTicketRepo()
+	svc := NewTicketService(repo, newFakeUserDirectory(), contributorRoleResolver())
+	requesterID := uuid.New()
+	for i := 0; i < 5; i++ {
+		if _, err := svc.Create(ctx, port.CreateInput{
+			Title:       "Issue",
+			Description: "Desc",
+			Priority:    domain.PriorityLow,
+			RequesterID: requesterID,
+		}); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	result, err := svc.List(ctx, requesterID, "agent", port.ListFilter{Page: 2, PageSize: 2})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(result.Items) != 2 {
+		t.Errorf("got %d items on page 2, want 2", len(result.Items))
+	}
+	if result.Total != 5 {
+		t.Errorf("total = %d, want 5 (all matches, not only the page)", result.Total)
+	}
+	if result.Page != 2 || result.PageSize != 2 {
+		t.Errorf("page/page_size = %d/%d, want 2/2", result.Page, result.PageSize)
 	}
 }

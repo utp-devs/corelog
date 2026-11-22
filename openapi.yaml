@@ -734,7 +734,7 @@ paths:
             default: 20
       responses:
         '200':
-          description: A page of tickets matching the given filters
+          description: A page of tickets matching the given filters, with the total across all pages
           content:
             application/json:
               schema:
@@ -744,6 +744,8 @@ paths:
                     type: array
                     items:
                       $ref: '#/components/schemas/Ticket'
+                  meta:
+                    $ref: '#/components/schemas/PageMeta'
         '401':
           $ref: '#/components/responses/Unauthorized'
   /saved-filters:
@@ -1920,6 +1922,21 @@ components:
           description: A signed JWT access token, valid for the duration configured by JWT_EXPIRATION on the server.
         user:
           $ref: '#/components/schemas/User'
+    PageMeta:
+      type: object
+      required: [page, page_size, total]
+      properties:
+        page:
+          type: integer
+          minimum: 1
+        page_size:
+          type: integer
+          minimum: 1
+          maximum: 100
+        total:
+          type: integer
+          minimum: 0
+          description: Number of tickets matching the filters, across all pages.
     CreateTicketRequest:
       type: object
       required: [title, description, priority]

@@ -13,6 +13,7 @@ type Repository interface {
 	Save(ctx context.Context, t *domain.Ticket) error
 	FindByID(ctx context.Context, id uuid.UUID) (*domain.Ticket, error)
 	FindAll(ctx context.Context, filter ListFilter) ([]*domain.Ticket, error)
+	Count(ctx context.Context, filter ListFilter) (int, error)
 	Update(ctx context.Context, t *domain.Ticket) error
 }
 

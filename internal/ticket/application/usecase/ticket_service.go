@@ -177,27 +177,36 @@ func (s *TicketService) DeleteSavedFilter(ctx context.Context, ownerID, filterID
 	return s.savedFilters.DeleteSavedFilter(ctx, ownerID, filterID)
 }
 
-func (s *TicketService) List(ctx context.Context, actorID uuid.UUID, globalRole string, filter port.ListFilter) ([]*domain.Ticket, error) {
+func (s *TicketService) List(ctx context.Context, actorID uuid.UUID, globalRole string, filter port.ListFilter) (port.ListResult, error) {
 	if filter.Page <= 0 {
 		filter.Page = 1
 	}
 	if filter.PageSize <= 0 || filter.PageSize > 100 {
 		filter.PageSize = 20
 	}
+	empty := port.ListResult{Items: []*domain.Ticket{}, Page: filter.Page, PageSize: filter.PageSize}
 	if globalRole != "admin" {
 		if s.projectRoles == nil {
-			return []*domain.Ticket{}, nil
+			return empty, nil
 		}
 		projectIDs, err := s.projectRoles.ListProjectIDs(ctx, actorID)
 		if err != nil {
-			return nil, err
+			return port.ListResult{}, err
 		}
 		if len(projectIDs) == 0 {
-			return []*domain.Ticket{}, nil
+			return empty, nil
 		}
 		filter.ProjectIDs = projectIDs
 	}
-	return s.repo.FindAll(ctx, filter)
+	items, err := s.repo.FindAll(ctx, filter)
+	if err != nil {
+		return port.ListResult{}, err
+	}
+	total, err := s.repo.Count(ctx, filter)
+	if err != nil {
+		return port.ListResult{}, err
+	}
+	return port.ListResult{Items: items, Total: total, Page: filter.Page, PageSize: filter.PageSize}, nil
 }
 
 func (s *TicketService) UpdateStatus(ctx context.Context, id, actorID uuid.UUID, globalRole string, status domain.Status) (*domain.Ticket, error) {

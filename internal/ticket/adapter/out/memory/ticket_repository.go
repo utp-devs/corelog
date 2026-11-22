@@ -2,6 +2,7 @@ package memory
 
 import (
 	"context"
+	"math"
 	"sort"
 	"sync"
 	"time"
@@ -48,6 +49,18 @@ func (r *TicketRepository) FindByID(_ context.Context, id uuid.UUID) (*domain.Ti
 		return nil, domain.ErrTicketNotFound
 	}
 	return cloneTicket(t), nil
+}
+
+// Count cuenta las coincidencias del filtro sin paginar.
+func (r *TicketRepository) Count(ctx context.Context, filter port.ListFilter) (int, error) {
+	unpaged := filter
+	unpaged.Page = 1
+	unpaged.PageSize = math.MaxInt32
+	all, err := r.FindAll(ctx, unpaged)
+	if err != nil {
+		return 0, err
+	}
+	return len(all), nil
 }
 
 func (r *TicketRepository) FindAll(_ context.Context, filter port.ListFilter) ([]*domain.Ticket, error) {

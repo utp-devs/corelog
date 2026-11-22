@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -50,6 +51,17 @@ func (r *memoryTicketRepo) FindByID(_ context.Context, id uuid.UUID) (*domain.Ti
 	return &copied, nil
 }
 
+func (r *memoryTicketRepo) Count(ctx context.Context, filter ticketport.ListFilter) (int, error) {
+	unpaged := filter
+	unpaged.Page = 1
+	unpaged.PageSize = math.MaxInt32
+	all, err := r.FindAll(ctx, unpaged)
+	if err != nil {
+		return 0, err
+	}
+	return len(all), nil
+}
+
 func (r *memoryTicketRepo) FindAll(_ context.Context, filter ticketport.ListFilter) ([]*domain.Ticket, error) {
 	var list []*domain.Ticket
 	projectIDs := make(map[uuid.UUID]struct{}, len(filter.ProjectIDs))
@@ -70,6 +82,20 @@ func (r *memoryTicketRepo) FindAll(_ context.Context, filter ticketport.ListFilt
 		}
 		copied := *t
 		list = append(list, &copied)
+	}
+	if filter.PageSize > 0 {
+		start := (filter.Page - 1) * filter.PageSize
+		if start < 0 {
+			start = 0
+		}
+		if start > len(list) {
+			start = len(list)
+		}
+		end := start + filter.PageSize
+		if end > len(list) {
+			end = len(list)
+		}
+		list = list[start:end]
 	}
 	return list, nil
 }
@@ -367,4 +393,50 @@ func TestTicketHTTP_Handlers(t *testing.T) {
 			t.Errorf("got status %d, want %d; body: %s", rec.Code, http.StatusOK, rec.Body.String())
 		}
 	})
+}
+
+func TestTicketHTTP_ListReturnsPaginationMeta(t *testing.T) {
+	router, jwtSecret, _, _ := setupTicketRouter()
+	token, _ := authtoken.Generate(jwtSecret, time.Hour, uuid.New(), "admin")
+
+	for i := 0; i < 3; i++ {
+		body := `{"title":"Issue list","description":"Desc","priority":"low"}`
+		req := httptest.NewRequest(http.MethodPost, "/issues", bytes.NewBufferString(body))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", "Bearer "+token)
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+		if rec.Code != http.StatusCreated {
+			t.Fatalf("create got status %d, want %d", rec.Code, http.StatusCreated)
+		}
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/issues?page=1&page_size=2", nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("list got status %d, want %d", rec.Code, http.StatusOK)
+	}
+
+	var payload struct {
+		Data []map[string]any `json:"data"`
+		Meta struct {
+			Page     int `json:"page"`
+			PageSize int `json:"page_size"`
+			Total    int `json:"total"`
+		} `json:"meta"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &payload); err != nil {
+		t.Fatalf("invalid JSON: %v", err)
+	}
+	if len(payload.Data) != 2 {
+		t.Errorf("got %d items on the page, want 2", len(payload.Data))
+	}
+	if payload.Meta.Total != 3 {
+		t.Errorf("meta.total = %d, want 3 (all matches, not only this page)", payload.Meta.Total)
+	}
+	if payload.Meta.Page != 1 || payload.Meta.PageSize != 2 {
+		t.Errorf("meta page/page_size = %d/%d, want 1/2", payload.Meta.Page, payload.Meta.PageSize)
+	}
 }

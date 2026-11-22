@@ -91,11 +91,10 @@ func (r *TicketRepository) FindByID(ctx context.Context, id uuid.UUID) (*domain.
 	return row.toDomain(), nil
 }
 
-func (r *TicketRepository) FindAll(ctx context.Context, filter port.ListFilter) ([]*domain.Ticket, error) {
-	query := `
-		SELECT id, project_id, title, description, status, priority, issue_type, parent_id,
-		       due_date, story_points, rank, closed_at, requester_id, assignee_id, created_at, updated_at
-		FROM issues WHERE 1 = 1`
+// listWhere arma la clausula WHERE compartida por la consulta de datos y el conteo,
+// para que ambas devuelvan exactamente el mismo conjunto de issues.
+func listWhere(filter port.ListFilter) (string, []any) {
+	query := " WHERE 1 = 1"
 	args := []any{}
 	if len(filter.ProjectIDs) > 0 {
 		placeholders := make([]string, 0, len(filter.ProjectIDs))
@@ -138,6 +137,25 @@ func (r *TicketRepository) FindAll(ctx context.Context, filter port.ListFilter) 
 		args = append(args, *filter.DueTo)
 		query += fmt.Sprintf(" AND due_date <= $%d", len(args))
 	}
+	return query, args
+}
+
+// Count devuelve cuantos issues cumplen el filtro, sin paginar.
+func (r *TicketRepository) Count(ctx context.Context, filter port.ListFilter) (int, error) {
+	where, args := listWhere(filter)
+	var total int
+	if err := r.db.GetContext(ctx, &total, "SELECT COUNT(*) FROM issues"+where, args...); err != nil {
+		return 0, apperror.Wrap(apperror.KindInternal, "failed to count tickets", err)
+	}
+	return total, nil
+}
+
+func (r *TicketRepository) FindAll(ctx context.Context, filter port.ListFilter) ([]*domain.Ticket, error) {
+	where, args := listWhere(filter)
+	query := `
+		SELECT id, project_id, title, description, status, priority, issue_type, parent_id,
+		       due_date, story_points, rank, closed_at, requester_id, assignee_id, created_at, updated_at
+		FROM issues` + where
 
 	query += " ORDER BY rank ASC, created_at DESC"
 

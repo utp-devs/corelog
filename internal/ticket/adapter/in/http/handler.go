@@ -144,13 +144,17 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 		filter.DueTo = &value
 	}
 
-	tickets, err := h.service.List(r.Context(), actorID, globalRole, filter)
+	result, err := h.service.List(r.Context(), actorID, globalRole, filter)
 	if err != nil {
 		httpresponse.Error(w, err)
 		return
 	}
 
-	httpresponse.JSON(w, http.StatusOK, toTicketResponses(tickets))
+	httpresponse.Paginated(w, http.StatusOK, toTicketResponses(result.Items), httpresponse.PageMeta{
+		Page:     result.Page,
+		PageSize: result.PageSize,
+		Total:    result.Total,
+	})
 }
 
 func (h *Handler) ListSavedFilters(w http.ResponseWriter, r *http.Request) {
