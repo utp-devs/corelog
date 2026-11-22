@@ -18,6 +18,7 @@ const TicketsListPage = lazy(() => import('@/adapters/in/ui/tickets/TicketsListP
 const NotFoundPage = lazy(() => import('@/adapters/in/ui/common/NotFoundPage').then(m => ({ default: m.NotFoundPage })))
 const ProjectsPage = lazy(() => import('@/adapters/in/ui/projects/ProjectsPage').then(m => ({ default: m.ProjectsPage })))
 const ProjectBoardPage = lazy(() => import('@/adapters/in/ui/projects/ProjectBoardPage').then(m => ({ default: m.ProjectBoardPage })))
+const ProjectBacklogPage = lazy(() => import('@/adapters/in/ui/projects/ProjectBacklogPage').then(m => ({ default: m.ProjectBacklogPage })))
 
 function SuspenseWrapper({ children }: { children: ReactNode }) {
   return (
@@ -49,6 +50,7 @@ export const router = createBrowserRouter([
           { path: 'profile', element: <SuspenseWrapper><ProfilePage /></SuspenseWrapper> },
           { path: 'projects', element: <SuspenseWrapper><ProjectsPage /></SuspenseWrapper> },
           { path: 'projects/:id/board', element: <SuspenseWrapper><ProjectBoardPage /></SuspenseWrapper> },
+          { path: 'projects/:id/backlog', element: <SuspenseWrapper><ProjectBacklogPage /></SuspenseWrapper> },
           {
             element: <AdminRoute />,
             children: [{ path: 'teams', element: <SuspenseWrapper><TeamsPage /></SuspenseWrapper> }],
