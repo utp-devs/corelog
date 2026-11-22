@@ -19,11 +19,11 @@ type Service interface {
 
 type BoardView struct {
 	CanManageBoard bool
-	ID        uuid.UUID
-	ProjectID uuid.UUID
-	Name      string
-	Type      string
-	Columns   []ColumnView
+	ID             uuid.UUID
+	ProjectID      uuid.UUID
+	Name           string
+	Type           string
+	Columns        []ColumnView
 }
 
 type ColumnView struct {
