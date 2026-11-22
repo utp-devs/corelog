@@ -3,11 +3,12 @@ package http
 import "github.com/google/uuid"
 
 type boardResponse struct {
-	ID        uuid.UUID             `json:"id"`
-	ProjectID uuid.UUID             `json:"project_id"`
-	Name      string                `json:"name"`
-	Type      string                `json:"type"`
-	Columns   []boardColumnResponse `json:"columns"`
+	ID             uuid.UUID             `json:"id"`
+	ProjectID      uuid.UUID             `json:"project_id"`
+	Name           string                `json:"name"`
+	Type           string                `json:"type"`
+	Columns        []boardColumnResponse `json:"columns"`
+	CanManageBoard bool                  `json:"can_manage_board"`
 }
 
 type boardColumnResponse struct {

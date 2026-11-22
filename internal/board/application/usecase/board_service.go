@@ -33,6 +33,7 @@ func (s *BoardService) Get(ctx context.Context, projectID, actorID uuid.UUID, gl
 		ID: board.ID, ProjectID: board.ProjectID, Name: board.Name, Type: string(board.Type),
 		Columns: make([]port.ColumnView, 0, len(board.Columns)),
 	}
+	view.CanManageBoard = s.authorizer.Authorize(ctx, port.ActionManageBoard, actorID, globalRole, projectID) == nil
 	for _, column := range board.Columns {
 		columnView := port.ColumnView{
 			ID: column.ID, Name: column.Name, Status: string(column.Status), Position: column.Position,

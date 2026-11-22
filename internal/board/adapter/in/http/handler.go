@@ -54,6 +54,7 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 func toBoardResponse(board *port.BoardView) boardResponse {
 	response := boardResponse{
 		ID: board.ID, ProjectID: board.ProjectID, Name: board.Name, Type: board.Type,
+		CanManageBoard: board.CanManageBoard,
 		Columns: make([]boardColumnResponse, 0, len(board.Columns)),
 	}
 	for _, column := range board.Columns {

@@ -246,3 +246,21 @@ func TestBoardServiceUpdateColumnWIP(t *testing.T) {
 	})
 
 }
+
+// TestBoardServiceGetReportsManageCapability comprueba que el tablero indica si el actor puede editarlo.
+func TestBoardServiceGetReportsManageCapability(t *testing.T) {
+	ctx := context.Background()
+	board := &domain.Board{ID: uuid.New(), ProjectID: uuid.New(), Name: "Default", Type: domain.TypeKanban}
+
+	allowed := NewBoardService(&boardRepositoryStub{board: board}, projectAuthorizerStub{}, fakeAuthorizer{}, &fakeMover{})
+	view, err := allowed.Get(ctx, board.ProjectID, uuid.New(), "admin")
+	if err != nil || !view.CanManageBoard {
+		t.Fatalf("manager should see CanManageBoard=true, got %v, %v", view, err)
+	}
+
+	denied := NewBoardService(&boardRepositoryStub{board: board}, projectAuthorizerStub{}, fakeAuthorizer{err: apperror.New(apperror.KindForbidden, "forbidden project operation")}, &fakeMover{})
+	view, err = denied.Get(ctx, board.ProjectID, uuid.New(), "requester")
+	if err != nil || view.CanManageBoard {
+		t.Fatalf("non manager should see CanManageBoard=false, got %v, %v", view, err)
+	}
+}

@@ -18,6 +18,7 @@ type Service interface {
 }
 
 type BoardView struct {
+	CanManageBoard bool
 	ID        uuid.UUID
 	ProjectID uuid.UUID
 	Name      string
