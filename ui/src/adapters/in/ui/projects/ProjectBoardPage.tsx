@@ -8,7 +8,7 @@ import { ProjectHttpRepository } from '@/adapters/out/http/project-http-reposito
 import type { Project } from '@/core/projects/domain/project'
 import type { ProjectBoard } from '@/core/projects/domain/board'
 import { PageHeader } from '@/shared/ui/PageHeader'
-import { TicketBadge } from '@/adapters/in/ui/tickets/TicketBadge'
+import { PriorityTag } from '@/shared/ui/PriorityTag'
 import type { TicketPriority } from '@/core/tickets/domain/ticket'
 import styles from './ProjectBoardPage.module.css'
 
@@ -66,7 +66,7 @@ export function ProjectBoardPage() {
                       <Typography.Text type="secondary">{card.id.slice(0, 8)} · {card.type}</Typography.Text>
                       <Link to={`/issues/${card.id}`} className={styles.summary}>{card.summary}</Link>
                       <Space wrap size={[6, 6]}>
-                        <TicketBadge kind="priority" value={card.priority as TicketPriority} />
+                        <PriorityTag priority={card.priority as TicketPriority} />
                         {card.storyPoints !== undefined && <Tag>{card.storyPoints} puntos</Tag>}
                       </Space>
                       <Typography.Text type="secondary">Responsable: {card.assignee || 'Sin asignar'}</Typography.Text>

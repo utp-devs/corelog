@@ -3,7 +3,8 @@ import { DownOutlined, UpOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 
 import type { Ticket, TicketPriority, TicketStatus } from '@/core/tickets/domain/ticket'
-import { TicketBadge } from './TicketBadge'
+import { PriorityTag } from '@/shared/ui/PriorityTag'
+import { StatusTag } from '@/shared/ui/StatusTag'
 import styles from './TicketList.module.css'
 
 interface TicketListProps {
@@ -22,13 +23,13 @@ export function TicketList({ tickets, isLoading, onSelect, onMoveUp, onMoveDown,
       title: 'Estado',
       dataIndex: 'status',
       key: 'status',
-      render: (value: TicketStatus) => <TicketBadge kind="status" value={value} />,
+      render: (value: TicketStatus) => <StatusTag status={value} />,
     },
     {
       title: 'Prioridad',
       dataIndex: 'priority',
       key: 'priority',
-      render: (value: TicketPriority) => <TicketBadge kind="priority" value={value} />,
+      render: (value: TicketPriority) => <PriorityTag priority={value} />,
     },
     {
       title: 'Creado',

@@ -7,7 +7,8 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { canTransitionTo, type IssueType, type Ticket, type TicketPriority, type TicketStatus } from '@/core/tickets/domain/ticket'
 import { useTicketsStore } from '@/adapters/in/state/tickets.store'
 import { useTeammateSearch } from './hooks/useTeammateSearch'
-import { TicketBadge } from './TicketBadge'
+import { PriorityTag } from '@/shared/ui/PriorityTag'
+import { StatusTag } from '@/shared/ui/StatusTag'
 import styles from './TicketDetailPage.module.css'
 import { PageHeader } from '@/shared/ui/PageHeader'
 import type { IssueAttachment } from '@/core/tickets/domain/attachment'
@@ -326,10 +327,10 @@ export function TicketDetailPage() {
 
         <Descriptions column={1} bordered size="small">
           <Descriptions.Item label="Estado">
-            <TicketBadge kind="status" value={selected.status} />
+            <StatusTag status={selected.status} />
           </Descriptions.Item>
           <Descriptions.Item label="Prioridad">
-            <TicketBadge kind="priority" value={selected.priority} />
+            <PriorityTag priority={selected.priority} />
           </Descriptions.Item>
           <Descriptions.Item label="Tipo">{issueTypeLabel(selected.issueType)}</Descriptions.Item>
           <Descriptions.Item label="Fecha limite">
