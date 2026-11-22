@@ -1,9 +1,10 @@
-import { Button, Space, Table } from 'antd'
+import { Button, Space, Table, Typography } from 'antd'
 import { DownOutlined, UpOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import dayjs from 'dayjs'
 
 import type { Ticket } from '@/core/tickets/domain/ticket'
+import { AvatarGroup } from '@/shared/ui/AvatarGroup'
 import { EmptyState } from '@/shared/ui/EmptyState'
 import { IssueTypeIcon } from '@/shared/ui/IssueTypeIcon'
 import { PriorityTag } from '@/shared/ui/PriorityTag'
@@ -37,6 +38,18 @@ export function TicketList({ tickets, isLoading, onSelect, onMoveUp, onMoveDown,
       title: 'Prioridad',
       key: 'priority',
       render: (_, ticket) => <PriorityTag priority={ticket.priority} />,
+    },
+    {
+      title: 'Responsable',
+      key: 'assignee',
+      render: (_, ticket) => ticket.assigneeId && ticket.assigneeName ? (
+        <Space size="small">
+          <AvatarGroup users={[{ id: ticket.assigneeId, name: ticket.assigneeName }]} />
+          <span>{ticket.assigneeName}</span>
+        </Space>
+      ) : (
+        <Typography.Text type="secondary">Sin asignar</Typography.Text>
+      ),
     },
     {
       title: 'Creado',
