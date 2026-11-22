@@ -14,13 +14,18 @@ import (
 )
 
 type ProjectService struct {
-	repo       port.Repository
-	memberRepo port.MemberRepository
-	policy     authorization.Policy
+	repo        port.Repository
+	memberRepo  port.MemberRepository
+	catalogRepo port.CatalogRepository
+	policy      authorization.Policy
 }
 
-func NewProjectService(repo port.Repository, memberRepo port.MemberRepository) *ProjectService {
-	return &ProjectService{repo: repo, memberRepo: memberRepo, policy: authorization.Policy{}}
+func NewProjectService(repo port.Repository, memberRepo port.MemberRepository, catalogRepo ...port.CatalogRepository) *ProjectService {
+	var catalog port.CatalogRepository
+	if len(catalogRepo) > 0 {
+		catalog = catalogRepo[0]
+	}
+	return &ProjectService{repo: repo, memberRepo: memberRepo, catalogRepo: catalog, policy: authorization.Policy{}}
 }
 
 var _ port.Service = (*ProjectService)(nil)
@@ -199,4 +204,60 @@ func (s *ProjectService) RemoveMember(ctx context.Context, actorID uuid.UUID, gl
 		return err
 	}
 	return s.memberRepo.Remove(ctx, projectID, userID)
+}
+
+func (s *ProjectService) ListLabels(ctx context.Context, projectID uuid.UUID) ([]domain.Label, error) {
+	if s.catalogRepo == nil {
+		return []domain.Label{}, nil
+	}
+	return s.catalogRepo.ListLabels(ctx, projectID)
+}
+
+func (s *ProjectService) CreateLabel(ctx context.Context, projectID uuid.UUID, name, color string) (*domain.Label, error) {
+	if s.catalogRepo == nil {
+		return nil, domain.ErrInvalidProject
+	}
+	label, err := domain.NewLabel(projectID, name, color)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.catalogRepo.CreateLabel(ctx, label); err != nil {
+		return nil, err
+	}
+	return label, nil
+}
+
+func (s *ProjectService) DeleteLabel(ctx context.Context, projectID, labelID uuid.UUID) error {
+	if s.catalogRepo == nil {
+		return domain.ErrInvalidProject
+	}
+	return s.catalogRepo.DeleteLabel(ctx, projectID, labelID)
+}
+
+func (s *ProjectService) ListComponents(ctx context.Context, projectID uuid.UUID) ([]domain.Component, error) {
+	if s.catalogRepo == nil {
+		return []domain.Component{}, nil
+	}
+	return s.catalogRepo.ListComponents(ctx, projectID)
+}
+
+func (s *ProjectService) CreateComponent(ctx context.Context, projectID uuid.UUID, name, description string) (*domain.Component, error) {
+	if s.catalogRepo == nil {
+		return nil, domain.ErrInvalidProject
+	}
+	component, err := domain.NewComponent(projectID, name, description)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.catalogRepo.CreateComponent(ctx, component); err != nil {
+		return nil, err
+	}
+	return component, nil
+}
+
+func (s *ProjectService) DeleteComponent(ctx context.Context, projectID, componentID uuid.UUID) error {
+	if s.catalogRepo == nil {
+		return domain.ErrInvalidProject
+	}
+	return s.catalogRepo.DeleteComponent(ctx, projectID, componentID)
 }

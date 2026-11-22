@@ -18,4 +18,10 @@ type Service interface {
 	AddMember(ctx context.Context, actorID uuid.UUID, globalRole string, projectID, userID uuid.UUID, role string) (*Member, error)
 	UpdateMemberRole(ctx context.Context, actorID uuid.UUID, globalRole string, projectID, userID uuid.UUID, role string) (*Member, error)
 	RemoveMember(ctx context.Context, actorID uuid.UUID, globalRole string, projectID, userID uuid.UUID) error
+	ListLabels(ctx context.Context, projectID uuid.UUID) ([]domain.Label, error)
+	CreateLabel(ctx context.Context, projectID uuid.UUID, name, color string) (*domain.Label, error)
+	DeleteLabel(ctx context.Context, projectID, labelID uuid.UUID) error
+	ListComponents(ctx context.Context, projectID uuid.UUID) ([]domain.Component, error)
+	CreateComponent(ctx context.Context, projectID uuid.UUID, name, description string) (*domain.Component, error)
+	DeleteComponent(ctx context.Context, projectID, componentID uuid.UUID) error
 }

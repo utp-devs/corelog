@@ -12,16 +12,28 @@ export function ProjectsPage() {
   const projects = useProjectsStore((state) => state.projects)
   const status = useProjectsStore((state) => state.status)
   const members = useProjectsStore((state) => state.members)
+  const labels = useProjectsStore((state) => state.labels)
+  const components = useProjectsStore((state) => state.components)
   const fetchProjects = useProjectsStore((state) => state.fetchProjects)
   const createProject = useProjectsStore((state) => state.createProject)
   const fetchMembers = useProjectsStore((state) => state.fetchMembers)
   const addMember = useProjectsStore((state) => state.addMember)
   const updateMember = useProjectsStore((state) => state.updateMember)
   const removeMember = useProjectsStore((state) => state.removeMember)
+  const fetchLabels = useProjectsStore((state) => state.fetchLabels)
+  const createLabel = useProjectsStore((state) => state.createLabel)
+  const deleteLabel = useProjectsStore((state) => state.deleteLabel)
+  const fetchComponents = useProjectsStore((state) => state.fetchComponents)
+  const createComponent = useProjectsStore((state) => state.createComponent)
+  const deleteComponent = useProjectsStore((state) => state.deleteComponent)
   const [open, setOpen] = useState(false)
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null)
   const [memberUserId, setMemberUserId] = useState('')
   const [memberRole, setMemberRole] = useState<'lead' | 'contributor' | 'viewer'>('contributor')
+  const [labelName, setLabelName] = useState('')
+  const [labelColor, setLabelColor] = useState('blue')
+  const [componentName, setComponentName] = useState('')
+  const [componentDescription, setComponentDescription] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [form] = Form.useForm()
 
@@ -77,6 +89,8 @@ export function ProjectsPage() {
               onClick={() => {
                 setSelectedProjectId(project.id)
                 void fetchMembers(project.id)
+                void fetchLabels(project.id)
+                void fetchComponents(project.id)
               }}
             >
               <p className={styles.description}>{project.description || 'Sin descripcion'}</p>
@@ -163,6 +177,75 @@ export function ProjectsPage() {
               )}
             />
           )}
+        </Card>
+      )}
+
+      {selectedProjectId && (
+        <Card title="Etiquetas y componentes" className={styles.members}>
+          <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+            <Space wrap>
+              <Input value={labelName} onChange={(event) => setLabelName(event.target.value)} placeholder="Nueva etiqueta" style={{ width: 220 }} />
+              <Select value={labelColor} onChange={setLabelColor} options={[
+                { value: 'blue', label: 'Azul' },
+                { value: 'green', label: 'Verde' },
+                { value: 'gold', label: 'Dorado' },
+                { value: 'red', label: 'Rojo' },
+              ]} />
+              <Button
+                type="primary"
+                disabled={!labelName.trim()}
+                onClick={async () => {
+                  await createLabel(selectedProjectId, labelName, labelColor)
+                  setLabelName('')
+                }}
+              >
+                Crear etiqueta
+              </Button>
+            </Space>
+            <List
+              size="small"
+              dataSource={labels}
+              locale={{ emptyText: 'Aun no hay etiquetas' }}
+              renderItem={(label) => (
+                <List.Item actions={[
+                  <Button key="delete" danger size="small" onClick={() => void deleteLabel(selectedProjectId, label.id)}>
+                    Eliminar
+                  </Button>,
+                ]}>
+                  {label.name} ({label.color})
+                </List.Item>
+              )}
+            />
+            <Space wrap>
+              <Input value={componentName} onChange={(event) => setComponentName(event.target.value)} placeholder="Nuevo componente" style={{ width: 220 }} />
+              <Input value={componentDescription} onChange={(event) => setComponentDescription(event.target.value)} placeholder="Descripcion" style={{ width: 260 }} />
+              <Button
+                type="primary"
+                disabled={!componentName.trim()}
+                onClick={async () => {
+                  await createComponent(selectedProjectId, componentName, componentDescription)
+                  setComponentName('')
+                  setComponentDescription('')
+                }}
+              >
+                Crear componente
+              </Button>
+            </Space>
+            <List
+              size="small"
+              dataSource={components}
+              locale={{ emptyText: 'Aun no hay componentes' }}
+              renderItem={(component) => (
+                <List.Item actions={[
+                  <Button key="delete" danger size="small" onClick={() => void deleteComponent(selectedProjectId, component.id)}>
+                    Eliminar
+                  </Button>,
+                ]}>
+                  {component.name}{component.description ? ` - ${component.description}` : ''}
+                </List.Item>
+              )}
+            />
+          </Space>
         </Card>
       )}
 

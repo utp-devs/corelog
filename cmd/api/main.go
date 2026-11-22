@@ -64,10 +64,11 @@ func run() error {
 	ticketDBRepo = ticketpostgres.NewTicketRepository(db)
 	projectRepo = projectpostgres.NewProjectRepository(db)
 	projectMemberRepo = projectpostgres.NewMemberRepository(db)
+	projectCatalogRepo := projectpostgres.NewCatalogRepository(db)
 
 	userModule := user.NewModule(userRepo, cfg.Auth.JWTSecret, cfg.Auth.JWTExpiration)
 	teamModule := team.NewModule(teamRepo, cfg.Auth.JWTSecret)
-	projectModule := project.NewModule(projectRepo, projectMemberRepo, cfg.Auth.JWTSecret)
+	projectModule := project.NewModule(projectRepo, projectMemberRepo, projectCatalogRepo, cfg.Auth.JWTSecret)
 
 	ticketRepo := ticketDBRepo
 	if cfg.Features.TicketRepository == "memory" {

@@ -22,3 +22,21 @@ export interface ProjectMember {
   role: ProjectMemberRole
   createdAt: string
 }
+
+export interface ProjectLabel {
+  id: string
+  projectId: string
+  name: string
+  color: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface ProjectComponent {
+  id: string
+  projectId: string
+  name: string
+  description: string
+  createdAt: string
+  updatedAt: string
+}

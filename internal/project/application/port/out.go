@@ -32,3 +32,12 @@ type MemberRepository interface {
 	UpdateRole(ctx context.Context, projectID, userID uuid.UUID, role string) error
 	Remove(ctx context.Context, projectID, userID uuid.UUID) error
 }
+
+type CatalogRepository interface {
+	ListLabels(ctx context.Context, projectID uuid.UUID) ([]domain.Label, error)
+	CreateLabel(ctx context.Context, label *domain.Label) error
+	DeleteLabel(ctx context.Context, projectID, labelID uuid.UUID) error
+	ListComponents(ctx context.Context, projectID uuid.UUID) ([]domain.Component, error)
+	CreateComponent(ctx context.Context, component *domain.Component) error
+	DeleteComponent(ctx context.Context, projectID, componentID uuid.UUID) error
+}

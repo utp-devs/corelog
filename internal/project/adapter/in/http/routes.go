@@ -15,6 +15,12 @@ func (h *Handler) RegisterRoutes(r chi.Router) {
 		r.Post("/{id}/members", h.AddMember)
 		r.Patch("/{id}/members/{user_id}", h.UpdateMember)
 		r.Delete("/{id}/members/{user_id}", h.RemoveMember)
+		r.Get("/{id}/labels", h.ListLabels)
+		r.Post("/{id}/labels", h.CreateLabel)
+		r.Delete("/{id}/labels/{label_id}", h.DeleteLabel)
+		r.Get("/{id}/components", h.ListComponents)
+		r.Post("/{id}/components", h.CreateComponent)
+		r.Delete("/{id}/components/{component_id}", h.DeleteComponent)
 
 		r.Group(func(r chi.Router) {
 			r.Use(appmw.RequireRole("admin"))

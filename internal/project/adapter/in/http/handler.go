@@ -134,6 +134,116 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 	httpresponse.JSON(w, http.StatusNoContent, nil)
 }
 
+func (h *Handler) ListLabels(w http.ResponseWriter, r *http.Request) {
+	projectID, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		httpresponse.Error(w, apperror.New(apperror.KindValidation, "invalid project id"))
+		return
+	}
+	labels, err := h.service.ListLabels(r.Context(), projectID)
+	if err != nil {
+		httpresponse.Error(w, err)
+		return
+	}
+	httpresponse.JSON(w, http.StatusOK, toLabelResponses(labels))
+}
+
+func (h *Handler) CreateLabel(w http.ResponseWriter, r *http.Request) {
+	projectID, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		httpresponse.Error(w, apperror.New(apperror.KindValidation, "invalid project id"))
+		return
+	}
+	var req labelRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		httpresponse.Error(w, apperror.New(apperror.KindValidation, "invalid request body"))
+		return
+	}
+	if err := validation.Struct(req); err != nil {
+		httpresponse.Error(w, apperror.Wrap(apperror.KindValidation, "invalid request body", err))
+		return
+	}
+	label, err := h.service.CreateLabel(r.Context(), projectID, req.Name, req.Color)
+	if err != nil {
+		httpresponse.Error(w, err)
+		return
+	}
+	httpresponse.JSON(w, http.StatusCreated, toLabelResponse(*label))
+}
+
+func (h *Handler) DeleteLabel(w http.ResponseWriter, r *http.Request) {
+	projectID, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		httpresponse.Error(w, apperror.New(apperror.KindValidation, "invalid project id"))
+		return
+	}
+	labelID, err := uuid.Parse(chi.URLParam(r, "label_id"))
+	if err != nil {
+		httpresponse.Error(w, apperror.New(apperror.KindValidation, "invalid label id"))
+		return
+	}
+	if err := h.service.DeleteLabel(r.Context(), projectID, labelID); err != nil {
+		httpresponse.Error(w, err)
+		return
+	}
+	httpresponse.JSON(w, http.StatusNoContent, nil)
+}
+
+func (h *Handler) ListComponents(w http.ResponseWriter, r *http.Request) {
+	projectID, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		httpresponse.Error(w, apperror.New(apperror.KindValidation, "invalid project id"))
+		return
+	}
+	components, err := h.service.ListComponents(r.Context(), projectID)
+	if err != nil {
+		httpresponse.Error(w, err)
+		return
+	}
+	httpresponse.JSON(w, http.StatusOK, toComponentResponses(components))
+}
+
+func (h *Handler) CreateComponent(w http.ResponseWriter, r *http.Request) {
+	projectID, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		httpresponse.Error(w, apperror.New(apperror.KindValidation, "invalid project id"))
+		return
+	}
+	var req componentRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		httpresponse.Error(w, apperror.New(apperror.KindValidation, "invalid request body"))
+		return
+	}
+	if err := validation.Struct(req); err != nil {
+		httpresponse.Error(w, apperror.Wrap(apperror.KindValidation, "invalid request body", err))
+		return
+	}
+	component, err := h.service.CreateComponent(r.Context(), projectID, req.Name, req.Description)
+	if err != nil {
+		httpresponse.Error(w, err)
+		return
+	}
+	httpresponse.JSON(w, http.StatusCreated, toComponentResponse(*component))
+}
+
+func (h *Handler) DeleteComponent(w http.ResponseWriter, r *http.Request) {
+	projectID, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		httpresponse.Error(w, apperror.New(apperror.KindValidation, "invalid project id"))
+		return
+	}
+	componentID, err := uuid.Parse(chi.URLParam(r, "component_id"))
+	if err != nil {
+		httpresponse.Error(w, apperror.New(apperror.KindValidation, "invalid component id"))
+		return
+	}
+	if err := h.service.DeleteComponent(r.Context(), projectID, componentID); err != nil {
+		httpresponse.Error(w, err)
+		return
+	}
+	httpresponse.JSON(w, http.StatusNoContent, nil)
+}
+
 func actorFromRequest(r *http.Request) (uuid.UUID, string, bool) {
 	actorID, ok := appmw.UserIDFromContext(r.Context())
 	if !ok {

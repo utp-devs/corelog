@@ -917,6 +917,126 @@ paths:
           $ref: '#/components/responses/NotFound'
         '422':
           $ref: '#/components/responses/ValidationError'
+  /projects/{id}/labels:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      tags: [projects]
+      summary: List project labels
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Project labels
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      tags: [projects]
+      summary: Create project label
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateProjectLabelRequest'
+      responses:
+        '201':
+          description: Label created
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+  /projects/{id}/labels/{label_id}:
+    delete:
+      tags: [projects]
+      summary: Delete project label
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: label_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Label deleted
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /projects/{id}/components:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      tags: [projects]
+      summary: List project components
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Project components
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      tags: [projects]
+      summary: Create project component
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateProjectComponentRequest'
+      responses:
+        '201':
+          description: Component created
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+  /projects/{id}/components/{component_id}:
+    delete:
+      tags: [projects]
+      summary: Delete project component
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: component_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Component deleted
+        '404':
+          $ref: '#/components/responses/NotFound'
   /health:
     get:
       tags: [health]
@@ -1231,6 +1351,28 @@ components:
         visibility:
           type: string
           enum: [private, team]
+    CreateProjectLabelRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 40
+        color:
+          type: string
+          maxLength: 20
+    CreateProjectComponentRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 80
+        description:
+          type: string
+          maxLength: 5000
     AuthSession:
       type: object
       properties:

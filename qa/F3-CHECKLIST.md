@@ -28,6 +28,8 @@
 - [ ] No quedan rutas /tickets visibles
 - [ ] Crear comentario valida longitud y registra autor
 - [ ] Eliminar comentario propio oculta el registro
+- [ ] Crear y eliminar etiquetas desde la configuración de proyecto
+- [ ] Crear y eliminar componentes desde la configuración de proyecto
 - [ ] Las menciones @usuario detectan miembros del proyecto
 - [ ] Actividad de issue lista cambios append-only
 

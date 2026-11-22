@@ -1,5 +1,5 @@
 import type { CreateProjectInput, ProjectRepositoryPort } from '@/core/projects/application/ports/project-repository.port'
-import type { Project, ProjectMember, ProjectMemberRole } from '@/core/projects/domain/project'
+import type { Project, ProjectMember, ProjectMemberRole, ProjectLabel, ProjectComponent } from '@/core/projects/domain/project'
 import { apiClient } from './api-client'
 
 interface ProjectDto {
@@ -22,12 +22,52 @@ interface ProjectMemberDto {
   created_at: string
 }
 
+interface LabelDto {
+  id: string
+  project_id: string
+  name: string
+  color: string
+  created_at: string
+  updated_at: string
+}
+
+interface ComponentDto {
+  id: string
+  project_id: string
+  name: string
+  description: string
+  created_at: string
+  updated_at: string
+}
+
 function toProjectMember(dto: ProjectMemberDto): ProjectMember {
   return {
     projectId: dto.project_id,
     userId: dto.user_id,
     role: dto.role,
     createdAt: dto.created_at,
+  }
+}
+
+function toLabel(dto: LabelDto): ProjectLabel {
+  return {
+    id: dto.id,
+    projectId: dto.project_id,
+    name: dto.name,
+    color: dto.color,
+    createdAt: dto.created_at,
+    updatedAt: dto.updated_at,
+  }
+}
+
+function toComponent(dto: ComponentDto): ProjectComponent {
+  return {
+    id: dto.id,
+    projectId: dto.project_id,
+    name: dto.name,
+    description: dto.description,
+    createdAt: dto.created_at,
+    updatedAt: dto.updated_at,
   }
 }
 
@@ -101,5 +141,33 @@ export class ProjectHttpRepository implements ProjectRepositoryPort {
 
   async removeMember(projectId: string, userId: string): Promise<void> {
     await apiClient.delete(`/projects/${projectId}/members/${userId}`)
+  }
+
+  async listLabels(projectId: string): Promise<ProjectLabel[]> {
+    const { data } = await apiClient.get<{ data: LabelDto[] }>(`/projects/${projectId}/labels`)
+    return data.data.map(toLabel)
+  }
+
+  async createLabel(projectId: string, name: string, color: string): Promise<ProjectLabel> {
+    const { data } = await apiClient.post<{ data: LabelDto }>(`/projects/${projectId}/labels`, { name, color })
+    return toLabel(data.data)
+  }
+
+  async deleteLabel(projectId: string, labelId: string): Promise<void> {
+    await apiClient.delete(`/projects/${projectId}/labels/${labelId}`)
+  }
+
+  async listComponents(projectId: string): Promise<ProjectComponent[]> {
+    const { data } = await apiClient.get<{ data: ComponentDto[] }>(`/projects/${projectId}/components`)
+    return data.data.map(toComponent)
+  }
+
+  async createComponent(projectId: string, name: string, description: string): Promise<ProjectComponent> {
+    const { data } = await apiClient.post<{ data: ComponentDto }>(`/projects/${projectId}/components`, { name, description })
+    return toComponent(data.data)
+  }
+
+  async deleteComponent(projectId: string, componentId: string): Promise<void> {
+    await apiClient.delete(`/projects/${projectId}/components/${componentId}`)
   }
 }
