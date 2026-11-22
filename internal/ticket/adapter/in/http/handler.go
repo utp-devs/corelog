@@ -363,6 +363,29 @@ func (h *Handler) DeleteIssueLink(w http.ResponseWriter, r *http.Request) {
 	httpresponse.JSON(w, http.StatusNoContent, nil)
 }
 
+func (h *Handler) UpdateRank(w http.ResponseWriter, r *http.Request) {
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		httpresponse.Error(w, apperror.New(apperror.KindValidation, "invalid issue id"))
+		return
+	}
+	var req updateRankRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		httpresponse.Error(w, apperror.New(apperror.KindValidation, "invalid request body"))
+		return
+	}
+	if err := validation.Struct(req); err != nil {
+		httpresponse.Error(w, apperror.Wrap(apperror.KindValidation, "invalid request body", err))
+		return
+	}
+	ticket, err := h.service.UpdateRank(r.Context(), id, req.Rank)
+	if err != nil {
+		httpresponse.Error(w, err)
+		return
+	}
+	httpresponse.JSON(w, http.StatusOK, toTicketResponse(ticket))
+}
+
 func atoiOrDefault(s string, fallback int) int {
 	if s == "" {
 		return fallback

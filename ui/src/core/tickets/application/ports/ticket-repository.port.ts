@@ -38,6 +38,7 @@ export interface TicketRepositoryPort {
   listLinks(id: string): Promise<IssueLink[]>
   createLink(id: string, targetIssueId: string, kind: IssueLinkKind): Promise<IssueLink>
   deleteLink(id: string, linkId: string): Promise<void>
+  updateRank(id: string, rank: string): Promise<Ticket>
 }
 
 export interface IssueComment {

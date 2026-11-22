@@ -953,6 +953,34 @@ paths:
           description: Issue link deleted
         '404':
           $ref: '#/components/responses/NotFound'
+  /issues/{id}/rank:
+    parameters:
+      - $ref: '#/components/parameters/TicketId'
+    patch:
+      tags: [tickets]
+      summary: Update issue rank
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateIssueRankRequest'
+      responses:
+        '200':
+          description: Issue rank updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Ticket'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
   /issues/{id}/metadata:
     parameters:
       - $ref: '#/components/parameters/TicketId'
@@ -1508,6 +1536,14 @@ components:
         assignee_id:
           type: string
           format: uuid
+    UpdateIssueRankRequest:
+      type: object
+      required: [rank]
+      properties:
+        rank:
+          type: string
+          minLength: 1
+          maxLength: 64
     UpdateIssueMetadataRequest:
       type: object
       required: [issue_type]

@@ -31,6 +31,10 @@ type updateCommentRequest struct {
 	Body string `json:"body" validate:"required,min=1,max=5000"`
 }
 
+type updateRankRequest struct {
+	Rank string `json:"rank" validate:"required,max=64"`
+}
+
 type commentResponse struct {
 	ID        string     `json:"id"`
 	IssueID   string     `json:"issue_id"`

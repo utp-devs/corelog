@@ -5,6 +5,7 @@ import { Link, useNavigate } from 'react-router-dom'
 
 import type { Ticket, TicketPriority, TicketStatus } from '@/core/tickets/domain/ticket'
 import { useTickets } from './hooks/useTickets'
+import { useTicketsStore } from '@/adapters/in/state/tickets.store'
 import { TicketList } from './TicketList'
 import { PageHeader } from '@/shared/ui/PageHeader'
 import styles from './TicketsListPage.module.css'
@@ -30,6 +31,7 @@ export function TicketsListPage() {
 
   const { tickets, isLoading } = useTickets({ status: statusFilter, priority: priorityFilter })
   const [search, setSearch] = useState('')
+  const updateRank = useTicketsStore((state) => state.updateRank)
 
   const filteredTickets = useMemo(() => {
    const term = search.trim().toLowerCase()
@@ -42,6 +44,31 @@ export function TicketsListPage() {
  }, [tickets, search])
 
   const handleSelect = (ticket: Ticket) => navigate(`/issues/${ticket.id}`)
+
+  const orderedTickets = useMemo(
+    () => [...filteredTickets].sort((a, b) => a.rank.localeCompare(b.rank)),
+    [filteredTickets],
+  )
+
+  const handleMove = async (ticket: Ticket, direction: -1 | 1) => {
+    const currentIndex = orderedTickets.findIndex((item) => item.id === ticket.id)
+    const targetIndex = currentIndex + direction
+    if (currentIndex < 0 || targetIndex < 0 || targetIndex >= orderedTickets.length) return
+
+    await Promise.all(
+      orderedTickets.map((item, index) =>
+        updateRank(item.id, index.toString().padStart(8, '0')),
+      ),
+    )
+
+    const currentRank = currentIndex.toString().padStart(8, '0')
+    const targetRank = targetIndex.toString().padStart(8, '0')
+
+    await Promise.all([
+      updateRank(ticket.id, targetRank),
+      updateRank(orderedTickets[targetIndex].id, currentRank),
+    ])
+  }
 
   return (
     <div>
@@ -81,9 +108,11 @@ export function TicketsListPage() {
       />
 
       <TicketList
-         tickets={filteredTickets}
+         tickets={orderedTickets}
          isLoading={isLoading}
          onSelect={handleSelect}
+         onMoveUp={(ticket) => void handleMove(ticket, -1)}
+         onMoveDown={(ticket) => void handleMove(ticket, 1)}
          emptyText={search.trim() ? `Ninguna incidencia coincide con "${search.trim()}"` : undefined}
       />
 

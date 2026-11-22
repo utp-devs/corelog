@@ -65,4 +65,8 @@ export class TicketService {
   deleteLink(id: string, linkId: string) {
     return this.repository.deleteLink(id, linkId)
   }
+
+  updateRank(id: string, rank: string): Promise<Ticket> {
+    return this.repository.updateRank(id, rank)
+  }
 }

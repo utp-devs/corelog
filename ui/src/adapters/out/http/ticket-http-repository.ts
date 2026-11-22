@@ -205,4 +205,9 @@ export class TicketHttpRepository implements TicketRepositoryPort {
   async deleteLink(id: string, linkId: string): Promise<void> {
     await apiClient.delete(`/issues/${id}/links/${linkId}`)
   }
+
+  async updateRank(id: string, rank: string): Promise<Ticket> {
+    const { data } = await apiClient.patch<{ data: TicketDto }>(`/issues/${id}/rank`, { rank })
+    return toTicket(data.data)
+  }
 }

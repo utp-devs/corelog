@@ -55,4 +55,5 @@ type Service interface {
 	ListIssueLinks(ctx context.Context, issueID uuid.UUID) ([]*domain.IssueLink, error)
 	CreateIssueLink(ctx context.Context, sourceIssueID, targetIssueID, createdBy uuid.UUID, kind domain.IssueLinkKind) (*domain.IssueLink, error)
 	DeleteIssueLink(ctx context.Context, linkID uuid.UUID) error
+	UpdateRank(ctx context.Context, id uuid.UUID, rank string) (*domain.Ticket, error)
 }

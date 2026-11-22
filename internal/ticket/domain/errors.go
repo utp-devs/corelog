@@ -8,6 +8,7 @@ var (
 	ErrInvalidPriority    = apperror.New(apperror.KindValidation, "priority is invalid")
 	ErrInvalidStatus      = apperror.New(apperror.KindValidation, "status is invalid")
 	ErrInvalidRequester   = apperror.New(apperror.KindValidation, "requester is required")
+	ErrInvalidRank        = apperror.New(apperror.KindValidation, "issue rank is invalid")
 	ErrInvalidIssueType   = apperror.New(apperror.KindValidation, "issue type is invalid")
 	ErrInvalidStoryPoints = apperror.New(apperror.KindValidation, "story points are invalid")
 

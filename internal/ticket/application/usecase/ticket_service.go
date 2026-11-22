@@ -249,3 +249,17 @@ func (s *TicketService) DeleteIssueLink(ctx context.Context, linkID uuid.UUID) e
 	}
 	return s.issueLinks.Delete(ctx, linkID)
 }
+
+func (s *TicketService) UpdateRank(ctx context.Context, id uuid.UUID, rank string) (*domain.Ticket, error) {
+	ticket, err := s.repo.FindByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	if err := ticket.UpdateRank(rank); err != nil {
+		return nil, err
+	}
+	if err := s.repo.Update(ctx, ticket); err != nil {
+		return nil, err
+	}
+	return ticket, nil
+}

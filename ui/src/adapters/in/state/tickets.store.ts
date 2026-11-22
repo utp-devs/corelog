@@ -39,6 +39,7 @@ interface TicketsState {
   fetchLinks: (id: string) => Promise<void>
   createLink: (id: string, targetIssueId: string, kind: IssueLinkKind) => Promise<void>
   deleteLink: (id: string, linkId: string) => Promise<void>
+  updateRank: (id: string, rank: string) => Promise<void>
 }
 
 export const useTicketsStore = create<TicketsState>((set, get) => ({
@@ -121,6 +122,11 @@ export const useTicketsStore = create<TicketsState>((set, get) => ({
   deleteLink: async (id, linkId) => {
     await ticketService.deleteLink(id, linkId)
     set({ links: get().links.filter((link) => link.id !== linkId) })
+  },
+
+  updateRank: async (id, rank) => {
+    const updated = await ticketService.updateRank(id, rank)
+    applyUpdate(set, get, updated)
   },
 }))
 

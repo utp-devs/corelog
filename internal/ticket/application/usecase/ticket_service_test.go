@@ -228,6 +228,28 @@ func TestTicketService_UpdateStatus(t *testing.T) {
 	})
 }
 
+func TestTicketService_UpdateRank(t *testing.T) {
+	ctx := context.Background()
+	repo := newFakeTicketRepo()
+	dir := newFakeUserDirectory()
+	svc := NewTicketService(repo, dir)
+
+	ticket, _ := svc.Create(ctx, port.CreateInput{
+		Title:       "Ranked issue",
+		Description: "Desc",
+		Priority:    domain.PriorityMedium,
+		RequesterID: uuid.New(),
+	})
+
+	updated, err := svc.UpdateRank(ctx, ticket.ID, "00000001")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if updated.Rank != "00000001" {
+		t.Fatalf("got rank %q, want %q", updated.Rank, "00000001")
+	}
+}
+
 type fakeWorkflowRepo struct {
 	allowed bool
 }

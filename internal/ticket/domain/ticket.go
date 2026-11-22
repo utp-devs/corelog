@@ -1,6 +1,7 @@
 package domain
 
 import (
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -119,4 +120,14 @@ func (t *Ticket) AssignTo(assigneeID uuid.UUID) error {
 
 func (t *Ticket) IsClosed() bool {
 	return t.Status == StatusClosed
+}
+
+func (t *Ticket) UpdateRank(rank string) error {
+	rank = strings.TrimSpace(rank)
+	if rank == "" || len(rank) > 64 {
+		return ErrInvalidRank
+	}
+	t.Rank = rank
+	t.UpdatedAt = time.Now().UTC()
+	return nil
 }
