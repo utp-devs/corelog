@@ -501,6 +501,7 @@ paths:
     get:
       tags: [projects]
       summary: Get the default board for a project
+      description: Incluye can_manage_board, true si el actor puede editar el tablero y sus columnas (lead o administrador global).
       operationId: getProjectBoard
       security:
         - bearerAuth: []
@@ -836,6 +837,70 @@ paths:
                     $ref: '#/components/schemas/PageMeta'
         '401':
           $ref: '#/components/responses/Unauthorized'
+  /backlog:
+    get:
+      tags: [tickets]
+      operationId: listBacklog
+      summary: Backlog de un proyecto ordenado por rank
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: project_id
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Incidencias en orden de backlog
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Sin permiso para ver el proyecto
+  /backlog/{issue_id}:
+    put:
+      tags: [tickets]
+      operationId: moveInBacklog
+      summary: Colocar una incidencia en una posicion del backlog
+      description: Requiere permiso de mover tarjetas (lead o contributor). Renumera el rank de las incidencias del proyecto con el orden resultante y devuelve el backlog.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: issue_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: project_id
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [position]
+              properties:
+                position:
+                  type: integer
+                  minimum: 0
+      responses:
+        '200':
+          description: Backlog actualizado
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Sin permiso para mover incidencias del proyecto
+        '404':
+          description: Incidencia no encontrada en el proyecto
+        '422':
+          $ref: '#/components/responses/ValidationError'
   /workflows:
     get:
       tags: [tickets]
