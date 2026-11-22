@@ -22,6 +22,6 @@ export async function login(page: Page): Promise<void> {
   await page.goto('/login')
   await page.locator('input[type="email"]').fill(credentials.email)
   await page.locator('input[type="password"]').fill(credentials.password)
-  await page.getByRole('button', { name: 'Iniciar sesion' }).click()
+  await page.getByRole('button', { name: 'Iniciar sesión' }).click()
   await expect(page).toHaveURL(/\/issues/)
 }
