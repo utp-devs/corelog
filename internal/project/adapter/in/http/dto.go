@@ -3,8 +3,6 @@ package http
 import (
 	"time"
 
-	"github.com/google/uuid"
-
 	"github.com/jhonsferg/corelog/internal/project/application/port"
 	"github.com/jhonsferg/corelog/internal/project/domain"
 )
@@ -144,8 +142,4 @@ func toComponentResponses(components []domain.Component) []componentResponse {
 		out = append(out, toComponentResponse(component))
 	}
 	return out
-}
-
-func parseProjectID(value string) (uuid.UUID, error) {
-	return uuid.Parse(value)
 }

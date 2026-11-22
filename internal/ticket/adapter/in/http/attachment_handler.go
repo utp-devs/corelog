@@ -75,14 +75,14 @@ func (h *Handler) UploadAttachment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if r.MultipartForm != nil {
-		defer r.MultipartForm.RemoveAll()
+		defer func() { _ = r.MultipartForm.RemoveAll() }()
 	}
 	f, header, err := r.FormFile("file")
 	if err != nil {
 		httpresponse.Error(w, apperror.New(apperror.KindValidation, "file is required"))
 		return
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	if header.Size < 1 || header.Size > domain.MaxAttachmentSize {
 		httpresponse.Error(w, domain.ErrInvalidAttachment)
 		return
@@ -163,7 +163,7 @@ func (h *Handler) DownloadAttachment(w http.ResponseWriter, r *http.Request) {
 		httpresponse.Error(w, apperror.Wrap(apperror.KindInternal, "failed to open attachment", err))
 		return
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 	w.Header().Set("Content-Type", attachment.ContentType)
 	w.Header().Set("Content-Length", fmt.Sprintf("%d", attachment.Size))
 	w.Header().Set("Content-Disposition", mime.FormatMediaType("attachment", map[string]string{"filename": attachment.FileName}))

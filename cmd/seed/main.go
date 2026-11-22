@@ -164,10 +164,11 @@ func runSeed() error {
 		if t.status != ticketdomain.StatusOpen {
 			if err := ticket.ChangeStatus(t.status); err != nil {
 				// If status is resolved/closed, transition through in_progress first if needed
-				if t.status == ticketdomain.StatusResolved {
+				switch t.status {
+				case ticketdomain.StatusResolved:
 					_ = ticket.ChangeStatus(ticketdomain.StatusInProgress)
 					_ = ticket.ChangeStatus(ticketdomain.StatusResolved)
-				} else if t.status == ticketdomain.StatusClosed {
+				case ticketdomain.StatusClosed:
 					_ = ticket.ChangeStatus(ticketdomain.StatusClosed)
 				}
 			}
