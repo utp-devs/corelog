@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useCallback, useEffect } from 'react'
 
 import type { IssueType, TicketPriority, TicketStatus } from '@/core/tickets/domain/ticket'
 import { useTicketsStore } from '@/adapters/in/state/tickets.store'
@@ -31,18 +31,20 @@ export function useTickets(filter: UseTicketsFilter) {
   const error = useTicketsStore((s) => s.error)
   const fetchTickets = useTicketsStore((s) => s.fetchTickets)
 
-  useEffect(() => {
-    fetchTickets({
-      status: statusFilter,
-      priority: priorityFilter,
-      query,
-      issueType,
-      dueFrom,
-      dueTo,
-      page,
-      pageSize,
-    })
-  }, [fetchTickets, statusFilter, priorityFilter, query, issueType, dueFrom, dueTo, page, pageSize])
+  const load = useCallback(() => fetchTickets({
+    status: statusFilter,
+    priority: priorityFilter,
+    query,
+    issueType,
+    dueFrom,
+    dueTo,
+    page,
+    pageSize,
+  }), [fetchTickets, statusFilter, priorityFilter, query, issueType, dueFrom, dueTo, page, pageSize])
 
-  return { tickets, total, isLoading: status === 'loading', error }
+  useEffect(() => {
+    void load()
+  }, [load])
+
+  return { tickets, total, isLoading: status === 'loading', error, refetch: load }
 }

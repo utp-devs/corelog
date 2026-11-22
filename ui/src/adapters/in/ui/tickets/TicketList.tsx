@@ -1,8 +1,11 @@
 import { Button, Space, Table } from 'antd'
 import { DownOutlined, UpOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
+import dayjs from 'dayjs'
 
-import type { Ticket, TicketPriority, TicketStatus } from '@/core/tickets/domain/ticket'
+import type { Ticket } from '@/core/tickets/domain/ticket'
+import { EmptyState } from '@/shared/ui/EmptyState'
+import { IssueTypeIcon } from '@/shared/ui/IssueTypeIcon'
 import { PriorityTag } from '@/shared/ui/PriorityTag'
 import { StatusTag } from '@/shared/ui/StatusTag'
 import styles from './TicketList.module.css'
@@ -16,26 +19,30 @@ interface TicketListProps {
   emptyText?: string
 }
 
-export function TicketList({ tickets, isLoading, onSelect, onMoveUp, onMoveDown, emptyText = 'Aun no hay incidencias' }: TicketListProps) {
+export function TicketList({ tickets, isLoading, onSelect, onMoveUp, onMoveDown, emptyText = 'Aún no hay incidencias' }: TicketListProps) {
   const columns: ColumnsType<Ticket> = [
-    { title: 'Titulo', dataIndex: 'title', key: 'title' },
+    {
+      title: 'Tipo',
+      key: 'issueType',
+      width: 72,
+      render: (_, ticket) => <IssueTypeIcon type={ticket.issueType} />,
+    },
+    { title: 'Título', dataIndex: 'title', key: 'title' },
     {
       title: 'Estado',
-      dataIndex: 'status',
       key: 'status',
-      render: (value: TicketStatus) => <StatusTag status={value} />,
+      render: (_, ticket) => <StatusTag status={ticket.status} />,
     },
     {
       title: 'Prioridad',
-      dataIndex: 'priority',
       key: 'priority',
-      render: (value: TicketPriority) => <PriorityTag priority={value} />,
+      render: (_, ticket) => <PriorityTag priority={ticket.priority} />,
     },
     {
       title: 'Creado',
       dataIndex: 'createdAt',
       key: 'createdAt',
-      render: (value: string) => new Date(value).toLocaleString(),
+      render: (value: string) => dayjs(value).format('DD/MM/YYYY HH:mm'),
     },
     {
       title: 'Orden',
@@ -57,7 +64,8 @@ export function TicketList({ tickets, isLoading, onSelect, onMoveUp, onMoveDown,
       columns={columns}
       onRow={(record) => ({ onClick: () => onSelect(record) })}
       rowClassName={() => styles.row}
-      locale={{ emptyText: <div className={styles.empty}>{emptyText}</div> }}
+      pagination={false}
+      locale={{ emptyText: <EmptyState title={emptyText} /> }}
     />
   )
 }

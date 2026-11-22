@@ -1,18 +1,22 @@
 import { PlusOutlined } from '@ant-design/icons'
 import { Alert, Button, DatePicker, Input, Modal, Pagination, Select, Typography, message as antdMessage } from 'antd'
-import type { IssueType } from '@/core/tickets/domain/ticket'
 import dayjs from 'dayjs'
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 
-import type { Ticket, TicketPriority, TicketStatus } from '@/core/tickets/domain/ticket'
-import type { SavedFilter, SavedFilterCriteria } from '@/core/tickets/domain/saved-filter'
 import { SavedFilterHttpRepository } from '@/adapters/out/http/saved-filter-http-repository'
-import { useTickets } from './hooks/useTickets'
 import { useTicketsStore } from '@/adapters/in/state/tickets.store'
-import { TicketList } from './TicketList'
+import type { IssueType, Ticket, TicketPriority, TicketStatus } from '@/core/tickets/domain/ticket'
+import type { SavedFilter, SavedFilterCriteria } from '@/core/tickets/domain/saved-filter'
+import { ErrorState } from '@/shared/ui/ErrorState'
+import { FilterBar } from '@/shared/ui/FilterBar'
+import { LoadingSkeleton } from '@/shared/ui/LoadingSkeleton'
 import { PageHeader } from '@/shared/ui/PageHeader'
+import { useTickets } from './hooks/useTickets'
+import { TicketList } from './TicketList'
 import styles from './TicketsListPage.module.css'
+
+const PAGE_SIZE = 20
 
 const statusOptions: { value: TicketStatus; label: string }[] = [
   { value: 'open', label: 'Abierto' },
@@ -25,7 +29,15 @@ const priorityOptions: { value: TicketPriority; label: string }[] = [
   { value: 'low', label: 'Baja' },
   { value: 'medium', label: 'Media' },
   { value: 'high', label: 'Alta' },
-  { value: 'critical', label: 'Critica' },
+  { value: 'critical', label: 'Crítica' },
+]
+
+const issueTypeOptions: { value: IssueType; label: string }[] = [
+  { value: 'task', label: 'Tarea' },
+  { value: 'bug', label: 'Error' },
+  { value: 'story', label: 'Historia' },
+  { value: 'epic', label: 'Épica' },
+  { value: 'subtask', label: 'Subtarea' },
 ]
 
 const savedFilterRepository = new SavedFilterHttpRepository()
@@ -56,7 +68,7 @@ export function TicketsListPage() {
     return () => { active = false }
   }, [])
 
-  const { tickets, isLoading } = useTickets({
+  const { tickets, total, isLoading, error, refetch } = useTickets({
     status: statusFilter,
     priority: priorityFilter,
     issueType: issueTypeFilter,
@@ -64,9 +76,13 @@ export function TicketsListPage() {
     dueFrom,
     dueTo,
     page,
-    pageSize: 20,
+    pageSize: PAGE_SIZE,
   })
   const updateRank = useTicketsStore((state) => state.updateRank)
+
+  const hasActiveFilters = Boolean(
+    search.trim() || statusFilter || priorityFilter || issueTypeFilter || dueFrom || dueTo,
+  )
 
   const handleSelect = (ticket: Ticket) => navigate(`/issues/${ticket.id}`)
 
@@ -88,6 +104,17 @@ export function TicketsListPage() {
     setSearch(criteria?.query ?? '')
     setDueFrom(criteria?.dueFrom)
     setDueTo(criteria?.dueTo)
+    setPage(1)
+  }
+
+  const clearFilters = () => {
+    setSearch('')
+    setStatusFilter(undefined)
+    setPriorityFilter(undefined)
+    setIssueTypeFilter(undefined)
+    setDueFrom(undefined)
+    setDueTo(undefined)
+    setSelectedSavedFilter(undefined)
     setPage(1)
   }
 
@@ -144,6 +171,8 @@ export function TicketsListPage() {
     ])
   }
 
+  const showingSkeleton = isLoading && tickets.length === 0
+
   return (
     <div>
       {contextHolder}
@@ -157,7 +186,7 @@ export function TicketsListPage() {
         }
       />
 
-      <div className={styles.filters}>
+      <div className={styles.savedRow}>
         <Select
           allowClear
           placeholder="Cargar filtro guardado"
@@ -168,77 +197,62 @@ export function TicketsListPage() {
         />
         <Button onClick={() => setSaveModalOpen(true)}>Guardar filtro actual</Button>
         <Button danger disabled={!selectedSavedFilter} onClick={() => void deleteSelectedFilter()}>Eliminar filtro</Button>
-        <Select
-          allowClear
-          placeholder="Filtrar por estado"
-          className={styles.filterSelect}
-          options={statusOptions}
-          value={statusFilter}
-          onChange={setStatusFilter}
-        />
-        <Select
-          allowClear
-          placeholder="Filtrar por prioridad"
-          className={styles.filterSelect}
-          options={priorityOptions}
-          value={priorityFilter}
-          onChange={setPriorityFilter}
-        />
-        <Select
-          allowClear
-          placeholder="Filtrar por tipo"
-          className={styles.filterSelect}
-          options={[
-            { value: 'task', label: 'Tarea' },
-            { value: 'bug', label: 'Error' },
-            { value: 'story', label: 'Historia' },
-            { value: 'epic', label: 'Epic' },
-            { value: 'subtask', label: 'Subtarea' },
-          ]}
-          value={issueTypeFilter}
-          onChange={setIssueTypeFilter}
-        />
         <DatePicker
           placeholder="Fecha desde"
           value={dueFrom ? dayjs(dueFrom) : null}
-          onChange={(value) => setDueFrom(value?.startOf('day').toISOString())}
+          onChange={(value) => { setDueFrom(value?.startOf('day').toISOString()); setPage(1) }}
         />
         <DatePicker
           placeholder="Fecha hasta"
           value={dueTo ? dayjs(dueTo) : null}
-          onChange={(value) => setDueTo(value?.endOf('day').toISOString())}
+          onChange={(value) => { setDueTo(value?.endOf('day').toISOString()); setPage(1) }}
         />
       </div>
+
       {savedFilterError && <Alert type="error" showIcon message={savedFilterError} closable onClose={() => setSavedFilterError(undefined)} />}
-      <Input.Search
-         placeholder="Buscar incidencia por título o descripción"
-         allowClear
-         value={search}
-         onChange={(e) => setSearch(e.target.value)}
+
+      <FilterBar
+        search={{ value: search, onChange: (value) => { setSearch(value); setPage(1) }, placeholder: 'Buscar incidencia por título o descripción' }}
+        filters={[
+          { key: 'status', label: 'Filtrar por estado', options: statusOptions, value: statusFilter, onChange: (value) => { setStatusFilter(value as TicketStatus | undefined); setPage(1) } },
+          { key: 'priority', label: 'Filtrar por prioridad', options: priorityOptions, value: priorityFilter, onChange: (value) => { setPriorityFilter(value as TicketPriority | undefined); setPage(1) } },
+          { key: 'issueType', label: 'Filtrar por tipo', options: issueTypeOptions, value: issueTypeFilter, onChange: (value) => { setIssueTypeFilter(value as IssueType | undefined); setPage(1) } },
+        ]}
+        onClear={hasActiveFilters ? clearFilters : undefined}
       />
 
-      <TicketList
-         tickets={orderedTickets}
-         isLoading={isLoading}
-         onSelect={handleSelect}
-         onMoveUp={(ticket) => void handleMove(ticket, -1)}
-         onMoveDown={(ticket) => void handleMove(ticket, 1)}
-         emptyText={search.trim() ? `Ninguna incidencia coincide con "${search.trim()}"` : undefined}
-      />
+      {error ? (
+        <ErrorState message={error} onRetry={() => void refetch()} />
+      ) : showingSkeleton ? (
+        <LoadingSkeleton variant="table" rows={6} />
+      ) : (
+        <TicketList
+          tickets={orderedTickets}
+          isLoading={isLoading}
+          onSelect={handleSelect}
+          onMoveUp={(ticket) => void handleMove(ticket, -1)}
+          onMoveDown={(ticket) => void handleMove(ticket, 1)}
+          emptyText={hasActiveFilters ? 'Ninguna incidencia coincide con los filtros' : 'Aún no hay incidencias'}
+        />
+      )}
 
-      {tickets.length >= 20 && (
+      {!error && total > 0 && (
         <Pagination
           current={page}
-          pageSize={20}
-          total={tickets.length + (page - 1) * 20 + 20}
+          pageSize={PAGE_SIZE}
+          total={total}
+          showSizeChanger={false}
           onChange={setPage}
           className={styles.pagination}
         />
       )}
 
-      <Typography.Paragraph type="secondary" className={styles.hint}>
-        <Link to="/issues/new">Crear la primera incidencia</Link> si la lista esta vacia.
-      </Typography.Paragraph>
+      {!error && !isLoading && tickets.length === 0 && !hasActiveFilters && (
+        <Typography.Paragraph type="secondary" className={styles.hint}>
+          <Link to="/issues/new">Crear la primera incidencia</Link>
+        </Typography.Paragraph>
+      )}
+
       <Modal
         title="Guardar filtro"
         open={saveModalOpen}

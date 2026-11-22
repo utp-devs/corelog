@@ -5,9 +5,3 @@
 .row:hover td {
   background: var(--cl-bg-sunken);
 }
-
-.empty {
-  padding: 24px 0;
-  text-align: center;
-  color: var(--cl-text-subtle);
-}
