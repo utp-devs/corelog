@@ -5,7 +5,9 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/jhonsferg/corelog/internal/platform/apperror"
 	"github.com/jhonsferg/corelog/internal/platform/authtoken"
+	"github.com/jhonsferg/corelog/internal/platform/httpresponse"
 )
 
 func Authenticate(secret string) func(http.Handler) http.Handler {
@@ -14,13 +16,13 @@ func Authenticate(secret string) func(http.Handler) http.Handler {
 			header := r.Header.Get("Authorization")
 			token, ok := strings.CutPrefix(header, "Bearer ")
 			if !ok || token == "" {
-				http.Error(w, "missing bearer token", http.StatusUnauthorized)
+				httpresponse.Error(w, apperror.New(apperror.KindUnauthorized, "not authenticated"))
 				return
 			}
 
 			claims, err := authtoken.Parse(secret, token)
 			if err != nil {
-				http.Error(w, "invalid or expired token", http.StatusUnauthorized)
+				httpresponse.Error(w, apperror.New(apperror.KindUnauthorized, "not authenticated"))
 				return
 			}
 
@@ -36,7 +38,7 @@ func RequireRole(allowed ...string) func(http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			role, ok := RoleFromContext(r.Context())
 			if !ok {
-				http.Error(w, "forbidden", http.StatusForbidden)
+				httpresponse.Error(w, apperror.New(apperror.KindForbidden, "forbidden"))
 				return
 			}
 			for _, a := range allowed {
@@ -45,7 +47,7 @@ func RequireRole(allowed ...string) func(http.Handler) http.Handler {
 					return
 				}
 			}
-			http.Error(w, "forbidden", http.StatusForbidden)
+			httpresponse.Error(w, apperror.New(apperror.KindForbidden, "forbidden"))
 		})
 	}
 }
