@@ -40,16 +40,23 @@ func (s *ProjectService) Create(ctx context.Context, key, name, description stri
 	} else if !errors.Is(err, domain.ErrProjectNotFound) {
 		return nil, err
 	}
-	if err := s.repo.Save(ctx, project); err != nil {
-		return nil, err
-	}
-	if err := s.memberRepo.Add(ctx, port.Member{
+	lead := port.Member{
 		ProjectID: project.ID,
 		UserID:    leadID,
 		Role:      string(authorization.ProjectRoleLead),
 		CreatedAt: time.Now().UTC(),
-	}); err != nil {
-		return nil, err
+	}
+	if creator, ok := s.repo.(port.ProjectCreationRepository); ok {
+		if err := creator.CreateWithDefaults(ctx, project, lead); err != nil {
+			return nil, err
+		}
+	} else {
+		if err := s.repo.Save(ctx, project); err != nil {
+			return nil, err
+		}
+		if err := s.memberRepo.Add(ctx, lead); err != nil {
+			return nil, err
+		}
 	}
 	return project, nil
 }

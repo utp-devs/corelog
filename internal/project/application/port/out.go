@@ -18,6 +18,11 @@ type Repository interface {
 	Delete(ctx context.Context, id uuid.UUID) error
 }
 
+// ProjectCreationRepository persists a project and its required initial relations atomically.
+type ProjectCreationRepository interface {
+	CreateWithDefaults(ctx context.Context, project *domain.Project, lead Member) error
+}
+
 type Member struct {
 	ProjectID uuid.UUID
 	UserID    uuid.UUID

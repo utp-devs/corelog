@@ -125,7 +125,9 @@ Los adjuntos de issues se almacenan en `data/attachments` en desarrollo local. D
 
 Los miembros de un proyecto pueden seguir o dejar de seguir sus issues. Quien comenta y la persona asignada se agregan automáticamente a los seguidores. Cada usuario puede guardar filtros personales de estado, prioridad, tipo, fechas y texto para reutilizarlos en el listado.
 
-Las pruebas de integración de adjuntos, seguidores y filtros guardados usan PostgreSQL real y se activan con `CORELOG_TEST_DATABASE_URL`; crean y eliminan esquemas temporales aislados.
+Cada proyecto recibe un tablero predeterminado con columnas para abierto, en progreso, resuelto y cerrado. La migración crea tableros iniciales para los proyectos existentes; la creación de nuevos proyectos guarda el proyecto, su líder, el tablero y sus columnas en una sola transacción.
+
+Las pruebas de integración de adjuntos, seguidores, filtros guardados y tableros usan PostgreSQL real y se activan con `CORELOG_TEST_DATABASE_URL`; crean y eliminan esquemas temporales aislados.
 
 ### Equipos y asignación
 
