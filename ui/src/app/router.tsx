@@ -20,6 +20,7 @@ const ProjectsPage = lazy(() => import('@/adapters/in/ui/projects/ProjectsPage')
 const ProjectBoardPage = lazy(() => import('@/adapters/in/ui/projects/ProjectBoardPage').then(m => ({ default: m.ProjectBoardPage })))
 const ProjectBacklogPage = lazy(() => import('@/adapters/in/ui/projects/ProjectBacklogPage').then(m => ({ default: m.ProjectBacklogPage })))
 const ProjectSprintsPage = lazy(() => import('@/adapters/in/ui/projects/ProjectSprintsPage').then(m => ({ default: m.ProjectSprintsPage })))
+const ProjectCalendarPage = lazy(() => import('@/adapters/in/ui/projects/ProjectCalendarPage').then(m => ({ default: m.ProjectCalendarPage })))
 
 function SuspenseWrapper({ children }: { children: ReactNode }) {
   return (
@@ -53,6 +54,7 @@ export const router = createBrowserRouter([
           { path: 'projects/:id/board', element: <SuspenseWrapper><ProjectBoardPage /></SuspenseWrapper> },
           { path: 'projects/:id/backlog', element: <SuspenseWrapper><ProjectBacklogPage /></SuspenseWrapper> },
           { path: 'projects/:id/sprints', element: <SuspenseWrapper><ProjectSprintsPage /></SuspenseWrapper> },
+          { path: 'projects/:id/calendar', element: <SuspenseWrapper><ProjectCalendarPage /></SuspenseWrapper> },
           {
             element: <AdminRoute />,
             children: [{ path: 'teams', element: <SuspenseWrapper><TeamsPage /></SuspenseWrapper> }],
