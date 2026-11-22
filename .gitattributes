@@ -1,0 +1,16 @@
+# Store and check out text files with LF line endings, whatever the local
+# core.autocrlf setting is. Keeps Windows checkouts from reintroducing CRLF.
+* text=auto eol=lf
+
+# Binary assets are never normalized or diffed as text.
+*.png binary
+*.ico binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.gz binary
+*.zip binary
