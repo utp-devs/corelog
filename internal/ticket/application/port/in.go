@@ -27,6 +27,16 @@ type UpdateMetadataInput struct {
 	StoryPoints *float64
 }
 
+type UpdateDetailsInput struct {
+	Title       string
+	Description string
+	Priority    domain.Priority
+	IssueType   domain.IssueType
+	ParentID    *uuid.UUID
+	DueDate     *time.Time
+	StoryPoints *float64
+}
+
 type CreateCommentInput struct {
 	IssueID  uuid.UUID
 	AuthorID uuid.UUID
@@ -53,6 +63,7 @@ type Service interface {
 	UpdateStatus(ctx context.Context, id uuid.UUID, status domain.Status, actorRole ...string) (*domain.Ticket, error)
 	Assign(ctx context.Context, id uuid.UUID, assignerID uuid.UUID, assigneeID uuid.UUID) (*domain.Ticket, error)
 	UpdateMetadata(ctx context.Context, id uuid.UUID, input UpdateMetadataInput) (*domain.Ticket, error)
+	UpdateDetails(ctx context.Context, id, actorID uuid.UUID, globalRole string, input UpdateDetailsInput) (*domain.Ticket, error)
 	ListComments(ctx context.Context, issueID uuid.UUID) ([]*domain.Comment, error)
 	CreateComment(ctx context.Context, in CreateCommentInput) (*domain.Comment, error)
 	UpdateComment(ctx context.Context, commentID, actorID uuid.UUID, body string) (*domain.Comment, error)

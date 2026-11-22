@@ -4,7 +4,7 @@ import dayjs from 'dayjs'
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 
-import { canTransitionTo, type IssueType, type TicketStatus } from '@/core/tickets/domain/ticket'
+import { canTransitionTo, type IssueType, type Ticket, type TicketPriority, type TicketStatus } from '@/core/tickets/domain/ticket'
 import { useTicketsStore } from '@/adapters/in/state/tickets.store'
 import { useTeammateSearch } from './hooks/useTeammateSearch'
 import { TicketBadge } from './TicketBadge'
@@ -12,6 +12,78 @@ import styles from './TicketDetailPage.module.css'
 import { PageHeader } from '@/shared/ui/PageHeader'
 
 const allStatuses: TicketStatus[] = ['open', 'in_progress', 'resolved', 'closed']
+
+type IssueEditorProps = {
+  ticket: Ticket
+  onSave: (details: {
+    title: string
+    description: string
+    priority: TicketPriority
+    issueType: IssueType
+    parentId?: string
+    dueDate?: string
+    storyPoints?: number
+  }) => Promise<void>
+}
+
+function IssueEditor({ ticket, onSave }: IssueEditorProps) {
+  const [title, setTitle] = useState(ticket.title)
+  const [description, setDescription] = useState(ticket.description)
+  const [priority, setPriority] = useState<TicketPriority>(ticket.priority)
+  const [issueType, setIssueType] = useState<IssueType>(ticket.issueType)
+  const [parentId, setParentId] = useState(ticket.parentId ?? '')
+  const [dueDate, setDueDate] = useState(ticket.dueDate ? dayjs(ticket.dueDate) : null)
+  const [storyPoints, setStoryPoints] = useState<number | null>(ticket.storyPoints)
+
+  return (
+    <Card title="Metadatos">
+      <Space direction="vertical" className={styles.editor}>
+        <Input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Titulo" />
+        <TextArea value={description} onChange={(event) => setDescription(event.target.value)} rows={4} placeholder="Descripcion" />
+        <Space wrap>
+          <Select<TicketPriority>
+            value={priority}
+            onChange={setPriority}
+            options={[
+              { value: 'low', label: 'Baja' },
+              { value: 'medium', label: 'Media' },
+              { value: 'high', label: 'Alta' },
+              { value: 'critical', label: 'Critica' },
+            ]}
+          />
+          <Select<IssueType>
+            value={issueType}
+            onChange={setIssueType}
+            options={[
+              { value: 'task', label: 'Tarea' },
+              { value: 'bug', label: 'Error' },
+              { value: 'story', label: 'Historia' },
+              { value: 'epic', label: 'Epic' },
+              { value: 'subtask', label: 'Subtarea' },
+            ]}
+          />
+          <Input value={parentId} onChange={(event) => setParentId(event.target.value)} placeholder="ID incidencia padre" style={{ width: 280 }} />
+          <DatePicker value={dueDate} onChange={(value) => setDueDate(value)} placeholder="Fecha limite" />
+          <InputNumber value={storyPoints} onChange={setStoryPoints} min={0} max={999} placeholder="Puntos" />
+          <Button
+            type="primary"
+            onClick={() => void onSave({
+              title,
+              description,
+              priority,
+              issueType,
+              parentId: parentId || undefined,
+              dueDate: dueDate?.toISOString(),
+              storyPoints: storyPoints ?? undefined,
+            })}
+          >
+            Guardar
+          </Button>
+        </Space>
+      </Space>
+    </Card>
+  )
+}
 
 export function TicketDetailPage() {
   const { id } = useParams<{ id: string }>()
@@ -23,7 +95,7 @@ export function TicketDetailPage() {
   const fetchTicket = useTicketsStore((s) => s.fetchTicket)
   const updateStatus = useTicketsStore((s) => s.updateStatus)
   const assign = useTicketsStore((s) => s.assign)
-  const updateMetadata = useTicketsStore((s) => s.updateMetadata)
+  const updateDetails = useTicketsStore((s) => s.updateDetails)
   const comments = useTicketsStore((s) => s.comments)
   const activities = useTicketsStore((s) => s.activities)
   const fetchComments = useTicketsStore((s) => s.fetchComments)
@@ -36,9 +108,6 @@ export function TicketDetailPage() {
   const deleteLink = useTicketsStore((s) => s.deleteLink)
 
   const [assigneeId, setAssigneeId] = useState('')
-  const [issueType, setIssueType] = useState<IssueType>(selected?.issueType ?? 'task')
-  const [dueDate, setDueDate] = useState(selected?.dueDate ? dayjs(selected.dueDate) : null)
-  const [storyPoints, setStoryPoints] = useState<number | null>(selected?.storyPoints ?? null)
   const [commentBody, setCommentBody] = useState('')
   const [linkTargetId, setLinkTargetId] = useState('')
   const [linkKind, setLinkKind] = useState<'blocks' | 'relates' | 'duplicates'>('relates')
@@ -158,6 +227,12 @@ export function TicketDetailPage() {
           <Descriptions.Item label="Prioridad">
             <TicketBadge kind="priority" value={selected.priority} />
           </Descriptions.Item>
+          <Descriptions.Item label="Tipo">{issueTypeLabel(selected.issueType)}</Descriptions.Item>
+          <Descriptions.Item label="Fecha limite">
+            {selected.dueDate ? dayjs(selected.dueDate).format('DD/MM/YYYY') : 'Sin fecha limite'}
+          </Descriptions.Item>
+          <Descriptions.Item label="Puntos de historia">{selected.storyPoints ?? 'Sin estimar'}</Descriptions.Item>
+          <Descriptions.Item label="Incidencia padre">{selected.parentId ?? 'Sin incidencia padre'}</Descriptions.Item>
           <Descriptions.Item label="Solicitante">{selected.requesterId}</Descriptions.Item>
           <Descriptions.Item label="Responsable">{selected.assigneeId ?? 'Sin asignar'}</Descriptions.Item>
           <Descriptions.Item label="Creado">{new Date(selected.createdAt).toLocaleString('es-ES')}</Descriptions.Item>
@@ -181,50 +256,18 @@ export function TicketDetailPage() {
         </Space>
       </Card>
 
-      <Card title="Metadatos">
-        <Space wrap>
-          <Select<IssueType>
-            value={issueType}
-            onChange={setIssueType}
-            options={[
-              { value: 'task', label: 'Tarea' },
-              { value: 'bug', label: 'Error' },
-              { value: 'story', label: 'Historia' },
-              { value: 'epic', label: 'Epic' },
-              { value: 'subtask', label: 'Subtarea' },
-            ]}
-          />
-          <DatePicker
-            value={dueDate}
-            onChange={(value) => setDueDate(value)}
-            placeholder="Fecha limite"
-          />
-          <InputNumber
-            value={storyPoints}
-            onChange={setStoryPoints}
-            min={0}
-            max={999}
-            placeholder="Puntos"
-          />
-          <Button
-            type="primary"
-            onClick={async () => {
-              try {
-                await updateMetadata(selected.id, {
-                  issueType,
-                  dueDate: dueDate?.toISOString(),
-                  storyPoints: storyPoints ?? undefined,
-                })
-                message.success('Metadatos actualizados')
-              } catch (error) {
-                message.error(error instanceof Error ? error.message : 'No se pudieron actualizar los metadatos')
-              }
-            }}
-          >
-            Guardar
-          </Button>
-        </Space>
-      </Card>
+      <IssueEditor
+        key={selected.id}
+        ticket={selected}
+        onSave={async (details) => {
+          try {
+            await updateDetails(selected.id, details)
+            message.success('Incidencia actualizada')
+          } catch (error) {
+            message.error(error instanceof Error ? error.message : 'No se pudo actualizar la incidencia')
+          }
+        }}
+      />
 
       <Card title="Asignar">
         <Space>
@@ -332,4 +375,15 @@ export function TicketDetailPage() {
       </Card>
     </div>
   )
+}
+
+function issueTypeLabel(issueType: IssueType): string {
+  const labels: Record<IssueType, string> = {
+    task: 'Tarea',
+    bug: 'Error',
+    story: 'Historia',
+    epic: 'Epic',
+    subtask: 'Subtarea',
+  }
+  return labels[issueType]
 }

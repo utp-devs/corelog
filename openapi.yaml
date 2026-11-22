@@ -989,6 +989,36 @@ paths:
           description: Issue link deleted
         '404':
           $ref: '#/components/responses/NotFound'
+  /issues/{id}/details:
+    parameters:
+      - $ref: '#/components/parameters/TicketId'
+    patch:
+      tags: [tickets]
+      summary: Update complete issue details
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateIssueDetailsRequest'
+      responses:
+        '200':
+          description: Issue details updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Ticket'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
   /issues/{id}/rank:
     parameters:
       - $ref: '#/components/parameters/TicketId'
@@ -1572,6 +1602,33 @@ components:
         assignee_id:
           type: string
           format: uuid
+    UpdateIssueDetailsRequest:
+      type: object
+      required: [title, description, priority, issue_type]
+      properties:
+        title:
+          type: string
+          minLength: 3
+          maxLength: 200
+        description:
+          type: string
+          minLength: 3
+        priority:
+          $ref: '#/components/schemas/TicketPriority'
+        issue_type:
+          $ref: '#/components/schemas/IssueType'
+        parent_id:
+          type: string
+          format: uuid
+          nullable: true
+        due_date:
+          type: string
+          format: date-time
+          nullable: true
+        story_points:
+          type: number
+          format: double
+          nullable: true
     UpdateIssueRankRequest:
       type: object
       required: [rank]

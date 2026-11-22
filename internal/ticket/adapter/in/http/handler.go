@@ -224,6 +224,43 @@ func (h *Handler) UpdateMetadata(w http.ResponseWriter, r *http.Request) {
 	httpresponse.JSON(w, http.StatusOK, toTicketResponse(ticket))
 }
 
+func (h *Handler) UpdateDetails(w http.ResponseWriter, r *http.Request) {
+	actorID, ok := appmw.UserIDFromContext(r.Context())
+	if !ok {
+		httpresponse.Error(w, apperror.New(apperror.KindUnauthorized, "not authenticated"))
+		return
+	}
+	globalRole, _ := appmw.RoleFromContext(r.Context())
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		httpresponse.Error(w, apperror.New(apperror.KindValidation, "invalid issue id"))
+		return
+	}
+	var req updateDetailsRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		httpresponse.Error(w, apperror.New(apperror.KindValidation, "invalid request body"))
+		return
+	}
+	if err := validation.Struct(req); err != nil {
+		httpresponse.Error(w, apperror.Wrap(apperror.KindValidation, "invalid request body", err))
+		return
+	}
+	ticket, err := h.service.UpdateDetails(r.Context(), id, actorID, globalRole, port.UpdateDetailsInput{
+		Title:       req.Title,
+		Description: req.Description,
+		Priority:    domain.Priority(req.Priority),
+		IssueType:   domain.IssueType(req.IssueType),
+		ParentID:    parseOptionalUUID(req.ParentID),
+		DueDate:     req.DueDate,
+		StoryPoints: req.StoryPoints,
+	})
+	if err != nil {
+		httpresponse.Error(w, err)
+		return
+	}
+	httpresponse.JSON(w, http.StatusOK, toTicketResponse(ticket))
+}
+
 func parseOptionalUUID(value string) *uuid.UUID {
 	if value == "" {
 		return nil

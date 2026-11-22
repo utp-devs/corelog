@@ -23,6 +23,16 @@ type updateMetadataRequest struct {
 	StoryPoints *float64   `json:"story_points"`
 }
 
+type updateDetailsRequest struct {
+	Title       string     `json:"title" validate:"required,min=3,max=200"`
+	Description string     `json:"description" validate:"required,min=3"`
+	Priority    string     `json:"priority" validate:"required,oneof=low medium high critical"`
+	IssueType   string     `json:"issue_type" validate:"required,oneof=task bug story epic subtask"`
+	ParentID    string     `json:"parent_id" validate:"omitempty,uuid4"`
+	DueDate     *time.Time `json:"due_date"`
+	StoryPoints *float64   `json:"story_points"`
+}
+
 type createCommentRequest struct {
 	Body string `json:"body" validate:"required,min=1,max=5000"`
 }

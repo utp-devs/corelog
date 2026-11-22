@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/jhonsferg/corelog/internal/platform/apperror"
 	"github.com/jhonsferg/corelog/internal/ticket/application/port"
 	"github.com/jhonsferg/corelog/internal/ticket/domain"
 )
@@ -60,6 +61,14 @@ func (r *fakeTicketRepo) Update(_ context.Context, t *domain.Ticket) error {
 
 type fakeUserDirectory struct {
 	userTeams map[uuid.UUID]*uuid.UUID
+}
+
+type fakeProjectRoleResolver struct {
+	role *string
+}
+
+func (r fakeProjectRoleResolver) FindRole(context.Context, uuid.UUID, uuid.UUID) (*string, error) {
+	return r.role, nil
 }
 
 func newFakeUserDirectory() *fakeUserDirectory {
@@ -248,6 +257,62 @@ func TestTicketService_UpdateRank(t *testing.T) {
 	if updated.Rank != "00000001" {
 		t.Fatalf("got rank %q, want %q", updated.Rank, "00000001")
 	}
+}
+
+func TestTicketService_UpdateDetailsAuthorization(t *testing.T) {
+	ctx := context.Background()
+	repo := newFakeTicketRepo()
+	dir := newFakeUserDirectory()
+	requesterID := uuid.New()
+	ticket, err := domain.NewTicket("Issue", "Description", domain.PriorityLow, requesterID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ticket.ProjectID = uuid.New()
+	if err := repo.Save(ctx, ticket); err != nil {
+		t.Fatal(err)
+	}
+	input := port.UpdateDetailsInput{
+		Title: "Updated issue", Description: "Updated description", Priority: domain.PriorityHigh,
+		IssueType: domain.IssueTypeBug,
+	}
+
+	t.Run("project contributor can edit", func(t *testing.T) {
+		role := "contributor"
+		svc := NewTicketService(repo, dir, fakeProjectRoleResolver{role: &role})
+		updated, err := svc.UpdateDetails(ctx, ticket.ID, uuid.New(), "agent", input)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if updated.Title != input.Title {
+			t.Fatalf("got title %q, want %q", updated.Title, input.Title)
+		}
+	})
+
+	t.Run("project viewer cannot edit", func(t *testing.T) {
+		role := "viewer"
+		svc := NewTicketService(repo, dir, fakeProjectRoleResolver{role: &role})
+		_, err := svc.UpdateDetails(ctx, ticket.ID, uuid.New(), "agent", input)
+		if apperror.KindOf(err) != apperror.KindForbidden {
+			t.Fatalf("got error kind %q, want forbidden", apperror.KindOf(err))
+		}
+	})
+
+	t.Run("non-member cannot edit", func(t *testing.T) {
+		svc := NewTicketService(repo, dir, fakeProjectRoleResolver{})
+		_, err := svc.UpdateDetails(ctx, ticket.ID, uuid.New(), "agent", input)
+		if apperror.KindOf(err) != apperror.KindForbidden {
+			t.Fatalf("got error kind %q, want forbidden", apperror.KindOf(err))
+		}
+	})
+
+	t.Run("admin can edit without project membership", func(t *testing.T) {
+		svc := NewTicketService(repo, dir, fakeProjectRoleResolver{})
+		_, err := svc.UpdateDetails(ctx, ticket.ID, uuid.New(), "admin", input)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+	})
 }
 
 type fakeWorkflowRepo struct {

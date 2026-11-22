@@ -38,3 +38,7 @@ type IssueLinkRepository interface {
 type WorkflowRepository interface {
 	CanTransition(ctx context.Context, projectID uuid.UUID, fromStatus, toStatus domain.Status, actorRole string) (bool, error)
 }
+
+type ProjectRoleResolver interface {
+	FindRole(ctx context.Context, projectID, userID uuid.UUID) (*string, error)
+}

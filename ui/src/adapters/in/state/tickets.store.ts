@@ -5,6 +5,7 @@ import type {
   CreateTicketInput,
   ListTicketsFilter,
   UpdateIssueMetadataInput,
+  UpdateIssueDetailsInput,
   IssueComment,
   IssueActivity,
   IssueLink,
@@ -32,6 +33,7 @@ interface TicketsState {
   updateStatus: (id: string, status: TicketStatus) => Promise<void>
   assign: (id: string, assigneeId: string) => Promise<void>
   updateMetadata: (id: string, input: UpdateIssueMetadataInput) => Promise<void>
+  updateDetails: (id: string, input: UpdateIssueDetailsInput) => Promise<void>
   fetchComments: (id: string) => Promise<void>
   createComment: (id: string, body: string) => Promise<void>
   deleteComment: (issueId: string, commentId: string) => Promise<void>
@@ -89,6 +91,11 @@ export const useTicketsStore = create<TicketsState>((set, get) => ({
 
   updateMetadata: async (id, input) => {
     const updated = await ticketService.updateMetadata(id, input)
+    applyUpdate(set, get, updated)
+  },
+
+  updateDetails: async (id, input) => {
+    const updated = await ticketService.updateDetails(id, input)
     applyUpdate(set, get, updated)
   },
 

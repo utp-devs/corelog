@@ -17,6 +17,7 @@ func (h *Handler) RegisterRoutes(r chi.Router) {
 		r.Patch("/{id}/assign", h.Assign)
 		r.Patch("/{id}/metadata", h.UpdateMetadata)
 		r.Patch("/{id}/rank", h.UpdateRank)
+		r.Patch("/{id}/details", h.UpdateDetails)
 		r.Get("/{id}/comments", h.ListComments)
 		r.Post("/{id}/comments", h.CreateComment)
 		r.Patch("/{id}/comments/{comment_id}", h.UpdateComment)

@@ -7,6 +7,8 @@ import (
 
 	"github.com/google/uuid"
 
+	authorization "github.com/jhonsferg/corelog/internal/authorization/domain"
+	"github.com/jhonsferg/corelog/internal/platform/apperror"
 	"github.com/jhonsferg/corelog/internal/ticket/application/port"
 	"github.com/jhonsferg/corelog/internal/ticket/domain"
 )
@@ -17,12 +19,15 @@ type TicketService struct {
 	collaboration port.CollaborationRepository
 	issueLinks    port.IssueLinkRepository
 	workflows     port.WorkflowRepository
+	projectRoles  port.ProjectRoleResolver
+	policy        authorization.Policy
 }
 
 func NewTicketService(repo port.Repository, directory port.UserDirectory, repositories ...any) *TicketService {
 	var collaboration port.CollaborationRepository
 	var issueLinks port.IssueLinkRepository
 	var workflows port.WorkflowRepository
+	var projectRoles port.ProjectRoleResolver
 	for _, repository := range repositories {
 		switch typed := repository.(type) {
 		case port.CollaborationRepository:
@@ -31,9 +36,11 @@ func NewTicketService(repo port.Repository, directory port.UserDirectory, reposi
 			issueLinks = typed
 		case port.WorkflowRepository:
 			workflows = typed
+		case port.ProjectRoleResolver:
+			projectRoles = typed
 		}
 	}
-	return &TicketService{repo: repo, directory: directory, collaboration: collaboration, issueLinks: issueLinks, workflows: workflows}
+	return &TicketService{repo: repo, directory: directory, collaboration: collaboration, issueLinks: issueLinks, workflows: workflows, projectRoles: projectRoles}
 }
 
 var _ port.Service = (*TicketService)(nil)
@@ -136,6 +143,37 @@ func (s *TicketService) Assign(ctx context.Context, id uuid.UUID, assignerID uui
 func (s *TicketService) UpdateMetadata(ctx context.Context, id uuid.UUID, input port.UpdateMetadataInput) (*domain.Ticket, error) {
 	ticket, err := s.repo.FindByID(ctx, id)
 	if err != nil {
+		return nil, err
+	}
+	if err := ticket.UpdateMetadata(input.IssueType, input.ParentID, input.DueDate, input.StoryPoints); err != nil {
+		return nil, err
+	}
+	if err := s.repo.Update(ctx, ticket); err != nil {
+		return nil, err
+	}
+	return ticket, nil
+}
+
+func (s *TicketService) UpdateDetails(ctx context.Context, id, actorID uuid.UUID, globalRole string, input port.UpdateDetailsInput) (*domain.Ticket, error) {
+	ticket, err := s.repo.FindByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	var projectRole *authorization.ProjectRole
+	if s.projectRoles != nil {
+		role, err := s.projectRoles.FindRole(ctx, ticket.ProjectID, actorID)
+		if err != nil {
+			return nil, err
+		}
+		if role != nil {
+			value := authorization.ProjectRole(*role)
+			projectRole = &value
+		}
+	}
+	if !s.policy.CanEditIssue(globalRole, projectRole) {
+		return nil, apperror.New(apperror.KindForbidden, "forbidden issue operation")
+	}
+	if err := ticket.UpdateDetails(input.Title, input.Description, input.Priority); err != nil {
 		return nil, err
 	}
 	if err := ticket.UpdateMetadata(input.IssueType, input.ParentID, input.DueDate, input.StoryPoints); err != nil {

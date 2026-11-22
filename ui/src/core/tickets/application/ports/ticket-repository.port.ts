@@ -17,6 +17,12 @@ export interface UpdateIssueMetadataInput {
   storyPoints?: number
 }
 
+export interface UpdateIssueDetailsInput extends UpdateIssueMetadataInput {
+  title: string
+  description: string
+  priority: TicketPriority
+}
+
 export interface ListTicketsFilter {
   status?: TicketStatus
   priority?: TicketPriority
@@ -37,6 +43,7 @@ export interface TicketRepositoryPort {
   updateStatus(id: string, status: TicketStatus): Promise<Ticket>
   assign(id: string, assigneeId: string): Promise<Ticket>
   updateMetadata(id: string, input: UpdateIssueMetadataInput): Promise<Ticket>
+  updateDetails(id: string, input: UpdateIssueDetailsInput): Promise<Ticket>
   listComments(id: string): Promise<IssueComment[]>
   createComment(id: string, body: string): Promise<IssueComment>
   deleteComment(issueId: string, commentId: string): Promise<void>

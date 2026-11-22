@@ -107,6 +107,23 @@ func (t *Ticket) UpdateMetadata(issueType IssueType, parentID *uuid.UUID, dueDat
 	return nil
 }
 
+func (t *Ticket) UpdateDetails(title, description string, priority Priority) error {
+	if strings.TrimSpace(title) == "" {
+		return ErrInvalidTitle
+	}
+	if strings.TrimSpace(description) == "" {
+		return ErrInvalidDescription
+	}
+	if !priority.IsValid() {
+		return ErrInvalidPriority
+	}
+	t.Title = strings.TrimSpace(title)
+	t.Description = strings.TrimSpace(description)
+	t.Priority = priority
+	t.UpdatedAt = time.Now().UTC()
+	return nil
+}
+
 func (t *Ticket) AssignTo(assigneeID uuid.UUID) error {
 	t.AssigneeID = &assigneeID
 	if t.Status == StatusOpen {

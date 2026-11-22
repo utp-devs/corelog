@@ -3,6 +3,7 @@ import type {
   ListTicketsFilter,
   TicketRepositoryPort,
   UpdateIssueMetadataInput,
+  UpdateIssueDetailsInput,
   IssueLinkKind,
 } from './ports/ticket-repository.port'
 import type { Ticket, TicketStatus } from '../domain/ticket'
@@ -36,6 +37,10 @@ export class TicketService {
 
   updateMetadata(id: string, input: UpdateIssueMetadataInput): Promise<Ticket> {
     return this.repository.updateMetadata(id, input)
+  }
+
+  updateDetails(id: string, input: UpdateIssueDetailsInput): Promise<Ticket> {
+    return this.repository.updateDetails(id, input)
   }
 
   listComments(id: string) {

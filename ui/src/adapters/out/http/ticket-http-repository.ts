@@ -3,6 +3,7 @@ import type {
   ListTicketsFilter,
   TicketRepositoryPort,
   UpdateIssueMetadataInput,
+  UpdateIssueDetailsInput,
   IssueComment,
   IssueActivity,
   IssueLink,
@@ -168,6 +169,19 @@ export class TicketHttpRepository implements TicketRepositoryPort {
 
   async updateMetadata(id: string, input: UpdateIssueMetadataInput): Promise<Ticket> {
     const { data } = await apiClient.patch<{ data: TicketDto }>(`/issues/${id}/metadata`, {
+      issue_type: input.issueType,
+      parent_id: input.parentId,
+      due_date: input.dueDate,
+      story_points: input.storyPoints,
+    })
+    return toTicket(data.data)
+  }
+
+  async updateDetails(id: string, input: UpdateIssueDetailsInput): Promise<Ticket> {
+    const { data } = await apiClient.patch<{ data: TicketDto }>(`/issues/${id}/details`, {
+      title: input.title,
+      description: input.description,
+      priority: input.priority,
       issue_type: input.issueType,
       parent_id: input.parentId,
       due_date: input.dueDate,

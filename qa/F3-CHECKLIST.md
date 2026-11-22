@@ -37,6 +37,8 @@
 - [ ] Mover incidencia abajo cambia su rank y persiste tras recargar
 - [ ] Buscar texto coincide en título o descripción
 - [ ] Combinar estado, prioridad, tipo y fechas devuelve una lista consistente
+- [ ] Editar título, descripción, prioridad y metadatos desde el detalle
+- [ ] Un colaborador del proyecto puede editar; un lector y un no miembro reciben 403
 - [ ] Migración 0010 crea workflow por defecto y transiciones
 - [ ] Transición fuera del workflow devuelve 409
 - [ ] Rol no permitido para la transición devuelve 409

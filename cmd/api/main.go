@@ -79,7 +79,7 @@ func run() error {
 	collaborationRepo := ticketpostgres.NewCollaborationRepository(db)
 	issueLinkRepo := ticketpostgres.NewIssueLinkRepository(db)
 	workflowRepo := ticketpostgres.NewWorkflowRepository(db)
-	ticketModule := ticket.NewModule(ticketRepo, userDirectory, collaborationRepo, issueLinkRepo, workflowRepo, cfg.Auth.JWTSecret)
+	ticketModule := ticket.NewModule(ticketRepo, userDirectory, collaborationRepo, issueLinkRepo, workflowRepo, cfg.Auth.JWTSecret, projectMemberRepo)
 
 	router := httpserver.NewRouter(cfg.Server)
 	router.Route("/api/v1", func(r chi.Router) {
