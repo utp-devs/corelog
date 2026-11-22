@@ -2,13 +2,14 @@ import { Alert, App, Button, Card, DatePicker, Descriptions, Input, InputNumber,
 import TextArea from 'antd/es/input/TextArea'
 import dayjs from 'dayjs'
 import { useEffect, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 
 import { canTransitionTo, type IssueType, type Ticket, type TicketPriority, type TicketStatus } from '@/core/tickets/domain/ticket'
 import { useTicketsStore } from '@/adapters/in/state/tickets.store'
 import { useTeammateSearch } from './hooks/useTeammateSearch'
 import { PriorityTag } from '@/shared/ui/PriorityTag'
 import { StatusTag } from '@/shared/ui/StatusTag'
+import { IssuePicker } from './IssuePicker'
 import styles from './TicketDetailPage.module.css'
 import { PageHeader } from '@/shared/ui/PageHeader'
 import type { IssueAttachment } from '@/core/tickets/domain/attachment'
@@ -92,6 +93,13 @@ function IssueEditor({ ticket, onSave }: IssueEditorProps) {
       </Space>
     </Card>
   )
+}
+
+// Etiquetas en español para el tipo de vinculo entre incidencias.
+const linkKindLabels: Record<string, string> = {
+  blocks: 'Bloquea a',
+  relates: 'Se relaciona con',
+  duplicates: 'Duplica a',
 }
 
 export function TicketDetailPage() {
@@ -273,12 +281,7 @@ export function TicketDetailPage() {
       <Card title="Vinculos">
         {collaborationError && <Alert type="error" showIcon message={collaborationError} />}
         <Space wrap>
-          <Input
-            value={linkTargetId}
-            onChange={(event) => setLinkTargetId(event.target.value)}
-            placeholder="UUID de incidencia"
-            className={styles.linkInput}
-          />
+          <IssuePicker value={linkTargetId} onChange={setLinkTargetId} excludeId={selected.id} />
           <Select
             value={linkKind}
             onChange={setLinkKind}
@@ -321,7 +324,9 @@ export function TicketDetailPage() {
                 </Button>,
               ]}
             >
-              {link.kind} - {link.sourceIssueId === selected.id ? link.targetIssueId : link.sourceIssueId}
+              <Link to={`/issues/${(link.sourceIssueId === selected.id ? link.targetIssueId : link.sourceIssueId)}`}>
+                {linkKindLabels[link.kind] ?? link.kind}: incidencia {(link.sourceIssueId === selected.id ? link.targetIssueId : link.sourceIssueId).slice(0, 8)}
+              </Link>
             </List.Item>
           )}
         />
@@ -376,7 +381,7 @@ export function TicketDetailPage() {
       </Card>
 
       <Card title="Asignar">
-        <Space>
+        <Space wrap>
           <Select
             showSearch
             filterOption={false}
