@@ -12,7 +12,7 @@ import {
   UserOutlined,
   ProjectOutlined,
 } from '@ant-design/icons'
-import { Avatar, Dropdown, Layout, Menu, Space, Typography, Button, Input, Grid } from 'antd'
+import { Avatar, Dropdown, Layout, Menu, Space, Typography, Button, Grid } from 'antd'
 import type { MenuProps } from 'antd'
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useState } from 'react'
@@ -21,6 +21,7 @@ import { useAuthStore } from '@/adapters/in/state/auth.store'
 import { navigationItems, type NavigationItem } from '@/app/navigation'
 import { useThemeMode } from '@/app/theme-context'
 import styles from './AppLayout.module.css'
+import { GlobalSearch } from './GlobalSearch'
 import { NotificationsBell } from './NotificationsBell'
 
 const { Header, Sider, Content } = Layout
@@ -60,8 +61,8 @@ export function AppLayout() {
     .map((item) => ({
       key: item.key,
       icon: iconMap[item.icon],
-      label: item.key === '/dashboard' ? item.label : <Link to={item.key}>{item.label}</Link>,
-      disabled: item.key === '/dashboard' || item.key === '/calendar',
+      label: item.key === '/calendar' ? item.label : <Link to={item.key}>{item.label}</Link>,
+      disabled: item.key === '/calendar',
     }))
 
   const userMenuItems: MenuProps['items'] = [
@@ -121,12 +122,7 @@ export function AppLayout() {
             </Typography.Text>
           </div>
           <Space size="small">
-            <Input.Search
-              className={styles.globalSearch}
-              placeholder="Buscar"
-              disabled
-              allowClear
-            />
+            <GlobalSearch />
             <NotificationsBell />
             <Button
               type="text"
