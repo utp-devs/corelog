@@ -92,6 +92,8 @@ type Service interface {
 	DefaultWorkflow(ctx context.Context, actorID uuid.UUID, globalRole string, projectID uuid.UUID) (*Workflow, error)
 	UpdateDefaultWorkflow(ctx context.Context, actorID uuid.UUID, globalRole string, projectID uuid.UUID, transitions []WorkflowTransition) (*Workflow, error)
 	MoveIssueToStatus(ctx context.Context, actorID uuid.UUID, globalRole string, projectID, issueID uuid.UUID, status domain.Status) error
+	Backlog(ctx context.Context, actorID uuid.UUID, globalRole string, projectID uuid.UUID) ([]*domain.Ticket, error)
+	MoveInBacklog(ctx context.Context, actorID uuid.UUID, globalRole string, projectID, issueID uuid.UUID, position int) ([]*domain.Ticket, error)
 	DeleteSavedFilter(ctx context.Context, ownerID, filterID uuid.UUID) error
 	ListIssueLinks(ctx context.Context, issueID, actorID uuid.UUID, globalRole string) ([]*domain.IssueLink, error)
 	CreateIssueLink(ctx context.Context, sourceIssueID, targetIssueID, createdBy uuid.UUID, globalRole string, kind domain.IssueLinkKind) (*domain.IssueLink, error)

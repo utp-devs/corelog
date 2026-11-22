@@ -49,6 +49,9 @@ type WorkflowRepository interface {
 // ActionManageWorkflow es la accion del autorizador para editar el flujo de un proyecto.
 const ActionManageWorkflow = "manage_workflow"
 
+// ActionMoveCards es la accion del autorizador para mover incidencias (columnas y backlog).
+const ActionMoveCards = "move_cards"
+
 // Workflow es el flujo por defecto de un proyecto con sus transiciones permitidas.
 type Workflow struct {
 	ID          uuid.UUID
@@ -107,4 +110,10 @@ type ProjectAuthorizer interface {
 type ProjectRoleResolver interface {
 	FindRole(ctx context.Context, projectID, userID uuid.UUID) (*string, error)
 	ListProjectIDs(ctx context.Context, userID uuid.UUID) ([]uuid.UUID, error)
+}
+
+// BacklogRepository ordena las incidencias de un proyecto por rank y guarda el nuevo orden.
+type BacklogRepository interface {
+	ListBacklog(ctx context.Context, projectID uuid.UUID) ([]*domain.Ticket, error)
+	SaveRanks(ctx context.Context, projectID uuid.UUID, ranks map[uuid.UUID]string) error
 }

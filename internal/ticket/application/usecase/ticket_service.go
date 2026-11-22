@@ -2,6 +2,7 @@ package usecase
 
 import (
 	"context"
+	"fmt"
 	"regexp"
 	"strings"
 
@@ -13,6 +14,7 @@ import (
 )
 
 type TicketService struct {
+	backlog       port.BacklogRepository
 	repo          port.Repository
 	directory     port.UserDirectory
 	collaboration port.CollaborationRepository
@@ -34,9 +36,14 @@ func NewTicketService(repo port.Repository, directory port.UserDirectory, reposi
 	var watchers port.IssueWatcherRepository
 	var assigneeWatch port.AssigneeWatcherRepository
 	var savedFilters port.SavedFilterRepository
+	var backlog port.BacklogRepository
 	for _, repository := range repositories {
 		if typed, ok := repository.(port.ProjectAuthorizer); ok {
 			authorizer = typed
+		}
+		// El backlog va fuera del switch: un repositorio puede cumplir un case anterior y el switch se detiene.
+		if typed, ok := repository.(port.BacklogRepository); ok {
+			backlog = typed
 		}
 		switch typed := repository.(type) {
 		case port.CollaborationRepository:
@@ -55,7 +62,7 @@ func NewTicketService(repo port.Repository, directory port.UserDirectory, reposi
 			savedFilters = typed
 		}
 	}
-	return &TicketService{repo: repo, directory: directory, collaboration: collaboration, issueLinks: issueLinks, workflows: workflows, projectRoles: projectRoles, authorizer: authorizer, watchers: watchers, assigneeWatch: assigneeWatch, savedFilters: savedFilters}
+	return &TicketService{repo: repo, directory: directory, collaboration: collaboration, issueLinks: issueLinks, workflows: workflows, projectRoles: projectRoles, authorizer: authorizer, watchers: watchers, assigneeWatch: assigneeWatch, savedFilters: savedFilters, backlog: backlog}
 }
 
 var _ port.Service = (*TicketService)(nil)
@@ -641,4 +648,75 @@ func (s *TicketService) MoveIssueToStatus(ctx context.Context, actorID uuid.UUID
 	}
 	_, err = s.UpdateStatus(ctx, issueID, actorID, globalRole, status)
 	return err
+}
+
+// Backlog devuelve las incidencias del proyecto en el orden de su rank. Lo puede leer quien puede ver el proyecto.
+func (s *TicketService) Backlog(ctx context.Context, actorID uuid.UUID, globalRole string, projectID uuid.UUID) ([]*domain.Ticket, error) {
+	if err := s.requireIssueView(ctx, projectID, actorID, globalRole); err != nil {
+		return nil, err
+	}
+	if s.backlog == nil {
+		return nil, apperror.New(apperror.KindInternal, "backlog is not available")
+	}
+	return s.backlog.ListBacklog(ctx, projectID)
+}
+
+// MoveInBacklog coloca una incidencia en una posicion del backlog (permiso move_cards). Renumera el rank de
+// todas las incidencias del proyecto con el orden de la lista, asi el orden queda explicito y estable.
+func (s *TicketService) MoveInBacklog(ctx context.Context, actorID uuid.UUID, globalRole string, projectID, issueID uuid.UUID, position int) ([]*domain.Ticket, error) {
+	if err := s.authorize(ctx, port.ActionMoveCards, projectID, actorID, globalRole); err != nil {
+		return nil, err
+	}
+	if s.backlog == nil {
+		return nil, apperror.New(apperror.KindInternal, "backlog is not available")
+	}
+	items, err := s.backlog.ListBacklog(ctx, projectID)
+	if err != nil {
+		return nil, err
+	}
+	from := -1
+	for i, item := range items {
+		if item.ID == issueID {
+			from = i
+		}
+	}
+	if from < 0 {
+		return nil, domain.ErrTicketNotFound
+	}
+	if position < 0 || position >= len(items) {
+		return nil, apperror.New(apperror.KindValidation, "invalid backlog position")
+	}
+
+	moved := items[from]
+	rest := make([]*domain.Ticket, 0, len(items)-1)
+	for i, item := range items {
+		if i != from {
+			rest = append(rest, item)
+		}
+	}
+	reordered := make([]*domain.Ticket, 0, len(items))
+	reordered = append(reordered, rest[:position]...)
+	reordered = append(reordered, moved)
+	reordered = append(reordered, rest[position:]...)
+
+	ranks := make(map[uuid.UUID]string)
+	for i, item := range reordered {
+		rank := fmt.Sprintf("%06d", i+1)
+		if item.Rank != rank {
+			ranks[item.ID] = rank
+		}
+	}
+	if len(ranks) > 0 {
+		if err := s.backlog.SaveRanks(ctx, projectID, ranks); err != nil {
+			return nil, err
+		}
+	}
+	for _, item := range reordered {
+		if rank, ok := ranks[item.ID]; ok {
+			if err := item.UpdateRank(rank); err != nil {
+				return nil, err
+			}
+		}
+	}
+	return reordered, nil
 }

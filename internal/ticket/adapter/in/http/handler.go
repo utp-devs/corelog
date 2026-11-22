@@ -767,3 +767,88 @@ func (h *Handler) UpdateDefaultWorkflow(w http.ResponseWriter, r *http.Request) 
 	}
 	httpresponse.JSON(w, http.StatusOK, toWorkflowResponse(workflow))
 }
+
+type backlogItemResponse struct {
+	ID          string   `json:"id"`
+	ProjectID   string   `json:"project_id"`
+	Summary     string   `json:"summary"`
+	Type        string   `json:"type"`
+	Status      string   `json:"status"`
+	Priority    string   `json:"priority"`
+	Rank        string   `json:"rank"`
+	AssigneeID  *string  `json:"assignee_id,omitempty"`
+	StoryPoints *float64 `json:"story_points,omitempty"`
+}
+
+type backlogMoveRequest struct {
+	Position int `json:"position"`
+}
+
+// ListBacklog devuelve las incidencias del proyecto indicado en project_id, ordenadas por rank.
+func (h *Handler) ListBacklog(w http.ResponseWriter, r *http.Request) {
+	actorID, ok := appmw.UserIDFromContext(r.Context())
+	if !ok {
+		httpresponse.Error(w, apperror.New(apperror.KindUnauthorized, "not authenticated"))
+		return
+	}
+	globalRole, _ := appmw.RoleFromContext(r.Context())
+	projectID, err := uuid.Parse(r.URL.Query().Get("project_id"))
+	if err != nil {
+		httpresponse.Error(w, apperror.New(apperror.KindValidation, "invalid project id"))
+		return
+	}
+	items, err := h.service.Backlog(r.Context(), actorID, globalRole, projectID)
+	if err != nil {
+		httpresponse.Error(w, err)
+		return
+	}
+	httpresponse.JSON(w, http.StatusOK, toBacklogResponse(items))
+}
+
+// MoveInBacklog coloca una incidencia en la posicion indicada del backlog y devuelve el backlog nuevo.
+func (h *Handler) MoveInBacklog(w http.ResponseWriter, r *http.Request) {
+	actorID, ok := appmw.UserIDFromContext(r.Context())
+	if !ok {
+		httpresponse.Error(w, apperror.New(apperror.KindUnauthorized, "not authenticated"))
+		return
+	}
+	globalRole, _ := appmw.RoleFromContext(r.Context())
+	projectID, err := uuid.Parse(r.URL.Query().Get("project_id"))
+	if err != nil {
+		httpresponse.Error(w, apperror.New(apperror.KindValidation, "invalid project id"))
+		return
+	}
+	issueID, err := uuid.Parse(chi.URLParam(r, "issue_id"))
+	if err != nil {
+		httpresponse.Error(w, apperror.New(apperror.KindValidation, "invalid issue id"))
+		return
+	}
+	var body backlogMoveRequest
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		httpresponse.Error(w, apperror.New(apperror.KindValidation, "invalid request body"))
+		return
+	}
+	items, err := h.service.MoveInBacklog(r.Context(), actorID, globalRole, projectID, issueID, body.Position)
+	if err != nil {
+		httpresponse.Error(w, err)
+		return
+	}
+	httpresponse.JSON(w, http.StatusOK, toBacklogResponse(items))
+}
+
+func toBacklogResponse(items []*domain.Ticket) []backlogItemResponse {
+	response := make([]backlogItemResponse, 0, len(items))
+	for _, item := range items {
+		entry := backlogItemResponse{
+			ID: item.ID.String(), ProjectID: item.ProjectID.String(), Summary: item.Title,
+			Type: string(item.IssueType), Status: string(item.Status), Priority: string(item.Priority),
+			Rank: item.Rank, StoryPoints: item.StoryPoints,
+		}
+		if item.AssigneeID != nil {
+			assignee := item.AssigneeID.String()
+			entry.AssigneeID = &assignee
+		}
+		response = append(response, entry)
+	}
+	return response
+}

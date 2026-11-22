@@ -33,6 +33,11 @@ func (h *Handler) RegisterRoutes(r chi.Router) {
 		r.Post("/{id}/watchers", h.WatchIssue)
 		r.Delete("/{id}/watchers", h.UnwatchIssue)
 	})
+	r.Route("/backlog", func(r chi.Router) {
+		r.Use(appmw.Authenticate(h.jwtSecret))
+		r.Get("/", h.ListBacklog)
+		r.Put("/{issue_id}", h.MoveInBacklog)
+	})
 	r.Route("/workflows", func(r chi.Router) {
 		r.Use(appmw.Authenticate(h.jwtSecret))
 		r.Get("/", h.GetDefaultWorkflow)

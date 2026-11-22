@@ -804,3 +804,85 @@ func TestTicketService_MoveIssueToStatusChecksProject(t *testing.T) {
 		t.Fatalf("status = %v, want in_progress", stored.Status)
 	}
 }
+
+type fakeBacklogRepo struct {
+	items []*domain.Ticket
+	saved map[uuid.UUID]string
+}
+
+func (r *fakeBacklogRepo) ListBacklog(context.Context, uuid.UUID) ([]*domain.Ticket, error) {
+	return r.items, nil
+}
+
+func (r *fakeBacklogRepo) SaveRanks(_ context.Context, _ uuid.UUID, ranks map[uuid.UUID]string) error {
+	r.saved = ranks
+	return nil
+}
+
+// TestTicketService_MoveInBacklogRenumbersRanks comprueba el reordenado, la renumeracion de rank,
+// la validacion de posicion y los permisos (viewer sin acceso a mover).
+func TestTicketService_MoveInBacklogRenumbersRanks(t *testing.T) {
+	ctx := context.Background()
+	first := &domain.Ticket{ID: uuid.New(), ProjectID: domain.DefaultProjectID, Title: "primera", Rank: "000001"}
+	second := &domain.Ticket{ID: uuid.New(), ProjectID: domain.DefaultProjectID, Title: "segunda", Rank: "000002"}
+	third := &domain.Ticket{ID: uuid.New(), ProjectID: domain.DefaultProjectID, Title: "tercera", Rank: "000003"}
+	newRepo := func() *fakeBacklogRepo {
+		return &fakeBacklogRepo{items: []*domain.Ticket{first, second, third}}
+	}
+
+	repo := newRepo()
+	svc := NewTicketService(newFakeTicketRepo(), newFakeUserDirectory(), repo, contributorRoleResolver())
+	ordered, err := svc.MoveInBacklog(ctx, uuid.New(), "agent", domain.DefaultProjectID, first.ID, 2)
+	if err != nil {
+		t.Fatalf("contributor should reorder the backlog, got %v", err)
+	}
+	if ordered[0].ID != second.ID || ordered[1].ID != third.ID || ordered[2].ID != first.ID {
+		t.Fatalf("unexpected order: %s, %s, %s", ordered[0].Title, ordered[1].Title, ordered[2].Title)
+	}
+	if repo.saved[first.ID] != "000003" || repo.saved[second.ID] != "000001" || repo.saved[third.ID] != "000002" {
+		t.Fatalf("saved ranks = %v", repo.saved)
+	}
+	if first.Rank != "000003" {
+		t.Fatalf("rank not updated in memory: %s", first.Rank)
+	}
+
+	outOfRange := NewTicketService(newFakeTicketRepo(), newFakeUserDirectory(), newRepo(), contributorRoleResolver())
+	if _, err := outOfRange.MoveInBacklog(ctx, uuid.New(), "agent", domain.DefaultProjectID, second.ID, 3); apperror.KindOf(err) != apperror.KindValidation {
+		t.Fatalf("position out of range: want validation, got %v", err)
+	}
+
+	unknown := NewTicketService(newFakeTicketRepo(), newFakeUserDirectory(), newRepo(), contributorRoleResolver())
+	if _, err := unknown.MoveInBacklog(ctx, uuid.New(), "agent", domain.DefaultProjectID, uuid.New(), 0); !errors.Is(err, domain.ErrTicketNotFound) {
+		t.Fatalf("unknown issue: got %v", err)
+	}
+
+	viewer := fakeProjectRoleResolver{role: stringPtr("viewer")}
+	denied := NewTicketService(newFakeTicketRepo(), newFakeUserDirectory(), newRepo(), viewer)
+	if _, err := denied.MoveInBacklog(ctx, uuid.New(), "requester", domain.DefaultProjectID, first.ID, 0); apperror.KindOf(err) != apperror.KindForbidden {
+		t.Fatalf("viewer should be forbidden, got %v", err)
+	}
+}
+
+func stringPtr(value string) *string {
+	return &value
+}
+
+// fakeSharedRepo cumple AssigneeWatcherRepository y BacklogRepository a la vez, como el repositorio de
+// Postgres. Protege contra que un case del switch de wiring tape al otro.
+type fakeSharedRepo struct {
+	fakeBacklogRepo
+}
+
+func (fakeSharedRepo) UpdateAndWatchAssignee(context.Context, *domain.Ticket, uuid.UUID) error {
+	return nil
+}
+
+// TestTicketService_BacklogWiredWhenRepositoryAlsoImplementsOtherPorts es la regresion del bug en que el
+// backlog no se conectaba porque el repositorio tambien cumple AssigneeWatcherRepository.
+func TestTicketService_BacklogWiredWhenRepositoryAlsoImplementsOtherPorts(t *testing.T) {
+	shared := &fakeSharedRepo{fakeBacklogRepo: fakeBacklogRepo{items: []*domain.Ticket{}}}
+	svc := NewTicketService(newFakeTicketRepo(), newFakeUserDirectory(), shared, contributorRoleResolver())
+	if _, err := svc.Backlog(context.Background(), uuid.New(), "agent", domain.DefaultProjectID); err != nil {
+		t.Fatalf("backlog must be wired, got %v", err)
+	}
+}
