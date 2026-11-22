@@ -2,29 +2,92 @@ import type {
   CreateTicketInput,
   ListTicketsFilter,
   TicketRepositoryPort,
+  UpdateIssueMetadataInput,
+  IssueComment,
+  IssueActivity,
 } from '@/core/tickets/application/ports/ticket-repository.port'
-import type { Ticket, TicketPriority, TicketStatus } from '@/core/tickets/domain/ticket'
+import type { IssueType, Ticket, TicketPriority, TicketStatus } from '@/core/tickets/domain/ticket'
 import { apiClient } from './api-client'
 
 interface TicketDto {
   id: string
+  project_id: string
   title: string
   description: string
   status: TicketStatus
   priority: TicketPriority
+  issue_type: IssueType
+  parent_id: string | null
+  due_date: string | null
+  story_points: number | null
+  rank: string
+  closed_at: string | null
   requester_id: string
   assignee_id: string | null
   created_at: string
   updated_at: string
 }
 
+interface CommentDto {
+  id: string
+  issue_id: string
+  author_id: string
+  body: string
+  created_at: string
+  updated_at: string
+  deleted_at: string | null
+}
+
+interface ActivityDto {
+  id: string
+  issue_id: string
+  actor_id: string
+  action: string
+  field_name: string | null
+  old_value: string | null
+  new_value: string | null
+  created_at: string
+}
+
+function toComment(dto: CommentDto): IssueComment {
+  return {
+    id: dto.id,
+    issueId: dto.issue_id,
+    authorId: dto.author_id,
+    body: dto.body,
+    createdAt: dto.created_at,
+    updatedAt: dto.updated_at,
+    deletedAt: dto.deleted_at,
+  }
+}
+
+function toActivity(dto: ActivityDto): IssueActivity {
+  return {
+    id: dto.id,
+    issueId: dto.issue_id,
+    actorId: dto.actor_id,
+    action: dto.action,
+    fieldName: dto.field_name,
+    oldValue: dto.old_value,
+    newValue: dto.new_value,
+    createdAt: dto.created_at,
+  }
+}
+
 function toTicket(dto: TicketDto): Ticket {
   return {
     id: dto.id,
+    projectId: dto.project_id,
     title: dto.title,
     description: dto.description,
     status: dto.status,
     priority: dto.priority,
+    issueType: dto.issue_type,
+    parentId: dto.parent_id,
+    dueDate: dto.due_date,
+    storyPoints: dto.story_points,
+    rank: dto.rank,
+    closedAt: dto.closed_at,
     requesterId: dto.requester_id,
     assigneeId: dto.assignee_id ?? null,
     createdAt: dto.created_at,
@@ -34,7 +97,7 @@ function toTicket(dto: TicketDto): Ticket {
 
 export class TicketHttpRepository implements TicketRepositoryPort {
   async list(filter: ListTicketsFilter): Promise<Ticket[]> {
-    const { data } = await apiClient.get<{ data: TicketDto[] }>('/tickets', {
+    const { data } = await apiClient.get<{ data: TicketDto[] }>('/issues', {
       params: {
         status: filter.status,
         priority: filter.priority,
@@ -46,24 +109,61 @@ export class TicketHttpRepository implements TicketRepositoryPort {
   }
 
   async getById(id: string): Promise<Ticket> {
-    const { data } = await apiClient.get<{ data: TicketDto }>(`/tickets/${id}`)
+    const { data } = await apiClient.get<{ data: TicketDto }>(`/issues/${id}`)
     return toTicket(data.data)
   }
 
   async create(input: CreateTicketInput): Promise<Ticket> {
-    const { data } = await apiClient.post<{ data: TicketDto }>('/tickets', input)
+    const { data } = await apiClient.post<{ data: TicketDto }>('/issues', {
+      title: input.title,
+      description: input.description,
+      priority: input.priority,
+      issue_type: input.issueType,
+      parent_id: input.parentId,
+      due_date: input.dueDate,
+      story_points: input.storyPoints,
+    })
     return toTicket(data.data)
   }
 
   async updateStatus(id: string, status: TicketStatus): Promise<Ticket> {
-    const { data } = await apiClient.patch<{ data: TicketDto }>(`/tickets/${id}/status`, { status })
+    const { data } = await apiClient.patch<{ data: TicketDto }>(`/issues/${id}/status`, { status })
     return toTicket(data.data)
   }
 
   async assign(id: string, assigneeId: string): Promise<Ticket> {
-    const { data } = await apiClient.patch<{ data: TicketDto }>(`/tickets/${id}/assign`, {
+    const { data } = await apiClient.patch<{ data: TicketDto }>(`/issues/${id}/assign`, {
       assignee_id: assigneeId,
     })
     return toTicket(data.data)
+  }
+
+  async updateMetadata(id: string, input: UpdateIssueMetadataInput): Promise<Ticket> {
+    const { data } = await apiClient.patch<{ data: TicketDto }>(`/issues/${id}/metadata`, {
+      issue_type: input.issueType,
+      parent_id: input.parentId,
+      due_date: input.dueDate,
+      story_points: input.storyPoints,
+    })
+    return toTicket(data.data)
+  }
+
+  async listComments(id: string): Promise<IssueComment[]> {
+    const { data } = await apiClient.get<{ data: CommentDto[] }>(`/issues/${id}/comments`)
+    return data.data.map(toComment)
+  }
+
+  async createComment(id: string, body: string): Promise<IssueComment> {
+    const { data } = await apiClient.post<{ data: CommentDto }>(`/issues/${id}/comments`, { body })
+    return toComment(data.data)
+  }
+
+  async deleteComment(issueId: string, commentId: string): Promise<void> {
+    await apiClient.delete(`/issues/${issueId}/comments/${commentId}`)
+  }
+
+  async listActivities(id: string): Promise<IssueActivity[]> {
+    const { data } = await apiClient.get<{ data: ActivityDto[] }>(`/issues/${id}/activities`)
+    return data.data.map(toActivity)
   }
 }

@@ -109,9 +109,9 @@ func TestTicketHTTP_Handlers(t *testing.T) {
 
 	tokenUserA, _ := authtoken.Generate(jwtSecret, time.Hour, userA, "requester")
 
-	t.Run("POST /tickets requires authentication (401)", func(t *testing.T) {
+	t.Run("POST /issues requires authentication (401)", func(t *testing.T) {
 		body := `{"title":"Issue","description":"Desc","priority":"high"}`
-		req := httptest.NewRequest(http.MethodPost, "/tickets", bytes.NewBufferString(body))
+		req := httptest.NewRequest(http.MethodPost, "/issues", bytes.NewBufferString(body))
 		req.Header.Set("Content-Type", "application/json")
 		rec := httptest.NewRecorder()
 
@@ -122,9 +122,9 @@ func TestTicketHTTP_Handlers(t *testing.T) {
 		}
 	})
 
-	t.Run("POST /tickets creates ticket (201)", func(t *testing.T) {
+	t.Run("POST /issues creates ticket (201)", func(t *testing.T) {
 		body := `{"title":"Server crash","description":"Server crashes under load","priority":"critical"}`
-		req := httptest.NewRequest(http.MethodPost, "/tickets", bytes.NewBufferString(body))
+		req := httptest.NewRequest(http.MethodPost, "/issues", bytes.NewBufferString(body))
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("Authorization", "Bearer "+tokenUserA)
 		rec := httptest.NewRecorder()
@@ -136,9 +136,9 @@ func TestTicketHTTP_Handlers(t *testing.T) {
 		}
 	})
 
-	t.Run("POST /tickets rejects validation error (422)", func(t *testing.T) {
+	t.Run("POST /issues rejects validation error (422)", func(t *testing.T) {
 		body := `{"title":"","description":"","priority":"invalid"}`
-		req := httptest.NewRequest(http.MethodPost, "/tickets", bytes.NewBufferString(body))
+		req := httptest.NewRequest(http.MethodPost, "/issues", bytes.NewBufferString(body))
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("Authorization", "Bearer "+tokenUserA)
 		rec := httptest.NewRecorder()
@@ -154,8 +154,8 @@ func TestTicketHTTP_Handlers(t *testing.T) {
 	ticket, _ := domain.NewTicket("Ticket for transitions", "Desc", domain.PriorityMedium, userA)
 	_ = repo.Save(context.Background(), ticket)
 
-	t.Run("GET /tickets/{id} returns 200 for existing ticket", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodGet, "/tickets/"+ticket.ID.String(), nil)
+	t.Run("GET /issues/{id} returns 200 for existing ticket", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/issues/"+ticket.ID.String(), nil)
 		req.Header.Set("Authorization", "Bearer "+tokenUserA)
 		rec := httptest.NewRecorder()
 
@@ -166,8 +166,8 @@ func TestTicketHTTP_Handlers(t *testing.T) {
 		}
 	})
 
-	t.Run("GET /tickets/{id} returns 404 for unknown ticket", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodGet, "/tickets/"+uuid.New().String(), nil)
+	t.Run("GET /issues/{id} returns 404 for unknown ticket", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/issues/"+uuid.New().String(), nil)
 		req.Header.Set("Authorization", "Bearer "+tokenUserA)
 		rec := httptest.NewRecorder()
 
@@ -178,10 +178,10 @@ func TestTicketHTTP_Handlers(t *testing.T) {
 		}
 	})
 
-	t.Run("PATCH /tickets/{id}/status returns 409 on illegal transition", func(t *testing.T) {
+	t.Run("PATCH /issues/{id}/status returns 409 on illegal transition", func(t *testing.T) {
 		// Open to Resolved is illegal
 		body := `{"status":"resolved"}`
-		req := httptest.NewRequest(http.MethodPatch, "/tickets/"+ticket.ID.String()+"/status", bytes.NewBufferString(body))
+		req := httptest.NewRequest(http.MethodPatch, "/issues/"+ticket.ID.String()+"/status", bytes.NewBufferString(body))
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("Authorization", "Bearer "+tokenUserA)
 		rec := httptest.NewRecorder()
@@ -193,9 +193,9 @@ func TestTicketHTTP_Handlers(t *testing.T) {
 		}
 	})
 
-	t.Run("PATCH /tickets/{id}/status returns 200 on valid transition", func(t *testing.T) {
+	t.Run("PATCH /issues/{id}/status returns 200 on valid transition", func(t *testing.T) {
 		body := `{"status":"in_progress"}`
-		req := httptest.NewRequest(http.MethodPatch, "/tickets/"+ticket.ID.String()+"/status", bytes.NewBufferString(body))
+		req := httptest.NewRequest(http.MethodPatch, "/issues/"+ticket.ID.String()+"/status", bytes.NewBufferString(body))
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("Authorization", "Bearer "+tokenUserA)
 		rec := httptest.NewRecorder()
@@ -207,9 +207,9 @@ func TestTicketHTTP_Handlers(t *testing.T) {
 		}
 	})
 
-	t.Run("PATCH /tickets/{id}/assign returns 403 on cross-team assignment", func(t *testing.T) {
+	t.Run("PATCH /issues/{id}/assign returns 403 on cross-team assignment", func(t *testing.T) {
 		body := fmt.Sprintf(`{"assignee_id":"%s"}`, userOtherTeam.String())
-		req := httptest.NewRequest(http.MethodPatch, "/tickets/"+ticket.ID.String()+"/assign", bytes.NewBufferString(body))
+		req := httptest.NewRequest(http.MethodPatch, "/issues/"+ticket.ID.String()+"/assign", bytes.NewBufferString(body))
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("Authorization", "Bearer "+tokenUserA)
 		rec := httptest.NewRecorder()
@@ -221,9 +221,9 @@ func TestTicketHTTP_Handlers(t *testing.T) {
 		}
 	})
 
-	t.Run("PATCH /tickets/{id}/assign returns 200 on same-team assignment", func(t *testing.T) {
+	t.Run("PATCH /issues/{id}/assign returns 200 on same-team assignment", func(t *testing.T) {
 		body := fmt.Sprintf(`{"assignee_id":"%s"}`, userB.String())
-		req := httptest.NewRequest(http.MethodPatch, "/tickets/"+ticket.ID.String()+"/assign", bytes.NewBufferString(body))
+		req := httptest.NewRequest(http.MethodPatch, "/issues/"+ticket.ID.String()+"/assign", bytes.NewBufferString(body))
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("Authorization", "Bearer "+tokenUserA)
 		rec := httptest.NewRecorder()

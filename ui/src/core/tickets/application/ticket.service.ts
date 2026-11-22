@@ -2,6 +2,7 @@ import type {
   CreateTicketInput,
   ListTicketsFilter,
   TicketRepositoryPort,
+  UpdateIssueMetadataInput,
 } from './ports/ticket-repository.port'
 import type { Ticket, TicketStatus } from '../domain/ticket'
 
@@ -30,5 +31,25 @@ export class TicketService {
 
   assign(id: string, assigneeId: string): Promise<Ticket> {
     return this.repository.assign(id, assigneeId)
+  }
+
+  updateMetadata(id: string, input: UpdateIssueMetadataInput): Promise<Ticket> {
+    return this.repository.updateMetadata(id, input)
+  }
+
+  listComments(id: string) {
+    return this.repository.listComments(id)
+  }
+
+  createComment(id: string, body: string) {
+    return this.repository.createComment(id, body)
+  }
+
+  deleteComment(issueId: string, commentId: string) {
+    return this.repository.deleteComment(issueId, commentId)
+  }
+
+  listActivities(id: string) {
+    return this.repository.listActivities(id)
   }
 }
