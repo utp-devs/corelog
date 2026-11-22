@@ -18,6 +18,8 @@ import (
 	boardpostgres "github.com/jhonsferg/corelog/internal/board/adapter/out/postgres"
 	"github.com/jhonsferg/corelog/internal/calendar"
 	calendarpostgres "github.com/jhonsferg/corelog/internal/calendar/adapter/out/postgres"
+	"github.com/jhonsferg/corelog/internal/dashboard"
+	dashboardpostgres "github.com/jhonsferg/corelog/internal/dashboard/adapter/out/postgres"
 	"github.com/jhonsferg/corelog/internal/notification"
 	notificationpostgres "github.com/jhonsferg/corelog/internal/notification/adapter/out/postgres"
 	"github.com/jhonsferg/corelog/internal/platform/config"
@@ -105,6 +107,7 @@ func run() error {
 	notificationModule := notification.NewModule(notificationpostgres.NewNotificationRepository(db), cfg.Auth.JWTSecret)
 	ticketModule := ticket.NewModule(ticketRepo, userDirectory, collaborationRepo, issueLinkRepo, workflowRepo, watcherRepo, savedFilterRepo, cfg.Auth.JWTSecret, projectAuthorizer, notificationModule.Service, projectMemberRepo)
 	searchModule := search.NewModule(searchpostgres.NewSearchIndex(db), cfg.Auth.JWTSecret)
+	dashboardModule := dashboard.NewModule(dashboardpostgres.NewDashboardReader(db), cfg.Auth.JWTSecret)
 	calendarModule := calendar.NewModule(calendarpostgres.NewCalendarRepository(db), projectAuthorizer, cfg.Auth.JWTSecret)
 	sprintModule := sprint.NewModule(sprintpostgres.NewSprintRepository(db), projectAuthorizer, cfg.Auth.JWTSecret)
 	boardModule := board.NewModule(boardpostgres.NewBoardRepository(db), projectModule.Service, projectAuthorizer, boardIssueMover{issues: ticketModule.Service}, cfg.Auth.JWTSecret)
@@ -112,7 +115,7 @@ func run() error {
 
 	router := httpserver.NewRouter(cfg.Server)
 	router.Route("/api/v1", func(r chi.Router) {
-		httpserver.Mount(r, userModule.Handler, teamModule.Handler, projectModule.Handler, boardModule.Handler, ticketModule.Handler, sprintModule.Handler, notificationModule.Handler, calendarModule.Handler, searchModule.Handler)
+		httpserver.Mount(r, userModule.Handler, teamModule.Handler, projectModule.Handler, boardModule.Handler, ticketModule.Handler, sprintModule.Handler, notificationModule.Handler, calendarModule.Handler, searchModule.Handler, dashboardModule.Handler)
 	})
 
 	server := httpserver.New(cfg.Server, router)
