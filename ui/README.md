@@ -96,7 +96,7 @@ npm install
 npm run dev
 ```
 
-The API base URL defaults to `http://localhost:8080/api/v1`. Override it via `VITE_API_BASE_URL` in `.env` if the backend runs elsewhere. See the repository root [`README.md`](../README.md) for running the backend with either PostgreSQL or SQLite.
+The API base URL defaults to `http://localhost:8080/api/v1`. Override it via `VITE_API_BASE_URL` in `.env` if the backend runs elsewhere. See the repository root [`README.md`](../README.md) for running the backend with PostgreSQL.
 
 ## Available scripts
 
@@ -105,6 +105,7 @@ The API base URL defaults to `http://localhost:8080/api/v1`. Override it via `VI
 | `npm run dev`     | Start the Vite dev server with HMR               |
 | `npm run build`   | Type-check via `tsc -b` and build for production |
 | `npm run lint`    | Run ESLint                                       |
+| `npm test`        | Run the Vitest and React Testing Library suite   |
 | `npm run preview` | Serve the production build locally               |
 
 ## Environment variables
@@ -116,3 +117,5 @@ The API base URL defaults to `http://localhost:8080/api/v1`. Override it via `VI
 ## Styling conventions
 
 Every component owns its own `<Component>.module.css`, imported as `styles` and referenced via `className={styles.foo}`. Never use global CSS or inline `style={{}}` props for anything reusable. `src/styles/global.css` is the only global stylesheet and is limited to resets and root-level tokens. It is loaded once, in `main.tsx`.
+
+The F1 design foundation lives in `src/shared/theme/tokens.ts` and `src/styles/tokens.css`. It defines the light and dark CoreLog tokens used by Ant Design and CSS Modules. Navigation is centralized in `src/app/navigation.ts`, and the theme is persisted under `corelog.theme` in `localStorage`.

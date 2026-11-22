@@ -15,19 +15,19 @@ import (
 	"github.com/jhonsferg/corelog/internal/platform/database"
 	"github.com/jhonsferg/corelog/internal/platform/httpserver"
 	"github.com/jhonsferg/corelog/internal/platform/logger"
+	"github.com/jhonsferg/corelog/internal/project"
+	projectpostgres "github.com/jhonsferg/corelog/internal/project/adapter/out/postgres"
+	projectport "github.com/jhonsferg/corelog/internal/project/application/port"
 	"github.com/jhonsferg/corelog/internal/team"
 	teampostgres "github.com/jhonsferg/corelog/internal/team/adapter/out/postgres"
-	teamsqlite "github.com/jhonsferg/corelog/internal/team/adapter/out/sqlite"
 	teamport "github.com/jhonsferg/corelog/internal/team/application/port"
 	"github.com/jhonsferg/corelog/internal/ticket"
 	ticketdirectory "github.com/jhonsferg/corelog/internal/ticket/adapter/out/directory"
 	ticketmemory "github.com/jhonsferg/corelog/internal/ticket/adapter/out/memory"
 	ticketpostgres "github.com/jhonsferg/corelog/internal/ticket/adapter/out/postgres"
-	ticketsqlite "github.com/jhonsferg/corelog/internal/ticket/adapter/out/sqlite"
 	ticketport "github.com/jhonsferg/corelog/internal/ticket/application/port"
 	"github.com/jhonsferg/corelog/internal/user"
 	userpostgres "github.com/jhonsferg/corelog/internal/user/adapter/out/postgres"
-	usersqlite "github.com/jhonsferg/corelog/internal/user/adapter/out/sqlite"
 	userport "github.com/jhonsferg/corelog/internal/user/application/port"
 )
 
@@ -47,34 +47,27 @@ func run() error {
 	log := logger.New(cfg.Server.Env)
 
 	var db *sqlx.DB
-	switch cfg.Database.Driver {
-	case "sqlite":
-		db, err = database.NewSQLite(cfg.Database)
-	default:
-		db, err = database.NewPostgres(cfg.Database)
-	}
+	db, err = database.NewPostgres(cfg.Database)
 	if err != nil {
 		return err
 	}
 	defer func() { _ = db.Close() }()
-	log.Info("connected to database", "driver", cfg.Database.Driver)
+	log.Info("connected to database", "driver", "postgresql")
 
 	var userRepo userport.Repository
 	var teamRepo teamport.Repository
 	var ticketDBRepo ticketport.Repository
-	switch cfg.Database.Driver {
-	case "sqlite":
-		userRepo = usersqlite.NewUserRepository(db)
-		teamRepo = teamsqlite.NewTeamRepository(db)
-		ticketDBRepo = ticketsqlite.NewTicketRepository(db)
-	default:
-		userRepo = userpostgres.NewUserRepository(db)
-		teamRepo = teampostgres.NewTeamRepository(db)
-		ticketDBRepo = ticketpostgres.NewTicketRepository(db)
-	}
+	var projectRepo projectport.Repository
+	var projectMemberRepo projectport.MemberRepository
+	userRepo = userpostgres.NewUserRepository(db)
+	teamRepo = teampostgres.NewTeamRepository(db)
+	ticketDBRepo = ticketpostgres.NewTicketRepository(db)
+	projectRepo = projectpostgres.NewProjectRepository(db)
+	projectMemberRepo = projectpostgres.NewMemberRepository(db)
 
 	userModule := user.NewModule(userRepo, cfg.Auth.JWTSecret, cfg.Auth.JWTExpiration)
 	teamModule := team.NewModule(teamRepo, cfg.Auth.JWTSecret)
+	projectModule := project.NewModule(projectRepo, projectMemberRepo, cfg.Auth.JWTSecret)
 
 	ticketRepo := ticketDBRepo
 	if cfg.Features.TicketRepository == "memory" {
@@ -82,11 +75,12 @@ func run() error {
 		log.Warn("ticket module using in-memory repository")
 	}
 	userDirectory := ticketdirectory.NewUserDirectory(db)
-	ticketModule := ticket.NewModule(ticketRepo, userDirectory, cfg.Auth.JWTSecret)
+	collaborationRepo := ticketpostgres.NewCollaborationRepository(db)
+	ticketModule := ticket.NewModule(ticketRepo, userDirectory, collaborationRepo, cfg.Auth.JWTSecret)
 
 	router := httpserver.NewRouter(cfg.Server)
 	router.Route("/api/v1", func(r chi.Router) {
-		httpserver.Mount(r, userModule.Handler, teamModule.Handler, ticketModule.Handler)
+		httpserver.Mount(r, userModule.Handler, teamModule.Handler, projectModule.Handler, ticketModule.Handler)
 	})
 
 	server := httpserver.New(cfg.Server, router)

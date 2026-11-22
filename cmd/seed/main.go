@@ -13,15 +13,12 @@ import (
 	"github.com/jhonsferg/corelog/internal/platform/config"
 	"github.com/jhonsferg/corelog/internal/platform/database"
 	teampostgres "github.com/jhonsferg/corelog/internal/team/adapter/out/postgres"
-	teamsqlite "github.com/jhonsferg/corelog/internal/team/adapter/out/sqlite"
 	teamport "github.com/jhonsferg/corelog/internal/team/application/port"
 	teamdomain "github.com/jhonsferg/corelog/internal/team/domain"
 	ticketpostgres "github.com/jhonsferg/corelog/internal/ticket/adapter/out/postgres"
-	ticketsqlite "github.com/jhonsferg/corelog/internal/ticket/adapter/out/sqlite"
 	ticketport "github.com/jhonsferg/corelog/internal/ticket/application/port"
 	ticketdomain "github.com/jhonsferg/corelog/internal/ticket/domain"
 	userpostgres "github.com/jhonsferg/corelog/internal/user/adapter/out/postgres"
-	usersqlite "github.com/jhonsferg/corelog/internal/user/adapter/out/sqlite"
 	userport "github.com/jhonsferg/corelog/internal/user/application/port"
 	userdomain "github.com/jhonsferg/corelog/internal/user/domain"
 )
@@ -40,12 +37,7 @@ func runSeed() error {
 	}
 
 	var db *sqlx.DB
-	switch cfg.Database.Driver {
-	case "sqlite":
-		db, err = database.NewSQLite(cfg.Database)
-	default:
-		db, err = database.NewPostgres(cfg.Database)
-	}
+	db, err = database.NewPostgres(cfg.Database)
 	if err != nil {
 		return fmt.Errorf("connect database: %w", err)
 	}
@@ -54,16 +46,9 @@ func runSeed() error {
 	var userRepo userport.Repository
 	var teamRepo teamport.Repository
 	var ticketRepo ticketport.Repository
-	switch cfg.Database.Driver {
-	case "sqlite":
-		userRepo = usersqlite.NewUserRepository(db)
-		teamRepo = teamsqlite.NewTeamRepository(db)
-		ticketRepo = ticketsqlite.NewTicketRepository(db)
-	default:
-		userRepo = userpostgres.NewUserRepository(db)
-		teamRepo = teampostgres.NewTeamRepository(db)
-		ticketRepo = ticketpostgres.NewTicketRepository(db)
-	}
+	userRepo = userpostgres.NewUserRepository(db)
+	teamRepo = teampostgres.NewTeamRepository(db)
+	ticketRepo = ticketpostgres.NewTicketRepository(db)
 
 	ctx := context.Background()
 
@@ -155,7 +140,7 @@ func runSeed() error {
 		},
 		{
 			title:       "Add automated integration tests for team module",
-			description: "Ensure team creation, member association and deletion are tested against SQLite and PostgreSQL.",
+			description: "Ensure team creation, member association and deletion are tested against PostgreSQL.",
 			priority:    ticketdomain.PriorityMedium,
 			status:      ticketdomain.StatusResolved,
 			requesterID: adminUser.ID,

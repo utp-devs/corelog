@@ -3,7 +3,7 @@
 - **Responsable de QA**: 
 - **Fecha de ejecución**: YYYY-MM-DD
 - **Versión / Release**: v0.X.0
-- **Entorno de pruebas**: SQLite local / PostgreSQL Docker (http://localhost:8080/api/v1)
+- **Entorno de pruebas**: PostgreSQL Docker (http://localhost:8080/api/v1)
 
 ---
 
@@ -13,7 +13,7 @@
 - [ ] `make test-coverage` supera el umbral mínimo definido para la fase (mínimo 40% en F0).
 - [ ] `npm test` en `ui/` ejecuta las pruebas de frontend sin errores.
 - [ ] `npm run lint` y `npm run build` en `ui/` compilan sin errores ni warnings.
-- [ ] Migraciones ejecutadas limpiamente en SQLite y PostgreSQL (`up` y `down`).
+- [ ] Migraciones PostgreSQL ejecutadas limpiamente (`up` y `down`).
 - [ ] `openapi.yaml` refleja fielmente los endpoints añadidos o modificados.
 
 ---

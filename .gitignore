@@ -50,9 +50,6 @@ go.work.sum
 *.db-journal
 *.db-shm
 *.db-wal
-*.sqlite
-*.sqlite3
-*.sqlite-journal
 
 # ---------------------------------------------------------------------
 # Secrets and machine-local configuration

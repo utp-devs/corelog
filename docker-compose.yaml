@@ -43,7 +43,6 @@ services:
       APP_ENV: development
       SERVER_PORT: 8080
       CORS_ALLOWED_ORIGIN: http://localhost:5173
-      DB_DRIVER: postgres
       DB_HOST: db
       DB_PORT: 5432
       DB_USER: ${DB_USER:-corelog}

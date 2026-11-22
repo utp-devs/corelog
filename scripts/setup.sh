@@ -59,7 +59,7 @@ check_migrate() {
     log check "golang-migrate found: $(migrate -version 2>&1)"
     return 0
   fi
-  log check "golang-migrate not found, only required for manual PostgreSQL or SQLite migration commands"
+  log check "golang-migrate not found, only required for manual PostgreSQL migration commands"
   return 1
 }
 
@@ -92,9 +92,11 @@ cmd_env() {
 }
 
 cmd_dev() {
-  log dev "Preparing the local development environment, SQLite backend, no Docker required"
+  log dev "Preparing the PostgreSQL development environment"
+  check_docker || fail "Docker and the Docker Compose plugin are required"
   check_go || fail "Go is required for local development, install it and re-run this command"
   cmd_env
+  (cd "$ROOT_DIR" && docker compose up -d db migrate)
   log dev "Downloading Go module dependencies"
   (cd "$ROOT_DIR" && go mod download)
   if check_node; then
@@ -115,10 +117,8 @@ cmd_prod() {
   fi
   cmd_env
   if [ "$created_env" -eq 1 ]; then
-    sed -i.bak 's/^DB_DRIVER=.*/DB_DRIVER=postgres/' "$ROOT_DIR/.env" && rm -f "$ROOT_DIR/.env.bak"
-    log prod "Set DB_DRIVER=postgres in the newly created .env"
   else
-    log prod "Existing .env left untouched, confirm DB_DRIVER=postgres yourself if needed"
+    log prod "Existing .env left untouched"
   fi
   log prod "Starting the db and api containers"
   (cd "$ROOT_DIR" && docker compose up -d --build)
@@ -178,7 +178,7 @@ Usage: scripts/setup.sh <command>
 Commands:
   check     Report whether Go, Node, npm, Docker, and golang-migrate are available
   env       Create .env and ui/.env from their example files if missing
-  dev       Prepare a local development environment backed by SQLite, no Docker required
+  dev       Prepare a PostgreSQL development environment with Docker
   prod      Prepare a production-like environment backed by PostgreSQL via Docker
   build     Compile the backend binary and build the frontend
   package   Build and assemble a distributable archive under dist/

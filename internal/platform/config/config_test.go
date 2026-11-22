@@ -1,12 +1,11 @@
 package config
 
 import (
-	"path/filepath"
 	"testing"
 )
 
 func TestConfig(t *testing.T) {
-	t.Run("DatabaseConfig DSN and SQLitePath", func(t *testing.T) {
+	t.Run("DatabaseConfig DSN", func(t *testing.T) {
 		dbCfg := DatabaseConfig{
 			Host:     "localhost",
 			Port:     "5432",
@@ -21,10 +20,6 @@ func TestConfig(t *testing.T) {
 			t.Errorf("got DSN %q, want %q", dbCfg.DSN(), expectedDSN)
 		}
 
-		expectedPath := filepath.Join("data", "testdb.db")
-		if dbCfg.SQLitePath() != expectedPath {
-			t.Errorf("got SQLitePath %q, want %q", dbCfg.SQLitePath(), expectedPath)
-		}
 	})
 
 	t.Run("Load returns valid configuration", func(t *testing.T) {
@@ -34,9 +29,6 @@ func TestConfig(t *testing.T) {
 		}
 		if cfg.Server.Port == "" {
 			t.Errorf("expected default server port")
-		}
-		if cfg.Database.Driver == "" {
-			t.Errorf("expected default database driver")
 		}
 	})
 }
