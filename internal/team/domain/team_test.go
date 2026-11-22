@@ -76,4 +76,3 @@ func TestTeam_Rename(t *testing.T) {
 		}
 	})
 }
-
