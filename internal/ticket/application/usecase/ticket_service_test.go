@@ -228,6 +228,43 @@ func TestTicketService_UpdateStatus(t *testing.T) {
 	})
 }
 
+type fakeWorkflowRepo struct {
+	allowed bool
+}
+
+func (r *fakeWorkflowRepo) CanTransition(_ context.Context, _ uuid.UUID, _, _ domain.Status, _ string) (bool, error) {
+	return r.allowed, nil
+}
+
+func TestTicketService_WorkflowPolicy(t *testing.T) {
+	ctx := context.Background()
+	repo := newFakeTicketRepo()
+	dir := newFakeUserDirectory()
+	workflowRepo := &fakeWorkflowRepo{allowed: false}
+	svc := NewTicketService(repo, dir, workflowRepo)
+
+	ticket, _ := svc.Create(ctx, port.CreateInput{
+		Title:       "Workflow issue",
+		Description: "Desc",
+		Priority:    domain.PriorityMedium,
+		RequesterID: uuid.New(),
+	})
+
+	_, err := svc.UpdateStatus(ctx, ticket.ID, domain.StatusInProgress, "requester")
+	if !errors.Is(err, domain.ErrIllegalTransition) {
+		t.Fatalf("expected ErrIllegalTransition, got %v", err)
+	}
+
+	workflowRepo.allowed = true
+	updated, err := svc.UpdateStatus(ctx, ticket.ID, domain.StatusInProgress, "admin")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if updated.Status != domain.StatusInProgress {
+		t.Fatalf("got status %v, want %v", updated.Status, domain.StatusInProgress)
+	}
+}
+
 func TestTicketService_Assign(t *testing.T) {
 	ctx := context.Background()
 	repo := newFakeTicketRepo()

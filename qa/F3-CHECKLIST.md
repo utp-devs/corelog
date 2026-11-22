@@ -33,6 +33,9 @@
 - [ ] Crear vínculo blocks/relates/duplicates entre dos incidencias
 - [ ] No permitir vincular una incidencia consigo misma
 - [ ] Eliminar vínculo elimina solo la relación
+- [ ] Migración 0010 crea workflow por defecto y transiciones
+- [ ] Transición fuera del workflow devuelve 409
+- [ ] Rol no permitido para la transición devuelve 409
 - [ ] Las menciones @usuario detectan miembros del proyecto
 - [ ] Actividad de issue lista cambios append-only
 

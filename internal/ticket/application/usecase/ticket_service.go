@@ -16,20 +16,24 @@ type TicketService struct {
 	directory     port.UserDirectory
 	collaboration port.CollaborationRepository
 	issueLinks    port.IssueLinkRepository
+	workflows     port.WorkflowRepository
 }
 
 func NewTicketService(repo port.Repository, directory port.UserDirectory, repositories ...any) *TicketService {
 	var collaboration port.CollaborationRepository
 	var issueLinks port.IssueLinkRepository
+	var workflows port.WorkflowRepository
 	for _, repository := range repositories {
 		switch typed := repository.(type) {
 		case port.CollaborationRepository:
 			collaboration = typed
 		case port.IssueLinkRepository:
 			issueLinks = typed
+		case port.WorkflowRepository:
+			workflows = typed
 		}
 	}
-	return &TicketService{repo: repo, directory: directory, collaboration: collaboration, issueLinks: issueLinks}
+	return &TicketService{repo: repo, directory: directory, collaboration: collaboration, issueLinks: issueLinks, workflows: workflows}
 }
 
 var _ port.Service = (*TicketService)(nil)
@@ -67,10 +71,24 @@ func (s *TicketService) List(ctx context.Context, filter port.ListFilter) ([]*do
 	return s.repo.FindAll(ctx, filter)
 }
 
-func (s *TicketService) UpdateStatus(ctx context.Context, id uuid.UUID, status domain.Status) (*domain.Ticket, error) {
+func (s *TicketService) UpdateStatus(ctx context.Context, id uuid.UUID, status domain.Status, actorRoles ...string) (*domain.Ticket, error) {
 	ticket, err := s.repo.FindByID(ctx, id)
 	if err != nil {
 		return nil, err
+	}
+
+	if s.workflows != nil {
+		actorRole := ""
+		if len(actorRoles) > 0 {
+			actorRole = actorRoles[0]
+		}
+		allowed, err := s.workflows.CanTransition(ctx, ticket.ProjectID, ticket.Status, status, actorRole)
+		if err != nil {
+			return nil, err
+		}
+		if !allowed {
+			return nil, domain.ErrIllegalTransition
+		}
 	}
 
 	if err := ticket.ChangeStatus(status); err != nil {

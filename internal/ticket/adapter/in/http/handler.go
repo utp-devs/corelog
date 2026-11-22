@@ -112,7 +112,8 @@ func (h *Handler) UpdateStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ticket, err := h.service.UpdateStatus(r.Context(), id, domain.Status(req.Status))
+	actorRole, _ := appmw.RoleFromContext(r.Context())
+	ticket, err := h.service.UpdateStatus(r.Context(), id, domain.Status(req.Status), actorRole)
 	if err != nil {
 		httpresponse.Error(w, err)
 		return

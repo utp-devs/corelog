@@ -34,3 +34,7 @@ type IssueLinkRepository interface {
 	ListByIssue(ctx context.Context, issueID uuid.UUID) ([]*domain.IssueLink, error)
 	Delete(ctx context.Context, linkID uuid.UUID) error
 }
+
+type WorkflowRepository interface {
+	CanTransition(ctx context.Context, projectID uuid.UUID, fromStatus, toStatus domain.Status, actorRole string) (bool, error)
+}

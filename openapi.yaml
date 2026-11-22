@@ -703,6 +703,7 @@ paths:
     patch:
       tags: [tickets]
       summary: Transition a ticket's status
+      description: The transition must exist in the project's default workflow and be allowed for the authenticated role.
       description: >-
         Valid transitions are open to in_progress, open to closed, in_progress to resolved,
         in_progress to closed, resolved to closed, and resolved to in_progress. Any other

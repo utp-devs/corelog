@@ -11,8 +11,8 @@ type Module struct {
 	Handler *httpadapter.Handler
 }
 
-func NewModule(repo port.Repository, directory port.UserDirectory, collaboration port.CollaborationRepository, issueLinks port.IssueLinkRepository, jwtSecret string) *Module {
-	service := usecase.NewTicketService(repo, directory, collaboration, issueLinks)
+func NewModule(repo port.Repository, directory port.UserDirectory, collaboration port.CollaborationRepository, issueLinks port.IssueLinkRepository, workflows port.WorkflowRepository, jwtSecret string) *Module {
+	service := usecase.NewTicketService(repo, directory, collaboration, issueLinks, workflows)
 	handler := httpadapter.NewHandler(service, jwtSecret)
 
 	return &Module{

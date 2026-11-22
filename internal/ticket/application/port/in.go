@@ -44,7 +44,7 @@ type Service interface {
 	Create(ctx context.Context, in CreateInput) (*domain.Ticket, error)
 	Get(ctx context.Context, id uuid.UUID) (*domain.Ticket, error)
 	List(ctx context.Context, filter ListFilter) ([]*domain.Ticket, error)
-	UpdateStatus(ctx context.Context, id uuid.UUID, status domain.Status) (*domain.Ticket, error)
+	UpdateStatus(ctx context.Context, id uuid.UUID, status domain.Status, actorRole ...string) (*domain.Ticket, error)
 	Assign(ctx context.Context, id uuid.UUID, assignerID uuid.UUID, assigneeID uuid.UUID) (*domain.Ticket, error)
 	UpdateMetadata(ctx context.Context, id uuid.UUID, input UpdateMetadataInput) (*domain.Ticket, error)
 	ListComments(ctx context.Context, issueID uuid.UUID) ([]*domain.Comment, error)
