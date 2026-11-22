@@ -780,3 +780,27 @@ func authorizeWithResolver(ctx context.Context, resolver port.ProjectRoleResolve
 func (r fakeProjectRoleResolver) Authorize(ctx context.Context, action string, actorID uuid.UUID, globalRole string, projectID uuid.UUID) error {
 	return authorizeWithResolver(ctx, r, action, actorID, globalRole, projectID)
 }
+
+// TestTicketService_MoveIssueToStatusChecksProject comprueba que una incidencia solo se mueve dentro
+// de su proyecto: desde otro proyecto responde no encontrada y no cambia de estado.
+func TestTicketService_MoveIssueToStatusChecksProject(t *testing.T) {
+	ctx := context.Background()
+	repo := newFakeTicketRepo()
+	svc := NewTicketService(repo, newFakeUserDirectory(), contributorRoleResolver())
+	ticket, err := svc.Create(ctx, port.CreateInput{Title: "Move me", Description: "Desc", Priority: domain.PriorityMedium, RequesterID: uuid.New()})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	otherProject := uuid.New()
+	if err := svc.MoveIssueToStatus(ctx, uuid.New(), "agent", otherProject, ticket.ID, domain.StatusInProgress); !errors.Is(err, domain.ErrTicketNotFound) {
+		t.Fatalf("move from another project: got %v, want ErrTicketNotFound", err)
+	}
+	if err := svc.MoveIssueToStatus(ctx, uuid.New(), "agent", domain.DefaultProjectID, ticket.ID, domain.StatusInProgress); err != nil {
+		t.Fatalf("move within the project: %v", err)
+	}
+	stored, _ := repo.FindByID(ctx, ticket.ID)
+	if stored.Status != domain.StatusInProgress {
+		t.Fatalf("status = %v, want in_progress", stored.Status)
+	}
+}

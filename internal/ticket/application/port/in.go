@@ -91,6 +91,7 @@ type Service interface {
 	ListSavedFilters(ctx context.Context, ownerID uuid.UUID) ([]*domain.SavedFilter, error)
 	DefaultWorkflow(ctx context.Context, actorID uuid.UUID, globalRole string, projectID uuid.UUID) (*Workflow, error)
 	UpdateDefaultWorkflow(ctx context.Context, actorID uuid.UUID, globalRole string, projectID uuid.UUID, transitions []WorkflowTransition) (*Workflow, error)
+	MoveIssueToStatus(ctx context.Context, actorID uuid.UUID, globalRole string, projectID, issueID uuid.UUID, status domain.Status) error
 	DeleteSavedFilter(ctx context.Context, ownerID, filterID uuid.UUID) error
 	ListIssueLinks(ctx context.Context, issueID, actorID uuid.UUID, globalRole string) ([]*domain.IssueLink, error)
 	CreateIssueLink(ctx context.Context, sourceIssueID, targetIssueID, createdBy uuid.UUID, globalRole string, kind domain.IssueLinkKind) (*domain.IssueLink, error)

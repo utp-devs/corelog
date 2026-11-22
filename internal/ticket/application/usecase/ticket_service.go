@@ -628,3 +628,17 @@ func (s *TicketService) UpdateDefaultWorkflow(ctx context.Context, actorID uuid.
 	}
 	return s.workflows.DefaultWorkflow(ctx, projectID)
 }
+
+// MoveIssueToStatus cambia el estado de una incidencia del proyecto indicado. Reutiliza UpdateStatus,
+// asi que aplica permisos de edicion y reglas del flujo. Una incidencia de otro proyecto no existe aqui.
+func (s *TicketService) MoveIssueToStatus(ctx context.Context, actorID uuid.UUID, globalRole string, projectID, issueID uuid.UUID, status domain.Status) error {
+	ticket, err := s.repo.FindByID(ctx, issueID)
+	if err != nil {
+		return err
+	}
+	if ticket.ProjectID != projectID {
+		return domain.ErrTicketNotFound
+	}
+	_, err = s.UpdateStatus(ctx, issueID, actorID, globalRole, status)
+	return err
+}
