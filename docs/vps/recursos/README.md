@@ -34,6 +34,7 @@ Antes de usarlos: reemplazar `example.com` / `app.example.com` / `api.example.co
 | `anubis/politica.yaml` | `/opt/anubis/politica.yaml` (modo 644) | [09](../09-anubis.md) |
 | `anubis/env.example` | `/opt/anubis/.env` (modo 600, con tu llave) | [09](../09-anubis.md) |
 | `scripts/nginx-container`, `scripts/nginx-wrapper`, `systemd/nginx.service` | `/usr/local/sbin/nginx-container`, `/usr/local/sbin/nginx`, `/etc/systemd/system/nginx.service` (modo B, aplicado) | [10](../10-nginx-como-servicio-del-host.md) |
+| `scripts/upgrade-nginx-image.sh` | Cambia un servidor que ya usa el modo B a una imagen nueva: línea base de todos los `server_name`, conmutación, comparación y retroceso automático (`NEW=nginx-clang:<tag> ./upgrade-nginx-image.sh`) | [16](../16-mantenimiento-y-versionado-de-la-imagen.md) |
 | `scripts/migrate-nginx-to-host.sh` | Migra de Compose al modo B con línea base y retroceso automático (editar `APP` y `API`) | [10](../10-nginx-como-servicio-del-host.md) |
 | `logrotate/nginx-host-variant` | `/etc/logrotate.d/nginx` (variante del servidor de referencia; el servidor nuevo usa `nginx-docker`) | [10](../10-nginx-como-servicio-del-host.md) |
 | `fail2ban/jail.local` | `/etc/fail2ban/jail.local` | [11](../11-fail2ban.md) |

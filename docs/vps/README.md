@@ -70,5 +70,5 @@ Archivos de configuración: [`recursos/`](recursos/README.md) (con el destino de
 ## Cómo se verificó
 
 - **Servidor nuevo** (Debian 13): todo lo marcado como "verificado" se probó con tráfico real y simulaciones de ataque desde otro servidor dentro del país permitido.
-- **Servidor de referencia** (Debian 12, producción previa): origen de la primera versión de la imagen `nginx-clang`, de la unidad `systemd` que convierte al contenedor en el Nginx del host y de algunas variantes opcionales (`userns-remap`, SSH por WireGuard). Cada vez que se usa, se indica.
-- La imagen vigente (`1.31.9-r2`) se **reconstruyó en el servidor nuevo** y su integración con el sistema (modo servicio del host) también está aplicada y verificada allí.
+- **Servidor de referencia** (Debian 13, producción previa, con 19 nombres de sitio): origen de la primera versión de la imagen `nginx-clang`, de la unidad `systemd` que convierte al contenedor en el Nginx del host y de algunas variantes opcionales (`userns-remap`, SSH por WireGuard). Cada vez que se usa, se indica.
+- La imagen vigente (`1.31.9-r2`) se **reconstruyó en el servidor nuevo**, y su integración con el sistema (modo servicio del host) está aplicada y verificada allí. Después se **desplegó también en el servidor de referencia**, reemplazando a la `1.31.6-r1`.

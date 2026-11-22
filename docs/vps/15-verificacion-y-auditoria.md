@@ -147,6 +147,7 @@ Tras la matriz: `fail2ban-client unban <IP_DE_PRUEBA>` y `ufw status | grep -c <
 | `docker build -q --progress=plain` no hace nada | Las dos opciones son incompatibles (error inmediato, tiempo medido 0 s) | Usar solo una; comprobar siempre que un benchmark **realmente corrió** |
 | El script copiado por SSH quedó vacío | `cat > f && … &` en segundo plano pierde `stdin` (los procesos en segundo plano leen de `/dev/null`) | Copiar primero, de forma síncrona, y lanzar después |
 | `pkill -f nombre` mató mi propia sesión SSH | El patrón coincide con la línea de comando del propio `ssh`/shell | Usar el PID o un patrón que no aparezca en el comando que lo ejecuta |
+| Tras actualizar la imagen, un WebSocket dio 404 y un SQLi dio 200: ¿regresión? | No: el backend responde igual **sin nginx**, y el CRS de ese servidor usa umbral de anomalía 10 (una regla crítica suma 5) | Separar lo que responde la aplicación, lo que decide el WAF y lo que hace nginx antes de culpar a la imagen ([16](16-mantenimiento-y-versionado-de-la-imagen.md)) |
 | Cuatro procesos `nginx` como `uuidd` junto a los míos | Es el contenedor oficial de la aplicación web (uid 101); el host muestra el nombre de la cuenta que tiene ese uid | Identificarlos por su proceso maestro y línea de comando ([10](10-nginx-como-servicio-del-host.md)) |
 | Un benchmark de Meson fallaba en 0,2 s | Opciones que no existen en ese proyecto (`lzma`, `programs`, `tests`) y falta de `git` | Listar las opciones reales (`meson configure`) y validar que la medición ejecuta de verdad |
 
@@ -159,6 +160,7 @@ Tras la matriz: `fail2ban-client unban <IP_DE_PRUEBA>` y `ufw status | grep -c <
 | 07 (configuración) | Servidor nuevo, ya con el esquema del sistema (`/etc/nginx`, workers `www-data`) |
 | 10, modo A (Compose) | Servidor nuevo, hasta la migración |
 | 10, modo B (systemd + envoltorio) | **Servidor nuevo (migrado, corte de 1,5 s) y servidor de referencia**, ambos en producción |
+| Despliegue de `1.31.9-r2` en el servidor de referencia | 19 sitios idénticos a la línea base, corte de 2,4 s, `certbot renew --dry-run` con 12 certificados (capítulo 16, sección 7) |
 | 16 (mantenimiento) | Scripts ejecutados en el servidor nuevo: `check-updates.sh`, `check-docs.sh` (incluida una prueba negativa de desfase), `build.sh`/`smoke-test.sh`, `repro-clang.sh` y las mediciones de velocidad |
 | Variantes opcionales (`userns-remap`, SSH por WireGuard, criptografía SSH restringida, jails `nginx-403/4xx/global-attacks`) | Solo en el servidor de referencia |
 
