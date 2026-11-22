@@ -26,6 +26,7 @@ func newMemoryTeamRepo() *memoryTeamRepo {
 }
 
 func (r *memoryTeamRepo) Save(_ context.Context, t *domain.Team) error {
+	if t.ID == uuid.Nil { t.ID = uuid.New() }
 	copied := *t
 	r.teams[t.ID] = &copied
 	return nil
@@ -36,6 +37,7 @@ func (r *memoryTeamRepo) FindByID(_ context.Context, id uuid.UUID) (*domain.Team
 	if !ok {
 		return nil, domain.ErrTeamNotFound
 	}
+	if t.ID == uuid.Nil { t.ID = uuid.New() }
 	copied := *t
 	return &copied, nil
 }
@@ -63,6 +65,7 @@ func (r *memoryTeamRepo) Update(_ context.Context, t *domain.Team) error {
 	if _, ok := r.teams[t.ID]; !ok {
 		return domain.ErrTeamNotFound
 	}
+	if t.ID == uuid.Nil { t.ID = uuid.New() }
 	copied := *t
 	r.teams[t.ID] = &copied
 	return nil

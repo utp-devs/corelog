@@ -14,8 +14,8 @@ func TestNewTeam(t *testing.T) {
 		if err != nil {
 			t.Fatalf("unexpected error creating team: %v", err)
 		}
-		if team.ID == uuid.Nil {
-			t.Errorf("expected non-nil team ID")
+		if team.ID != uuid.Nil {
+			t.Errorf("constructor must leave ID for the database to generate, got %s", team.ID)
 		}
 		if team.Name != "Platform Engineering" {
 			t.Errorf("got name %s, want 'Platform Engineering'", team.Name)

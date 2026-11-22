@@ -9,6 +9,7 @@ import (
 	"github.com/jmoiron/sqlx"
 
 	"github.com/jhonsferg/corelog/internal/platform/apperror"
+	"github.com/jhonsferg/corelog/internal/platform/database"
 	"github.com/jhonsferg/corelog/internal/team/application/port"
 	"github.com/jhonsferg/corelog/internal/team/domain"
 )
@@ -27,12 +28,15 @@ func (r *TeamRepository) Save(ctx context.Context, t *domain.Team) error {
 	row := fromDomain(t)
 
 	const query = `
-		INSERT INTO teams (id, name, created_at, updated_at)
-		VALUES (:id, :name, :created_at, :updated_at)`
+		INSERT INTO teams (name, created_at, updated_at)
+		VALUES (:name, :created_at, :updated_at)
+		RETURNING id`
 
-	if _, err := r.db.NamedExecContext(ctx, query, row); err != nil {
+	id, err := database.InsertReturningID(ctx, r.db, query, row)
+	if err != nil {
 		return apperror.Wrap(apperror.KindInternal, "failed to save team", err)
 	}
+	t.ID = id
 	return nil
 }
 
