@@ -886,3 +886,40 @@ func TestTicketService_BacklogWiredWhenRepositoryAlsoImplementsOtherPorts(t *tes
 		t.Fatalf("backlog must be wired, got %v", err)
 	}
 }
+
+type fakeNotifier struct {
+	calls []uuid.UUID
+}
+
+func (f *fakeNotifier) Notify(_ context.Context, userID uuid.UUID, _, _, _ string) error {
+	f.calls = append(f.calls, userID)
+	return nil
+}
+
+// TestTicketService_AssignNotifiesAssignee comprueba que asignar a otra persona la avisa, y que asignarse a si
+// mismo no genera aviso.
+func TestTicketService_AssignNotifiesAssignee(t *testing.T) {
+	ctx := context.Background()
+	repo := newFakeTicketRepo()
+	dir := newFakeUserDirectory()
+	team := uuid.New()
+	assigner, assignee := uuid.New(), uuid.New()
+	dir.userTeams[assigner] = &team
+	dir.userTeams[assignee] = &team
+	notifier := &fakeNotifier{}
+	svc := NewTicketService(repo, dir, contributorRoleResolver(), newFakeWatcherRepository()).WithNotifier(notifier)
+
+	ticket, _ := svc.Create(ctx, port.CreateInput{Title: "Avisame", Description: "Desc", Priority: domain.PriorityLow, RequesterID: uuid.New()})
+	if _, err := svc.Assign(ctx, ticket.ID, assigner, assignee, "agent"); err != nil {
+		t.Fatalf("assign: %v", err)
+	}
+	if len(notifier.calls) != 1 || notifier.calls[0] != assignee {
+		t.Fatalf("notifications = %v, want one for the assignee", notifier.calls)
+	}
+	if _, err := svc.Assign(ctx, ticket.ID, assignee, assignee, "agent"); err != nil {
+		t.Fatalf("self assign: %v", err)
+	}
+	if len(notifier.calls) != 1 {
+		t.Fatalf("self assignment must not notify, calls = %d", len(notifier.calls))
+	}
+}

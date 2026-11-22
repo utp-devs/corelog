@@ -15,6 +15,7 @@ import (
 
 type TicketService struct {
 	backlog       port.BacklogRepository
+	notifier      port.Notifier
 	repo          port.Repository
 	directory     port.UserDirectory
 	collaboration port.CollaborationRepository
@@ -297,6 +298,7 @@ func (s *TicketService) Assign(ctx context.Context, id, assignerID, assigneeID u
 		}
 	}
 
+	s.notifyAssignment(ctx, ticket, assignerID, assigneeID)
 	return ticket, nil
 }
 
@@ -719,4 +721,18 @@ func (s *TicketService) MoveInBacklog(ctx context.Context, actorID uuid.UUID, gl
 		}
 	}
 	return reordered, nil
+}
+
+// WithNotifier conecta el aviso in-app al asignar incidencias. Sin notificador, asignar no avisa.
+func (s *TicketService) WithNotifier(notifier port.Notifier) *TicketService {
+	s.notifier = notifier
+	return s
+}
+
+// notifyAssignment avisa a la persona asignada. Es best-effort: un fallo al avisar no deshace la asignacion.
+func (s *TicketService) notifyAssignment(ctx context.Context, ticket *domain.Ticket, assignerID, assigneeID uuid.UUID) {
+	if s.notifier == nil || assignerID == assigneeID {
+		return
+	}
+	_ = s.notifier.Notify(ctx, assigneeID, "issue_assigned", "Te asignaron la incidencia: "+ticket.Title, "/issues/"+ticket.ID.String())
 }

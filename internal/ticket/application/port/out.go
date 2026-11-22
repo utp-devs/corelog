@@ -117,3 +117,8 @@ type BacklogRepository interface {
 	ListBacklog(ctx context.Context, projectID uuid.UUID) ([]*domain.Ticket, error)
 	SaveRanks(ctx context.Context, projectID uuid.UUID, ranks map[uuid.UUID]string) error
 }
+
+// Notifier avisa a una persona de un evento del modulo ticket. Lo implementa el modulo notification.
+type Notifier interface {
+	Notify(ctx context.Context, userID uuid.UUID, kind, message, link string) error
+}

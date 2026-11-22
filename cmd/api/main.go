@@ -16,6 +16,8 @@ import (
 	authusecase "github.com/jhonsferg/corelog/internal/authorization/application/usecase"
 	"github.com/jhonsferg/corelog/internal/board"
 	boardpostgres "github.com/jhonsferg/corelog/internal/board/adapter/out/postgres"
+	"github.com/jhonsferg/corelog/internal/notification"
+	notificationpostgres "github.com/jhonsferg/corelog/internal/notification/adapter/out/postgres"
 	"github.com/jhonsferg/corelog/internal/platform/config"
 	"github.com/jhonsferg/corelog/internal/platform/database"
 	"github.com/jhonsferg/corelog/internal/platform/httpserver"
@@ -96,14 +98,15 @@ func run() error {
 	}
 	fileStorage := ticketfilesystem.New(attachmentRoot)
 	workflowRepo := ticketpostgres.NewWorkflowRepository(db)
-	ticketModule := ticket.NewModule(ticketRepo, userDirectory, collaborationRepo, issueLinkRepo, workflowRepo, watcherRepo, savedFilterRepo, cfg.Auth.JWTSecret, projectAuthorizer, projectMemberRepo)
+	notificationModule := notification.NewModule(notificationpostgres.NewNotificationRepository(db), cfg.Auth.JWTSecret)
+	ticketModule := ticket.NewModule(ticketRepo, userDirectory, collaborationRepo, issueLinkRepo, workflowRepo, watcherRepo, savedFilterRepo, cfg.Auth.JWTSecret, projectAuthorizer, notificationModule.Service, projectMemberRepo)
 	sprintModule := sprint.NewModule(sprintpostgres.NewSprintRepository(db), projectAuthorizer, cfg.Auth.JWTSecret)
 	boardModule := board.NewModule(boardpostgres.NewBoardRepository(db), projectModule.Service, projectAuthorizer, boardIssueMover{issues: ticketModule.Service}, cfg.Auth.JWTSecret)
 	ticketModule.Handler.WithAttachments(attachmentRepo, fileStorage)
 
 	router := httpserver.NewRouter(cfg.Server)
 	router.Route("/api/v1", func(r chi.Router) {
-		httpserver.Mount(r, userModule.Handler, teamModule.Handler, projectModule.Handler, boardModule.Handler, ticketModule.Handler, sprintModule.Handler)
+		httpserver.Mount(r, userModule.Handler, teamModule.Handler, projectModule.Handler, boardModule.Handler, ticketModule.Handler, sprintModule.Handler, notificationModule.Handler)
 	})
 
 	server := httpserver.New(cfg.Server, router)
