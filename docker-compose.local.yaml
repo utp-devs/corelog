@@ -1,0 +1,88 @@
+name: corelog-local
+
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER:-corelog}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-corelog}
+      POSTGRES_DB: ${DB_NAME:-corelog}
+    ports:
+      - "${CORELOG_LOCAL_DB_PORT:-5432}:5432"
+    volumes:
+      - corelog_local_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-corelog} -d ${DB_NAME:-corelog}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  migrate:
+    image: migrate/migrate:v4.17.1
+    restart: "no"
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./migrations/postgres:/migrations:ro
+    command:
+      - "-path=/migrations"
+      - "-database=postgres://${DB_USER:-corelog}:${DB_PASSWORD:-corelog}@db:5432/${DB_NAME:-corelog}?sslmode=disable"
+      - "up"
+
+  api:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.api
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    environment:
+      APP_ENV: development
+      SERVER_PORT: 8080
+      CORS_ALLOWED_ORIGIN: http://localhost:${CORELOG_LOCAL_UI_PORT:-5173}
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: ${DB_USER:-corelog}
+      DB_PASSWORD: ${DB_PASSWORD:-corelog}
+      DB_NAME: ${DB_NAME:-corelog}
+      DB_SSLMODE: disable
+      JWT_SECRET: ${JWT_SECRET:-local-development-secret-change-before-sharing}
+      JWT_EXPIRATION: 24h
+      ATTACHMENTS_DIR: /var/lib/corelog/attachments
+    ports:
+      - "${CORELOG_LOCAL_API_PORT:-8080}:8080"
+    volumes:
+      - corelog_local_attachments:/var/lib/corelog/attachments
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:8080/health || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+
+  ui:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.ui
+      args:
+        VITE_API_BASE_URL: http://localhost:${CORELOG_LOCAL_API_PORT:-8080}/api/v1
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - "${CORELOG_LOCAL_UI_PORT:-5173}:80"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost/ || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+volumes:
+  corelog_local_db_data:
+  corelog_local_attachments:

@@ -306,6 +306,20 @@ docker compose up -d --build
 
 El frontend se compila con `VITE_API_BASE_URL`, cuyo valor por defecto es `http://localhost:8080/api/v1`. Para usar otra URL, defínela en `.env` antes de construir.
 
+Para ejecutar todo el proyecto en local con una configuración y volúmenes independientes, usa `docker-compose.local.yaml`:
+
+```sh
+docker compose -f docker-compose.local.yaml up -d --build
+```
+
+La UI queda disponible en `http://localhost:5173`, la API en `http://localhost:8080` y PostgreSQL en `localhost:5432`. La primera cuenta registrada obtiene el rol de administrador. La base de datos y los adjuntos persisten en volúmenes locales dedicados. Para detener los servicios sin borrar esos datos:
+
+```sh
+docker compose -f docker-compose.local.yaml down
+```
+
+Los puertos se pueden cambiar con `CORELOG_LOCAL_UI_PORT`, `CORELOG_LOCAL_API_PORT` y `CORELOG_LOCAL_DB_PORT`. Las credenciales de desarrollo tienen valores predeterminados; define `DB_USER`, `DB_PASSWORD`, `DB_NAME` y `JWT_SECRET` en el entorno o en un archivo `.env` si necesitas personalizarlas.
+
 ### Contenedor de base de datos: usuario, base de datos y permisos
 
 The `db` service runs the official `postgres:17-alpine` image unmodified. That image creates the role, the database, and the ownership grant between them automatically, driven entirely by three environment variables set in `docker-compose.yaml`:
