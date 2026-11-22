@@ -1,0 +1,92 @@
+package postgres
+
+import (
+	"context"
+	"os"
+	"strings"
+	"testing"
+
+	"github.com/google/uuid"
+	_ "github.com/jackc/pgx/v5/stdlib"
+	"github.com/jmoiron/sqlx"
+)
+
+// TestSearchIndexVisibilityAndLiteralPatternsPostgres comprueba que un miembro solo ve sus proyectos y
+// sus incidencias, que el admin ve todo, y que "%" y "_" se buscan literalmente.
+func TestSearchIndexVisibilityAndLiteralPatternsPostgres(t *testing.T) {
+	dsn := os.Getenv("CORELOG_TEST_DATABASE_URL")
+	if dsn == "" {
+		t.Skip("set CORELOG_TEST_DATABASE_URL to run PostgreSQL integration tests")
+	}
+	db, err := sqlx.Connect("pgx", dsn)
+	if err != nil {
+		t.Fatal(err)
+	}
+	db.SetMaxOpenConns(1)
+	t.Cleanup(func() { _ = db.Close() })
+
+	schema := "search_test_" + strings.ReplaceAll(uuid.NewString(), "-", "")
+	if _, err := db.Exec(`CREATE SCHEMA ` + schema); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _, _ = db.Exec(`DROP SCHEMA ` + schema + ` CASCADE`) })
+	if _, err := db.Exec(`SET search_path TO ` + schema); err != nil {
+		t.Fatal(err)
+	}
+	for _, statement := range []string{
+		`CREATE TABLE projects (id UUID PRIMARY KEY, key TEXT NOT NULL, name TEXT NOT NULL)`,
+		`CREATE TABLE project_members (project_id UUID NOT NULL, user_id UUID NOT NULL, PRIMARY KEY (project_id, user_id))`,
+		`CREATE TABLE issues (id UUID PRIMARY KEY, project_id UUID NOT NULL REFERENCES projects (id), title TEXT NOT NULL, description TEXT NOT NULL DEFAULT '', updated_at TIMESTAMPTZ NOT NULL DEFAULT now())`,
+	} {
+		if _, err := db.Exec(statement); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	member, outsider := uuid.New(), uuid.New()
+	mine, theirs := uuid.New(), uuid.New()
+	if _, err := db.Exec(`INSERT INTO projects (id, key, name) VALUES ($1, 'CORE', 'Core platform'), ($2, 'OPS', 'Operaciones')`, mine, theirs); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`INSERT INTO project_members VALUES ($1, $2)`, mine, member); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`INSERT INTO issues (id, project_id, title) VALUES ($1, $2, 'Exportar 100% de datos'), ($3, $4, 'Exportar 100% tambien')`,
+		uuid.New(), mine, uuid.New(), theirs); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`INSERT INTO issues (id, project_id, title) VALUES ($1, $2, 'Exportar 1000 datos')`, uuid.New(), mine); err != nil {
+		t.Fatal(err)
+	}
+
+	index := NewSearchIndex(db)
+	ctx := context.Background()
+
+	memberHits, err := index.Search(ctx, member, false, "exportar", 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(memberHits) != 2 {
+		t.Fatalf("member sees %d hits for 'exportar', want 2 (its own project only)", len(memberHits))
+	}
+
+	outsiderHits, err := index.Search(ctx, outsider, false, "core", 10)
+	if err != nil || len(outsiderHits) != 0 {
+		t.Fatalf("non member found %d hits in a project it does not belong to", len(outsiderHits))
+	}
+
+	adminHits, err := index.Search(ctx, outsider, true, "exportar", 10)
+	if err != nil || len(adminHits) != 3 {
+		t.Fatalf("admin sees %d hits, want 3 (all projects)", len(adminHits))
+	}
+
+	literal, err := index.Search(ctx, outsider, true, "100%", 10)
+	if err != nil || len(literal) != 2 {
+		t.Fatalf("'100%%' matched %d hits, want 2 (the literal percent sign only)", len(literal))
+	}
+	for _, hit := range literal {
+		if !strings.Contains(hit.Title, "100%") {
+			t.Fatalf("wildcard leaked into results: %q", hit.Title)
+		}
+	}
+}
