@@ -6,7 +6,7 @@ import { PriorityTag } from './PriorityTag'
 describe('PriorityTag', () => {
   it('renders the critical priority label', () => {
     render(<PriorityTag priority="critical" />)
-    expect(screen.getByText('Critica')).toBeInTheDocument()
+    expect(screen.getByText('Crítica')).toBeInTheDocument()
   })
 
   it('renders the low priority label', () => {

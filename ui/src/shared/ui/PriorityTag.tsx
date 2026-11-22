@@ -6,7 +6,7 @@ const priorityMap: Record<TicketPriority, { label: string; tone: Tone }> = {
   low: { label: 'Baja', tone: 'neutral' },
   medium: { label: 'Media', tone: 'blue' },
   high: { label: 'Alta', tone: 'orange' },
-  critical: { label: 'Critica', tone: 'red' },
+  critical: { label: 'Crítica', tone: 'red' },
 }
 
 type PriorityTagProps = {

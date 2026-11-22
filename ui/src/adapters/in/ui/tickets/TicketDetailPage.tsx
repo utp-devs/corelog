@@ -57,7 +57,7 @@ function IssueEditor({ ticket, onSave }: IssueEditorProps) {
               { value: 'low', label: 'Baja' },
               { value: 'medium', label: 'Media' },
               { value: 'high', label: 'Alta' },
-              { value: 'critical', label: 'Critica' },
+              { value: 'critical', label: 'Crítica' },
             ]}
           />
           <Select<IssueType>
