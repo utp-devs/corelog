@@ -83,3 +83,28 @@
 .wipInput {
   width: 96px;
 }
+
+/* Barra de filtros rapidos del tablero. */
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--cl-space-3);
+  margin-bottom: var(--cl-space-4);
+}
+
+.searchField {
+  width: 280px;
+  max-width: 100%;
+}
+
+.priorityField {
+  width: 160px;
+}
+
+.mineToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--cl-space-2);
+  cursor: pointer;
+}

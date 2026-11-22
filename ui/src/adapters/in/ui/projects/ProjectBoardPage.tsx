@@ -2,9 +2,12 @@ import {
   Alert,
   Card,
   Empty,
+  Input,
   InputNumber,
+  Select,
   Skeleton,
   Space,
+  Switch,
   Tag,
   Typography,
 } from 'antd'
@@ -23,6 +26,7 @@ import {
 import { useEffect, useState, type ReactNode } from 'react'
 import { Link, useParams } from 'react-router-dom'
 
+import { useAuthStore } from '@/adapters/in/state/auth.store'
 import { BoardHttpRepository } from '@/adapters/out/http/board-http-repository'
 import { ProjectHttpRepository } from '@/adapters/out/http/project-http-repository'
 import type { BoardCard, BoardColumn, ProjectBoard } from '@/core/projects/domain/board'
@@ -157,6 +161,20 @@ export function ProjectBoardPage() {
 
   const currentResult = result?.projectId === id ? result : null
   const board = currentResult?.board
+  const currentUserId = useAuthStore((s) => s.user?.id)
+  const [search, setSearch] = useState('')
+  const [onlyMine, setOnlyMine] = useState(false)
+  const [priorityFilter, setPriorityFilter] = useState<string | undefined>(undefined)
+
+  // Filtros rapidos sobre las tarjetas ya cargadas: no generan peticiones.
+  const matchesFilters = (card: BoardCard) => {
+    if (onlyMine && card.assigneeId !== currentUserId) return false
+    if (priorityFilter && card.priority !== priorityFilter) return false
+    const term = search.trim().toLowerCase()
+    if (term && !card.summary.toLowerCase().includes(term)) return false
+    return true
+  }
+  const visibleColumns = (board?.columns ?? []).map((column) => ({ ...column, cards: column.cards.filter(matchesFilters) }))
 
   const handleDragStart = (event: DragStartEvent) => {
     setActiveCardId(String(event.active.id))
@@ -204,8 +222,36 @@ export function ProjectBoardPage() {
       )}
       {!currentResult ? <Skeleton active paragraph={{ rows: 5 }} /> : currentResult.error ? <Alert type="error" showIcon message={currentResult.error} /> : board?.columns.length ? (
         <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd} onDragCancel={() => setActiveCardId(null)}>
+          <div className={styles.filters} role="search" aria-label="Filtrar tarjetas del tablero">
+            <Input.Search
+              allowClear
+              placeholder="Buscar en el tablero"
+              aria-label="Buscar en el tablero"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              className={styles.searchField}
+            />
+            <Select
+              allowClear
+              placeholder="Prioridad"
+              aria-label="Filtrar por prioridad"
+              value={priorityFilter}
+              onChange={(value) => setPriorityFilter(value)}
+              options={[
+                { value: 'critical', label: 'Crítica' },
+                { value: 'high', label: 'Alta' },
+                { value: 'medium', label: 'Media' },
+                { value: 'low', label: 'Baja' },
+              ]}
+              className={styles.priorityField}
+            />
+            <label className={styles.mineToggle}>
+              <Switch size="small" checked={onlyMine} onChange={setOnlyMine} aria-label="Solo mis incidencias" />
+              <Typography.Text>Solo mis incidencias</Typography.Text>
+            </label>
+          </div>
           <div className={styles.board} aria-label={`Tablero ${board.name}`}>
-            {board.columns.map((column) => (
+            {visibleColumns.map((column) => (
               <DroppableColumn key={column.id} column={column} canManage={board.canManageBoard} onSaveWip={saveWip}>
                 <div className={styles.cards}>
                   {column.cards.length === 0 ? <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Sin incidencias" /> : column.cards.map((card) => (
