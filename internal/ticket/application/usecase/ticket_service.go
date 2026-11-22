@@ -256,17 +256,11 @@ func (s *TicketService) Assign(ctx context.Context, id, assignerID, assigneeID u
 		return nil, err
 	}
 
-	assignerTeam, err := s.directory.TeamOf(ctx, assignerID)
+	sameTeam, err := s.directory.SharesTeam(ctx, assignerID, assigneeID)
 	if err != nil {
 		return nil, err
 	}
-
-	assigneeTeam, err := s.directory.TeamOf(ctx, assigneeID)
-	if err != nil {
-		return nil, err
-	}
-
-	if assignerTeam == nil || assigneeTeam == nil || *assignerTeam != *assigneeTeam {
+	if !sameTeam {
 		return nil, domain.ErrCrossTeamAssignment
 	}
 

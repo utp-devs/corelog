@@ -213,12 +213,10 @@ func (d *fakeUserDirectory) NamesOf(_ context.Context, userIDs []uuid.UUID) (map
 	return out, nil
 }
 
-func (d *fakeUserDirectory) TeamOf(_ context.Context, userID uuid.UUID) (*uuid.UUID, error) {
-	teamID, ok := d.userTeams[userID]
-	if !ok {
-		return nil, nil
-	}
-	return teamID, nil
+func (d *fakeUserDirectory) SharesTeam(_ context.Context, userA, userB uuid.UUID) (bool, error) {
+	teamA, okA := d.userTeams[userA]
+	teamB, okB := d.userTeams[userB]
+	return okA && okB && teamA != nil && teamB != nil && *teamA == *teamB, nil
 }
 
 func TestTicketService_Create(t *testing.T) {

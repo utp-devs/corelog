@@ -18,7 +18,8 @@ type Repository interface {
 }
 
 type UserDirectory interface {
-	TeamOf(ctx context.Context, userID uuid.UUID) (*uuid.UUID, error)
+	// SharesTeam indica si los dos usuarios pertenecen a al menos un mismo equipo.
+	SharesTeam(ctx context.Context, userA, userB uuid.UUID) (bool, error)
 	NamesOf(ctx context.Context, userIDs []uuid.UUID) (map[uuid.UUID]string, error)
 }
 

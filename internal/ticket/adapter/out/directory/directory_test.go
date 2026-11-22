@@ -11,9 +11,10 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
-// TestUserDirectoryNamesOfPostgres comprueba la busqueda de nombres por lote: los ids
-// existentes aparecen en el mapa y los inexistentes se omiten sin error.
-func TestUserDirectoryNamesOfPostgres(t *testing.T) {
+// openTestSchema abre la base de pruebas y crea un schema temporal que se elimina al terminar.
+// Devuelve false (y omite la prueba) si no hay CORELOG_TEST_DATABASE_URL.
+func openTestSchema(t *testing.T) (*sqlx.DB, bool) {
+	t.Helper()
 	dsn := os.Getenv("CORELOG_TEST_DATABASE_URL")
 	if dsn == "" {
 		t.Skip("set CORELOG_TEST_DATABASE_URL to run PostgreSQL integration tests")
@@ -33,6 +34,13 @@ func TestUserDirectoryNamesOfPostgres(t *testing.T) {
 	if _, err := db.Exec(`SET search_path TO ` + schema); err != nil {
 		t.Fatal(err)
 	}
+	return db, true
+}
+
+// TestUserDirectoryNamesOfPostgres comprueba la busqueda de nombres por lote: los ids
+// existentes aparecen en el mapa y los inexistentes se omiten sin error.
+func TestUserDirectoryNamesOfPostgres(t *testing.T) {
+	db, _ := openTestSchema(t)
 	if _, err := db.Exec(`CREATE TABLE users (id UUID PRIMARY KEY, name VARCHAR(120) NOT NULL)`); err != nil {
 		t.Fatal(err)
 	}
@@ -57,5 +65,34 @@ func TestUserDirectoryNamesOfPostgres(t *testing.T) {
 	empty, err := dir.NamesOf(context.Background(), nil)
 	if err != nil || len(empty) != 0 {
 		t.Errorf("NamesOf(nil) = %v, %v; want empty map and no error", empty, err)
+	}
+}
+
+// TestUserDirectorySharesTeamPostgres comprueba que dos usuarios comparten equipo solo si
+// existe una membresia en comun en team_members.
+func TestUserDirectorySharesTeamPostgres(t *testing.T) {
+	db, _ := openTestSchema(t)
+	if _, err := db.Exec(`CREATE TABLE team_members (team_id UUID NOT NULL, user_id UUID NOT NULL, PRIMARY KEY (team_id, user_id))`); err != nil {
+		t.Fatal(err)
+	}
+
+	teamA, teamB := uuid.New(), uuid.New()
+	ana, luis, nadie := uuid.New(), uuid.New(), uuid.New()
+	if _, err := db.Exec(
+		`INSERT INTO team_members (team_id, user_id) VALUES ($1, $2), ($3, $4), ($3, $5)`,
+		teamA, ana, teamB, luis, ana,
+	); err != nil {
+		t.Fatal(err)
+	}
+
+	dir := NewUserDirectory(db)
+	ctx := context.Background()
+	shared, err := dir.SharesTeam(ctx, ana, luis)
+	if err != nil || !shared {
+		t.Errorf("SharesTeam(ana, luis) = %v, %v; want true (both belong to teamB)", shared, err)
+	}
+	none, err := dir.SharesTeam(ctx, ana, nadie)
+	if err != nil || none {
+		t.Errorf("SharesTeam(ana, nadie) = %v, %v; want false", none, err)
 	}
 }

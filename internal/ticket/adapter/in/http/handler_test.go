@@ -181,12 +181,10 @@ func (d *memoryDirectory) NamesOf(_ context.Context, userIDs []uuid.UUID) (map[u
 	return out, nil
 }
 
-func (d *memoryDirectory) TeamOf(_ context.Context, userID uuid.UUID) (*uuid.UUID, error) {
-	teamID, ok := d.teams[userID]
-	if !ok {
-		return nil, nil
-	}
-	return teamID, nil
+func (d *memoryDirectory) SharesTeam(_ context.Context, userA, userB uuid.UUID) (bool, error) {
+	teamA, okA := d.teams[userA]
+	teamB, okB := d.teams[userB]
+	return okA && okB && teamA != nil && teamB != nil && *teamA == *teamB, nil
 }
 
 func setupTicketRouter() (*chi.Mux, string, *memoryTicketRepo, *memoryDirectory) {

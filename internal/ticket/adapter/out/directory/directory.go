@@ -2,8 +2,6 @@ package directory
 
 import (
 	"context"
-	"database/sql"
-	"errors"
 
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
@@ -45,25 +43,16 @@ func (d *UserDirectory) NamesOf(ctx context.Context, userIDs []uuid.UUID) (map[u
 	return names, nil
 }
 
-func (d *UserDirectory) TeamOf(ctx context.Context, userID uuid.UUID) (*uuid.UUID, error) {
-	query := d.db.Rebind(`SELECT team_id FROM users WHERE id = ?`)
-
-	var teamID sql.NullString
-	if err := d.db.GetContext(ctx, &teamID, query, userID); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, apperror.New(apperror.KindValidation, "user does not exist")
-		}
-		return nil, apperror.Wrap(apperror.KindInternal, "failed to look up user team", err)
+// SharesTeam indica si los dos usuarios comparten al menos un equipo, segun la tabla team_members.
+func (d *UserDirectory) SharesTeam(ctx context.Context, userA, userB uuid.UUID) (bool, error) {
+	var shared bool
+	query := d.db.Rebind(`SELECT EXISTS (
+		SELECT 1 FROM team_members a
+		JOIN team_members b ON b.team_id = a.team_id
+		WHERE a.user_id = ? AND b.user_id = ?
+	)`)
+	if err := d.db.GetContext(ctx, &shared, query, userA, userB); err != nil {
+		return false, apperror.Wrap(apperror.KindInternal, "failed to check shared teams", err)
 	}
-
-	if !teamID.Valid {
-		return nil, nil
-	}
-
-	parsed, err := uuid.Parse(teamID.String)
-	if err != nil {
-		return nil, apperror.Wrap(apperror.KindInternal, "failed to decode team id", err)
-	}
-
-	return &parsed, nil
+	return shared, nil
 }
