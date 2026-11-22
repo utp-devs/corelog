@@ -18,3 +18,9 @@
 .hint {
   margin-top: var(--cl-space-2);
 }
+
+.advancedToggle {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: var(--cl-space-3);
+}

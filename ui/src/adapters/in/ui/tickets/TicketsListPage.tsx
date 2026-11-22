@@ -43,6 +43,7 @@ const issueTypeOptions: { value: IssueType; label: string }[] = [
 const savedFilterRepository = new SavedFilterHttpRepository()
 
 export function TicketsListPage() {
+  const [advancedOpen, setAdvancedOpen] = useState(false)
   const navigate = useNavigate()
   const [statusFilter, setStatusFilter] = useState<TicketStatus | undefined>()
   const [priorityFilter, setPriorityFilter] = useState<TicketPriority | undefined>()
@@ -173,6 +174,8 @@ export function TicketsListPage() {
 
   const showingSkeleton = isLoading && tickets.length === 0
 
+  // Los filtros avanzados (filtro guardado y fechas) se muestran plegados; se abren solos si hay alguno activo.
+  const advancedVisible = advancedOpen || Boolean(dueFrom || dueTo || selectedSavedFilter)
   return (
     <div>
       {contextHolder}
@@ -186,6 +189,13 @@ export function TicketsListPage() {
         }
       />
 
+      <div className={styles.advancedToggle}>
+        <Button aria-expanded={advancedVisible} onClick={() => setAdvancedOpen((value) => !value)}>
+          {advancedVisible ? 'Ocultar filtros avanzados' : 'Filtros avanzados'}
+        </Button>
+      </div>
+
+      {advancedVisible && (
       <div className={styles.savedRow}>
         <Select
           allowClear
@@ -208,6 +218,7 @@ export function TicketsListPage() {
           onChange={(value) => { setDueTo(value?.endOf('day').toISOString()); setPage(1) }}
         />
       </div>
+      )}
 
       {savedFilterError && <Alert type="error" showIcon message={savedFilterError} closable onClose={() => setSavedFilterError(undefined)} />}
 

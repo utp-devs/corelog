@@ -28,7 +28,12 @@ export function TicketList({ tickets, isLoading, onSelect, onMoveUp, onMoveDown,
       width: 72,
       render: (_, ticket) => <IssueTypeIcon type={ticket.issueType} />,
     },
-    { title: 'Título', dataIndex: 'title', key: 'title' },
+    {
+      title: 'Título',
+      dataIndex: 'title',
+      key: 'title',
+      render: (value: string) => <span className={styles.titleText}>{value}</span>,
+    },
     {
       title: 'Estado',
       key: 'status',

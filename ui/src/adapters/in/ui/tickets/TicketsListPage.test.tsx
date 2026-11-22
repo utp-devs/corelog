@@ -58,6 +58,7 @@ describe('TicketsListPage saved filters', () => {
 
   it('loads saved criteria into the issue filters and deletes the selected saved filter', async () => {
     renderPage()
+    fireEvent.click(await screen.findByRole('button', { name: 'Filtros avanzados' }))
     await waitFor(() => expect(listSavedFilters).toHaveBeenCalled())
     fireEvent.mouseDown(screen.getByText('Cargar filtro guardado'))
     fireEvent.click(await screen.findByText('Open bugs'))
@@ -69,6 +70,7 @@ describe('TicketsListPage saved filters', () => {
 
   it('saves the active issue criteria with a personal name', async () => {
     renderPage()
+    fireEvent.click(await screen.findByRole('button', { name: 'Filtros avanzados' }))
     fireEvent.click(screen.getByRole('button', { name: 'Guardar filtro actual' }))
     fireEvent.change(screen.getByPlaceholderText('Nombre del filtro'), { target: { value: 'My current view' } })
     fireEvent.click(screen.getByRole('button', { name: 'Guardar' }))

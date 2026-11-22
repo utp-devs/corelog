@@ -5,3 +5,12 @@
 .row:hover td {
   background: var(--cl-bg-sunken);
 }
+
+.titleText {
+  color: var(--cl-brand);
+  font-weight: 600;
+}
+
+.titleText:hover {
+  text-decoration: underline;
+}
