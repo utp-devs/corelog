@@ -78,6 +78,12 @@ type FileStorage interface {
 	Delete(context.Context, string) error
 }
 
+// ProjectAuthorizer decide si un actor puede ejecutar una accion sobre un proyecto. Las acciones
+// usan los nombres de la matriz de permisos (view_project, create_issue, edit_issue, comment).
+type ProjectAuthorizer interface {
+	Authorize(ctx context.Context, action string, actorID uuid.UUID, globalRole string, projectID uuid.UUID) error
+}
+
 type ProjectRoleResolver interface {
 	FindRole(ctx context.Context, projectID, userID uuid.UUID) (*string, error)
 	ListProjectIDs(ctx context.Context, userID uuid.UUID) ([]uuid.UUID, error)

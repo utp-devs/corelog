@@ -7,7 +7,6 @@ import (
 
 	"github.com/google/uuid"
 
-	authorization "github.com/jhonsferg/corelog/internal/authorization/domain"
 	"github.com/jhonsferg/corelog/internal/platform/apperror"
 	"github.com/jhonsferg/corelog/internal/ticket/application/port"
 	"github.com/jhonsferg/corelog/internal/ticket/domain"
@@ -23,7 +22,7 @@ type TicketService struct {
 	watchers      port.IssueWatcherRepository
 	assigneeWatch port.AssigneeWatcherRepository
 	savedFilters  port.SavedFilterRepository
-	policy        authorization.Policy
+	authorizer    port.ProjectAuthorizer
 }
 
 func NewTicketService(repo port.Repository, directory port.UserDirectory, repositories ...any) *TicketService {
@@ -31,10 +30,14 @@ func NewTicketService(repo port.Repository, directory port.UserDirectory, reposi
 	var issueLinks port.IssueLinkRepository
 	var workflows port.WorkflowRepository
 	var projectRoles port.ProjectRoleResolver
+	var authorizer port.ProjectAuthorizer
 	var watchers port.IssueWatcherRepository
 	var assigneeWatch port.AssigneeWatcherRepository
 	var savedFilters port.SavedFilterRepository
 	for _, repository := range repositories {
+		if typed, ok := repository.(port.ProjectAuthorizer); ok {
+			authorizer = typed
+		}
 		switch typed := repository.(type) {
 		case port.CollaborationRepository:
 			collaboration = typed
@@ -52,7 +55,7 @@ func NewTicketService(repo port.Repository, directory port.UserDirectory, reposi
 			savedFilters = typed
 		}
 	}
-	return &TicketService{repo: repo, directory: directory, collaboration: collaboration, issueLinks: issueLinks, workflows: workflows, projectRoles: projectRoles, watchers: watchers, assigneeWatch: assigneeWatch, savedFilters: savedFilters}
+	return &TicketService{repo: repo, directory: directory, collaboration: collaboration, issueLinks: issueLinks, workflows: workflows, projectRoles: projectRoles, authorizer: authorizer, watchers: watchers, assigneeWatch: assigneeWatch, savedFilters: savedFilters}
 }
 
 var _ port.Service = (*TicketService)(nil)
@@ -515,57 +518,25 @@ func (s *TicketService) UpdateRank(ctx context.Context, id, actorID uuid.UUID, g
 }
 
 func (s *TicketService) requireIssueEdit(ctx context.Context, projectID, actorID uuid.UUID, globalRole string) error {
-	role, err := s.projectRole(ctx, projectID, actorID)
-	if err != nil {
-		return err
-	}
-	if !s.policy.CanEditIssue(globalRole, role) {
-		return apperror.New(apperror.KindForbidden, "forbidden issue operation")
-	}
-	return nil
+	return s.authorize(ctx, "edit_issue", projectID, actorID, globalRole)
 }
 
 func (s *TicketService) requireIssueView(ctx context.Context, projectID, actorID uuid.UUID, globalRole string) error {
-	role, err := s.projectRole(ctx, projectID, actorID)
-	if err != nil {
-		return err
-	}
-	if !s.policy.CanViewProject(globalRole, role) {
-		return apperror.New(apperror.KindForbidden, "forbidden project operation")
-	}
-	return nil
+	return s.authorize(ctx, "view_project", projectID, actorID, globalRole)
 }
 
 func (s *TicketService) requireIssueCreate(ctx context.Context, projectID, actorID uuid.UUID, globalRole string) error {
-	role, err := s.projectRole(ctx, projectID, actorID)
-	if err != nil {
-		return err
-	}
-	if !s.policy.CanCreateIssue(globalRole, role) {
-		return apperror.New(apperror.KindForbidden, "forbidden project operation")
-	}
-	return nil
+	return s.authorize(ctx, "create_issue", projectID, actorID, globalRole)
 }
 
 func (s *TicketService) requireComment(ctx context.Context, projectID, actorID uuid.UUID, globalRole string) error {
-	role, err := s.projectRole(ctx, projectID, actorID)
-	if err != nil {
-		return err
-	}
-	if !s.policy.CanComment(globalRole, role) {
-		return apperror.New(apperror.KindForbidden, "forbidden issue operation")
-	}
-	return nil
+	return s.authorize(ctx, "comment", projectID, actorID, globalRole)
 }
 
-func (s *TicketService) projectRole(ctx context.Context, projectID, actorID uuid.UUID) (*authorization.ProjectRole, error) {
-	if s.projectRoles == nil {
-		return nil, nil
+// authorize delega la decision de acceso al autorizador del proyecto. Sin autorizador se deniega.
+func (s *TicketService) authorize(ctx context.Context, action string, projectID, actorID uuid.UUID, globalRole string) error {
+	if s.authorizer == nil {
+		return apperror.New(apperror.KindForbidden, "forbidden project operation")
 	}
-	role, err := s.projectRoles.FindRole(ctx, projectID, actorID)
-	if err != nil || role == nil {
-		return nil, err
-	}
-	value := authorization.ProjectRole(*role)
-	return &value, nil
+	return s.authorizer.Authorize(ctx, action, actorID, globalRole, projectID)
 }

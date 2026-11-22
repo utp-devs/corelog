@@ -13,6 +13,9 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
+	authport "github.com/jhonsferg/corelog/internal/authorization/application/port"
+	authusecase "github.com/jhonsferg/corelog/internal/authorization/application/usecase"
+	authdomain "github.com/jhonsferg/corelog/internal/authorization/domain"
 
 	"github.com/jhonsferg/corelog/internal/platform/apperror"
 	"github.com/jhonsferg/corelog/internal/platform/authtoken"
@@ -500,4 +503,26 @@ func TestTicketHTTP_ResponsesIncludePersonNames(t *testing.T) {
 	if fetched.Data.AssigneeName != nil {
 		t.Errorf("assignee_name = %q, want absent when unassigned", *fetched.Data.AssigneeName)
 	}
+}
+
+// roleLookupOf adapta el resolutor de roles del modulo al puerto de autorizacion del hexagono authorization.
+type roleLookupOf struct {
+	resolver ticketport.ProjectRoleResolver
+}
+
+func (l roleLookupOf) FindRole(ctx context.Context, projectID, userID uuid.UUID) (*authdomain.ProjectRole, error) {
+	role, err := l.resolver.FindRole(ctx, projectID, userID)
+	if err != nil || role == nil {
+		return nil, err
+	}
+	value := authdomain.ProjectRole(*role)
+	return &value, nil
+}
+
+func authorizeWithResolver(ctx context.Context, resolver ticketport.ProjectRoleResolver, action string, actorID uuid.UUID, globalRole string, projectID uuid.UUID) error {
+	return authusecase.NewAuthorizer(roleLookupOf{resolver: resolver}).Authorize(ctx, authport.Action(action), actorID, globalRole, projectID)
+}
+
+func (r projectRoleResolver) Authorize(ctx context.Context, action string, actorID uuid.UUID, globalRole string, projectID uuid.UUID) error {
+	return authorizeWithResolver(ctx, r, action, actorID, globalRole, projectID)
 }

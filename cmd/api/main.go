@@ -12,6 +12,8 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/jmoiron/sqlx"
 
+	authpostgres "github.com/jhonsferg/corelog/internal/authorization/adapter/out/postgres"
+	authusecase "github.com/jhonsferg/corelog/internal/authorization/application/usecase"
 	"github.com/jhonsferg/corelog/internal/board"
 	boardpostgres "github.com/jhonsferg/corelog/internal/board/adapter/out/postgres"
 	"github.com/jhonsferg/corelog/internal/platform/config"
@@ -92,7 +94,8 @@ func run() error {
 	}
 	fileStorage := ticketfilesystem.New(attachmentRoot)
 	workflowRepo := ticketpostgres.NewWorkflowRepository(db)
-	ticketModule := ticket.NewModule(ticketRepo, userDirectory, collaborationRepo, issueLinkRepo, workflowRepo, watcherRepo, savedFilterRepo, cfg.Auth.JWTSecret, projectMemberRepo)
+	projectAuthorizer := ticketProjectAuthorizer{authorizer: authusecase.NewAuthorizer(authpostgres.NewRoleLookup(db))}
+	ticketModule := ticket.NewModule(ticketRepo, userDirectory, collaborationRepo, issueLinkRepo, workflowRepo, watcherRepo, savedFilterRepo, cfg.Auth.JWTSecret, projectAuthorizer, projectMemberRepo)
 	ticketModule.Handler.WithAttachments(attachmentRepo, fileStorage)
 
 	router := httpserver.NewRouter(cfg.Server)

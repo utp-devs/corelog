@@ -7,6 +7,9 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
+	authport "github.com/jhonsferg/corelog/internal/authorization/application/port"
+	authusecase "github.com/jhonsferg/corelog/internal/authorization/application/usecase"
+	authdomain "github.com/jhonsferg/corelog/internal/authorization/domain"
 
 	"github.com/jhonsferg/corelog/internal/platform/apperror"
 	"github.com/jhonsferg/corelog/internal/ticket/application/port"
@@ -658,4 +661,26 @@ func TestTicketService_ListReportsTotalAcrossPages(t *testing.T) {
 	if result.Page != 2 || result.PageSize != 2 {
 		t.Errorf("page/page_size = %d/%d, want 2/2", result.Page, result.PageSize)
 	}
+}
+
+// roleLookupOf adapta el resolutor de roles del modulo al puerto de autorizacion del hexagono authorization.
+type roleLookupOf struct {
+	resolver port.ProjectRoleResolver
+}
+
+func (l roleLookupOf) FindRole(ctx context.Context, projectID, userID uuid.UUID) (*authdomain.ProjectRole, error) {
+	role, err := l.resolver.FindRole(ctx, projectID, userID)
+	if err != nil || role == nil {
+		return nil, err
+	}
+	value := authdomain.ProjectRole(*role)
+	return &value, nil
+}
+
+func authorizeWithResolver(ctx context.Context, resolver port.ProjectRoleResolver, action string, actorID uuid.UUID, globalRole string, projectID uuid.UUID) error {
+	return authusecase.NewAuthorizer(roleLookupOf{resolver: resolver}).Authorize(ctx, authport.Action(action), actorID, globalRole, projectID)
+}
+
+func (r fakeProjectRoleResolver) Authorize(ctx context.Context, action string, actorID uuid.UUID, globalRole string, projectID uuid.UUID) error {
+	return authorizeWithResolver(ctx, r, action, actorID, globalRole, projectID)
 }
