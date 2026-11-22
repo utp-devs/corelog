@@ -27,6 +27,7 @@ func NewTicketRepository(db *sqlx.DB) *TicketRepository {
 }
 
 var _ port.Repository = (*TicketRepository)(nil)
+var _ port.AssigneeWatcherRepository = (*TicketRepository)(nil)
 
 func (r *TicketRepository) Save(ctx context.Context, t *domain.Ticket) error {
 	row := fromDomain(t)
@@ -185,6 +186,48 @@ func (r *TicketRepository) Update(ctx context.Context, t *domain.Ticket) error {
 		return domain.ErrTicketNotFound
 	}
 
+	return nil
+}
+
+func (r *TicketRepository) UpdateAndWatchAssignee(ctx context.Context, t *domain.Ticket, assigneeID uuid.UUID) error {
+	tx, err := r.db.BeginTxx(ctx, nil)
+	if err != nil {
+		return apperror.Wrap(apperror.KindInternal, "failed to begin assignment transaction", err)
+	}
+	defer func() { _ = tx.Rollback() }()
+	row := fromDomain(t)
+	const query = `
+		UPDATE issues
+		SET title = :title, description = :description, status = :status, priority = :priority,
+		    issue_type = :issue_type, parent_id = :parent_id, due_date = :due_date,
+		    story_points = :story_points, rank = :rank, closed_at = :closed_at,
+		    assignee_id = :assignee_id, updated_at = :updated_at
+		WHERE id = :id`
+	result, err := sqlx.NamedExecContext(ctx, tx, query, row)
+	if err != nil {
+		if isForeignKeyViolation(err) {
+			return domain.ErrAssigneeNotFound
+		}
+		return apperror.Wrap(apperror.KindInternal, "failed to assign ticket", err)
+	}
+	affected, err := result.RowsAffected()
+	if err != nil {
+		return apperror.Wrap(apperror.KindInternal, "failed to assign ticket", err)
+	}
+	if affected == 0 {
+		return domain.ErrTicketNotFound
+	}
+	if _, err := tx.ExecContext(ctx, `
+		INSERT INTO watchers(issue_id, user_id) VALUES($1, $2)
+		ON CONFLICT(issue_id, user_id) DO NOTHING`, t.ID, assigneeID); err != nil {
+		if isForeignKeyViolation(err) {
+			return domain.ErrAssigneeNotFound
+		}
+		return apperror.Wrap(apperror.KindInternal, "failed to follow issue after assignment", err)
+	}
+	if err := tx.Commit(); err != nil {
+		return apperror.Wrap(apperror.KindInternal, "failed to commit assignment", err)
+	}
 	return nil
 }
 

@@ -1,9 +1,9 @@
 import { App } from 'antd'
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-const { ticketState, attachmentList } = vi.hoisted(() => ({
+const { ticketState, attachmentList, watcherGetState, watcherWatch } = vi.hoisted(() => ({
   ticketState: {
     selected: {
       id: 'issue-1', title: 'Error de prueba', description: 'Descripción de la incidencia', status: 'open',
@@ -18,6 +18,8 @@ const { ticketState, attachmentList } = vi.hoisted(() => ({
     createLink: vi.fn(), deleteLink: vi.fn(),
   },
   attachmentList: vi.fn().mockResolvedValue([]),
+  watcherGetState: vi.fn().mockResolvedValue({ isWatching: false, count: 0 }),
+  watcherWatch: vi.fn().mockResolvedValue({ isWatching: true, count: 1 }),
 }))
 
 vi.mock('@/adapters/in/state/tickets.store', () => ({
@@ -32,6 +34,14 @@ vi.mock('@/adapters/out/http/attachment-http-repository', () => ({
   },
 }))
 
+vi.mock('@/adapters/out/http/issue-watcher-http-repository', () => ({
+  IssueWatcherHttpRepository: class {
+    getState = watcherGetState
+    watch = watcherWatch
+    unwatch = vi.fn().mockResolvedValue({ isWatching: false, count: 0 })
+  },
+}))
+
 vi.mock('./hooks/useTeammateSearch', () => ({
   useTeammateSearch: () => ({ results: [], isLoading: false, search: vi.fn() }),
 }))
@@ -42,6 +52,10 @@ describe('TicketDetailPage tabs', () => {
   beforeEach(() => {
     attachmentList.mockClear()
     attachmentList.mockResolvedValue([])
+    watcherGetState.mockClear()
+    watcherGetState.mockResolvedValue({ isWatching: false, count: 0 })
+    watcherWatch.mockClear()
+    watcherWatch.mockResolvedValue({ isWatching: true, count: 1 })
   })
 
   it('shows issue details, comments, activity, and files in separate tabs', async () => {
@@ -80,5 +94,24 @@ describe('TicketDetailPage tabs', () => {
 
     fireEvent.click(await screen.findByRole('tab', { name: 'Archivos' }))
     expect(await screen.findByText('No se pudieron cargar los archivos')).toBeInTheDocument()
+  })
+
+  it('lets a project member follow an issue and updates the follower count', async () => {
+    render(
+      <App>
+        <MemoryRouter initialEntries={['/issues/issue-1']}>
+          <Routes>
+            <Route path="/issues/:id" element={<TicketDetailPage />} />
+          </Routes>
+        </MemoryRouter>
+      </App>,
+    )
+
+    const followButton = await screen.findByRole('button', { name: 'Seguir incidencia' })
+    await waitFor(() => expect(followButton).toBeEnabled())
+    fireEvent.click(followButton)
+    expect(watcherWatch).toHaveBeenCalledWith('issue-1')
+    expect(await screen.findByRole('button', { name: 'Dejar de seguir' })).toBeInTheDocument()
+    expect(screen.getByText('1 persona sigue esta incidencia')).toBeInTheDocument()
   })
 })

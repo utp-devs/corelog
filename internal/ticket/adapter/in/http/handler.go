@@ -502,6 +502,61 @@ func (h *Handler) DeleteIssueLink(w http.ResponseWriter, r *http.Request) {
 	httpresponse.JSON(w, http.StatusNoContent, nil)
 }
 
+func (h *Handler) GetWatcherState(w http.ResponseWriter, r *http.Request) {
+	issueID, actorID, globalRole, err := watcherRequestContext(r)
+	if err != nil {
+		httpresponse.Error(w, err)
+		return
+	}
+	state, err := h.service.GetWatcherState(r.Context(), issueID, actorID, globalRole)
+	if err != nil {
+		httpresponse.Error(w, err)
+		return
+	}
+	httpresponse.JSON(w, http.StatusOK, watcherStateResponse{IsWatching: state.IsWatching, Count: state.Count})
+}
+
+func (h *Handler) WatchIssue(w http.ResponseWriter, r *http.Request) {
+	issueID, actorID, globalRole, err := watcherRequestContext(r)
+	if err != nil {
+		httpresponse.Error(w, err)
+		return
+	}
+	state, err := h.service.WatchIssue(r.Context(), issueID, actorID, globalRole)
+	if err != nil {
+		httpresponse.Error(w, err)
+		return
+	}
+	httpresponse.JSON(w, http.StatusOK, watcherStateResponse{IsWatching: state.IsWatching, Count: state.Count})
+}
+
+func (h *Handler) UnwatchIssue(w http.ResponseWriter, r *http.Request) {
+	issueID, actorID, globalRole, err := watcherRequestContext(r)
+	if err != nil {
+		httpresponse.Error(w, err)
+		return
+	}
+	state, err := h.service.UnwatchIssue(r.Context(), issueID, actorID, globalRole)
+	if err != nil {
+		httpresponse.Error(w, err)
+		return
+	}
+	httpresponse.JSON(w, http.StatusOK, watcherStateResponse{IsWatching: state.IsWatching, Count: state.Count})
+}
+
+func watcherRequestContext(r *http.Request) (uuid.UUID, uuid.UUID, string, error) {
+	issueID, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		return uuid.Nil, uuid.Nil, "", apperror.New(apperror.KindValidation, "invalid issue id")
+	}
+	actorID, ok := appmw.UserIDFromContext(r.Context())
+	if !ok {
+		return uuid.Nil, uuid.Nil, "", apperror.New(apperror.KindUnauthorized, "not authenticated")
+	}
+	globalRole, _ := appmw.RoleFromContext(r.Context())
+	return issueID, actorID, globalRole, nil
+}
+
 func (h *Handler) UpdateRank(w http.ResponseWriter, r *http.Request) {
 	actorID, ok := appmw.UserIDFromContext(r.Context())
 	if !ok {

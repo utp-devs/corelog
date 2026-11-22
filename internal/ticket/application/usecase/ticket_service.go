@@ -20,6 +20,8 @@ type TicketService struct {
 	issueLinks    port.IssueLinkRepository
 	workflows     port.WorkflowRepository
 	projectRoles  port.ProjectRoleResolver
+	watchers      port.IssueWatcherRepository
+	assigneeWatch port.AssigneeWatcherRepository
 	policy        authorization.Policy
 }
 
@@ -28,6 +30,8 @@ func NewTicketService(repo port.Repository, directory port.UserDirectory, reposi
 	var issueLinks port.IssueLinkRepository
 	var workflows port.WorkflowRepository
 	var projectRoles port.ProjectRoleResolver
+	var watchers port.IssueWatcherRepository
+	var assigneeWatch port.AssigneeWatcherRepository
 	for _, repository := range repositories {
 		switch typed := repository.(type) {
 		case port.CollaborationRepository:
@@ -38,9 +42,13 @@ func NewTicketService(repo port.Repository, directory port.UserDirectory, reposi
 			workflows = typed
 		case port.ProjectRoleResolver:
 			projectRoles = typed
+		case port.IssueWatcherRepository:
+			watchers = typed
+		case port.AssigneeWatcherRepository:
+			assigneeWatch = typed
 		}
 	}
-	return &TicketService{repo: repo, directory: directory, collaboration: collaboration, issueLinks: issueLinks, workflows: workflows, projectRoles: projectRoles}
+	return &TicketService{repo: repo, directory: directory, collaboration: collaboration, issueLinks: issueLinks, workflows: workflows, projectRoles: projectRoles, watchers: watchers, assigneeWatch: assigneeWatch}
 }
 
 var _ port.Service = (*TicketService)(nil)
@@ -84,6 +92,54 @@ func (s *TicketService) AuthorizeIssueEdit(ctx context.Context, id, actorID uuid
 		return err
 	}
 	return s.requireIssueEdit(ctx, ticket.ProjectID, actorID, globalRole)
+}
+
+func (s *TicketService) GetWatcherState(ctx context.Context, issueID, actorID uuid.UUID, globalRole string) (port.WatcherState, error) {
+	if s.watchers == nil {
+		return port.WatcherState{}, apperror.New(apperror.KindInternal, "watcher repository is unavailable")
+	}
+	ticket, err := s.repo.FindByID(ctx, issueID)
+	if err != nil {
+		return port.WatcherState{}, err
+	}
+	if err := s.requireIssueView(ctx, ticket.ProjectID, actorID, globalRole); err != nil {
+		return port.WatcherState{}, err
+	}
+	return s.watchers.State(ctx, issueID, actorID)
+}
+
+func (s *TicketService) WatchIssue(ctx context.Context, issueID, actorID uuid.UUID, globalRole string) (port.WatcherState, error) {
+	if s.watchers == nil {
+		return port.WatcherState{}, apperror.New(apperror.KindInternal, "watcher repository is unavailable")
+	}
+	ticket, err := s.repo.FindByID(ctx, issueID)
+	if err != nil {
+		return port.WatcherState{}, err
+	}
+	if err := s.requireIssueView(ctx, ticket.ProjectID, actorID, globalRole); err != nil {
+		return port.WatcherState{}, err
+	}
+	if err := s.watchers.Add(ctx, issueID, actorID); err != nil {
+		return port.WatcherState{}, err
+	}
+	return s.watchers.State(ctx, issueID, actorID)
+}
+
+func (s *TicketService) UnwatchIssue(ctx context.Context, issueID, actorID uuid.UUID, globalRole string) (port.WatcherState, error) {
+	if s.watchers == nil {
+		return port.WatcherState{}, apperror.New(apperror.KindInternal, "watcher repository is unavailable")
+	}
+	ticket, err := s.repo.FindByID(ctx, issueID)
+	if err != nil {
+		return port.WatcherState{}, err
+	}
+	if err := s.requireIssueView(ctx, ticket.ProjectID, actorID, globalRole); err != nil {
+		return port.WatcherState{}, err
+	}
+	if err := s.watchers.Remove(ctx, issueID, actorID); err != nil {
+		return port.WatcherState{}, err
+	}
+	return s.watchers.State(ctx, issueID, actorID)
 }
 
 func (s *TicketService) List(ctx context.Context, actorID uuid.UUID, globalRole string, filter port.ListFilter) ([]*domain.Ticket, error) {
@@ -166,8 +222,19 @@ func (s *TicketService) Assign(ctx context.Context, id, assignerID, assigneeID u
 		return nil, err
 	}
 
-	if err := s.repo.Update(ctx, ticket); err != nil {
-		return nil, err
+	if s.assigneeWatch != nil {
+		if err := s.assigneeWatch.UpdateAndWatchAssignee(ctx, ticket, assigneeID); err != nil {
+			return nil, err
+		}
+	} else {
+		if err := s.repo.Update(ctx, ticket); err != nil {
+			return nil, err
+		}
+		if s.watchers != nil {
+			if err := s.watchers.Add(ctx, id, assigneeID); err != nil {
+				return nil, err
+			}
+		}
 	}
 
 	return ticket, nil

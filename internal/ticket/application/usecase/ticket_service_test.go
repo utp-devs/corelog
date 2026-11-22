@@ -95,6 +95,35 @@ func contributorRoleResolver() fakeProjectRoleResolver {
 	return fakeProjectRoleResolver{role: &role}
 }
 
+type fakeWatcherRepository struct {
+	watching map[uuid.UUID]map[uuid.UUID]bool
+}
+
+func newFakeWatcherRepository() *fakeWatcherRepository {
+	return &fakeWatcherRepository{watching: make(map[uuid.UUID]map[uuid.UUID]bool)}
+}
+
+func (r *fakeWatcherRepository) State(_ context.Context, issueID, userID uuid.UUID) (port.WatcherState, error) {
+	state := port.WatcherState{IsWatching: r.watching[issueID][userID]}
+	for range r.watching[issueID] {
+		state.Count++
+	}
+	return state, nil
+}
+
+func (r *fakeWatcherRepository) Add(_ context.Context, issueID, userID uuid.UUID) error {
+	if r.watching[issueID] == nil {
+		r.watching[issueID] = make(map[uuid.UUID]bool)
+	}
+	r.watching[issueID][userID] = true
+	return nil
+}
+
+func (r *fakeWatcherRepository) Remove(_ context.Context, issueID, userID uuid.UUID) error {
+	delete(r.watching[issueID], userID)
+	return nil
+}
+
 func newFakeUserDirectory() *fakeUserDirectory {
 	return &fakeUserDirectory{userTeams: make(map[uuid.UUID]*uuid.UUID)}
 }
@@ -395,7 +424,8 @@ func TestTicketService_Assign(t *testing.T) {
 	ctx := context.Background()
 	repo := newFakeTicketRepo()
 	dir := newFakeUserDirectory()
-	svc := NewTicketService(repo, dir, contributorRoleResolver())
+	watchers := newFakeWatcherRepository()
+	svc := NewTicketService(repo, dir, contributorRoleResolver(), watchers)
 
 	teamA := uuid.New()
 	teamB := uuid.New()
@@ -427,6 +457,10 @@ func TestTicketService_Assign(t *testing.T) {
 		if assigned.Status != domain.StatusInProgress {
 			t.Errorf("got status %v, want %v", assigned.Status, domain.StatusInProgress)
 		}
+		state, err := watchers.State(ctx, ticket.ID, assigneeTeamA)
+		if err != nil || !state.IsWatching {
+			t.Errorf("assigned user should automatically follow issue, state=%+v err=%v", state, err)
+		}
 	})
 
 	t.Run("rejects cross-team assignment", func(t *testing.T) {
@@ -449,4 +483,40 @@ func TestTicketService_Assign(t *testing.T) {
 			t.Errorf("expected ErrTicketNotFound, got %v", err)
 		}
 	})
+}
+
+func TestTicketService_WatchIssueRequiresProjectVisibility(t *testing.T) {
+	ctx := context.Background()
+	repo := newFakeTicketRepo()
+	dir := newFakeUserDirectory()
+	watchers := newFakeWatcherRepository()
+	svc := NewTicketService(repo, dir, contributorRoleResolver(), watchers)
+	ticket, err := svc.Create(ctx, port.CreateInput{Title: "Watch issue", Description: "Desc", Priority: domain.PriorityLow, RequesterID: uuid.New()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	actor := uuid.New()
+
+	state, err := svc.GetWatcherState(ctx, ticket.ID, actor, "requester")
+	if err != nil || state.IsWatching || state.Count != 0 {
+		t.Fatalf("initial watcher state=%+v err=%v", state, err)
+	}
+	state, err = svc.WatchIssue(ctx, ticket.ID, actor, "requester")
+	if err != nil || !state.IsWatching || state.Count != 1 {
+		t.Fatalf("watch state=%+v err=%v", state, err)
+	}
+	state, err = svc.WatchIssue(ctx, ticket.ID, actor, "requester")
+	if err != nil || !state.IsWatching || state.Count != 1 {
+		t.Fatalf("duplicate watch should be idempotent: state=%+v err=%v", state, err)
+	}
+	state, err = svc.UnwatchIssue(ctx, ticket.ID, actor, "requester")
+	if err != nil || state.IsWatching || state.Count != 0 {
+		t.Fatalf("unwatch state=%+v err=%v", state, err)
+	}
+
+	nonMemberService := NewTicketService(repo, dir, fakeProjectRoleResolver{}, watchers)
+	_, err = nonMemberService.WatchIssue(ctx, ticket.ID, uuid.New(), "requester")
+	if apperror.KindOf(err) != apperror.KindForbidden {
+		t.Fatalf("non-member watch error=%v, want forbidden", err)
+	}
 }

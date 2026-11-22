@@ -789,7 +789,7 @@ paths:
         Assigning an open ticket also transitions its status to in_progress. Assigning a
         ticket in any other status only changes the assignee. The assignee must belong to
         the same team as the authenticated user making the request, otherwise this returns
-        403.
+        403. The assignee is added to the issue watchers in the same database transaction.
       operationId: assignTicket
       requestBody:
         required: true
@@ -842,6 +842,7 @@ paths:
     post:
       tags: [tickets]
       summary: Create an issue comment
+      description: The comment author is added to the issue watchers in the same database transaction.
       security:
         - bearerAuth: []
       requestBody:
@@ -1037,6 +1038,74 @@ paths:
               schema:
                 type: string
                 format: binary
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /issues/{id}/watchers:
+    parameters:
+      - $ref: '#/components/parameters/TicketId'
+    get:
+      tags: [tickets]
+      summary: Get the authenticated user's issue watcher state
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Whether the current user follows the issue and the total follower count
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/IssueWatcherState'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags: [tickets]
+      summary: Follow an issue
+      description: Idempotently add the authenticated project member as an issue watcher.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Updated watcher state and follower count
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/IssueWatcherState'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [tickets]
+      summary: Unfollow an issue
+      description: Idempotently remove the authenticated user from the issue watchers.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Updated watcher state and follower count
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/IssueWatcherState'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
@@ -1835,6 +1904,15 @@ components:
         created_at:
           type: string
           format: date-time
+    IssueWatcherState:
+      type: object
+      required: [is_watching, count]
+      properties:
+        is_watching:
+          type: boolean
+        count:
+          type: integer
+          minimum: 0
     CreateIssueCommentRequest:
       type: object
       required: [body]

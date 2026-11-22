@@ -63,17 +63,21 @@ func (r *CollaborationRepository) FindComment(ctx context.Context, commentID uui
 }
 
 func (r *CollaborationRepository) SaveComment(ctx context.Context, comment *domain.Comment) error {
-	_, err := r.db.ExecContext(ctx, `
+	tx, err := r.db.BeginTxx(ctx, nil)
+	if err != nil {
+		return apperror.Wrap(apperror.KindInternal, "failed to begin comment transaction", err)
+	}
+	defer func() { _ = tx.Rollback() }()
+	if _, err := tx.ExecContext(ctx, `
 		INSERT INTO comments (id, issue_id, author_id, body, created_at, updated_at, deleted_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7)`,
 		comment.ID, comment.IssueID, comment.AuthorID, comment.Body,
 		comment.CreatedAt, comment.UpdatedAt, comment.DeletedAt,
-	)
-	if err != nil {
+	); err != nil {
 		return apperror.Wrap(apperror.KindInternal, "failed to save comment", err)
 	}
 	for _, mentionedID := range comment.Mentions {
-		if _, err := r.db.ExecContext(ctx, `
+		if _, err := tx.ExecContext(ctx, `
 			INSERT INTO comment_mentions (comment_id, user_id)
 			VALUES ($1, $2)
 			ON CONFLICT DO NOTHING`,
@@ -81,6 +85,15 @@ func (r *CollaborationRepository) SaveComment(ctx context.Context, comment *doma
 		); err != nil {
 			return apperror.Wrap(apperror.KindInternal, "failed to save comment mention", err)
 		}
+	}
+	if _, err := tx.ExecContext(ctx, `
+		INSERT INTO watchers (issue_id, user_id)
+		VALUES ($1, $2)
+		ON CONFLICT (issue_id, user_id) DO NOTHING`, comment.IssueID, comment.AuthorID); err != nil {
+		return apperror.Wrap(apperror.KindInternal, "failed to follow issue after commenting", err)
+	}
+	if err := tx.Commit(); err != nil {
+		return apperror.Wrap(apperror.KindInternal, "failed to commit comment", err)
 	}
 	return nil
 }

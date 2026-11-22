@@ -13,8 +13,11 @@ import { PageHeader } from '@/shared/ui/PageHeader'
 import type { IssueAttachment } from '@/core/tickets/domain/attachment'
 import { AttachmentHttpRepository } from '@/adapters/out/http/attachment-http-repository'
 import { extractErrorMessage } from '@/adapters/out/http/api-client'
+import type { IssueWatcherState } from '@/core/tickets/domain/issue-watcher'
+import { IssueWatcherHttpRepository } from '@/adapters/out/http/issue-watcher-http-repository'
 
 const attachmentRepository = new AttachmentHttpRepository()
+const watcherRepository = new IssueWatcherHttpRepository()
 
 const allStatuses: TicketStatus[] = ['open', 'in_progress', 'resolved', 'closed']
 
@@ -128,6 +131,11 @@ export function TicketDetailPage() {
   const [collaborationLoad, setCollaborationLoad] = useState<{ issueId: string; error?: string } | null>(null)
   const collaborationLoading = !id || collaborationLoad?.issueId !== id
   const collaborationError = collaborationLoad && collaborationLoad.issueId === id ? collaborationLoad.error : undefined
+  const [watcherResult, setWatcherResult] = useState<{ issueId: string; state?: IssueWatcherState; error?: string } | null>(null)
+  const watcherLoading = watcherResult?.issueId !== id
+  const watcherState = watcherResult?.issueId === selected?.id ? watcherResult?.state : undefined
+  const watcherError = watcherResult?.issueId === selected?.id ? watcherResult?.error : undefined
+  const [watcherActionLoading, setWatcherActionLoading] = useState(false)
   const teammateSearch = useTeammateSearch()
 
   useEffect(() => {
@@ -163,6 +171,11 @@ export function TicketDetailPage() {
         })
       }
     })
+    void watcherRepository.getState(id).then((state) => {
+      if (active) setWatcherResult({ issueId: id, state })
+    }).catch((error: unknown) => {
+      if (active) setWatcherResult({ issueId: id, error: extractErrorMessage(error, 'No se pudo cargar el seguimiento') })
+    })
     return () => { active = false }
   }, [id, fetchComments, fetchActivities, fetchLinks, message])
 
@@ -196,10 +209,36 @@ export function TicketDetailPage() {
     if (!assigneeId) return
     try {
       await assign(selected.id, assigneeId)
+      await refreshWatcherState(selected.id)
       message.success('Incidencia asignada')
       setAssigneeId('')
     } catch (error) {
       message.error(error instanceof Error ? error.message : 'No se pudo asignar la incidencia')
+    }
+  }
+
+  const refreshWatcherState = async (issueId: string) => {
+    try {
+      const state = await watcherRepository.getState(issueId)
+      setWatcherResult({ issueId, state })
+    } catch (error) {
+      setWatcherResult({ issueId, error: extractErrorMessage(error, 'No se pudo actualizar el seguimiento') })
+    }
+  }
+
+  const toggleWatcher = async () => {
+    if (!watcherState) return
+    setWatcherActionLoading(true)
+    try {
+      const state = watcherState.isWatching
+        ? await watcherRepository.unwatch(selected.id)
+        : await watcherRepository.watch(selected.id)
+      setWatcherResult({ issueId: selected.id, state })
+      message.success(state.isWatching ? 'Seguirás esta incidencia' : 'Dejaste de seguir esta incidencia')
+    } catch (error) {
+      message.error(extractErrorMessage(error, 'No se pudo actualizar el seguimiento'))
+    } finally {
+      setWatcherActionLoading(false)
     }
   }
 
@@ -353,6 +392,23 @@ export function TicketDetailPage() {
           </Button>
         </Space>
       </Card>
+
+      <Card title="Seguimiento">
+        {watcherError && <Alert type="error" showIcon message={watcherError} />}
+        <Space>
+          <Button
+            aria-label={watcherState?.isWatching ? 'Dejar de seguir' : 'Seguir incidencia'}
+            loading={watcherLoading || watcherActionLoading}
+            disabled={watcherLoading || !watcherState}
+            onClick={() => void toggleWatcher()}
+          >
+            {watcherState?.isWatching ? 'Dejar de seguir' : 'Seguir incidencia'}
+          </Button>
+          <Typography.Text type="secondary">
+            {watcherState?.count ?? 0} {watcherState?.count === 1 ? 'persona sigue' : 'personas siguen'} esta incidencia
+          </Typography.Text>
+        </Space>
+      </Card>
               </>
             ),
           },
@@ -376,6 +432,7 @@ export function TicketDetailPage() {
                     onClick={async () => {
                       try {
                         await createComment(selected.id, commentBody)
+                        await refreshWatcherState(selected.id)
                         setCommentBody('')
                         message.success('Comentario agregado')
                       } catch (error) {

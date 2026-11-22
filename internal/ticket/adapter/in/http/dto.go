@@ -80,6 +80,11 @@ type issueLinkResponse struct {
 	CreatedAt     time.Time `json:"created_at"`
 }
 
+type watcherStateResponse struct {
+	IsWatching bool `json:"is_watching"`
+	Count      int  `json:"count"`
+}
+
 type updateStatusRequest struct {
 	Status string `json:"status" validate:"required,oneof=open in_progress resolved closed"`
 }

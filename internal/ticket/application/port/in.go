@@ -73,6 +73,9 @@ type Service interface {
 	DeleteComment(ctx context.Context, commentID, actorID uuid.UUID, globalRole string) error
 	ListActivities(ctx context.Context, issueID, actorID uuid.UUID, globalRole string) ([]*domain.Activity, error)
 	AuthorizeIssueEdit(ctx context.Context, issueID, actorID uuid.UUID, globalRole string) error
+	GetWatcherState(ctx context.Context, issueID, actorID uuid.UUID, globalRole string) (WatcherState, error)
+	WatchIssue(ctx context.Context, issueID, actorID uuid.UUID, globalRole string) (WatcherState, error)
+	UnwatchIssue(ctx context.Context, issueID, actorID uuid.UUID, globalRole string) (WatcherState, error)
 	ListIssueLinks(ctx context.Context, issueID, actorID uuid.UUID, globalRole string) ([]*domain.IssueLink, error)
 	CreateIssueLink(ctx context.Context, sourceIssueID, targetIssueID, createdBy uuid.UUID, globalRole string, kind domain.IssueLinkKind) (*domain.IssueLink, error)
 	DeleteIssueLink(ctx context.Context, issueID, linkID, actorID uuid.UUID, globalRole string) error

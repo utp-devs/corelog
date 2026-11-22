@@ -57,6 +57,11 @@
 - [ ] El detalle presenta cuatro pestanas: Detalle, Comentarios, Actividad y Archivos
 - [ ] Cada lista de colaboracion muestra carga, error y estado vacio
 - [ ] Cambiar de incidencia no muestra comentarios, actividad ni archivos de la anterior
+- [ ] Un miembro del proyecto puede seguir y dejar de seguir; la operacion es idempotente y el contador coincide
+- [ ] El estado de seguimiento de un issue ajeno responde 403/404 segun visibilidad
+- [ ] Comentar agrega al autor a watchers dentro de la transaccion del comentario
+- [ ] Asignar agrega al responsable como watcher dentro de la transaccion de asignacion
+- [ ] La migracion 000012 crea watchers y su down elimina solo esa tabla
 
 ## Automatizacion
 

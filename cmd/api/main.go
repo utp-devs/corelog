@@ -80,6 +80,7 @@ func run() error {
 	userDirectory := ticketdirectory.NewUserDirectory(db)
 	collaborationRepo := ticketpostgres.NewCollaborationRepository(db)
 	issueLinkRepo := ticketpostgres.NewIssueLinkRepository(db)
+	watcherRepo := ticketpostgres.NewWatcherRepository(db)
 	attachmentRepo := ticketpostgres.NewAttachmentRepository(db)
 	attachmentRoot := os.Getenv("ATTACHMENTS_DIR")
 	if attachmentRoot == "" {
@@ -87,7 +88,7 @@ func run() error {
 	}
 	fileStorage := ticketfilesystem.New(attachmentRoot)
 	workflowRepo := ticketpostgres.NewWorkflowRepository(db)
-	ticketModule := ticket.NewModule(ticketRepo, userDirectory, collaborationRepo, issueLinkRepo, workflowRepo, cfg.Auth.JWTSecret, projectMemberRepo)
+	ticketModule := ticket.NewModule(ticketRepo, userDirectory, collaborationRepo, issueLinkRepo, workflowRepo, watcherRepo, cfg.Auth.JWTSecret, projectMemberRepo)
 	ticketModule.Handler.WithAttachments(attachmentRepo, fileStorage)
 
 	router := httpserver.NewRouter(cfg.Server)

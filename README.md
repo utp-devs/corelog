@@ -123,7 +123,9 @@ El ticket hexagon admite opcionalmente `TICKET_REPOSITORY=memory` para demos y p
 
 Los adjuntos de issues se almacenan en `data/attachments` en desarrollo local. Docker Compose monta el volumen persistente `corelog_attachments` en `/var/lib/corelog/attachments`; `ATTACHMENTS_DIR` permite configurar otra ruta. La API acepta PDF, PNG, JPEG, GIF, WebP, texto plano y CSV de hasta 10 MiB por archivo.
 
-La prueba de integración del repositorio de adjuntos usa PostgreSQL real y se activa con `CORELOG_TEST_DATABASE_URL`; crea y elimina un esquema temporal aislado.
+Los miembros de un proyecto pueden seguir o dejar de seguir sus issues. Quien comenta y la persona asignada se agregan automáticamente a los seguidores.
+
+Las pruebas de integración de adjuntos y seguidores usan PostgreSQL real y se activan con `CORELOG_TEST_DATABASE_URL`; crean y eliminan esquemas temporales aislados.
 
 ### Equipos y asignación
 

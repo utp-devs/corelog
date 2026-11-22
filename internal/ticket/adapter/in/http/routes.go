@@ -29,5 +29,8 @@ func (h *Handler) RegisterRoutes(r chi.Router) {
 		r.Get("/{id}/attachments", h.ListAttachments)
 		r.Post("/{id}/attachments", h.UploadAttachment)
 		r.Get("/{id}/attachments/{attachment_id}", h.DownloadAttachment)
+		r.Get("/{id}/watchers", h.GetWatcherState)
+		r.Post("/{id}/watchers", h.WatchIssue)
+		r.Delete("/{id}/watchers", h.UnwatchIssue)
 	})
 }

@@ -41,6 +41,21 @@ type WorkflowRepository interface {
 	CanTransition(ctx context.Context, projectID uuid.UUID, fromStatus, toStatus domain.Status, actorRole string) (bool, error)
 }
 
+type IssueWatcherRepository interface {
+	State(context.Context, uuid.UUID, uuid.UUID) (WatcherState, error)
+	Add(context.Context, uuid.UUID, uuid.UUID) error
+	Remove(context.Context, uuid.UUID, uuid.UUID) error
+}
+
+type AssigneeWatcherRepository interface {
+	UpdateAndWatchAssignee(context.Context, *domain.Ticket, uuid.UUID) error
+}
+
+type WatcherState struct {
+	IsWatching bool
+	Count      int
+}
+
 type AttachmentRepository interface {
 	SaveAttachment(context.Context, *domain.Attachment) error
 	FindAttachment(context.Context, uuid.UUID, uuid.UUID) (*domain.Attachment, error)
