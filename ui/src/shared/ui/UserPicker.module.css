@@ -1,0 +1,16 @@
+.picker {
+  min-width: 240px;
+}
+
+.avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: var(--cl-radius-full);
+  background: var(--cl-brand-subtle);
+  color: var(--cl-brand);
+  font-size: var(--cl-font-caption);
+  font-weight: 600;
+}
