@@ -69,7 +69,6 @@ func NewProject(key, name, description string, projectType ProjectType, leadID u
 
 	now := time.Now().UTC()
 	return &Project{
-		ID:          uuid.New(),
 		Key:         key,
 		Name:        name,
 		Description: strings.TrimSpace(description),

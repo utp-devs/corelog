@@ -40,8 +40,8 @@ func (s *ProjectService) Create(ctx context.Context, key, name, description stri
 	} else if !errors.Is(err, domain.ErrProjectNotFound) {
 		return nil, err
 	}
+	// El ID del proyecto lo asigna la BD al persistirlo; el lider se vincula despues.
 	lead := port.Member{
-		ProjectID: project.ID,
 		UserID:    leadID,
 		Role:      string(authorization.ProjectRoleLead),
 		CreatedAt: time.Now().UTC(),
@@ -54,6 +54,7 @@ func (s *ProjectService) Create(ctx context.Context, key, name, description stri
 		if err := s.repo.Save(ctx, project); err != nil {
 			return nil, err
 		}
+		lead.ProjectID = project.ID
 		if err := s.memberRepo.Add(ctx, lead); err != nil {
 			return nil, err
 		}

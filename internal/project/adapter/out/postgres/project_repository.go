@@ -12,6 +12,7 @@ import (
 
 	boarddomain "github.com/jhonsferg/corelog/internal/board/domain"
 	"github.com/jhonsferg/corelog/internal/platform/apperror"
+	"github.com/jhonsferg/corelog/internal/platform/database"
 	"github.com/jhonsferg/corelog/internal/project/application/port"
 	"github.com/jhonsferg/corelog/internal/project/domain"
 )
@@ -30,62 +31,81 @@ var _ port.ProjectCreationRepository = (*ProjectRepository)(nil)
 func (r *ProjectRepository) Save(ctx context.Context, p *domain.Project) error {
 	row := fromDomain(p)
 	const query = `
-		INSERT INTO projects (id, key, name, description, type, lead_id, visibility, archived_at, created_at, updated_at)
-		VALUES (:id, :key, :name, :description, :type, :lead_id, :visibility, :archived_at, :created_at, :updated_at)`
-	if _, err := r.db.NamedExecContext(ctx, query, row); err != nil {
+		INSERT INTO projects (key, name, description, type, lead_id, visibility, archived_at, created_at, updated_at)
+		VALUES (:key, :name, :description, :type, :lead_id, :visibility, :archived_at, :created_at, :updated_at)
+		RETURNING id`
+	id, err := database.InsertReturningID(ctx, r.db, query, row)
+	if err != nil {
 		if strings.Contains(err.Error(), "duplicate key") {
 			return domain.ErrProjectKeyTaken
 		}
 		return apperror.Wrap(apperror.KindInternal, "failed to save project", err)
 	}
+	p.ID = id
 	return nil
 }
 
+// CreateWithDefaults persiste el proyecto junto con su miembro lider, el tablero
+// por defecto y el workflow por defecto. Los identificadores los genera la BD:
+// el proyecto se inserta primero y el resto de filas usan el ID devuelto.
 func (r *ProjectRepository) CreateWithDefaults(ctx context.Context, p *domain.Project, lead port.Member) error {
 	tx, err := r.db.BeginTxx(ctx, nil)
 	if err != nil {
 		return apperror.Wrap(apperror.KindInternal, "failed to begin project creation", err)
 	}
 	defer func() { _ = tx.Rollback() }()
+
 	row := fromDomain(p)
 	const projectQuery = `
-		INSERT INTO projects (id, key, name, description, type, lead_id, visibility, archived_at, created_at, updated_at)
-		VALUES (:id, :key, :name, :description, :type, :lead_id, :visibility, :archived_at, :created_at, :updated_at)`
-	if _, err := tx.NamedExecContext(ctx, projectQuery, row); err != nil {
+		INSERT INTO projects (key, name, description, type, lead_id, visibility, archived_at, created_at, updated_at)
+		VALUES (:key, :name, :description, :type, :lead_id, :visibility, :archived_at, :created_at, :updated_at)
+		RETURNING id`
+	projectID, err := database.InsertReturningID(ctx, tx, projectQuery, row)
+	if err != nil {
 		if isUniqueConstraintViolation(err) {
 			return domain.ErrProjectKeyTaken
 		}
 		return apperror.Wrap(apperror.KindInternal, "failed to save project", err)
 	}
+	p.ID = projectID
+	lead.ProjectID = projectID
+
 	if _, err := tx.ExecContext(ctx, `
 		INSERT INTO project_members (project_id, user_id, role, created_at)
 		VALUES ($1, $2, $3, $4)`, lead.ProjectID, lead.UserID, lead.Role, lead.CreatedAt); err != nil {
 		return apperror.Wrap(apperror.KindInternal, "failed to add project lead", err)
 	}
+
 	defaultBoard, err := boarddomain.NewDefaultBoard(p.ID, boarddomain.Type(p.Type))
 	if err != nil {
 		return err
 	}
-	if _, err := tx.ExecContext(ctx, `
-		INSERT INTO boards (id, project_id, name, type, config, is_default, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5::jsonb, $6, $7, $8)`,
-		defaultBoard.ID, defaultBoard.ProjectID, defaultBoard.Name, defaultBoard.Type,
-		string(defaultBoard.Config), defaultBoard.IsDefault, defaultBoard.CreatedAt, defaultBoard.UpdatedAt); err != nil {
+	boardID, err := database.InsertReturningID(ctx, tx, `
+		INSERT INTO boards (project_id, name, type, config, is_default, created_at, updated_at)
+		VALUES (:project_id, :name, :type, CAST(:config AS jsonb), :is_default, :created_at, :updated_at)
+		RETURNING id`, boardRowArgs(defaultBoard))
+	if err != nil {
 		return apperror.Wrap(apperror.KindInternal, "failed to create default project board", err)
 	}
-	for _, column := range defaultBoard.Columns {
+	defaultBoard.ID = boardID
+
+	for i := range defaultBoard.Columns {
+		column := &defaultBoard.Columns[i]
+		column.BoardID = boardID
 		if _, err := tx.ExecContext(ctx, `
-			INSERT INTO board_columns (id, board_id, name, status, position, wip_limit, created_at, updated_at)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-			column.ID, column.BoardID, column.Name, column.Status, column.Position,
+			INSERT INTO board_columns (board_id, name, status, position, wip_limit, created_at, updated_at)
+			VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+			column.BoardID, column.Name, column.Status, column.Position,
 			column.WIPLimit, column.CreatedAt, column.UpdatedAt); err != nil {
 			return apperror.Wrap(apperror.KindInternal, "failed to create default board column", err)
 		}
 	}
-	defaultWorkflowID := uuid.New()
-	if _, err := tx.ExecContext(ctx, `
-		INSERT INTO workflows (id, project_id, name, is_default, created_at, updated_at)
-		VALUES ($1, $2, 'Default', true, now(), now())`, defaultWorkflowID, p.ID); err != nil {
+
+	defaultWorkflowID, err := database.InsertReturningID(ctx, tx, `
+		INSERT INTO workflows (project_id, name, is_default, created_at, updated_at)
+		VALUES (:project_id, 'Default', true, now(), now())
+		RETURNING id`, map[string]interface{}{"project_id": p.ID})
+	if err != nil {
 		return apperror.Wrap(apperror.KindInternal, "failed to create default project workflow", err)
 	}
 	for _, transition := range [][2]string{
@@ -178,4 +198,17 @@ func (r *ProjectRepository) Delete(ctx context.Context, id uuid.UUID) error {
 		return domain.ErrProjectNotFound
 	}
 	return nil
+}
+
+// boardRowArgs arma los parametros nombrados del INSERT de boards.
+func boardRowArgs(b *boarddomain.Board) map[string]interface{} {
+	return map[string]interface{}{
+		"project_id": b.ProjectID,
+		"name":       b.Name,
+		"type":       b.Type,
+		"config":     string(b.Config),
+		"is_default": b.IsDefault,
+		"created_at": b.CreatedAt,
+		"updated_at": b.UpdatedAt,
+	}
 }

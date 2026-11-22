@@ -80,6 +80,18 @@ func TestProjectCreationProvisionsDefaultBoardPostgres(t *testing.T) {
 	if _, err := db.Exec(string(up)); err != nil {
 		t.Fatal(err)
 	}
+	if _, err := db.Exec(`ALTER TABLE projects ALTER COLUMN id SET DEFAULT gen_random_uuid()`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`ALTER TABLE boards ALTER COLUMN id SET DEFAULT gen_random_uuid()`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`ALTER TABLE board_columns ALTER COLUMN id SET DEFAULT gen_random_uuid()`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`ALTER TABLE workflows ALTER COLUMN id SET DEFAULT gen_random_uuid()`); err != nil {
+		t.Fatal(err)
+	}
 	downPath := filepath.Join("..", "..", "..", "..", "..", "migrations", "postgres", "000014_boards.down.sql")
 	down, err := os.ReadFile(downPath)
 	if err != nil {

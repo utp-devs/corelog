@@ -65,7 +65,7 @@ func NewDefaultBoard(projectID uuid.UUID, boardType Type) (*Board, error) {
 	}
 	now := time.Now().UTC()
 	board := &Board{
-		ID: uuid.New(), ProjectID: projectID, Name: "Default", Type: boardType,
+		ProjectID: projectID, Name: "Default", Type: boardType,
 		Config: json.RawMessage(`{}`), IsDefault: true, CreatedAt: now, UpdatedAt: now,
 	}
 	definitions := []struct {
@@ -80,7 +80,7 @@ func NewDefaultBoard(projectID uuid.UUID, boardType Type) (*Board, error) {
 	board.Columns = make([]Column, 0, len(definitions))
 	for position, definition := range definitions {
 		board.Columns = append(board.Columns, Column{
-			ID: uuid.New(), BoardID: board.ID, Name: definition.name,
+			BoardID: board.ID, Name: definition.name,
 			Status: definition.status, Position: position, CreatedAt: now, UpdatedAt: now,
 		})
 	}
