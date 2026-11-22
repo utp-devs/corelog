@@ -9,14 +9,18 @@ import {
   UserOutlined,
   WarningOutlined,
 } from '@ant-design/icons'
-import { App, Avatar, Button, Card, Descriptions, Grid, Menu, Segmented, Select, Space, Switch, Tag, Typography } from 'antd'
+import { Alert, App, Avatar, Button, Card, Descriptions, Grid, Input, Menu, Modal, Popconfirm, Segmented, Select, Skeleton, Space, Switch, Tag, Typography } from 'antd'
 import type { MenuProps } from 'antd'
 import dayjs from 'dayjs'
-import { useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 
 import type { ChangePasswordPayload, UpdateProfilePayload } from '@/core/auth/application/ports/auth-repository.port'
 import { useAuthStore } from '@/adapters/in/state/auth.store'
 import { extractErrorMessage } from '@/adapters/out/http/api-client'
+import { AccountSecurityHttpRepository } from '@/adapters/out/http/account-security-http-repository'
+import { NotificationHttpRepository } from '@/adapters/out/http/notification-http-repository'
+import { describeUserAgent, type AccountSession } from '@/core/auth/domain/session'
 import type { ThemeMode } from '@/adapters/out/storage/theme-storage'
 import { useThemeMode } from '@/app/theme-context'
 import { PasswordForm } from './PasswordForm'
@@ -48,6 +52,9 @@ function PendingTag() {
   return <Tag color="default">Próximamente</Tag>
 }
 
+const accountSecurity = new AccountSecurityHttpRepository()
+const notificationPrefs = new NotificationHttpRepository()
+
 export function ProfilePage() {
   const { message } = App.useApp()
   const screens = Grid.useBreakpoint()
@@ -60,9 +67,93 @@ export function ProfilePage() {
   const [isSavingProfile, setIsSavingProfile] = useState(false)
   const [isSavingPassword, setIsSavingPassword] = useState(false)
   const [activeSection, setActiveSection] = useState('datos')
+  const navigate = useNavigate()
+  // null = aun no cargado (o no disponible): el interruptor queda deshabilitado.
+  const [inAppEnabled, setInAppEnabled] = useState<boolean | null>(null)
+  const [sessions, setSessions] = useState<AccountSession[] | null>(null)
+  const [sessionsError, setSessionsError] = useState<string | null>(null)
+  const [isSavingSessions, setIsSavingSessions] = useState(false)
+  const [isDeactivateOpen, setIsDeactivateOpen] = useState(false)
+  const [deactivatePassword, setDeactivatePassword] = useState('')
+  const [isDeactivating, setIsDeactivating] = useState(false)
+
+  const loadSessions = useCallback(async () => {
+    try {
+      setSessions(await accountSecurity.listSessions())
+      setSessionsError(null)
+    } catch (error) {
+      setSessionsError(extractErrorMessage(error, 'No se pudieron cargar las sesiones'))
+    }
+  }, [])
+
+  useEffect(() => {
+    let active = true
+    notificationPrefs
+      .getPreferences()
+      .then((prefs) => { if (active) setInAppEnabled(prefs.inApp) })
+      .catch(() => undefined)
+    accountSecurity
+      .listSessions()
+      .then((list) => { if (active) { setSessions(list); setSessionsError(null) } })
+      .catch((error) => { if (active) setSessionsError(extractErrorMessage(error, 'No se pudieron cargar las sesiones')) })
+    return () => { active = false }
+  }, [])
 
   if (!user) {
     return null
+  }
+
+  const handleInAppToggle = async (checked: boolean) => {
+    const previous = inAppEnabled
+    setInAppEnabled(checked)
+    try {
+      const saved = await notificationPrefs.updatePreferences(checked)
+      setInAppEnabled(saved.inApp)
+      message.success(saved.inApp ? 'Avisos en la aplicación activados' : 'Avisos en la aplicación desactivados')
+    } catch (error) {
+      setInAppEnabled(previous)
+      message.error(extractErrorMessage(error, 'No se pudo guardar la preferencia'))
+    }
+  }
+
+  const handleRevokeSession = async (id: string) => {
+    setIsSavingSessions(true)
+    try {
+      await accountSecurity.revokeSession(id)
+      message.success('Sesión cerrada')
+      await loadSessions()
+    } catch (error) {
+      message.error(extractErrorMessage(error, 'No se pudo cerrar la sesión'))
+    } finally {
+      setIsSavingSessions(false)
+    }
+  }
+
+  const handleRevokeOthers = async () => {
+    setIsSavingSessions(true)
+    try {
+      await accountSecurity.revokeOtherSessions()
+      message.success('Las demás sesiones se cerraron')
+      await loadSessions()
+    } catch (error) {
+      message.error(extractErrorMessage(error, 'No se pudieron cerrar las sesiones'))
+    } finally {
+      setIsSavingSessions(false)
+    }
+  }
+
+  const handleDeactivate = async () => {
+    setIsDeactivating(true)
+    try {
+      await accountSecurity.deactivateAccount(deactivatePassword)
+      useAuthStore.getState().logout()
+      message.success('Tu cuenta fue desactivada')
+      navigate('/login', { replace: true })
+    } catch (error) {
+      message.error(extractErrorMessage(error, 'No se pudo desactivar la cuenta'))
+    } finally {
+      setIsDeactivating(false)
+    }
   }
 
   const handleProfileSubmit = async (payload: UpdateProfilePayload) => {
@@ -222,10 +313,13 @@ export function ProfilePage() {
               <Space orientation="vertical" className={styles.fullWidth}>
                 <div className={styles.rowBetween}>
                   <Typography.Text>Avisos en la aplicación</Typography.Text>
-                  <Space>
-                    <PendingTag />
-                    <Switch disabled defaultChecked aria-label="Avisos en la aplicación" />
-                  </Space>
+                  <Switch
+                    checked={inAppEnabled ?? false}
+                    disabled={inAppEnabled === null}
+                    loading={inAppEnabled === null}
+                    onChange={(checked) => void handleInAppToggle(checked)}
+                    aria-label="Avisos en la aplicación"
+                  />
                 </div>
                 <div className={styles.rowBetween}>
                   <Typography.Text>Correo electrónico</Typography.Text>
@@ -241,18 +335,48 @@ export function ProfilePage() {
           <section id="perfil-sesiones" className={styles.section}>
             <Typography.Title level={4} className={styles.sectionTitle}>Sesiones y accesos</Typography.Title>
             <Card className={styles.card}>
-              <div className={styles.rowBetween}>
-                <div>
-                  <Typography.Text strong>Este navegador</Typography.Text>
-                  <Typography.Paragraph type="secondary" className={styles.rowHint}>
-                    <CheckCircleFilled className={styles.okIcon} /> Sesión actual
-                  </Typography.Paragraph>
+              {sessionsError ? (
+                <Alert type="error" showIcon message={sessionsError} />
+              ) : sessions === null ? (
+                <Skeleton active paragraph={{ rows: 2 }} />
+              ) : (
+                <div className={styles.sessionList}>
+                  {sessions.map((session) => (
+                    <div key={session.id} className={styles.sessionItem}>
+                      <div className={styles.rowBetween}>
+                        <div>
+                          <Typography.Text strong>{describeUserAgent(session.userAgent)}</Typography.Text>
+                          {session.current && (
+                            <Tag color="success" className={styles.currentTag}><CheckCircleFilled /> Esta sesión</Tag>
+                          )}
+                          <Typography.Paragraph type="secondary" className={styles.rowHint}>
+                            Iniciada {dayjs(session.createdAt).format('DD/MM/YYYY HH:mm')} · Última actividad {dayjs(session.lastSeenAt).format('DD/MM/YYYY HH:mm')}
+                          </Typography.Paragraph>
+                        </div>
+                        {!session.current && (
+                          <Button onClick={() => void handleRevokeSession(session.id)} loading={isSavingSessions}>Cerrar</Button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
                 </div>
-                <Button disabled>Cerrar otras sesiones</Button>
-              </div>
-              <Typography.Paragraph type="secondary" className={styles.hint}>
-                El historial completo de sesiones estará disponible próximamente.
-              </Typography.Paragraph>
+              )}
+              {sessions?.some((session) => !session.current) && (
+                <div className={styles.rowBetween}>
+                  <Typography.Paragraph type="secondary" className={styles.rowHint}>
+                    Cierra las sesiones que no reconozcas.
+                  </Typography.Paragraph>
+                  <Popconfirm
+                    title="¿Cerrar las demás sesiones?"
+                    description="Tendrás que volver a iniciar sesión en esos dispositivos."
+                    okText="Sí, cerrar"
+                    cancelText="No"
+                    onConfirm={() => void handleRevokeOthers()}
+                  >
+                    <Button loading={isSavingSessions}>Cerrar otras sesiones</Button>
+                  </Popconfirm>
+                </div>
+              )}
             </Card>
           </section>
 
@@ -263,15 +387,32 @@ export function ProfilePage() {
                 <div>
                   <Typography.Text strong>Eliminar mi cuenta</Typography.Text>
                   <Typography.Paragraph type="secondary" className={styles.rowHint}>
-                    Esta acción no se puede deshacer. Tus incidencias se conservan con tu nombre de solicitante.
+                    Tu cuenta quedará desactivada y no podrás volver a entrar. Tus incidencias se conservan con tu nombre de solicitante.
                   </Typography.Paragraph>
                 </div>
-                <Space>
-                  <PendingTag />
-                  <Button danger icon={<DeleteOutlined />} disabled>Eliminar cuenta</Button>
-                </Space>
+                <Button danger icon={<DeleteOutlined />} onClick={() => setIsDeactivateOpen(true)}>Eliminar cuenta</Button>
               </div>
             </Card>
+            <Modal
+              title="Eliminar mi cuenta"
+              open={isDeactivateOpen}
+              onCancel={() => { setIsDeactivateOpen(false); setDeactivatePassword('') }}
+              onOk={() => void handleDeactivate()}
+              okText="Eliminar cuenta"
+              cancelText="Cancelar"
+              okButtonProps={{ danger: true, disabled: deactivatePassword.length === 0, loading: isDeactivating }}
+              destroyOnHidden
+            >
+              <Typography.Paragraph>
+                Se cerrarán todas tus sesiones. Para confirmar, escribe tu contraseña actual.
+              </Typography.Paragraph>
+              <Input.Password
+                aria-label="Contraseña actual"
+                placeholder="Contraseña actual"
+                value={deactivatePassword}
+                onChange={(event) => setDeactivatePassword(event.target.value)}
+              />
+            </Modal>
           </section>
         </div>
       </div>

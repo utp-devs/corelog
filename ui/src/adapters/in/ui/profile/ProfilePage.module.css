@@ -134,3 +134,22 @@
 .pairs > * {
   min-width: 0;
 }
+
+/* Sesiones: una fila por dispositivo, separadas por una linea. */
+.sessionList {
+  display: flex;
+  flex-direction: column;
+}
+
+.sessionItem {
+  padding: var(--cl-space-3) 0;
+  border-bottom: 1px solid var(--cl-border);
+}
+
+.sessionItem:last-child {
+  border-bottom: 0;
+}
+
+.currentTag {
+  margin-inline-start: var(--cl-space-2);
+}

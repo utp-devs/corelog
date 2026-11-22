@@ -32,4 +32,14 @@ export class NotificationHttpRepository {
   async markAllRead(): Promise<void> {
     await apiClient.post('/notifications/read-all')
   }
+
+  async getPreferences(): Promise<{ inApp: boolean }> {
+    const { data } = await apiClient.get<{ data: { in_app: boolean } }>('/notifications/preferences')
+    return { inApp: data.data.in_app }
+  }
+
+  async updatePreferences(inApp: boolean): Promise<{ inApp: boolean }> {
+    const { data } = await apiClient.put<{ data: { in_app: boolean } }>('/notifications/preferences', { in_app: inApp })
+    return { inApp: data.data.in_app }
+  }
 }

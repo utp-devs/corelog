@@ -8,6 +8,7 @@ import type {
   UpdateProfilePayload,
 } from '@/core/auth/application/ports/auth-repository.port'
 import type { User } from '@/core/auth/domain/user'
+import { AccountSecurityHttpRepository } from '@/adapters/out/http/account-security-http-repository'
 import { AuthHttpRepository } from '@/adapters/out/http/auth-http-repository'
 import { extractErrorMessage } from '@/adapters/out/http/api-client'
 import { tokenStorage } from '@/adapters/out/storage/token-storage'
@@ -85,6 +86,11 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   logout: () => {
+    // Cierre en el servidor (best effort): la sesion queda revocada aunque el navegador ya no tenga el token.
+    const token = tokenStorage.get()
+    if (token) {
+      void new AccountSecurityHttpRepository().logout(token).catch(() => undefined)
+    }
     tokenStorage.clear()
     set({ user: null, status: 'idle', error: null, sessionChecked: true })
   },
