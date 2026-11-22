@@ -47,6 +47,15 @@ export function AppProviders({ children }: PropsWithChildren) {
           Table: {
             headerBg: isDark ? coreLogTheme.bgSunkenDark : coreLogTheme.bgSunkenLight,
           },
+          Menu: {
+            itemBorderRadius: 6,
+            itemHeight: 40,
+            itemMarginInline: 8,
+            itemSelectedBg: isDark ? coreLogTheme.brandSubtleDark : coreLogTheme.brandSubtleLight,
+            itemSelectedColor: isDark ? coreLogTheme.brandDark : coreLogTheme.brand,
+            groupTitleColor: isDark ? coreLogTheme.textSubtleDark : coreLogTheme.textSubtleLight,
+            groupTitleFontSize: 11,
+          },
           Card: { boxShadow: 'none' },
           Button: { primaryShadow: 'none', defaultShadow: 'none' },
         },

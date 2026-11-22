@@ -1,28 +1,39 @@
-.layout {
-  min-height: 100vh;
+/* Estructura: la pantalla no hace scroll. Sidebar y cabecera quedan fijos;
+   solo el area de contenido (.content) tiene scroll propio. */
+
+.shell {
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+  background: var(--cl-bg-page);
 }
 
 .sider {
+  height: 100vh;
+  height: 100dvh;
+  background: var(--cl-bg-surface) !important;
   border-right: 1px solid var(--cl-border);
-  position: relative;
+}
+
+.siderInner {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
 }
 
 .brand {
-  height: 56px;
   display: flex;
   align-items: center;
-  margin: 0 var(--cl-space-4);
-  color: var(--cl-text);
-  font-size: var(--cl-font-h3);
-  font-weight: 700;
-  text-decoration: none;
+  height: 64px;
+  flex: none;
+  padding: 0 var(--cl-space-5);
   border-bottom: 1px solid var(--cl-border);
 }
 
 .brandCollapsed {
   justify-content: center;
-  margin: 0;
-  padding: 0 var(--cl-space-2);
+  padding: 0;
 }
 
 .brandBanner {
@@ -34,34 +45,73 @@
 
 .brandIcon {
   display: block;
-  width: 40px;
-  height: 40px;
+  width: 36px;
+  height: 36px;
   object-fit: contain;
 }
 
+.nav {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--cl-space-3) 0;
+}
+
+.menu {
+  border-inline-end: 0 !important;
+  background: transparent;
+}
+
+.siderFooter {
+  flex: none;
+  padding: var(--cl-space-3);
+  border-top: 1px solid var(--cl-border);
+}
+
+.main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  height: 100vh;
+  height: 100dvh;
+  background: transparent;
+}
+
 .header {
-  height: 56px;
-  background: var(--cl-bg-surface);
+  flex: none;
+  height: 64px;
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: var(--cl-space-3);
   padding: 0 var(--cl-space-6);
+  background: var(--cl-bg-surface);
   border-bottom: 1px solid var(--cl-border);
-  z-index: 100;
+  line-height: normal;
 }
 
 .headerStart {
   display: flex;
   align-items: center;
   gap: var(--cl-space-3);
+  min-width: 0;
+}
+
+.headerEnd {
+  flex: none;
+  min-width: 0;
 }
 
 .breadcrumb {
   color: var(--cl-text-subtle);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.globalSearch {
-  width: 320px;
+.breadcrumbCurrent {
+  color: var(--cl-text);
+  font-weight: 600;
 }
 
 .userButton {
@@ -69,27 +119,47 @@
   align-items: center;
   gap: var(--cl-space-2);
   height: 40px;
+  padding-inline: var(--cl-space-2);
+}
+
+.userText {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  line-height: 1.2;
+  text-align: left;
+}
+
+.userName {
+  font-weight: 600;
+  color: var(--cl-text);
+}
+
+.roleTag {
+  margin: 0;
+  padding: 0 6px;
+  font-size: var(--cl-font-caption);
+  line-height: 16px;
 }
 
 .content {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
   padding: var(--cl-space-6);
-  min-height: calc(100vh - 56px);
-  background: var(--cl-bg-page);
 }
 
-.collapseButton {
-  position: absolute;
-  right: 8px;
-  bottom: 16px;
+/* Responsive: en pantallas pequeñas el buscador se compacta y el nombre de usuario desaparece. */
+@media (max-width: 1199px) {
+  .content {
+    padding: var(--cl-space-5);
+  }
 }
 
 @media (max-width: 991px) {
   .header {
     padding: 0 var(--cl-space-3);
-  }
-
-  .globalSearch {
-    width: 180px;
   }
 
   .content {
@@ -98,8 +168,11 @@
 }
 
 @media (max-width: 640px) {
-  .globalSearch,
   .breadcrumb {
     display: none;
+  }
+
+  .header {
+    height: 56px;
   }
 }

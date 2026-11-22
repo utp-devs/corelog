@@ -21,6 +21,8 @@ export const coreLogTheme = {
   borderDark: '#44546F',
   textDark: '#C7D1DB',
   textSubtleDark: '#9FADBC',
+  brandSubtleLight: '#DEEBFF',
+  brandSubtleDark: '#0C2849',
   shadow1:
     '0 1px 1px rgba(9,30,66,.15), 0 0 1px rgba(9,30,66,.31)',
   fontFamily:
