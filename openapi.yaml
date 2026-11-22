@@ -645,6 +645,42 @@ paths:
           description: Filter by ticket priority. When absent, tickets of every priority are returned.
           schema:
             $ref: '#/components/schemas/TicketPriority'
+        - name: q
+          in: query
+          required: false
+          description: Text search across title and description.
+          schema:
+            type: string
+        - name: issue_type
+          in: query
+          required: false
+          description: Filter by issue type.
+          schema:
+            $ref: '#/components/schemas/IssueType'
+        - name: label_id
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - name: assignee_id
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - name: due_from
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+        - name: due_to
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
         - name: page
           in: query
           required: false

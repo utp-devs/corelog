@@ -123,6 +123,12 @@ export class TicketHttpRepository implements TicketRepositoryPort {
       params: {
         status: filter.status,
         priority: filter.priority,
+        q: filter.query,
+        issue_type: filter.issueType,
+        label_id: filter.labelId,
+        assignee_id: filter.assigneeId,
+        due_from: filter.dueFrom,
+        due_to: filter.dueTo,
         page: filter.page,
         page_size: filter.pageSize,
       },

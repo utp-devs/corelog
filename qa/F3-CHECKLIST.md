@@ -35,6 +35,8 @@
 - [ ] Eliminar vínculo elimina solo la relación
 - [ ] Mover incidencia arriba cambia su rank y persiste tras recargar
 - [ ] Mover incidencia abajo cambia su rank y persiste tras recargar
+- [ ] Buscar texto coincide en título o descripción
+- [ ] Combinar estado, prioridad, tipo y fechas devuelve una lista consistente
 - [ ] Migración 0010 crea workflow por defecto y transiciones
 - [ ] Transición fuera del workflow devuelve 409
 - [ ] Rol no permitido para la transición devuelve 409

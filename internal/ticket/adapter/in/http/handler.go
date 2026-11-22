@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -80,10 +81,45 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 
 	filter := port.ListFilter{
-		Status:   domain.Status(q.Get("status")),
-		Priority: domain.Priority(q.Get("priority")),
-		Page:     atoiOrDefault(q.Get("page"), 1),
-		PageSize: atoiOrDefault(q.Get("page_size"), 20),
+		Status:    domain.Status(q.Get("status")),
+		Priority:  domain.Priority(q.Get("priority")),
+		Query:     q.Get("q"),
+		IssueType: domain.IssueType(q.Get("issue_type")),
+		Page:      atoiOrDefault(q.Get("page"), 1),
+		PageSize:  atoiOrDefault(q.Get("page_size"), 20),
+	}
+
+	if labelID := q.Get("label_id"); labelID != "" {
+		id, err := uuid.Parse(labelID)
+		if err != nil {
+			httpresponse.Error(w, apperror.New(apperror.KindValidation, "invalid label id"))
+			return
+		}
+		filter.LabelID = id
+	}
+	if assigneeID := q.Get("assignee_id"); assigneeID != "" {
+		id, err := uuid.Parse(assigneeID)
+		if err != nil {
+			httpresponse.Error(w, apperror.New(apperror.KindValidation, "invalid assignee id"))
+			return
+		}
+		filter.AssigneeID = &id
+	}
+	if dueFrom := q.Get("due_from"); dueFrom != "" {
+		value, err := time.Parse(time.RFC3339, dueFrom)
+		if err != nil {
+			httpresponse.Error(w, apperror.New(apperror.KindValidation, "invalid due_from"))
+			return
+		}
+		filter.DueFrom = &value
+	}
+	if dueTo := q.Get("due_to"); dueTo != "" {
+		value, err := time.Parse(time.RFC3339, dueTo)
+		if err != nil {
+			httpresponse.Error(w, apperror.New(apperror.KindValidation, "invalid due_to"))
+			return
+		}
+		filter.DueTo = &value
 	}
 
 	tickets, err := h.service.List(r.Context(), filter)

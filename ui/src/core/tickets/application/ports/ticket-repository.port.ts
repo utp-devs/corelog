@@ -20,6 +20,12 @@ export interface UpdateIssueMetadataInput {
 export interface ListTicketsFilter {
   status?: TicketStatus
   priority?: TicketPriority
+  query?: string
+  issueType?: IssueType
+  labelId?: string
+  assigneeId?: string
+  dueFrom?: string
+  dueTo?: string
   page?: number
   pageSize?: number
 }

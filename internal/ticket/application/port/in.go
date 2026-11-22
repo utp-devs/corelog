@@ -34,10 +34,16 @@ type CreateCommentInput struct {
 }
 
 type ListFilter struct {
-	Status   domain.Status
-	Priority domain.Priority
-	Page     int
-	PageSize int
+	Status     domain.Status
+	Priority   domain.Priority
+	Query      string
+	IssueType  domain.IssueType
+	LabelID    uuid.UUID
+	AssigneeID *uuid.UUID
+	DueFrom    *time.Time
+	DueTo      *time.Time
+	Page       int
+	PageSize   int
 }
 
 type Service interface {

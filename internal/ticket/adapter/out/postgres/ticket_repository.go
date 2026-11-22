@@ -104,6 +104,30 @@ func (r *TicketRepository) FindAll(ctx context.Context, filter port.ListFilter) 
 		args = append(args, filter.Priority)
 		query += fmt.Sprintf(" AND priority = $%d", len(args))
 	}
+	if filter.Query != "" {
+		args = append(args, "%"+filter.Query+"%")
+		query += fmt.Sprintf(" AND (title ILIKE $%d OR description ILIKE $%d)", len(args), len(args))
+	}
+	if filter.IssueType != "" {
+		args = append(args, filter.IssueType)
+		query += fmt.Sprintf(" AND issue_type = $%d", len(args))
+	}
+	if filter.LabelID != uuid.Nil {
+		args = append(args, filter.LabelID)
+		query += fmt.Sprintf(" AND EXISTS (SELECT 1 FROM issue_labels il WHERE il.issue_id = issues.id AND il.label_id = $%d)", len(args))
+	}
+	if filter.AssigneeID != nil {
+		args = append(args, *filter.AssigneeID)
+		query += fmt.Sprintf(" AND assignee_id = $%d", len(args))
+	}
+	if filter.DueFrom != nil {
+		args = append(args, *filter.DueFrom)
+		query += fmt.Sprintf(" AND due_date >= $%d", len(args))
+	}
+	if filter.DueTo != nil {
+		args = append(args, *filter.DueTo)
+		query += fmt.Sprintf(" AND due_date <= $%d", len(args))
+	}
 
 	query += " ORDER BY rank ASC, created_at DESC"
 

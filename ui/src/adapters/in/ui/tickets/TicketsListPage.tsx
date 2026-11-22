@@ -1,5 +1,6 @@
 import { PlusOutlined } from '@ant-design/icons'
-import { Button, Input, Select, Typography } from 'antd'
+import { Button, DatePicker, Input, Pagination, Select, Typography } from 'antd'
+import type { IssueType } from '@/core/tickets/domain/ticket'
 import { useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 
@@ -28,9 +29,22 @@ export function TicketsListPage() {
   const navigate = useNavigate()
   const [statusFilter, setStatusFilter] = useState<TicketStatus | undefined>()
   const [priorityFilter, setPriorityFilter] = useState<TicketPriority | undefined>()
-
-  const { tickets, isLoading } = useTickets({ status: statusFilter, priority: priorityFilter })
+  const [issueTypeFilter, setIssueTypeFilter] = useState<IssueType | undefined>()
+  const [dueFrom, setDueFrom] = useState<string | undefined>()
+  const [dueTo, setDueTo] = useState<string | undefined>()
+  const [page, setPage] = useState(1)
   const [search, setSearch] = useState('')
+
+  const { tickets, isLoading } = useTickets({
+    status: statusFilter,
+    priority: priorityFilter,
+    issueType: issueTypeFilter,
+    query: search.trim() || undefined,
+    dueFrom,
+    dueTo,
+    page,
+    pageSize: 20,
+  })
   const updateRank = useTicketsStore((state) => state.updateRank)
 
   const filteredTickets = useMemo(() => {
@@ -99,6 +113,28 @@ export function TicketsListPage() {
           value={priorityFilter}
           onChange={setPriorityFilter}
         />
+        <Select
+          allowClear
+          placeholder="Filtrar por tipo"
+          className={styles.filterSelect}
+          options={[
+            { value: 'task', label: 'Tarea' },
+            { value: 'bug', label: 'Error' },
+            { value: 'story', label: 'Historia' },
+            { value: 'epic', label: 'Epic' },
+            { value: 'subtask', label: 'Subtarea' },
+          ]}
+          value={issueTypeFilter}
+          onChange={setIssueTypeFilter}
+        />
+        <DatePicker
+          placeholder="Fecha desde"
+          onChange={(value) => setDueFrom(value?.startOf('day').toISOString())}
+        />
+        <DatePicker
+          placeholder="Fecha hasta"
+          onChange={(value) => setDueTo(value?.endOf('day').toISOString())}
+        />
       </div>
       <Input.Search
          placeholder="Buscar incidencia por título"
@@ -115,6 +151,16 @@ export function TicketsListPage() {
          onMoveDown={(ticket) => void handleMove(ticket, 1)}
          emptyText={search.trim() ? `Ninguna incidencia coincide con "${search.trim()}"` : undefined}
       />
+
+      {tickets.length >= 20 && (
+        <Pagination
+          current={page}
+          pageSize={20}
+          total={tickets.length + (page - 1) * 20 + 20}
+          onChange={setPage}
+          style={{ marginTop: 16 }}
+        />
+      )}
 
       <Typography.Paragraph type="secondary" className={styles.hint}>
         <Link to="/issues/new">Crear la primera incidencia</Link> si la lista esta vacia.
