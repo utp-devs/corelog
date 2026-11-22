@@ -67,7 +67,7 @@ function IssueEditor({ ticket, onSave }: IssueEditorProps) {
               { value: 'task', label: 'Tarea' },
               { value: 'bug', label: 'Error' },
               { value: 'story', label: 'Historia' },
-              { value: 'epic', label: 'Epic' },
+              { value: 'epic', label: 'Épica' },
               { value: 'subtask', label: 'Subtarea' },
             ]}
           />
@@ -249,9 +249,13 @@ export function TicketDetailPage() {
         title={selected.title}
         description="Detalle de la incidencia"
         actions={
-          <Button onClick={() => navigate('/issues')}>
-            Volver a incidencias
-          </Button>
+          <Space wrap>
+            <StatusTag status={selected.status} />
+            <PriorityTag priority={selected.priority} />
+            <Button onClick={() => navigate('/issues')}>
+              Volver a incidencias
+            </Button>
+          </Space>
         }
       />
 
@@ -264,7 +268,8 @@ export function TicketDetailPage() {
             key: 'detail',
             label: 'Detalle',
             children: (
-              <>
+              <div className={styles.columns}>
+                <div className={styles.mainColumn}>
       <Card title="Vinculos">
         {collaborationError && <Alert type="error" showIcon message={collaborationError} />}
         <Space wrap>
@@ -326,25 +331,34 @@ export function TicketDetailPage() {
         <Typography.Paragraph>{selected.description}</Typography.Paragraph>
 
         <Descriptions column={1} bordered size="small">
-          <Descriptions.Item label="Estado">
-            <StatusTag status={selected.status} />
-          </Descriptions.Item>
-          <Descriptions.Item label="Prioridad">
-            <PriorityTag priority={selected.priority} />
-          </Descriptions.Item>
           <Descriptions.Item label="Tipo">{issueTypeLabel(selected.issueType)}</Descriptions.Item>
           <Descriptions.Item label="Fecha limite">
             {selected.dueDate ? dayjs(selected.dueDate).format('DD/MM/YYYY') : 'Sin fecha limite'}
           </Descriptions.Item>
           <Descriptions.Item label="Puntos de historia">{selected.storyPoints ?? 'Sin estimar'}</Descriptions.Item>
           <Descriptions.Item label="Incidencia padre">{selected.parentId ?? 'Sin incidencia padre'}</Descriptions.Item>
-          <Descriptions.Item label="Solicitante">{selected.requesterId}</Descriptions.Item>
-          <Descriptions.Item label="Responsable">{selected.assigneeId ?? 'Sin asignar'}</Descriptions.Item>
+          <Descriptions.Item label="Solicitante">{selected.requesterName}</Descriptions.Item>
+          <Descriptions.Item label="Responsable">{selected.assigneeName ?? 'Sin asignar'}</Descriptions.Item>
           <Descriptions.Item label="Creado">{new Date(selected.createdAt).toLocaleString('es-ES')}</Descriptions.Item>
           <Descriptions.Item label="Actualizado">{new Date(selected.updatedAt).toLocaleString('es-ES')}</Descriptions.Item>
         </Descriptions>
       </Card>
 
+      <IssueEditor
+        key={selected.id}
+        ticket={selected}
+        onSave={async (details) => {
+          try {
+            await updateDetails(selected.id, details)
+            message.success('Incidencia actualizada')
+          } catch (error) {
+            message.error(error instanceof Error ? error.message : 'No se pudo actualizar la incidencia')
+          }
+        }}
+      />
+
+                </div>
+                <div className={styles.sideColumn}>
       <Card title="Cambiar estado">
         <Space>
           <Select
@@ -360,19 +374,6 @@ export function TicketDetailPage() {
           {nextStatuses.length === 0 && <Typography.Text type="secondary">No hay transiciones disponibles</Typography.Text>}
         </Space>
       </Card>
-
-      <IssueEditor
-        key={selected.id}
-        ticket={selected}
-        onSave={async (details) => {
-          try {
-            await updateDetails(selected.id, details)
-            message.success('Incidencia actualizada')
-          } catch (error) {
-            message.error(error instanceof Error ? error.message : 'No se pudo actualizar la incidencia')
-          }
-        }}
-      />
 
       <Card title="Asignar">
         <Space>
@@ -410,7 +411,8 @@ export function TicketDetailPage() {
           </Typography.Text>
         </Space>
       </Card>
-              </>
+                </div>
+              </div>
             ),
           },
             {
@@ -552,7 +554,7 @@ function issueTypeLabel(issueType: IssueType): string {
     task: 'Tarea',
     bug: 'Error',
     story: 'Historia',
-    epic: 'Epic',
+    epic: 'Épica',
     subtask: 'Subtarea',
   }
   return labels[issueType]
