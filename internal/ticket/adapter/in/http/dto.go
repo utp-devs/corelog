@@ -113,44 +113,51 @@ type assignRequest struct {
 }
 
 type ticketResponse struct {
-	ID          string     `json:"id"`
-	ProjectID   string     `json:"project_id"`
-	Title       string     `json:"title"`
-	Description string     `json:"description"`
-	Status      string     `json:"status"`
-	Priority    string     `json:"priority"`
-	IssueType   string     `json:"issue_type"`
-	ParentID    *string    `json:"parent_id,omitempty"`
-	DueDate     *time.Time `json:"due_date,omitempty"`
-	StoryPoints *float64   `json:"story_points,omitempty"`
-	Rank        string     `json:"rank"`
-	ClosedAt    *time.Time `json:"closed_at,omitempty"`
-	RequesterID string     `json:"requester_id"`
-	AssigneeID  *string    `json:"assignee_id,omitempty"`
-	CreatedAt   time.Time  `json:"created_at"`
-	UpdatedAt   time.Time  `json:"updated_at"`
+	ID            string     `json:"id"`
+	ProjectID     string     `json:"project_id"`
+	Title         string     `json:"title"`
+	Description   string     `json:"description"`
+	Status        string     `json:"status"`
+	Priority      string     `json:"priority"`
+	IssueType     string     `json:"issue_type"`
+	ParentID      *string    `json:"parent_id,omitempty"`
+	DueDate       *time.Time `json:"due_date,omitempty"`
+	StoryPoints   *float64   `json:"story_points,omitempty"`
+	Rank          string     `json:"rank"`
+	ClosedAt      *time.Time `json:"closed_at,omitempty"`
+	RequesterID   string     `json:"requester_id"`
+	RequesterName string     `json:"requester_name"`
+	AssigneeID    *string    `json:"assignee_id,omitempty"`
+	AssigneeName  *string    `json:"assignee_name,omitempty"`
+	CreatedAt     time.Time  `json:"created_at"`
+	UpdatedAt     time.Time  `json:"updated_at"`
 }
 
-func toTicketResponse(t *domain.Ticket) ticketResponse {
+// toTicketResponse arma la respuesta de una incidencia. names contiene el nombre de cada persona implicada.
+func toTicketResponse(t *domain.Ticket, names map[uuid.UUID]string) ticketResponse {
 	resp := ticketResponse{
-		ID:          t.ID.String(),
-		ProjectID:   t.ProjectID.String(),
-		Title:       t.Title,
-		Description: t.Description,
-		Status:      string(t.Status),
-		Priority:    string(t.Priority),
-		IssueType:   string(t.IssueType),
-		DueDate:     t.DueDate,
-		StoryPoints: t.StoryPoints,
-		Rank:        t.Rank,
-		ClosedAt:    t.ClosedAt,
-		RequesterID: t.RequesterID.String(),
-		CreatedAt:   t.CreatedAt,
-		UpdatedAt:   t.UpdatedAt,
+		ID:            t.ID.String(),
+		ProjectID:     t.ProjectID.String(),
+		Title:         t.Title,
+		Description:   t.Description,
+		Status:        string(t.Status),
+		Priority:      string(t.Priority),
+		IssueType:     string(t.IssueType),
+		DueDate:       t.DueDate,
+		StoryPoints:   t.StoryPoints,
+		Rank:          t.Rank,
+		ClosedAt:      t.ClosedAt,
+		RequesterID:   t.RequesterID.String(),
+		RequesterName: names[t.RequesterID],
+		CreatedAt:     t.CreatedAt,
+		UpdatedAt:     t.UpdatedAt,
 	}
 	if t.AssigneeID != nil {
 		id := t.AssigneeID.String()
 		resp.AssigneeID = &id
+		if name, ok := names[*t.AssigneeID]; ok {
+			resp.AssigneeName = &name
+		}
 	}
 	if t.ParentID != nil {
 		id := t.ParentID.String()
@@ -159,12 +166,24 @@ func toTicketResponse(t *domain.Ticket) ticketResponse {
 	return resp
 }
 
-func toTicketResponses(tickets []*domain.Ticket) []ticketResponse {
+func toTicketResponses(tickets []*domain.Ticket, names map[uuid.UUID]string) []ticketResponse {
 	out := make([]ticketResponse, 0, len(tickets))
 	for _, t := range tickets {
-		out = append(out, toTicketResponse(t))
+		out = append(out, toTicketResponse(t, names))
 	}
 	return out
+}
+
+// personIDs devuelve los usuarios que aparecen en las incidencias (solicitante y responsable).
+func personIDs(tickets ...*domain.Ticket) []uuid.UUID {
+	ids := make([]uuid.UUID, 0, len(tickets)*2)
+	for _, t := range tickets {
+		ids = append(ids, t.RequesterID)
+		if t.AssigneeID != nil {
+			ids = append(ids, *t.AssigneeID)
+		}
+	}
+	return ids
 }
 
 func toCommentResponse(comment *domain.Comment) commentResponse {

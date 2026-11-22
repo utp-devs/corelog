@@ -68,7 +68,17 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	httpresponse.JSON(w, http.StatusCreated, toTicketResponse(ticket))
+	h.writeTicket(w, r, http.StatusCreated, ticket)
+}
+
+// writeTicket responde con una incidencia incluyendo el nombre de su solicitante y responsable.
+func (h *Handler) writeTicket(w http.ResponseWriter, r *http.Request, status int, ticket *domain.Ticket) {
+	names, err := h.service.UserNames(r.Context(), personIDs(ticket))
+	if err != nil {
+		httpresponse.Error(w, err)
+		return
+	}
+	httpresponse.JSON(w, status, toTicketResponse(ticket, names))
 }
 
 func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
@@ -90,7 +100,7 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	httpresponse.JSON(w, http.StatusOK, toTicketResponse(ticket))
+	h.writeTicket(w, r, http.StatusOK, ticket)
 }
 
 func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
@@ -150,7 +160,13 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	httpresponse.Paginated(w, http.StatusOK, toTicketResponses(result.Items), httpresponse.PageMeta{
+	names, err := h.service.UserNames(r.Context(), personIDs(result.Items...))
+	if err != nil {
+		httpresponse.Error(w, err)
+		return
+	}
+
+	httpresponse.Paginated(w, http.StatusOK, toTicketResponses(result.Items, names), httpresponse.PageMeta{
 		Page:     result.Page,
 		PageSize: result.PageSize,
 		Total:    result.Total,
@@ -247,7 +263,7 @@ func (h *Handler) UpdateStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	httpresponse.JSON(w, http.StatusOK, toTicketResponse(ticket))
+	h.writeTicket(w, r, http.StatusOK, ticket)
 }
 
 func (h *Handler) Assign(w http.ResponseWriter, r *http.Request) {
@@ -286,7 +302,7 @@ func (h *Handler) Assign(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	httpresponse.JSON(w, http.StatusOK, toTicketResponse(ticket))
+	h.writeTicket(w, r, http.StatusOK, ticket)
 }
 
 func (h *Handler) UpdateMetadata(w http.ResponseWriter, r *http.Request) {
@@ -320,7 +336,7 @@ func (h *Handler) UpdateMetadata(w http.ResponseWriter, r *http.Request) {
 		httpresponse.Error(w, err)
 		return
 	}
-	httpresponse.JSON(w, http.StatusOK, toTicketResponse(ticket))
+	h.writeTicket(w, r, http.StatusOK, ticket)
 }
 
 func (h *Handler) UpdateDetails(w http.ResponseWriter, r *http.Request) {
@@ -357,7 +373,7 @@ func (h *Handler) UpdateDetails(w http.ResponseWriter, r *http.Request) {
 		httpresponse.Error(w, err)
 		return
 	}
-	httpresponse.JSON(w, http.StatusOK, toTicketResponse(ticket))
+	h.writeTicket(w, r, http.StatusOK, ticket)
 }
 
 func parseOptionalUUID(value string) *uuid.UUID {
@@ -649,7 +665,7 @@ func (h *Handler) UpdateRank(w http.ResponseWriter, r *http.Request) {
 		httpresponse.Error(w, err)
 		return
 	}
-	httpresponse.JSON(w, http.StatusOK, toTicketResponse(ticket))
+	h.writeTicket(w, r, http.StatusOK, ticket)
 }
 
 func atoiOrDefault(s string, fallback int) int {

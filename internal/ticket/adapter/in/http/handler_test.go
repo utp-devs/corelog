@@ -114,6 +114,7 @@ func (r *memoryTicketRepo) Update(_ context.Context, t *domain.Ticket) error {
 
 type memoryDirectory struct {
 	teams map[uuid.UUID]*uuid.UUID
+	names map[uuid.UUID]string
 }
 
 type memorySavedFilterRepository struct {
@@ -167,7 +168,17 @@ func (projectRoleResolver) ListProjectIDs(context.Context, uuid.UUID) ([]uuid.UU
 }
 
 func newMemoryDirectory() *memoryDirectory {
-	return &memoryDirectory{teams: make(map[uuid.UUID]*uuid.UUID)}
+	return &memoryDirectory{teams: make(map[uuid.UUID]*uuid.UUID), names: make(map[uuid.UUID]string)}
+}
+
+func (d *memoryDirectory) NamesOf(_ context.Context, userIDs []uuid.UUID) (map[uuid.UUID]string, error) {
+	out := make(map[uuid.UUID]string, len(userIDs))
+	for _, id := range userIDs {
+		if name, ok := d.names[id]; ok {
+			out[id] = name
+		}
+	}
+	return out, nil
 }
 
 func (d *memoryDirectory) TeamOf(_ context.Context, userID uuid.UUID) (*uuid.UUID, error) {
@@ -438,5 +449,57 @@ func TestTicketHTTP_ListReturnsPaginationMeta(t *testing.T) {
 	}
 	if payload.Meta.Page != 1 || payload.Meta.PageSize != 2 {
 		t.Errorf("meta page/page_size = %d/%d, want 1/2", payload.Meta.Page, payload.Meta.PageSize)
+	}
+}
+
+func TestTicketHTTP_ResponsesIncludePersonNames(t *testing.T) {
+	router, jwtSecret, _, dir := setupTicketRouter()
+	requester := uuid.New()
+	dir.names[requester] = "Ana Torres"
+	token, _ := authtoken.Generate(jwtSecret, time.Hour, requester, "admin")
+
+	body := `{"title":"Named issue","description":"Desc","priority":"low"}`
+	create := httptest.NewRequest(http.MethodPost, "/issues", bytes.NewBufferString(body))
+	create.Header.Set("Content-Type", "application/json")
+	create.Header.Set("Authorization", "Bearer "+token)
+	createRec := httptest.NewRecorder()
+	router.ServeHTTP(createRec, create)
+	if createRec.Code != http.StatusCreated {
+		t.Fatalf("create got status %d, want %d", createRec.Code, http.StatusCreated)
+	}
+	var created struct {
+		Data struct {
+			ID            string `json:"id"`
+			RequesterName string `json:"requester_name"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(createRec.Body.Bytes(), &created); err != nil {
+		t.Fatalf("invalid JSON: %v", err)
+	}
+	if created.Data.RequesterName != "Ana Torres" {
+		t.Errorf("create requester_name = %q, want Ana Torres", created.Data.RequesterName)
+	}
+
+	get := httptest.NewRequest(http.MethodGet, "/issues/"+created.Data.ID, nil)
+	get.Header.Set("Authorization", "Bearer "+token)
+	getRec := httptest.NewRecorder()
+	router.ServeHTTP(getRec, get)
+	if getRec.Code != http.StatusOK {
+		t.Fatalf("get got status %d, want %d", getRec.Code, http.StatusOK)
+	}
+	var fetched struct {
+		Data struct {
+			RequesterName string  `json:"requester_name"`
+			AssigneeName  *string `json:"assignee_name"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(getRec.Body.Bytes(), &fetched); err != nil {
+		t.Fatalf("invalid JSON: %v", err)
+	}
+	if fetched.Data.RequesterName != "Ana Torres" {
+		t.Errorf("get requester_name = %q, want Ana Torres", fetched.Data.RequesterName)
+	}
+	if fetched.Data.AssigneeName != nil {
+		t.Errorf("assignee_name = %q, want absent when unassigned", *fetched.Data.AssigneeName)
 	}
 }

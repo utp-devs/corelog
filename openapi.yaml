@@ -2217,6 +2217,13 @@ components:
     Ticket:
       type: object
       properties:
+        requester_name:
+          type: string
+          description: Display name of the requester.
+        assignee_name:
+          type: string
+          nullable: true
+          description: Display name of the assignee; absent when unassigned.
         id:
           type: string
           format: uuid

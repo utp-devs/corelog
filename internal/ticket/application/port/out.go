@@ -19,6 +19,7 @@ type Repository interface {
 
 type UserDirectory interface {
 	TeamOf(ctx context.Context, userID uuid.UUID) (*uuid.UUID, error)
+	NamesOf(ctx context.Context, userIDs []uuid.UUID) (map[uuid.UUID]string, error)
 }
 
 type CollaborationRepository interface {

@@ -209,6 +209,14 @@ func (s *TicketService) List(ctx context.Context, actorID uuid.UUID, globalRole 
 	return port.ListResult{Items: items, Total: total, Page: filter.Page, PageSize: filter.PageSize}, nil
 }
 
+// UserNames devuelve el nombre visible de cada usuario indicado.
+func (s *TicketService) UserNames(ctx context.Context, userIDs []uuid.UUID) (map[uuid.UUID]string, error) {
+	if len(userIDs) == 0 {
+		return map[uuid.UUID]string{}, nil
+	}
+	return s.directory.NamesOf(ctx, userIDs)
+}
+
 func (s *TicketService) UpdateStatus(ctx context.Context, id, actorID uuid.UUID, globalRole string, status domain.Status) (*domain.Ticket, error) {
 	ticket, err := s.repo.FindByID(ctx, id)
 	if err != nil {

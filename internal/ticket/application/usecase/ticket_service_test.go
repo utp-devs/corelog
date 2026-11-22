@@ -105,6 +105,7 @@ func (r *fakeTicketRepo) Update(_ context.Context, t *domain.Ticket) error {
 
 type fakeUserDirectory struct {
 	userTeams map[uuid.UUID]*uuid.UUID
+	names     map[uuid.UUID]string
 }
 
 type fakeProjectRoleResolver struct {
@@ -199,7 +200,17 @@ func (r *fakeWatcherRepository) Remove(_ context.Context, issueID, userID uuid.U
 }
 
 func newFakeUserDirectory() *fakeUserDirectory {
-	return &fakeUserDirectory{userTeams: make(map[uuid.UUID]*uuid.UUID)}
+	return &fakeUserDirectory{userTeams: make(map[uuid.UUID]*uuid.UUID), names: make(map[uuid.UUID]string)}
+}
+
+func (d *fakeUserDirectory) NamesOf(_ context.Context, userIDs []uuid.UUID) (map[uuid.UUID]string, error) {
+	out := make(map[uuid.UUID]string, len(userIDs))
+	for _, id := range userIDs {
+		if name, ok := d.names[id]; ok {
+			out[id] = name
+		}
+	}
+	return out, nil
 }
 
 func (d *fakeUserDirectory) TeamOf(_ context.Context, userID uuid.UUID) (*uuid.UUID, error) {
