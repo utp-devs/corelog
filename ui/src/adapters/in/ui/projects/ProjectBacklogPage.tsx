@@ -78,6 +78,7 @@ export function ProjectBacklogPage() {
         actions={(
           <Space>
             <Button onClick={() => navigate(`/projects/${id}/board`)}>Tablero</Button>
+            <Button onClick={() => navigate(`/projects/${id}/sprints`)}>Sprints</Button>
             <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/projects')}>Proyectos</Button>
           </Space>
         )}
