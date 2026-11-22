@@ -59,4 +59,24 @@ describe('ProjectBoardPage', () => {
 
     expect(await screen.findByRole('alert')).toHaveTextContent('No se pudo cargar el tablero')
   })
+
+  it('shows the wip limit next to the count and flags a full column', async () => {
+    repositories.getBoard.mockResolvedValue({
+      id: 'board-1', projectId: 'project-1', name: 'Default', type: 'kanban',
+      columns: [
+        { id: 'column-1', name: 'En curso', status: 'in_progress', position: 0, count: 2, wipLimit: 2, cards: [{
+          id: 'issue-2', type: 'task', summary: 'Trabajo en curso', status: 'in_progress', priority: 'medium',
+          assignee: 'Grace Hopper', rank: 'n',
+        }] },
+      ],
+    })
+    render(
+      <MemoryRouter initialEntries={['/projects/project-1/board']}>
+        <Routes><Route path="/projects/:id/board" element={<ProjectBoardPage />} /></Routes>
+      </MemoryRouter>,
+    )
+
+    expect(await screen.findByText('2 / 2')).toBeInTheDocument()
+    expect(screen.getByText('Trabajo en curso')).toBeInTheDocument()
+  })
 })

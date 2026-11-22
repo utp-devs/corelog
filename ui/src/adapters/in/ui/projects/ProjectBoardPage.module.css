@@ -57,3 +57,26 @@
     max-height: none;
   }
 }
+
+.alert {
+  margin-bottom: var(--cl-space-4);
+}
+
+.cardDragging {
+  opacity: 0.4;
+}
+
+.cardPreview {
+  background: var(--cl-bg-surface);
+  box-shadow: var(--cl-shadow-2);
+  cursor: grabbing;
+}
+
+.columnOver {
+  border-color: var(--cl-brand);
+  background: var(--cl-brand-subtle);
+}
+
+.columnFull {
+  border-color: var(--cl-danger);
+}
