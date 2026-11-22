@@ -1,7 +1,15 @@
 <!doctype html>
-<html lang="en">
+<html lang="es">
   <head>
     <meta charset="UTF-8" />
+    <script>
+      try {
+        const mode = localStorage.getItem('corelog.theme')
+        const theme = mode === 'light' || mode === 'dark' ? mode : 'dark'
+        document.documentElement.dataset.theme = theme
+        document.documentElement.style.colorScheme = theme
+      } catch (_) {}
+    </script>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>corelog</title>

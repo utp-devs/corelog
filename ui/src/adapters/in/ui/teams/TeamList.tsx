@@ -19,24 +19,24 @@ export function TeamList({ teams, isLoading, selectedTeamId, onSelect, onRename,
   const stop = (event: MouseEvent) => event.stopPropagation()
 
   const columns: ColumnsType<Team> = [
-    { title: 'Name', dataIndex: 'name', key: 'name' },
+    { title: 'Nombre', dataIndex: 'name', key: 'name' },
     {
-      title: 'Created',
+      title: 'Creado',
       dataIndex: 'createdAt',
       key: 'createdAt',
       render: (value: string) => new Date(value).toLocaleString(),
     },
     {
-      title: 'Actions',
+      title: 'Acciones',
       key: 'actions',
       render: (_, team) => (
         <Space onClick={stop}>
           <Button icon={<EditOutlined />} onClick={() => onRename(team)}>
-            Rename
+            Renombrar
           </Button>
-          <Popconfirm title="Delete this team?" onConfirm={() => onDelete(team)}>
+          <Popconfirm title="¿Eliminar este equipo?" onConfirm={() => onDelete(team)}>
             <Button danger icon={<DeleteOutlined />}>
-              Delete
+              Eliminar
             </Button>
           </Popconfirm>
         </Space>

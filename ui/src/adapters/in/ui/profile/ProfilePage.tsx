@@ -1,4 +1,4 @@
-import { App, Card, Typography } from 'antd'
+import { App, Card } from 'antd'
 import { useState } from 'react'
 
 import type { ChangePasswordPayload, UpdateProfilePayload } from '@/core/auth/application/ports/auth-repository.port'
@@ -7,6 +7,7 @@ import { extractErrorMessage } from '@/adapters/out/http/api-client'
 import { PasswordForm } from './PasswordForm'
 import { ProfileForm } from './ProfileForm'
 import styles from './ProfilePage.module.css'
+import { PageHeader } from '@/shared/ui/PageHeader'
 
 export function ProfilePage() {
   const { message } = App.useApp()
@@ -25,9 +26,9 @@ export function ProfilePage() {
     setIsSavingProfile(true)
     try {
       await updateProfile(payload)
-      message.success('Profile updated')
+      message.success('Perfil actualizado')
     } catch (error) {
-      message.error(extractErrorMessage(error, 'Could not update profile'))
+      message.error(extractErrorMessage(error, 'No se pudo actualizar el perfil'))
     } finally {
       setIsSavingProfile(false)
     }
@@ -37,9 +38,9 @@ export function ProfilePage() {
     setIsSavingPassword(true)
     try {
       await changePassword(payload)
-      message.success('Password changed')
+      message.success('Contrasena cambiada')
     } catch (error) {
-      message.error(extractErrorMessage(error, 'Could not change password'))
+      message.error(extractErrorMessage(error, 'No se pudo cambiar la contrasena'))
       throw error
     } finally {
       setIsSavingPassword(false)
@@ -48,11 +49,12 @@ export function ProfilePage() {
 
   return (
     <div className={styles.wrapper}>
-      <Typography.Title level={3} className={styles.title}>
-        My profile
-      </Typography.Title>
+      <PageHeader
+        title="Mi perfil"
+        description="Administra tus datos personales y contraseña."
+      />
 
-      <Card title="Profile">
+      <Card title="Datos personales">
         <ProfileForm
           initialName={user.name}
           initialEmail={user.email}
@@ -61,7 +63,7 @@ export function ProfilePage() {
         />
       </Card>
 
-      <Card title="Password">
+      <Card title="Contrasena">
         <PasswordForm isSubmitting={isSavingPassword} onSubmit={handlePasswordSubmit} />
       </Card>
     </div>

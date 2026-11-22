@@ -8,9 +8,9 @@ import { useAuthStore } from '@/adapters/in/state/auth.store'
 import styles from './AuthPage.module.css'
 
 const schema = z.object({
-  name: z.string().min(2, 'Name is too short'),
-  email: z.string().email('Enter a valid email'),
-  password: z.string().min(8, 'Password must be at least 8 characters'),
+  name: z.string().min(2, 'El nombre es demasiado corto'),
+  email: z.string().email('Introduce un correo valido'),
+  password: z.string().min(8, 'La contrasena debe tener al menos 8 caracteres'),
 })
 
 type FormValues = z.infer<typeof schema>
@@ -32,9 +32,9 @@ export function RegisterPage() {
   const onSubmit = handleSubmit(async (values) => {
     try {
       await register(values)
-      navigate('/tickets')
+      navigate('/issues')
     } catch (error) {
-      message.error(error instanceof Error ? error.message : 'Registration failed')
+      message.error(error instanceof Error ? error.message : 'No se pudo crear la cuenta')
     }
   })
 
@@ -42,16 +42,16 @@ export function RegisterPage() {
     <div className={styles.wrapper}>
       <Card className={styles.card}>
         <Typography.Title level={3} className={styles.title}>
-          Create your CoreLog account
+          Crear cuenta en CoreLog
         </Typography.Title>
         <Form layout="vertical" onFinish={onSubmit}>
-          <Form.Item label="Name" validateStatus={errors.name ? 'error' : ''} help={errors.name?.message}>
+          <Form.Item label="Nombre" validateStatus={errors.name ? 'error' : ''} help={errors.name?.message}>
             <Controller name="name" control={control} render={({ field }) => <Input {...field} />} />
           </Form.Item>
-          <Form.Item label="Email" validateStatus={errors.email ? 'error' : ''} help={errors.email?.message}>
+          <Form.Item label="Correo electronico" validateStatus={errors.email ? 'error' : ''} help={errors.email?.message}>
             <Controller name="email" control={control} render={({ field }) => <Input {...field} type="email" />} />
           </Form.Item>
-          <Form.Item label="Password" validateStatus={errors.password ? 'error' : ''} help={errors.password?.message}>
+          <Form.Item label="Contrasena" validateStatus={errors.password ? 'error' : ''} help={errors.password?.message}>
             <Controller
               name="password"
               control={control}
@@ -59,11 +59,11 @@ export function RegisterPage() {
             />
           </Form.Item>
           <Button type="primary" htmlType="submit" block loading={isSubmitting}>
-            Create account
+            Crear cuenta
           </Button>
         </Form>
         <Typography.Paragraph className={styles.footer}>
-          Already have an account? <Link to="/login">Sign in</Link>
+          ¿Ya tienes cuenta? <Link to="/login">Iniciar sesion</Link>
         </Typography.Paragraph>
       </Card>
     </div>

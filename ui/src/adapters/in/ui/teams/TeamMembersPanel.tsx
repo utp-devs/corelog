@@ -52,28 +52,28 @@ export function TeamMembersPanel({ team }: TeamMembersPanelProps) {
   const handleAdd = async (userId: string) => {
     try {
       await addMember(team.id, userId)
-      message.success('Member added')
+      message.success('Miembro agregado')
       setSearchResults([])
     } catch (error) {
-      message.error(extractErrorMessage(error, 'Could not add member'))
+      message.error(extractErrorMessage(error, 'No se pudo agregar el miembro'))
     }
   }
 
   const handleRemove = async (userId: string) => {
     try {
       await removeMember(team.id, userId)
-      message.success('Member removed')
+      message.success('Miembro eliminado')
     } catch (error) {
-      message.error(extractErrorMessage(error, 'Could not remove member'))
+      message.error(extractErrorMessage(error, 'No se pudo eliminar el miembro'))
     }
   }
 
   return (
-    <Card title={`Members of ${team.name}`}>
+    <Card title={`Miembros de ${team.name}`}>
       <Select<string>
         showSearch
         filterOption={false}
-        placeholder="Search a person by name or email to add"
+        placeholder="Buscar una persona por nombre o correo"
         className={styles.search}
         loading={isSearching}
         onSearch={handleSearch}
@@ -83,12 +83,12 @@ export function TeamMembersPanel({ team }: TeamMembersPanelProps) {
       <List
         loading={membersStatus === 'loading'}
         dataSource={members}
-        locale={{ emptyText: 'No members yet' }}
+        locale={{ emptyText: 'Aun no hay miembros' }}
         renderItem={(member) => (
           <List.Item
             actions={[
               <Button key="remove" icon={<UserDeleteOutlined />} onClick={() => handleRemove(member.id)}>
-                Remove
+                Eliminar
               </Button>,
             ]}
           >

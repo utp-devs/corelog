@@ -6,20 +6,21 @@ import { Link, useNavigate } from 'react-router-dom'
 import type { Ticket, TicketPriority, TicketStatus } from '@/core/tickets/domain/ticket'
 import { useTickets } from './hooks/useTickets'
 import { TicketList } from './TicketList'
+import { PageHeader } from '@/shared/ui/PageHeader'
 import styles from './TicketsListPage.module.css'
 
 const statusOptions: { value: TicketStatus; label: string }[] = [
-  { value: 'open', label: 'Open' },
-  { value: 'in_progress', label: 'In progress' },
-  { value: 'resolved', label: 'Resolved' },
-  { value: 'closed', label: 'Closed' },
+  { value: 'open', label: 'Abierto' },
+  { value: 'in_progress', label: 'En progreso' },
+  { value: 'resolved', label: 'Resuelto' },
+  { value: 'closed', label: 'Cerrado' },
 ]
 
 const priorityOptions: { value: TicketPriority; label: string }[] = [
-  { value: 'low', label: 'Low' },
-  { value: 'medium', label: 'Medium' },
-  { value: 'high', label: 'High' },
-  { value: 'critical', label: 'Critical' },
+  { value: 'low', label: 'Baja' },
+  { value: 'medium', label: 'Media' },
+  { value: 'high', label: 'Alta' },
+  { value: 'critical', label: 'Critica' },
 ]
 
 export function TicketsListPage() {
@@ -40,23 +41,24 @@ export function TicketsListPage() {
    )
  }, [tickets, search])
 
-  const handleSelect = (ticket: Ticket) => navigate(`/tickets/${ticket.id}`)
+  const handleSelect = (ticket: Ticket) => navigate(`/issues/${ticket.id}`)
 
   return (
     <div>
-      <div className={styles.header}>
-        <Typography.Title level={3} className={styles.title}>
-          Tickets
-        </Typography.Title>
-        <Button type="primary" icon={<PlusOutlined />} onClick={() => navigate('/tickets/new')}>
-          New ticket
-        </Button>
-      </div>
+      <PageHeader
+        title="Incidencias"
+        description="Consulta y administra los incidentes registrados."
+        actions={
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => navigate('/issues/new')}>
+            Nueva incidencia
+          </Button>
+        }
+      />
 
       <div className={styles.filters}>
         <Select
           allowClear
-          placeholder="Filter by status"
+          placeholder="Filtrar por estado"
           className={styles.filterSelect}
           options={statusOptions}
           value={statusFilter}
@@ -64,7 +66,7 @@ export function TicketsListPage() {
         />
         <Select
           allowClear
-          placeholder="Filter by priority"
+          placeholder="Filtrar por prioridad"
           className={styles.filterSelect}
           options={priorityOptions}
           value={priorityFilter}
@@ -72,22 +74,21 @@ export function TicketsListPage() {
         />
       </div>
       <Input.Search
-         placeholder="Buscar ticket por título"
+         placeholder="Buscar incidencia por título"
          allowClear
          value={search}
          onChange={(e) => setSearch(e.target.value)}
-         style={{ marginBottom: 16, maxWidth: 400 }}
       />
 
       <TicketList
          tickets={filteredTickets}
          isLoading={isLoading}
          onSelect={handleSelect}
-         emptyText={search.trim() ? `Ningún ticket coincide con "${search.trim()}"` : undefined}
+         emptyText={search.trim() ? `Ninguna incidencia coincide con "${search.trim()}"` : undefined}
       />
 
       <Typography.Paragraph type="secondary" className={styles.hint}>
-        <Link to="/tickets/new">Create the first ticket</Link> if the list above is empty.
+        <Link to="/issues/new">Crear la primera incidencia</Link> si la lista esta vacia.
       </Typography.Paragraph>
     </div>
   )

@@ -11,37 +11,37 @@
 }
 
 .neutral {
-  background: #f3f4f6;
-  color: #374151;
-  border-color: #e5e7eb;
+  background: var(--cl-bg-sunken);
+  color: var(--cl-text-subtle);
+  border-color: var(--cl-border);
 }
 
 .blue {
-  background: #eff6ff;
-  color: #1d4ed8;
-  border-color: #bfdbfe;
+  background: var(--cl-brand-subtle);
+  color: var(--cl-brand);
+  border-color: var(--cl-brand);
 }
 
 .gold {
-  background: #fffbeb;
-  color: #b45309;
-  border-color: #fde68a;
+  background: var(--cl-warning-bg);
+  color: var(--cl-warning-text);
+  border-color: var(--cl-warning);
 }
 
 .green {
-  background: #ecfdf5;
-  color: #047857;
-  border-color: #a7f3d0;
+  background: var(--cl-success-bg);
+  color: var(--cl-success-text);
+  border-color: var(--cl-success);
 }
 
 .orange {
-  background: #fff7ed;
-  color: #c2410c;
-  border-color: #fed7aa;
+  background: var(--cl-warning-bg);
+  color: var(--cl-warning-text);
+  border-color: var(--cl-warning);
 }
 
 .red {
-  background: #fef2f2;
-  color: #b91c1c;
-  border-color: #fecaca;
+  background: var(--cl-danger-bg);
+  color: var(--cl-danger-text);
+  border-color: var(--cl-danger);
 }

@@ -1,5 +1,5 @@
 import { PlusOutlined } from '@ant-design/icons'
-import { App, Button, Empty, Flex, Typography } from 'antd'
+import { App, Button, Empty } from 'antd'
 import { useEffect, useState } from 'react'
 
 import type { Team } from '@/core/teams/domain/team'
@@ -9,6 +9,7 @@ import { TeamFormModal } from './TeamFormModal'
 import { TeamList } from './TeamList'
 import { TeamMembersPanel } from './TeamMembersPanel'
 import styles from './TeamsPage.module.css'
+import { PageHeader } from '@/shared/ui/PageHeader'
 
 type ModalState = { kind: 'create' } | { kind: 'rename'; team: Team } | { kind: 'closed' }
 
@@ -34,14 +35,14 @@ export function TeamsPage() {
     try {
       if (modal.kind === 'create') {
         await createTeam(name)
-        message.success('Team created')
+        message.success('Equipo creado')
       } else if (modal.kind === 'rename') {
         await renameTeam(modal.team.id, name)
-        message.success('Team renamed')
+        message.success('Equipo renombrado')
       }
       setModal({ kind: 'closed' })
     } catch (error) {
-      message.error(extractErrorMessage(error, 'Could not save team'))
+      message.error(extractErrorMessage(error, 'No se pudo guardar el equipo'))
       throw error
     } finally {
       setIsSubmitting(false)
@@ -51,25 +52,26 @@ export function TeamsPage() {
   const handleDelete = async (team: Team) => {
     try {
       await removeTeam(team.id)
-      message.success('Team deleted')
+      message.success('Equipo eliminado')
       if (selectedTeam?.id === team.id) {
         setSelectedTeam(null)
       }
     } catch (error) {
-      message.error(extractErrorMessage(error, 'Could not delete team'))
+      message.error(extractErrorMessage(error, 'No se pudo eliminar el equipo'))
     }
   }
 
   return (
     <div>
-      <Flex justify="space-between" align="center" className={styles.header}>
-        <Typography.Title level={3} className={styles.title}>
-          Teams
-        </Typography.Title>
-        <Button type="primary" icon={<PlusOutlined />} onClick={() => setModal({ kind: 'create' })}>
-          New team
-        </Button>
-      </Flex>
+      <PageHeader
+        title="Equipos"
+        description="Organiza los miembros y administra los equipos."
+        actions={
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => setModal({ kind: 'create' })}>
+            Nuevo equipo
+          </Button>
+        }
+      />
 
       <TeamList
         teams={teams}
@@ -84,13 +86,13 @@ export function TeamsPage() {
         {selectedTeam ? (
           <TeamMembersPanel key={selectedTeam.id} team={selectedTeam} />
         ) : (
-          <Empty description="Select a team to manage its members" />
+          <Empty description="Selecciona un equipo para administrar sus miembros" />
         )}
       </div>
 
       <TeamFormModal
         open={modal.kind !== 'closed'}
-        title={modal.kind === 'rename' ? 'Rename team' : 'New team'}
+        title={modal.kind === 'rename' ? 'Renombrar equipo' : 'Nuevo equipo'}
         initialName={modal.kind === 'rename' ? modal.team.name : ''}
         isSubmitting={isSubmitting}
         onSubmit={handleSubmitModal}

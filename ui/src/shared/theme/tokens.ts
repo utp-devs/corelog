@@ -1,0 +1,28 @@
+export const coreLogTheme = {
+  brand: '#0052CC',
+  brandDark: '#4C9AFF',
+  info: '#0065FF',
+  infoDark: '#4C9AFF',
+  success: '#22A06B',
+  successDark: '#4BCE97',
+  warning: '#FFAB00',
+  warningDark: '#F5CD47',
+  danger: '#DE350B',
+  dangerDark: '#FF7452',
+  bgPageLight: '#F7F8FA',
+  bgSurfaceLight: '#FFFFFF',
+  bgSunkenLight: '#F1F2F4',
+  borderLight: '#DFE1E6',
+  textLight: '#172B4D',
+  textSubtleLight: '#5E6C84',
+  bgPageDark: '#1D2125',
+  bgSurfaceDark: '#22272B',
+  bgSunkenDark: '#1B1F23',
+  borderDark: '#44546F',
+  textDark: '#C7D1DB',
+  textSubtleDark: '#9FADBC',
+  shadow1:
+    '0 1px 1px rgba(9,30,66,.15), 0 0 1px rgba(9,30,66,.31)',
+  fontFamily:
+    'Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif',
+} as const

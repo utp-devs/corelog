@@ -7,8 +7,8 @@ import type { UpdateProfilePayload } from '@/core/auth/application/ports/auth-re
 import styles from './ProfileForm.module.css'
 
 const schema = z.object({
-  name: z.string().min(2, 'Name is too short'),
-  email: z.string().email('Enter a valid email'),
+  name: z.string().min(2, 'El nombre es demasiado corto'),
+  email: z.string().email('Introduce un correo valido'),
 })
 
 type FormValues = z.infer<typeof schema>
@@ -36,14 +36,14 @@ export function ProfileForm({ initialName, initialEmail, isSubmitting, onSubmit 
 
   return (
     <Form className={styles.form} layout="vertical" onFinish={submit}>
-      <Form.Item label="Name" validateStatus={errors.name ? 'error' : ''} help={errors.name?.message}>
+      <Form.Item label="Nombre" validateStatus={errors.name ? 'error' : ''} help={errors.name?.message}>
         <Controller name="name" control={control} render={({ field }) => <Input {...field} />} />
       </Form.Item>
-      <Form.Item label="Email" validateStatus={errors.email ? 'error' : ''} help={errors.email?.message}>
+      <Form.Item label="Correo electronico" validateStatus={errors.email ? 'error' : ''} help={errors.email?.message}>
         <Controller name="email" control={control} render={({ field }) => <Input {...field} type="email" />} />
       </Form.Item>
       <Button type="primary" htmlType="submit" loading={isSubmitting}>
-        Save profile
+        Guardar perfil
       </Button>
     </Form>
   )

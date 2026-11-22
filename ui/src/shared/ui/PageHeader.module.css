@@ -1,0 +1,18 @@
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--cl-space-4);
+  margin-bottom: var(--cl-space-6);
+}
+
+.title {
+  margin: 0;
+  font-size: var(--cl-font-h1);
+}
+
+.description {
+  display: block;
+  margin-top: var(--cl-space-1);
+  color: var(--cl-text-subtle);
+}

@@ -12,23 +12,23 @@ interface TicketListProps {
   emptyText?: string
 }
 
-export function TicketList({ tickets, isLoading, onSelect, emptyText = 'No tickets yet' }: TicketListProps) {
+export function TicketList({ tickets, isLoading, onSelect, emptyText = 'Aun no hay incidencias' }: TicketListProps) {
   const columns: ColumnsType<Ticket> = [
-    { title: 'Title', dataIndex: 'title', key: 'title' },
+    { title: 'Titulo', dataIndex: 'title', key: 'title' },
     {
-      title: 'Status',
+      title: 'Estado',
       dataIndex: 'status',
       key: 'status',
       render: (value: TicketStatus) => <TicketBadge kind="status" value={value} />,
     },
     {
-      title: 'Priority',
+      title: 'Prioridad',
       dataIndex: 'priority',
       key: 'priority',
       render: (value: TicketPriority) => <TicketBadge kind="priority" value={value} />,
     },
     {
-      title: 'Created',
+      title: 'Creado',
       dataIndex: 'createdAt',
       key: 'createdAt',
       render: (value: string) => new Date(value).toLocaleString(),

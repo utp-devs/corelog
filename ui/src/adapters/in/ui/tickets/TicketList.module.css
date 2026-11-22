@@ -3,11 +3,11 @@
 }
 
 .row:hover td {
-  background: #fafafa;
+  background: var(--cl-bg-sunken);
 }
 
 .empty {
   padding: 24px 0;
   text-align: center;
-  color: #8c8c8c;
+  color: var(--cl-text-subtle);
 }
