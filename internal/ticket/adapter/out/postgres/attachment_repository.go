@@ -34,7 +34,7 @@ func (r *AttachmentRepository) SaveAttachment(ctx context.Context, a *domain.Att
 	if err != nil {
 		return apperror.Wrap(apperror.KindInternal, "invalid storage key", err)
 	}
-	_, err = r.db.ExecContext(ctx, `INSERT INTO attachments(id,issue_id,uploader_id,file_name,content_type,size_bytes,storage_key,created_at) VALUES($1,$2,$3,$4,$5,$6,$7,$8)`, a.ID, a.IssueID, a.UploaderID, a.FileName, a.ContentType, a.Size, key, a.CreatedAt)
+	err = r.db.QueryRowContext(ctx, `INSERT INTO attachments(issue_id,uploader_id,file_name,content_type,size_bytes,storage_key,created_at) VALUES($1,$2,$3,$4,$5,$6,$7) RETURNING id`, a.IssueID, a.UploaderID, a.FileName, a.ContentType, a.Size, key, a.CreatedAt).Scan(&a.ID)
 	if err != nil {
 		return apperror.Wrap(apperror.KindInternal, "failed to save attachment", err)
 	}

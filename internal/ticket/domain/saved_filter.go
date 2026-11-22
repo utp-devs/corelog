@@ -64,5 +64,5 @@ func NewSavedFilter(ownerID uuid.UUID, name string, criteria SavedFilterCriteria
 		return nil, ErrInvalidSavedFilter
 	}
 	criteria.Query = strings.TrimSpace(criteria.Query)
-	return &SavedFilter{ID: uuid.New(), OwnerID: ownerID, Name: name, Criteria: criteria, CreatedAt: time.Now().UTC(), UpdatedAt: time.Now().UTC()}, nil
+	return &SavedFilter{OwnerID: ownerID, Name: name, Criteria: criteria, CreatedAt: time.Now().UTC(), UpdatedAt: time.Now().UTC()}, nil
 }

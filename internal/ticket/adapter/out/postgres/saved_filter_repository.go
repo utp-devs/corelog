@@ -36,9 +36,10 @@ func (r *SavedFilterRepository) SaveSavedFilter(ctx context.Context, filter *dom
 	if err != nil {
 		return apperror.Wrap(apperror.KindInternal, "failed to encode saved filter", err)
 	}
-	_, err = r.db.ExecContext(ctx, `
-		INSERT INTO saved_filters(id, owner_id, name, filters, created_at, updated_at)
-		VALUES($1, $2, $3, $4::jsonb, $5, $6)`, filter.ID, filter.OwnerID, filter.Name, string(criteria), filter.CreatedAt, filter.UpdatedAt)
+	err = r.db.QueryRowContext(ctx, `
+		INSERT INTO saved_filters(owner_id, name, filters, created_at, updated_at)
+		VALUES($1, $2, $3::jsonb, $4, $5)
+		RETURNING id`, filter.OwnerID, filter.Name, string(criteria), filter.CreatedAt, filter.UpdatedAt).Scan(&filter.ID)
 	if err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgErr.Code == "23505" {

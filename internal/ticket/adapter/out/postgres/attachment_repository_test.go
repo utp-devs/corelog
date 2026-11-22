@@ -48,6 +48,9 @@ func TestAttachmentRepositoryPostgresCRUD(t *testing.T) {
 	if _, err := db.Exec(string(migration)); err != nil {
 		t.Fatal(err)
 	}
+	if _, err := db.Exec(`ALTER TABLE attachments ALTER COLUMN id SET DEFAULT gen_random_uuid()`); err != nil {
+		t.Fatal(err)
+	}
 
 	ctx := context.Background()
 	issueID, uploaderID := uuid.New(), uuid.New()

@@ -44,6 +44,9 @@ func TestSavedFilterRepositoryPostgresCRUDAndOwnership(t *testing.T) {
 	if _, err := db.Exec(string(up)); err != nil {
 		t.Fatal(err)
 	}
+	if _, err := db.Exec(`ALTER TABLE saved_filters ALTER COLUMN id SET DEFAULT gen_random_uuid()`); err != nil {
+		t.Fatal(err)
+	}
 	downPath := filepath.Join("..", "..", "..", "..", "..", "migrations", "postgres", "000013_saved_filters.down.sql")
 	down, err := os.ReadFile(downPath)
 	if err != nil {

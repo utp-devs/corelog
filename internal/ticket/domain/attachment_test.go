@@ -15,8 +15,8 @@ func TestNewAttachmentValidatesMetadataAndSanitizesName(t *testing.T) {
 	if got.FileName != "report.pdf" {
 		t.Fatalf("FileName = %q, want report.pdf", got.FileName)
 	}
-	if got.ID == uuid.Nil || got.StorageKey == "" {
-		t.Fatal("attachment identifiers must be set")
+	if got.ID != uuid.Nil || got.StorageKey == "" {
+		t.Fatal("attachment must leave ID to the database and set its storage key")
 	}
 }
 

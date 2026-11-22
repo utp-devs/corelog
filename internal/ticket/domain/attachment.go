@@ -40,5 +40,5 @@ func NewAttachment(issueID, uploaderID uuid.UUID, fileName, contentType string, 
 		return nil, ErrInvalidAttachment
 	}
 	now := time.Now().UTC()
-	return &Attachment{ID: uuid.New(), IssueID: issueID, UploaderID: uploaderID, FileName: fileName, ContentType: contentType, Size: size, StorageKey: uuid.NewString(), CreatedAt: now}, nil
+	return &Attachment{IssueID: issueID, UploaderID: uploaderID, FileName: fileName, ContentType: contentType, Size: size, StorageKey: uuid.NewString(), CreatedAt: now}, nil
 }
