@@ -52,4 +52,28 @@ describe('TicketHttpRepository.list', () => {
       params: expect.objectContaining({ page: 3, page_size: 10 }),
     }))
   })
+
+  it('maps the requester and assignee display names', async () => {
+    vi.spyOn(apiClient, 'get').mockResolvedValue({
+      data: {
+        data: [{ ...issue, requester_name: 'Ana Torres', assignee_id: '33333333-3333-4333-8333-333333333333', assignee_name: 'Luis Paredes' }],
+        meta: { page: 1, page_size: 20, total: 1 },
+      },
+    })
+
+    const page = await new TicketHttpRepository().list({ page: 1, pageSize: 20 })
+
+    expect(page.items[0].requesterName).toBe('Ana Torres')
+    expect(page.items[0].assigneeName).toBe('Luis Paredes')
+  })
+
+  it('leaves the assignee name null when the issue is unassigned', async () => {
+    vi.spyOn(apiClient, 'get').mockResolvedValue({
+      data: { data: [{ ...issue, requester_name: 'Ana Torres' }], meta: { page: 1, page_size: 20, total: 1 } },
+    })
+
+    const page = await new TicketHttpRepository().list({ page: 1, pageSize: 20 })
+
+    expect(page.items[0].assigneeName).toBeNull()
+  })
 })

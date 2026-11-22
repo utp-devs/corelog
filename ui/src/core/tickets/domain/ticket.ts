@@ -16,7 +16,9 @@ export interface Ticket {
   rank: string
   closedAt: string | null
   requesterId: string
+  requesterName: string
   assigneeId: string | null
+  assigneeName: string | null
   createdAt: string
   updatedAt: string
 }

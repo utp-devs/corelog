@@ -27,7 +27,9 @@ interface TicketDto {
   rank: string
   closed_at: string | null
   requester_id: string
+  requester_name: string
   assignee_id: string | null
+  assignee_name?: string | null
   created_at: string
   updated_at: string
 }
@@ -113,7 +115,9 @@ function toTicket(dto: TicketDto): Ticket {
     rank: dto.rank,
     closedAt: dto.closed_at,
     requesterId: dto.requester_id,
+    requesterName: dto.requester_name,
     assigneeId: dto.assignee_id ?? null,
+    assigneeName: dto.assignee_name ?? null,
     createdAt: dto.created_at,
     updatedAt: dto.updated_at,
   }
