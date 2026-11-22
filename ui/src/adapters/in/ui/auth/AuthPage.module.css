@@ -1,32 +1,9 @@
-.wrapper {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 100vh;
-  padding: var(--cl-space-4);
-  background: var(--cl-bg-page);
+/* Estilos de los formularios de acceso (la plantilla visual esta en AuthLayout). */
+.form {
+  width: 100%;
 }
 
-.card {
-  width: min(400px, 100%);
-  box-shadow: var(--cl-shadow-2);
-}
-
-.banner {
-  display: block;
-  width: 280px;
-  max-width: 100%;
-  height: auto;
-  margin: 0 auto var(--cl-space-4);
-}
-
-.title {
-  margin-top: 0;
-  text-align: center;
-}
-
-.footer {
-  margin-top: var(--cl-space-4);
-  margin-bottom: 0;
-  text-align: center;
+.form :global(.ant-form-item-label > label) {
+  font-weight: 600;
+  color: var(--cl-text);
 }

@@ -1,0 +1,142 @@
+.page {
+  display: grid;
+  grid-template-columns: 1fr;
+  min-height: 100vh;
+  background: var(--cl-bg-page);
+}
+
+/* Panel de marca: solo en escritorio. */
+.brandPanel {
+  display: none;
+  position: relative;
+  overflow: hidden;
+  padding: var(--cl-space-8);
+  background: linear-gradient(135deg, var(--cl-brand) 0%, var(--cl-brand-pressed) 100%);
+  color: #ffffff;
+}
+
+.brandPanel::after {
+  content: '';
+  position: absolute;
+  inset: auto -20% -30% auto;
+  width: 420px;
+  height: 420px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  pointer-events: none;
+}
+
+.brandContent {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  height: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+.logoTile {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 88px;
+  height: 88px;
+  margin-bottom: var(--cl-space-6);
+  border-radius: var(--cl-radius-lg);
+  background: #ffffff;
+  box-shadow: var(--cl-shadow-2);
+}
+
+.logo {
+  display: block;
+  width: 64px;
+  height: 64px;
+  object-fit: contain;
+}
+
+.brandTitle {
+  margin: 0 0 var(--cl-space-3) !important;
+  color: #ffffff !important;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.brandText {
+  margin-bottom: var(--cl-space-6) !important;
+  color: rgba(255, 255, 255, 0.86) !important;
+  font-size: var(--cl-font-body-strong);
+}
+
+.highlights {
+  display: grid;
+  gap: var(--cl-space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.highlights li {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--cl-space-3);
+  font-size: var(--cl-font-body);
+  color: rgba(255, 255, 255, 0.94);
+}
+
+.highlightIcon {
+  flex: none;
+  margin-top: 3px;
+  color: #ffffff;
+}
+
+/* Formulario: centrado y con ancho controlado. */
+.formPanel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--cl-space-8) var(--cl-space-5);
+  min-width: 0;
+}
+
+.formBox {
+  width: min(420px, 100%);
+}
+
+.mobileBanner {
+  display: block;
+  height: auto;
+  max-width: 100%;
+  margin: 0 0 var(--cl-space-6);
+}
+
+.title {
+  margin: 0 !important;
+  font-weight: 700;
+}
+
+.subtitle {
+  margin: var(--cl-space-1) 0 var(--cl-space-6) !important;
+}
+
+.footer {
+  margin: var(--cl-space-5) 0 0 !important;
+  text-align: center;
+  color: var(--cl-text-subtle);
+}
+
+@media (min-width: 992px) {
+  .page {
+    grid-template-columns: minmax(440px, 5fr) 6fr;
+  }
+
+  .brandPanel {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .formPanel {
+    padding: var(--cl-space-8);
+  }
+}
