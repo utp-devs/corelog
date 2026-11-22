@@ -51,3 +51,32 @@ func (Policy) CanComment(globalRole string, projectRole *ProjectRole) bool {
 	}
 	return projectRole != nil && (*projectRole == ProjectRoleLead || *projectRole == ProjectRoleContributor)
 }
+
+// CanDeleteProject: solo el administrador global puede eliminar un proyecto.
+func (Policy) CanDeleteProject(globalRole string, _ *ProjectRole) bool {
+	return globalRole == "admin"
+}
+
+// CanWatchIssue: cualquier miembro del proyecto puede seguir una incidencia.
+func (Policy) CanWatchIssue(globalRole string, projectRole *ProjectRole) bool {
+	if globalRole == "admin" {
+		return true
+	}
+	return projectRole != nil
+}
+
+// CanMoveCards: reordenar tarjetas y backlog exige poder editar incidencias.
+func (Policy) CanMoveCards(globalRole string, projectRole *ProjectRole) bool {
+	if globalRole == "admin" {
+		return true
+	}
+	return projectRole != nil && (*projectRole == ProjectRoleLead || *projectRole == ProjectRoleContributor)
+}
+
+// CanManageBoard: gestionar tableros y columnas es exclusivo del lider del proyecto.
+func (Policy) CanManageBoard(globalRole string, projectRole *ProjectRole) bool {
+	if globalRole == "admin" {
+		return true
+	}
+	return projectRole != nil && *projectRole == ProjectRoleLead
+}
