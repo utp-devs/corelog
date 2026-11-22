@@ -35,6 +35,7 @@ func TestPolicyMatrix(t *testing.T) {
 		{"mover tarjetas y backlog", policy.CanMoveCards, [5]bool{true, true, true, false, false}},
 		{"gestionar tablero y columnas", policy.CanManageBoard, [5]bool{true, true, false, false, false}},
 		{"gestionar flujo de estados", policy.CanManageWorkflow, [5]bool{true, true, false, false, false}},
+		{"gestionar sprints", policy.CanManageSprints, [5]bool{true, true, false, false, false}},
 	}
 
 	roles := [5]struct {

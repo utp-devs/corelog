@@ -62,6 +62,8 @@ func (a *Authorizer) allowed(action port.Action, globalRole string, role *domain
 		return a.policy.CanManageBoard(globalRole, role)
 	case port.ActionManageWorkflow:
 		return a.policy.CanManageWorkflow(globalRole, role)
+	case port.ActionManageSprints:
+		return a.policy.CanManageSprints(globalRole, role)
 	default:
 		return false
 	}

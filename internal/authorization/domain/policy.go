@@ -88,3 +88,11 @@ func (Policy) CanManageWorkflow(globalRole string, projectRole *ProjectRole) boo
 	}
 	return projectRole != nil && *projectRole == ProjectRoleLead
 }
+
+// CanManageSprints: planificar, iniciar y cerrar sprints es exclusivo del lider del proyecto.
+func (Policy) CanManageSprints(globalRole string, projectRole *ProjectRole) bool {
+	if globalRole == "admin" {
+		return true
+	}
+	return projectRole != nil && *projectRole == ProjectRoleLead
+}

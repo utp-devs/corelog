@@ -23,6 +23,7 @@ const (
 	ActionMoveCards      Action = "move_cards"
 	ActionManageBoard    Action = "manage_board"
 	ActionManageWorkflow Action = "manage_workflow"
+	ActionManageSprints  Action = "manage_sprint"
 )
 
 // Actions lista todas las acciones de la matriz de permisos.
@@ -38,6 +39,7 @@ var Actions = []Action{
 	ActionMoveCards,
 	ActionManageBoard,
 	ActionManageWorkflow,
+	ActionManageSprints,
 }
 
 // RoleLookup es el puerto de salida que devuelve el rol de un usuario en un proyecto.
