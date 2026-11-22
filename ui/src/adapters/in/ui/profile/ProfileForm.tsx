@@ -42,7 +42,7 @@ export function ProfileForm({ initialName, initialEmail, isSubmitting, onSubmit 
       <Form.Item label="Correo electrónico" validateStatus={errors.email ? 'error' : ''} help={errors.email?.message}>
         <Controller name="email" control={control} render={({ field }) => <Input {...field} type="email" />} />
       </Form.Item>
-      <Button type="primary" htmlType="submit" loading={isSubmitting}>
+      <Button type="primary" htmlType="submit" loading={isSubmitting} className={styles.submit}>
         Guardar perfil
       </Button>
     </Form>

@@ -9,7 +9,7 @@ import {
   UserOutlined,
   WarningOutlined,
 } from '@ant-design/icons'
-import { App, Avatar, Button, Card, Grid, Menu, Segmented, Select, Space, Switch, Tag, Typography } from 'antd'
+import { App, Avatar, Button, Card, Descriptions, Grid, Menu, Segmented, Select, Space, Switch, Tag, Typography } from 'antd'
 import type { MenuProps } from 'antd'
 import dayjs from 'dayjs'
 import { useState } from 'react'
@@ -134,6 +134,7 @@ export function ProfilePage() {
         <div className={styles.sections}>
           <section id="perfil-datos" className={styles.section}>
             <Typography.Title level={4} className={styles.sectionTitle}>Datos personales</Typography.Title>
+            <div className={styles.pairs}>
             <Card>
               <Typography.Paragraph type="secondary" className={styles.hint}>
                 Este nombre y correo son los que ven tus compañeros en las incidencias.
@@ -145,10 +146,23 @@ export function ProfilePage() {
                 onSubmit={handleProfileSubmit}
               />
             </Card>
+            <Card title="Datos de la cuenta" className={styles.card}>
+              <Descriptions
+                column={1}
+                size="small"
+                items={[
+                  { key: "role", label: "Rol", children: roleLabels[user.role] ?? user.role },
+                  { key: "since", label: "Miembro desde", children: memberSince ?? "—" },
+                  { key: "id", label: "Identificador", children: <Typography.Text copyable>{user.id}</Typography.Text> },
+                ]}
+              />
+            </Card>
+            </div>
           </section>
 
           <section id="perfil-seguridad" className={styles.section}>
             <Typography.Title level={4} className={styles.sectionTitle}>Seguridad</Typography.Title>
+            <div className={styles.pairs}>
             <Card title="Contraseña" className={styles.card}>
               <PasswordForm isSubmitting={isSavingPassword} onSubmit={handlePasswordSubmit} />
             </Card>
@@ -166,10 +180,12 @@ export function ProfilePage() {
                 </Space>
               </div>
             </Card>
+            </div>
           </section>
 
           <section id="perfil-preferencias" className={styles.section}>
             <Typography.Title level={4} className={styles.sectionTitle}>Preferencias</Typography.Title>
+            <div className={styles.pairs}>
             <Card title="Apariencia" className={styles.card}>
               <Typography.Paragraph type="secondary" className={styles.hint}>
                 El tema se guarda en este navegador y se aplica al abrir la aplicación.
@@ -201,6 +217,7 @@ export function ProfilePage() {
                 </Space>
               </div>
             </Card>
+            </div>
             <Card title={<><BellOutlined /> Notificaciones</>} className={styles.card}>
               <Space orientation="vertical" className={styles.fullWidth}>
                 <div className={styles.rowBetween}>

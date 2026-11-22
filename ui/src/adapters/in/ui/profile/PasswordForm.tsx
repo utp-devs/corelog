@@ -54,7 +54,7 @@ export function PasswordForm({ isSubmitting, onSubmit }: PasswordFormProps) {
       >
         <Controller name="newPassword" control={control} render={({ field }) => <Input.Password {...field} />} />
       </Form.Item>
-      <Button type="primary" htmlType="submit" loading={isSubmitting}>
+      <Button type="primary" htmlType="submit" loading={isSubmitting} className={styles.submit}>
         Cambiar contraseña
       </Button>
     </Form>

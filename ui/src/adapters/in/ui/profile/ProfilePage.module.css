@@ -2,7 +2,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--cl-space-5);
-  max-width: 1120px;
+  width: 100%;
 }
 
 /* Resumen de la cuenta: identidad y metadatos en una sola tarjeta. */
@@ -121,4 +121,16 @@
   .menu {
     white-space: nowrap;
   }
+}
+
+/* Tarjetas emparejadas en escritorio: dos columnas que se apilan cuando no caben. */
+.pairs {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+  gap: var(--cl-space-4);
+  align-items: start;
+}
+
+.pairs > * {
+  min-width: 0;
 }
