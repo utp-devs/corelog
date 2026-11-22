@@ -22,6 +22,7 @@ const ProjectBoardPage = lazy(() => import('@/adapters/in/ui/projects/ProjectBoa
 const ProjectBacklogPage = lazy(() => import('@/adapters/in/ui/projects/ProjectBacklogPage').then(m => ({ default: m.ProjectBacklogPage })))
 const ProjectSprintsPage = lazy(() => import('@/adapters/in/ui/projects/ProjectSprintsPage').then(m => ({ default: m.ProjectSprintsPage })))
 const MyDashboardPage = lazy(() => import('@/adapters/in/ui/dashboard/MyDashboardPage').then(m => ({ default: m.MyDashboardPage })))
+const ProjectPermissionsPage = lazy(() => import('@/adapters/in/ui/projects/ProjectPermissionsPage').then(m => ({ default: m.ProjectPermissionsPage })))
 const ProjectCalendarPage = lazy(() => import('@/adapters/in/ui/projects/ProjectCalendarPage').then(m => ({ default: m.ProjectCalendarPage })))
 
 function SuspenseWrapper({ children }: { children: ReactNode }) {
@@ -62,6 +63,7 @@ export const router = createBrowserRouter([
               { path: 'backlog', element: <SuspenseWrapper><ProjectBacklogPage /></SuspenseWrapper> },
               { path: 'sprints', element: <SuspenseWrapper><ProjectSprintsPage /></SuspenseWrapper> },
               { path: 'calendar', element: <SuspenseWrapper><ProjectCalendarPage /></SuspenseWrapper> },
+              { path: 'permisos', element: <SuspenseWrapper><ProjectPermissionsPage /></SuspenseWrapper> },
             ],
           },
           { path: 'dashboard', element: <SuspenseWrapper><MyDashboardPage /></SuspenseWrapper> },

@@ -13,6 +13,7 @@ const sections = [
   { key: 'backlog', label: 'Backlog' },
   { key: 'sprints', label: 'Sprints' },
   { key: 'calendar', label: 'Calendario' },
+  { key: 'permisos', label: 'Permisos' },
 ]
 
 const typeLabels: Record<ProjectType, string> = { kanban: 'Kanban', scrum: 'Scrum' }
