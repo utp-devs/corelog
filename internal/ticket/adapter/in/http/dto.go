@@ -28,6 +28,7 @@ type createTicketRequest struct {
 	Title       string     `json:"title" validate:"required,min=3,max=200"`
 	Description string     `json:"description" validate:"required,min=3"`
 	Priority    string     `json:"priority" validate:"required,oneof=low medium high critical"`
+	ProjectID   string     `json:"project_id" validate:"omitempty,uuid"`
 	IssueType   string     `json:"issue_type" validate:"omitempty,oneof=task bug story epic subtask"`
 	ParentID    string     `json:"parent_id" validate:"omitempty,uuid4"`
 	DueDate     *time.Time `json:"due_date"`

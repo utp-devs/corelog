@@ -1933,6 +1933,11 @@ components:
           minLength: 3
         priority:
           $ref: '#/components/schemas/TicketPriority'
+        project_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: Proyecto del ticket. Si se omite, se usa el proyecto por defecto (CORE).
         issue_type:
           $ref: '#/components/schemas/IssueType'
         parent_id:

@@ -62,7 +62,10 @@ func (s *TicketService) Create(ctx context.Context, in port.CreateInput) (*domai
 	if err != nil {
 		return nil, err
 	}
-	ticket.ProjectID = uuid.MustParse("00000000-0000-4000-8000-000000000001")
+	ticket.ProjectID = domain.DefaultProjectID
+	if in.ProjectID != nil {
+		ticket.ProjectID = *in.ProjectID
+	}
 	if err := s.requireIssueCreate(ctx, ticket.ProjectID, in.RequesterID, in.GlobalRole); err != nil {
 		return nil, err
 	}

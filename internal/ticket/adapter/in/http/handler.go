@@ -57,6 +57,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		Priority:    domain.Priority(req.Priority),
 		RequesterID: requesterID,
 		GlobalRole:  globalRole,
+		ProjectID:   parseOptionalUUID(req.ProjectID),
 		IssueType:   domain.IssueType(req.IssueType),
 		ParentID:    parseOptionalUUID(req.ParentID),
 		DueDate:     req.DueDate,

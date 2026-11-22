@@ -15,6 +15,8 @@ type CreateInput struct {
 	Priority    domain.Priority
 	RequesterID uuid.UUID
 	GlobalRole  string
+	// ProjectID es opcional: si es nil el ticket se asigna al proyecto por defecto.
+	ProjectID   *uuid.UUID
 	IssueType   domain.IssueType
 	ParentID    *uuid.UUID
 	DueDate     *time.Time
