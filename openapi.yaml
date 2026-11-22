@@ -1299,6 +1299,50 @@ paths:
           description: Sin permiso para ver el proyecto
         '422':
           $ref: '#/components/responses/ValidationError'
+  /search:
+    get:
+      tags: [tickets]
+      operationId: globalSearch
+      summary: Busqueda global de proyectos e incidencias
+      description: Busca por texto en nombre y clave de proyecto, y en titulo y descripcion de incidencia. Solo devuelve lo visible para el usuario (admin global, o miembro del proyecto). Los comodines se buscan literalmente.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 2
+            maxLength: 100
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 25
+            default: 10
+      responses:
+        '200':
+          description: Proyectos primero, luego incidencias
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+  /dashboard/me:
+    get:
+      tags: [tickets]
+      operationId: getMyDashboard
+      summary: Resumen personal del usuario
+      description: Trabajo asignado por estado, incidencias vencidas, proyectos en los que es miembro, sprints activos de esos proyectos y las 5 incidencias abiertas mas urgentes.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Resumen personal
+        '401':
+          $ref: '#/components/responses/Unauthorized'
   /workflows:
     get:
       tags: [tickets]
