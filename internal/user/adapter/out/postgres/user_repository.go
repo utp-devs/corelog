@@ -131,7 +131,7 @@ func (r *UserRepository) Search(ctx context.Context, filter port.SearchFilter) (
 	}
 	if filter.TeamID != nil {
 		args = append(args, *filter.TeamID)
-		query += fmt.Sprintf(" AND team_id = $%d", len(args))
+		query += fmt.Sprintf(" AND EXISTS (SELECT 1 FROM team_members tm WHERE tm.user_id = users.id AND tm.team_id = $%d)", len(args))
 	}
 
 	query += " ORDER BY name ASC LIMIT 20"
