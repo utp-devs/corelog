@@ -101,6 +101,22 @@ lerna-debug.log*
 logs/
 
 # ---------------------------------------------------------------------
+# Playwright artifacts (screenshots of failed runs, traces, HTML report)
+# ---------------------------------------------------------------------
+/ui/test-results/
+/ui/playwright-report/
+/ui/blob-report/
+/ui/playwright/.cache/
+
+# ---------------------------------------------------------------------
+# Python tooling (scripts/ with uv-managed virtualenv)
+# ---------------------------------------------------------------------
+.venv/
+venv/
+__pycache__/
+*.pyc
+
+# ---------------------------------------------------------------------
 # Editors and operating systems
 # ---------------------------------------------------------------------
 .vscode/*
