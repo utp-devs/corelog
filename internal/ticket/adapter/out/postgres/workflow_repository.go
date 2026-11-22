@@ -23,6 +23,9 @@ func NewWorkflowRepository(db *sqlx.DB) *WorkflowRepository {
 var _ port.WorkflowRepository = (*WorkflowRepository)(nil)
 
 func (r *WorkflowRepository) CanTransition(ctx context.Context, projectID uuid.UUID, fromStatus, toStatus domain.Status, actorRole string) (bool, error) {
+	if actorRole == "" {
+		return false, nil
+	}
 	var allowedRoles string
 	err := r.db.GetContext(ctx, &allowedRoles, `
 		SELECT wt.allowed_roles

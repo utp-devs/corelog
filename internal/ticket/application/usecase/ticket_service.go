@@ -230,7 +230,11 @@ func (s *TicketService) UpdateStatus(ctx context.Context, id, actorID uuid.UUID,
 	}
 
 	if s.workflows != nil {
-		allowed, err := s.workflows.CanTransition(ctx, ticket.ProjectID, ticket.Status, status, globalRole)
+		transitionRole, err := s.transitionRole(ctx, ticket.ProjectID, actorID, globalRole)
+		if err != nil {
+			return nil, err
+		}
+		allowed, err := s.workflows.CanTransition(ctx, ticket.ProjectID, ticket.Status, status, transitionRole)
 		if err != nil {
 			return nil, err
 		}
@@ -539,4 +543,23 @@ func (s *TicketService) authorize(ctx context.Context, action string, projectID,
 		return apperror.New(apperror.KindForbidden, "forbidden project operation")
 	}
 	return s.authorizer.Authorize(ctx, action, actorID, globalRole, projectID)
+}
+
+// transitionRole devuelve el rol con el que el flujo evalua una transicion: admin global, o el rol
+// del actor en el proyecto (ADR-003). Un no miembro obtiene cadena vacia, que el flujo nunca permite.
+func (s *TicketService) transitionRole(ctx context.Context, projectID, actorID uuid.UUID, globalRole string) (string, error) {
+	if globalRole == "admin" {
+		return "admin", nil
+	}
+	if s.projectRoles == nil {
+		return "", nil
+	}
+	role, err := s.projectRoles.FindRole(ctx, projectID, actorID)
+	if err != nil {
+		return "", err
+	}
+	if role == nil {
+		return "", nil
+	}
+	return *role, nil
 }

@@ -472,10 +472,33 @@ func TestTicketService_UpdateDetailsAuthorization(t *testing.T) {
 
 type fakeWorkflowRepo struct {
 	allowed bool
+	roles   []string
 }
 
-func (r *fakeWorkflowRepo) CanTransition(_ context.Context, _ uuid.UUID, _, _ domain.Status, _ string) (bool, error) {
+func (r *fakeWorkflowRepo) CanTransition(_ context.Context, _ uuid.UUID, _, _ domain.Status, role string) (bool, error) {
+	r.roles = append(r.roles, role)
 	return r.allowed, nil
+}
+
+// TestTicketService_WorkflowEvaluatesProjectRole comprueba que el flujo recibe el rol del proyecto
+// (o admin para el administrador global), no el rol global del actor.
+func TestTicketService_WorkflowEvaluatesProjectRole(t *testing.T) {
+	ctx := context.Background()
+	repo := newFakeTicketRepo()
+	workflowRepo := &fakeWorkflowRepo{allowed: true}
+	svc := NewTicketService(repo, newFakeUserDirectory(), workflowRepo, contributorRoleResolver())
+
+	ticket, _ := svc.Create(ctx, port.CreateInput{Title: "Role issue", Description: "Desc", Priority: domain.PriorityMedium, RequesterID: uuid.New()})
+
+	if _, err := svc.UpdateStatus(ctx, ticket.ID, uuid.New(), "agent", domain.StatusInProgress); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if _, err := svc.UpdateStatus(ctx, ticket.ID, uuid.New(), "admin", domain.StatusResolved); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(workflowRepo.roles) != 2 || workflowRepo.roles[0] != "contributor" || workflowRepo.roles[1] != "admin" {
+		t.Fatalf("workflow roles = %v, want [contributor admin]", workflowRepo.roles)
+	}
 }
 
 func TestTicketService_WorkflowPolicy(t *testing.T) {
