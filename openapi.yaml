@@ -78,6 +78,18 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
         '422':
           $ref: '#/components/responses/ValidationError'
+  /auth/logout:
+    post:
+      tags: [users]
+      summary: Cerrar la sesion actual (revoca el token)
+      operationId: logout
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: La sesion se cerro; el token deja de ser valido
+        '401':
+          $ref: '#/components/responses/Unauthorized'
   /users/me:
     get:
       tags: [users]
@@ -147,6 +159,96 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
         '422':
           $ref: '#/components/responses/ValidationError'
+  /users/me/deactivate:
+    post:
+      tags: [users]
+      summary: Desactivar la cuenta propia (borrado logico)
+      description: >-
+        Requiere la contrasena actual. La cuenta deja de poder iniciar sesion y todas sus sesiones
+        quedan revocadas. Los datos se conservan para no romper el historial de incidencias.
+      operationId: deactivateAccount
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [password]
+              properties:
+                password:
+                  type: string
+      responses:
+        '204':
+          description: La cuenta quedo desactivada
+        '401':
+          description: No autenticado, o la contrasena no coincide
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+  /users/me/sessions:
+    get:
+      tags: [users]
+      summary: Listar las sesiones activas de la cuenta propia
+      operationId: listSessions
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Sesiones activas; la marcada como current es la de la peticion
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id: {type: string, format: uuid}
+                    user_agent: {type: string}
+                    created_at: {type: string, format: date-time}
+                    last_seen_at: {type: string, format: date-time}
+                    current: {type: boolean}
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /users/me/sessions/revoke-others:
+    post:
+      tags: [users]
+      summary: Cerrar todas las sesiones salvo la actual
+      operationId: revokeOtherSessions
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: Las demas sesiones quedaron revocadas
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /users/me/sessions/{id}:
+    delete:
+      tags: [users]
+      summary: Cerrar una sesion de la cuenta propia
+      operationId: revokeSession
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: {type: string, format: uuid}
+      responses:
+        '204':
+          description: La sesion quedo revocada
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: La sesion no existe o pertenece a otro usuario
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /users/search:
     get:
       tags: [users]
@@ -1217,6 +1319,49 @@ paths:
           description: Notificaciones
         '401':
           $ref: '#/components/responses/Unauthorized'
+  /notifications/preferences:
+    get:
+      tags: [tickets]
+      summary: Preferencias de avisos del usuario
+      operationId: getNotificationPreferences
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Preferencias; sin configurar, los avisos en la aplicacion estan activos
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  in_app: {type: boolean}
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    put:
+      tags: [tickets]
+      summary: Actualizar las preferencias de avisos
+      description: >-
+        Con in_app en false no se guardan avisos nuevos en la aplicacion. El correo electronico
+        todavia no esta implementado.
+      operationId: updateNotificationPreferences
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [in_app]
+              properties:
+                in_app: {type: boolean}
+      responses:
+        '200':
+          description: Preferencias guardadas
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ValidationError'
   /notifications/unread-count:
     get:
       tags: [tickets]
