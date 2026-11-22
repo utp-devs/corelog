@@ -33,10 +33,11 @@ func NewIssueLinkRepository(db *sqlx.DB) *IssueLinkRepository {
 var _ port.IssueLinkRepository = (*IssueLinkRepository)(nil)
 
 func (r *IssueLinkRepository) Save(ctx context.Context, link *domain.IssueLink) error {
-	_, err := r.db.ExecContext(ctx, `
-		INSERT INTO issue_links (id, source_issue_id, target_issue_id, kind, created_at, created_by)
-		VALUES ($1, $2, $3, $4, $5, $6)`,
-		link.ID, link.SourceIssueID, link.TargetIssueID, string(link.Kind), link.CreatedAt, link.CreatedBy)
+	err := r.db.QueryRowContext(ctx, `
+		INSERT INTO issue_links (source_issue_id, target_issue_id, kind, created_at, created_by)
+		VALUES ($1, $2, $3, $4, $5)
+		RETURNING id`,
+		link.SourceIssueID, link.TargetIssueID, string(link.Kind), link.CreatedAt, link.CreatedBy).Scan(&link.ID)
 	if err != nil {
 		if strings.Contains(err.Error(), "duplicate key") {
 			return domain.ErrDuplicateLink

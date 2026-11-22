@@ -40,7 +40,7 @@ func NewIssueLink(sourceIssueID, targetIssueID, createdBy uuid.UUID, kind IssueL
 		return nil, ErrInvalidIssueLink
 	}
 	return &IssueLink{
-		ID: uuid.New(), SourceIssueID: sourceIssueID, TargetIssueID: targetIssueID,
+		SourceIssueID: sourceIssueID, TargetIssueID: targetIssueID,
 		Kind: kind, CreatedBy: createdBy, CreatedAt: time.Now().UTC(),
 	}, nil
 }
