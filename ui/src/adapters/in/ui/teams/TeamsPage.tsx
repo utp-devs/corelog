@@ -1,5 +1,5 @@
 import { PlusOutlined } from '@ant-design/icons'
-import { App, Button, Empty } from 'antd'
+import { App, Button } from 'antd'
 import { useEffect, useState } from 'react'
 
 import type { Team } from '@/core/teams/domain/team'
@@ -9,6 +9,8 @@ import { TeamFormModal } from './TeamFormModal'
 import { TeamList } from './TeamList'
 import { TeamMembersPanel } from './TeamMembersPanel'
 import styles from './TeamsPage.module.css'
+import { ConfirmModal } from '@/shared/ui/ConfirmModal'
+import { EmptyState } from '@/shared/ui/EmptyState'
 import { PageHeader } from '@/shared/ui/PageHeader'
 
 type ModalState = { kind: 'create' } | { kind: 'rename'; team: Team } | { kind: 'closed' }
@@ -25,6 +27,7 @@ export function TeamsPage() {
   const [selectedTeam, setSelectedTeam] = useState<Team | null>(null)
   const [modal, setModal] = useState<ModalState>({ kind: 'closed' })
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [pendingDelete, setPendingDelete] = useState<Team | null>(null)
 
   useEffect(() => {
     fetchTeams()
@@ -49,7 +52,10 @@ export function TeamsPage() {
     }
   }
 
-  const handleDelete = async (team: Team) => {
+  const handleDelete = async () => {
+    if (!pendingDelete) return
+    const team = pendingDelete
+    setPendingDelete(null)
     try {
       await removeTeam(team.id)
       message.success('Equipo eliminado')
@@ -79,16 +85,26 @@ export function TeamsPage() {
         selectedTeamId={selectedTeam?.id ?? null}
         onSelect={setSelectedTeam}
         onRename={(team) => setModal({ kind: 'rename', team })}
-        onDelete={handleDelete}
+        onDelete={setPendingDelete}
       />
 
       <div className={styles.membersSection}>
         {selectedTeam ? (
           <TeamMembersPanel key={selectedTeam.id} team={selectedTeam} />
         ) : (
-          <Empty description="Selecciona un equipo para administrar sus miembros" />
+          <EmptyState title="Selecciona un equipo" description="Elige un equipo de la lista para administrar sus miembros." />
         )}
       </div>
+
+      <ConfirmModal
+        open={pendingDelete !== null}
+        title={pendingDelete ? `Eliminar el equipo ${pendingDelete.name}` : ''}
+        description="Sus miembros dejarán de pertenecer a este equipo. Esta acción no se puede deshacer."
+        confirmText="Eliminar equipo"
+        danger
+        onConfirm={() => void handleDelete()}
+        onCancel={() => setPendingDelete(null)}
+      />
 
       <TeamFormModal
         open={modal.kind !== 'closed'}

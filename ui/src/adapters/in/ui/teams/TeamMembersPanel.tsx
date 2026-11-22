@@ -8,6 +8,7 @@ import { UserDirectoryService } from '@/core/users/application/user-directory.se
 import { useTeamsStore } from '@/adapters/in/state/teams.store'
 import { UserDirectoryHttpRepository } from '@/adapters/out/http/user-directory-http-repository'
 import { extractErrorMessage } from '@/adapters/out/http/api-client'
+import { EmptyState } from '@/shared/ui/EmptyState'
 import styles from './TeamMembersPanel.module.css'
 
 const directoryService = new UserDirectoryService(new UserDirectoryHttpRepository())
@@ -83,7 +84,7 @@ export function TeamMembersPanel({ team }: TeamMembersPanelProps) {
       <List
         loading={membersStatus === 'loading'}
         dataSource={members}
-        locale={{ emptyText: 'Aun no hay miembros' }}
+        locale={{ emptyText: <EmptyState title="Aún no hay miembros" /> }}
         renderItem={(member) => (
           <List.Item
             actions={[

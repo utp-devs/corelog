@@ -1,5 +1,5 @@
 import { DeleteOutlined, EditOutlined } from '@ant-design/icons'
-import { Button, Popconfirm, Space, Table } from 'antd'
+import { Button, Space, Table } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import type { MouseEvent } from 'react'
 
@@ -34,11 +34,9 @@ export function TeamList({ teams, isLoading, selectedTeamId, onSelect, onRename,
           <Button icon={<EditOutlined />} onClick={() => onRename(team)}>
             Renombrar
           </Button>
-          <Popconfirm title="¿Eliminar este equipo?" onConfirm={() => onDelete(team)}>
-            <Button danger icon={<DeleteOutlined />}>
-              Eliminar
-            </Button>
-          </Popconfirm>
+          <Button danger icon={<DeleteOutlined />} onClick={() => onDelete(team)}>
+            Eliminar
+          </Button>
         </Space>
       ),
     },
