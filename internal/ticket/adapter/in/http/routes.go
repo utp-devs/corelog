@@ -36,6 +36,7 @@ func (h *Handler) RegisterRoutes(r chi.Router) {
 	r.Route("/workflows", func(r chi.Router) {
 		r.Use(appmw.Authenticate(h.jwtSecret))
 		r.Get("/", h.GetDefaultWorkflow)
+		r.Put("/", h.UpdateDefaultWorkflow)
 	})
 	r.Route("/saved-filters", func(r chi.Router) {
 		r.Use(appmw.Authenticate(h.jwtSecret))

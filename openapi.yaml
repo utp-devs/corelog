@@ -801,6 +801,57 @@ paths:
           description: Sin permiso para ver el proyecto
         '404':
           description: El proyecto no tiene flujo por defecto
+    put:
+      tags: [tickets]
+      operationId: updateDefaultWorkflow
+      summary: Reemplazar las transiciones del flujo por defecto
+      description: Solo el lider del proyecto o el administrador global. Valida estados, roles permitidos (admin, lead, contributor, viewer) y transiciones duplicadas o sin cambio de estado.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: project_id
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [transitions]
+              properties:
+                transitions:
+                  type: array
+                  items:
+                    type: object
+                    required: [from_status, to_status, allowed_roles]
+                    properties:
+                      from_status:
+                        type: string
+                        enum: [open, in_progress, resolved, closed]
+                      to_status:
+                        type: string
+                        enum: [open, in_progress, resolved, closed]
+                      allowed_roles:
+                        type: array
+                        minItems: 1
+                        items:
+                          type: string
+                          enum: [admin, lead, contributor, viewer]
+      responses:
+        '200':
+          description: Flujo actualizado
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Solo lead o administrador global
+        '404':
+          description: El proyecto no tiene flujo por defecto
+        '422':
+          $ref: '#/components/responses/ValidationError'
   /saved-filters:
     get:
       tags: [tickets]

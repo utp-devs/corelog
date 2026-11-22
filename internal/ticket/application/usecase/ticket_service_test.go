@@ -474,10 +474,55 @@ type fakeWorkflowRepo struct {
 	allowed  bool
 	roles    []string
 	workflow *port.Workflow
+	replaced []port.WorkflowTransition
 }
 
 func (r *fakeWorkflowRepo) DefaultWorkflow(_ context.Context, _ uuid.UUID) (*port.Workflow, error) {
 	return r.workflow, nil
+}
+
+func (r *fakeWorkflowRepo) ReplaceTransitions(_ context.Context, _ uuid.UUID, transitions []port.WorkflowTransition) error {
+	r.replaced = transitions
+	return nil
+}
+
+// TestTicketService_UpdateDefaultWorkflow comprueba permisos (solo lead y admin) y validaciones.
+func TestTicketService_UpdateDefaultWorkflow(t *testing.T) {
+	ctx := context.Background()
+	valid := []port.WorkflowTransition{{From: domain.StatusOpen, To: domain.StatusInProgress, Roles: []string{"lead", "contributor"}}}
+	newRepo := func() *fakeWorkflowRepo {
+		return &fakeWorkflowRepo{workflow: &port.Workflow{ID: uuid.New(), ProjectID: domain.DefaultProjectID, Name: "Flujo"}}
+	}
+	lead := "lead"
+	leadResolver := fakeProjectRoleResolver{role: &lead}
+
+	repo := newRepo()
+	svc := NewTicketService(newFakeTicketRepo(), newFakeUserDirectory(), repo, leadResolver)
+	if _, err := svc.UpdateDefaultWorkflow(ctx, uuid.New(), "agent", domain.DefaultProjectID, valid); err != nil {
+		t.Fatalf("lead should update the workflow, got %v", err)
+	}
+	if len(repo.replaced) != 1 {
+		t.Fatalf("transitions were not replaced: %v", repo.replaced)
+	}
+
+	denied := NewTicketService(newFakeTicketRepo(), newFakeUserDirectory(), newRepo(), contributorRoleResolver())
+	if _, err := denied.UpdateDefaultWorkflow(ctx, uuid.New(), "agent", domain.DefaultProjectID, valid); apperror.KindOf(err) != apperror.KindForbidden {
+		t.Fatalf("contributor should be forbidden, got %v", err)
+	}
+
+	cases := map[string][]port.WorkflowTransition{
+		"invalid status":  {{From: "open", To: "done", Roles: []string{"lead"}}},
+		"self transition": {{From: domain.StatusOpen, To: domain.StatusOpen, Roles: []string{"lead"}}},
+		"no roles":        {{From: domain.StatusOpen, To: domain.StatusClosed, Roles: nil}},
+		"unknown role":    {{From: domain.StatusOpen, To: domain.StatusClosed, Roles: []string{"agent"}}},
+		"duplicated":      {{From: domain.StatusOpen, To: domain.StatusClosed, Roles: []string{"lead"}}, {From: domain.StatusOpen, To: domain.StatusClosed, Roles: []string{"lead"}}},
+	}
+	for name, transitions := range cases {
+		svc := NewTicketService(newFakeTicketRepo(), newFakeUserDirectory(), newRepo(), leadResolver)
+		if _, err := svc.UpdateDefaultWorkflow(ctx, uuid.New(), "agent", domain.DefaultProjectID, transitions); apperror.KindOf(err) != apperror.KindValidation {
+			t.Errorf("%s: want validation error, got %v", name, err)
+		}
+	}
 }
 
 // TestTicketService_DefaultWorkflow comprueba que lo puede leer un miembro, que un no miembro recibe

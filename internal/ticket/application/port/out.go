@@ -43,7 +43,11 @@ type IssueLinkRepository interface {
 type WorkflowRepository interface {
 	CanTransition(ctx context.Context, projectID uuid.UUID, fromStatus, toStatus domain.Status, actorRole string) (bool, error)
 	DefaultWorkflow(ctx context.Context, projectID uuid.UUID) (*Workflow, error)
+	ReplaceTransitions(ctx context.Context, workflowID uuid.UUID, transitions []WorkflowTransition) error
 }
+
+// ActionManageWorkflow es la accion del autorizador para editar el flujo de un proyecto.
+const ActionManageWorkflow = "manage_workflow"
 
 // Workflow es el flujo por defecto de un proyecto con sus transiciones permitidas.
 type Workflow struct {

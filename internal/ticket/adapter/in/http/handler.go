@@ -710,6 +710,10 @@ func (h *Handler) GetDefaultWorkflow(w http.ResponseWriter, r *http.Request) {
 		httpresponse.Error(w, err)
 		return
 	}
+	httpresponse.JSON(w, http.StatusOK, toWorkflowResponse(workflow))
+}
+
+func toWorkflowResponse(workflow *port.Workflow) workflowResponse {
 	response := workflowResponse{
 		ID:          workflow.ID.String(),
 		ProjectID:   workflow.ProjectID.String(),
@@ -723,5 +727,43 @@ func (h *Handler) GetDefaultWorkflow(w http.ResponseWriter, r *http.Request) {
 			Roles: transition.Roles,
 		})
 	}
-	httpresponse.JSON(w, http.StatusOK, response)
+	return response
+}
+
+type workflowUpdateRequest struct {
+	Transitions []workflowTransitionResponse `json:"transitions"`
+}
+
+// UpdateDefaultWorkflow reemplaza las transiciones del flujo por defecto del proyecto indicado en project_id.
+func (h *Handler) UpdateDefaultWorkflow(w http.ResponseWriter, r *http.Request) {
+	actorID, ok := appmw.UserIDFromContext(r.Context())
+	if !ok {
+		httpresponse.Error(w, apperror.New(apperror.KindUnauthorized, "not authenticated"))
+		return
+	}
+	globalRole, _ := appmw.RoleFromContext(r.Context())
+	projectID, err := uuid.Parse(r.URL.Query().Get("project_id"))
+	if err != nil {
+		httpresponse.Error(w, apperror.New(apperror.KindValidation, "invalid project id"))
+		return
+	}
+	var body workflowUpdateRequest
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		httpresponse.Error(w, apperror.New(apperror.KindValidation, "invalid request body"))
+		return
+	}
+	transitions := make([]port.WorkflowTransition, 0, len(body.Transitions))
+	for _, item := range body.Transitions {
+		transitions = append(transitions, port.WorkflowTransition{
+			From:  domain.Status(item.From),
+			To:    domain.Status(item.To),
+			Roles: item.Roles,
+		})
+	}
+	workflow, err := h.service.UpdateDefaultWorkflow(r.Context(), actorID, globalRole, projectID, transitions)
+	if err != nil {
+		httpresponse.Error(w, err)
+		return
+	}
+	httpresponse.JSON(w, http.StatusOK, toWorkflowResponse(workflow))
 }

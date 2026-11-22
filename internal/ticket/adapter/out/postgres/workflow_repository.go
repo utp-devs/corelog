@@ -115,3 +115,29 @@ func (r *WorkflowRepository) DefaultWorkflow(ctx context.Context, projectID uuid
 	}
 	return workflow, nil
 }
+
+// ReplaceTransitions sustituye en una transaccion todas las transiciones del flujo.
+func (r *WorkflowRepository) ReplaceTransitions(ctx context.Context, workflowID uuid.UUID, transitions []port.WorkflowTransition) error {
+	tx, err := r.db.BeginTxx(ctx, nil)
+	if err != nil {
+		return apperror.Wrap(apperror.KindInternal, "failed to update workflow", err)
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	if _, err := tx.ExecContext(ctx, `DELETE FROM workflow_transitions WHERE workflow_id = $1`, workflowID); err != nil {
+		return apperror.Wrap(apperror.KindInternal, "failed to update workflow", err)
+	}
+	for _, transition := range transitions {
+		if _, err := tx.ExecContext(ctx, `
+			INSERT INTO workflow_transitions (workflow_id, from_status, to_status, allowed_roles)
+			VALUES ($1, $2, $3, $4)`,
+			workflowID, string(transition.From), string(transition.To), strings.Join(transition.Roles, ","),
+		); err != nil {
+			return apperror.Wrap(apperror.KindInternal, "failed to update workflow", err)
+		}
+	}
+	if err := tx.Commit(); err != nil {
+		return apperror.Wrap(apperror.KindInternal, "failed to update workflow", err)
+	}
+	return nil
+}

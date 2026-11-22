@@ -581,3 +581,50 @@ func (s *TicketService) DefaultWorkflow(ctx context.Context, actorID uuid.UUID, 
 	}
 	return workflow, nil
 }
+
+// allowedWorkflowRoles son los roles de proyecto que pueden aparecer en una transicion.
+var allowedWorkflowRoles = map[string]bool{"admin": true, "lead": true, "contributor": true, "viewer": true}
+
+// UpdateDefaultWorkflow reemplaza las transiciones del flujo por defecto. Solo el lider del proyecto
+// y el administrador global pueden editarlo. Valida estados, roles y duplicados antes de guardar.
+func (s *TicketService) UpdateDefaultWorkflow(ctx context.Context, actorID uuid.UUID, globalRole string, projectID uuid.UUID, transitions []port.WorkflowTransition) (*port.Workflow, error) {
+	if err := s.authorize(ctx, port.ActionManageWorkflow, projectID, actorID, globalRole); err != nil {
+		return nil, err
+	}
+	if s.workflows == nil {
+		return nil, apperror.New(apperror.KindNotFound, "workflow not found")
+	}
+	current, err := s.workflows.DefaultWorkflow(ctx, projectID)
+	if err != nil {
+		return nil, err
+	}
+	if current == nil {
+		return nil, apperror.New(apperror.KindNotFound, "workflow not found")
+	}
+	seen := make(map[[2]domain.Status]bool, len(transitions))
+	for _, transition := range transitions {
+		if !transition.From.IsValid() || !transition.To.IsValid() {
+			return nil, apperror.New(apperror.KindValidation, "invalid status in transition")
+		}
+		if transition.From == transition.To {
+			return nil, apperror.New(apperror.KindValidation, "a transition must change the status")
+		}
+		key := [2]domain.Status{transition.From, transition.To}
+		if seen[key] {
+			return nil, apperror.New(apperror.KindValidation, "duplicated transition")
+		}
+		seen[key] = true
+		if len(transition.Roles) == 0 {
+			return nil, apperror.New(apperror.KindValidation, "a transition needs at least one role")
+		}
+		for _, role := range transition.Roles {
+			if !allowedWorkflowRoles[role] {
+				return nil, apperror.New(apperror.KindValidation, "invalid role in transition")
+			}
+		}
+	}
+	if err := s.workflows.ReplaceTransitions(ctx, current.ID, transitions); err != nil {
+		return nil, err
+	}
+	return s.workflows.DefaultWorkflow(ctx, projectID)
+}
