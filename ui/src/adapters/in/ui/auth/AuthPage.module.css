@@ -3,11 +3,13 @@
   align-items: center;
   justify-content: center;
   min-height: 100vh;
+  padding: var(--cl-space-4);
   background: var(--cl-bg-page);
 }
 
 .card {
-  width: 380px;
+  width: min(400px, 100%);
+  box-shadow: var(--cl-shadow-2);
 }
 
 .banner {
@@ -15,14 +17,16 @@
   width: 280px;
   max-width: 100%;
   height: auto;
-  margin: 0 auto 16px;
+  margin: 0 auto var(--cl-space-4);
 }
 
 .title {
   margin-top: 0;
+  text-align: center;
 }
 
 .footer {
-  margin-top: 16px;
+  margin-top: var(--cl-space-4);
+  margin-bottom: 0;
   text-align: center;
 }

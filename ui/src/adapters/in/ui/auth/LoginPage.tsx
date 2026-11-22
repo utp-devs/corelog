@@ -8,8 +8,8 @@ import { useAuthStore } from '@/adapters/in/state/auth.store'
 import styles from './AuthPage.module.css'
 
 const schema = z.object({
-  email: z.string().email('Introduce un correo valido'),
-  password: z.string().min(1, 'La contrasena es obligatoria'),
+  email: z.string().email('Introduce un correo electrónico válido'),
+  password: z.string().min(1, 'La contraseña es obligatoria'),
 })
 
 type FormValues = z.infer<typeof schema>
@@ -33,7 +33,7 @@ export function LoginPage() {
       await login(values)
       navigate('/issues')
     } catch (error) {
-      message.error(error instanceof Error ? error.message : 'No se pudo iniciar sesion')
+      message.error(error instanceof Error ? error.message : 'No se pudo iniciar sesión')
     }
   })
 
@@ -49,21 +49,25 @@ export function LoginPage() {
           className={styles.banner}
         />
         <Typography.Title level={3} className={styles.title}>
-          Iniciar sesion en CoreLog
+          Iniciar sesión en CoreLog
         </Typography.Title>
         <Form layout="vertical" onFinish={onSubmit}>
-          <Form.Item label="Correo electronico" validateStatus={errors.email ? 'error' : ''} help={errors.email?.message}>
-            <Controller name="email" control={control} render={({ field }) => <Input {...field} type="email" />} />
+          <Form.Item label="Correo electrónico" validateStatus={errors.email ? 'error' : ''} help={errors.email?.message}>
+            <Controller
+              name="email"
+              control={control}
+              render={({ field }) => <Input {...field} type="email" autoComplete="email" aria-label="Correo electrónico" />}
+            />
           </Form.Item>
-          <Form.Item label="Contrasena" validateStatus={errors.password ? 'error' : ''} help={errors.password?.message}>
+          <Form.Item label="Contraseña" validateStatus={errors.password ? 'error' : ''} help={errors.password?.message}>
             <Controller
               name="password"
               control={control}
-              render={({ field }) => <Input.Password {...field} />}
+              render={({ field }) => <Input.Password {...field} autoComplete="current-password" aria-label="Contraseña" />}
             />
           </Form.Item>
           <Button type="primary" htmlType="submit" block loading={isSubmitting}>
-            Iniciar sesion
+            Iniciar sesión
           </Button>
         </Form>
         <Typography.Paragraph className={styles.footer}>
