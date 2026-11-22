@@ -15,6 +15,8 @@ type Repository interface {
 	UnreadCount(ctx context.Context, userID uuid.UUID) (int, error)
 	MarkRead(ctx context.Context, userID, id uuid.UUID) error
 	MarkAllRead(ctx context.Context, userID uuid.UUID) error
+	GetPreferences(ctx context.Context, userID uuid.UUID) (domain.Preferences, error)
+	SavePreferences(ctx context.Context, userID uuid.UUID, prefs domain.Preferences) error
 }
 
 // Service es el caso de uso de notificaciones. Notify lo usan otros modulos (puerto Notifier).
@@ -24,4 +26,6 @@ type Service interface {
 	UnreadCount(ctx context.Context, userID uuid.UUID) (int, error)
 	MarkRead(ctx context.Context, userID, id uuid.UUID) error
 	MarkAllRead(ctx context.Context, userID uuid.UUID) error
+	GetPreferences(ctx context.Context, userID uuid.UUID) (domain.Preferences, error)
+	UpdatePreferences(ctx context.Context, userID uuid.UUID, prefs domain.Preferences) (domain.Preferences, error)
 }

@@ -127,3 +127,11 @@ func containsCount(body string, count int) bool {
 	}
 	return json.Unmarshal([]byte(body), &parsed) == nil && parsed.Data.Count == count
 }
+
+func (f *fakeService) GetPreferences(context.Context, uuid.UUID) (domain.Preferences, error) {
+	return domain.DefaultPreferences(), nil
+}
+
+func (f *fakeService) UpdatePreferences(_ context.Context, _ uuid.UUID, prefs domain.Preferences) (domain.Preferences, error) {
+	return prefs, nil
+}

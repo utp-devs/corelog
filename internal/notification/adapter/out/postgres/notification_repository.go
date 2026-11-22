@@ -2,6 +2,8 @@ package postgres
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"time"
 
 	"github.com/google/uuid"
@@ -102,6 +104,30 @@ func (r *NotificationRepository) MarkRead(ctx context.Context, userID, id uuid.U
 func (r *NotificationRepository) MarkAllRead(ctx context.Context, userID uuid.UUID) error {
 	if _, err := r.db.ExecContext(ctx, `UPDATE notifications SET read_at = now() WHERE user_id = $1 AND read_at IS NULL`, userID); err != nil {
 		return apperror.Wrap(apperror.KindInternal, "failed to mark notifications", err)
+	}
+	return nil
+}
+
+// GetPreferences devuelve los ajustes del usuario; sin fila aplican los valores por defecto.
+func (r *NotificationRepository) GetPreferences(ctx context.Context, userID uuid.UUID) (domain.Preferences, error) {
+	var inApp bool
+	err := r.db.GetContext(ctx, &inApp, `SELECT in_app FROM notification_preferences WHERE user_id = $1`, userID)
+	if errors.Is(err, sql.ErrNoRows) {
+		return domain.DefaultPreferences(), nil
+	}
+	if err != nil {
+		return domain.Preferences{}, apperror.Wrap(apperror.KindInternal, "failed to load notification preferences", err)
+	}
+	return domain.Preferences{InApp: inApp}, nil
+}
+
+func (r *NotificationRepository) SavePreferences(ctx context.Context, userID uuid.UUID, prefs domain.Preferences) error {
+	const query = `
+		INSERT INTO notification_preferences (user_id, in_app, updated_at)
+		VALUES ($1, $2, now())
+		ON CONFLICT (user_id) DO UPDATE SET in_app = EXCLUDED.in_app, updated_at = now()`
+	if _, err := r.db.ExecContext(ctx, query, userID, prefs.InApp); err != nil {
+		return apperror.Wrap(apperror.KindInternal, "failed to save notification preferences", err)
 	}
 	return nil
 }

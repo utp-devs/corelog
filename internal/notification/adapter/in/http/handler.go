@@ -1,12 +1,14 @@
 package http
 
 import (
+	"encoding/json"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 
 	"github.com/jhonsferg/corelog/internal/notification/application/port"
+	"github.com/jhonsferg/corelog/internal/notification/domain"
 	"github.com/jhonsferg/corelog/internal/platform/apperror"
 	"github.com/jhonsferg/corelog/internal/platform/httpresponse"
 	appmw "github.com/jhonsferg/corelog/internal/platform/middleware"
@@ -27,6 +29,8 @@ func (h *Handler) RegisterRoutes(r chi.Router) {
 		r.Get("/", h.List)
 		r.Get("/unread-count", h.UnreadCount)
 		r.Post("/read-all", h.MarkAllRead)
+		r.Get("/preferences", h.GetPreferences)
+		r.Put("/preferences", h.UpdatePreferences)
 		r.Post("/{id}/read", h.MarkRead)
 	})
 }
@@ -109,4 +113,43 @@ func (h *Handler) MarkAllRead(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+type preferencesRequest struct {
+	InApp *bool `json:"in_app"`
+}
+
+type preferencesResponse struct {
+	InApp bool `json:"in_app"`
+}
+
+func (h *Handler) GetPreferences(w http.ResponseWriter, r *http.Request) {
+	userID, ok := h.actor(w, r)
+	if !ok {
+		return
+	}
+	prefs, err := h.service.GetPreferences(r.Context(), userID)
+	if err != nil {
+		httpresponse.Error(w, err)
+		return
+	}
+	httpresponse.JSON(w, http.StatusOK, preferencesResponse{InApp: prefs.InApp})
+}
+
+func (h *Handler) UpdatePreferences(w http.ResponseWriter, r *http.Request) {
+	userID, ok := h.actor(w, r)
+	if !ok {
+		return
+	}
+	var req preferencesRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.InApp == nil {
+		httpresponse.Error(w, apperror.New(apperror.KindValidation, "in_app is required"))
+		return
+	}
+	prefs, err := h.service.UpdatePreferences(r.Context(), userID, domain.Preferences{InApp: *req.InApp})
+	if err != nil {
+		httpresponse.Error(w, err)
+		return
+	}
+	httpresponse.JSON(w, http.StatusOK, preferencesResponse{InApp: prefs.InApp})
 }

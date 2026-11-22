@@ -13,6 +13,22 @@ import (
 // memoryRepo guarda notificaciones en memoria y aplica el mismo filtro por usuario que el adaptador real.
 type memoryRepo struct {
 	items []*domain.Notification
+	prefs map[uuid.UUID]domain.Preferences
+}
+
+func (r *memoryRepo) GetPreferences(_ context.Context, userID uuid.UUID) (domain.Preferences, error) {
+	if p, ok := r.prefs[userID]; ok {
+		return p, nil
+	}
+	return domain.DefaultPreferences(), nil
+}
+
+func (r *memoryRepo) SavePreferences(_ context.Context, userID uuid.UUID, prefs domain.Preferences) error {
+	if r.prefs == nil {
+		r.prefs = make(map[uuid.UUID]domain.Preferences)
+	}
+	r.prefs[userID] = prefs
+	return nil
 }
 
 func (r *memoryRepo) Save(_ context.Context, n *domain.Notification) error {
@@ -114,5 +130,32 @@ func TestNotificationServiceMarkAllRead(t *testing.T) {
 	}
 	if count, _ := svc.UnreadCount(ctx, ana); count != 0 {
 		t.Fatalf("unread after mark all = %d, want 0", count)
+	}
+}
+
+func TestNotificationServiceDropsNotificationsWhenInAppIsOff(t *testing.T) {
+	ctx := context.Background()
+	repo := &memoryRepo{}
+	svc := NewNotificationService(repo)
+	ana := uuid.New()
+
+	if _, err := svc.UpdatePreferences(ctx, ana, domain.Preferences{InApp: false}); err != nil {
+		t.Fatalf("UpdatePreferences: %v", err)
+	}
+	if err := svc.Notify(ctx, ana, "issue_assigned", "Te asignaron CORE-2", ""); err != nil {
+		t.Fatalf("Notify with avisos desactivados must not fail: %v", err)
+	}
+	if count, _ := svc.UnreadCount(ctx, ana); count != 0 {
+		t.Fatalf("UnreadCount = %d; want 0 when in-app notifications are off", count)
+	}
+
+	if _, err := svc.UpdatePreferences(ctx, ana, domain.Preferences{InApp: true}); err != nil {
+		t.Fatalf("UpdatePreferences: %v", err)
+	}
+	if err := svc.Notify(ctx, ana, "issue_assigned", "Te asignaron CORE-3", ""); err != nil {
+		t.Fatalf("Notify: %v", err)
+	}
+	if count, _ := svc.UnreadCount(ctx, ana); count != 1 {
+		t.Fatalf("UnreadCount = %d; want 1 after re-enabling", count)
 	}
 }
