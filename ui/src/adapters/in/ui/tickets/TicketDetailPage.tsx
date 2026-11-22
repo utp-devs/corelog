@@ -50,7 +50,7 @@ function IssueEditor({ ticket, onSave }: IssueEditorProps) {
       <Space direction="vertical" className={styles.editor}>
         <Input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Titulo" />
         <TextArea value={description} onChange={(event) => setDescription(event.target.value)} rows={4} placeholder="Descripcion" />
-        <Space wrap>
+        <div className={styles.controlRow}>
           <Select<TicketPriority>
             value={priority}
             onChange={setPriority}
@@ -89,7 +89,7 @@ function IssueEditor({ ticket, onSave }: IssueEditorProps) {
           >
             Guardar
           </Button>
-        </Space>
+        </div>
       </Space>
     </Card>
   )
@@ -280,7 +280,7 @@ export function TicketDetailPage() {
                 <div className={styles.mainColumn}>
       <Card title="Vinculos">
         {collaborationError && <Alert type="error" showIcon message={collaborationError} />}
-        <Space wrap>
+        <div className={styles.controlRow}>
           <IssuePicker value={linkTargetId} onChange={setLinkTargetId} excludeId={selected.id} />
           <Select
             value={linkKind}
@@ -306,7 +306,7 @@ export function TicketDetailPage() {
           >
             Vincular
           </Button>
-        </Space>
+        </div>
         <List
           loading={collaborationLoading}
           dataSource={collaborationLoading || linksIssueId !== selected.id || collaborationError ? [] : links}
@@ -365,7 +365,7 @@ export function TicketDetailPage() {
                 </div>
                 <div className={styles.sideColumn}>
       <Card title="Cambiar estado">
-        <Space>
+        <div className={styles.controlRow}>
           <Select
             className={styles.statusSelect}
             placeholder="Seleccionar siguiente estado"
@@ -377,11 +377,11 @@ export function TicketDetailPage() {
             onChange={handleStatusChange}
           />
           {nextStatuses.length === 0 && <Typography.Text type="secondary">No hay transiciones disponibles</Typography.Text>}
-        </Space>
+        </div>
       </Card>
 
       <Card title="Asignar">
-        <Space wrap>
+        <div className={styles.controlRow}>
           <Select
             showSearch
             filterOption={false}
@@ -397,12 +397,12 @@ export function TicketDetailPage() {
           <Button type="primary" onClick={handleAssign} disabled={!assigneeId}>
             Asignar
           </Button>
-        </Space>
+        </div>
       </Card>
 
       <Card title="Seguimiento">
         {watcherError && <Alert type="error" showIcon message={watcherError} />}
-        <Space>
+        <div className={styles.controlRow}>
           <Button
             aria-label={watcherState?.isWatching ? 'Dejar de seguir' : 'Seguir incidencia'}
             loading={watcherLoading || watcherActionLoading}
@@ -414,7 +414,7 @@ export function TicketDetailPage() {
           <Typography.Text type="secondary">
             {watcherState?.count ?? 0} {watcherState?.count === 1 ? 'persona sigue' : 'personas siguen'} esta incidencia
           </Typography.Text>
-        </Space>
+        </div>
       </Card>
                 </div>
               </div>
