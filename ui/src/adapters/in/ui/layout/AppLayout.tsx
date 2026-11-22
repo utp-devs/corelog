@@ -26,6 +26,7 @@ import styles from './AppLayout.module.css'
 const { Header, Sider, Content } = Layout
 
 function resolveSelectedKey(pathname: string): string {
+  if (pathname.startsWith('/projects')) return '/projects'
   if (pathname.startsWith('/issues/new')) return '/issues/new'
   if (pathname.startsWith('/issues')) return '/issues'
   if (pathname.startsWith('/teams')) return '/teams'

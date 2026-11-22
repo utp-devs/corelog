@@ -19,19 +19,25 @@ CREATE INDEX IF NOT EXISTS idx_workflows_project_id ON workflows (project_id);
 CREATE INDEX IF NOT EXISTS idx_workflow_transitions_from ON workflow_transitions (from_status);
 
 INSERT INTO workflows (id, project_id, name, is_default)
-VALUES (
+SELECT
     '00000000-0000-4000-8000-000000000002',
-    '00000000-0000-4000-8000-000000000001',
+    p.id,
     'Workflow por defecto',
     true
-) ON CONFLICT (id) DO NOTHING;
+FROM projects p
+WHERE p.id = '00000000-0000-4000-8000-000000000001'
+ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO workflow_transitions (workflow_id, from_status, to_status, allowed_roles)
-VALUES
-    ('00000000-0000-4000-8000-000000000002', 'open', 'in_progress', 'admin,agent,requester'),
-    ('00000000-0000-4000-8000-000000000002', 'open', 'closed', 'admin,agent,requester'),
-    ('00000000-0000-4000-8000-000000000002', 'in_progress', 'resolved', 'admin,agent,requester'),
-    ('00000000-0000-4000-8000-000000000002', 'in_progress', 'closed', 'admin,agent,requester'),
-    ('00000000-0000-4000-8000-000000000002', 'resolved', 'closed', 'admin,agent,requester'),
-    ('00000000-0000-4000-8000-000000000002', 'resolved', 'in_progress', 'admin,agent,requester')
+SELECT w.id, t.from_status, t.to_status, 'admin,agent,requester'
+FROM workflows w
+CROSS JOIN (VALUES
+    ('open', 'in_progress'),
+    ('open', 'closed'),
+    ('in_progress', 'resolved'),
+    ('in_progress', 'closed'),
+    ('resolved', 'closed'),
+    ('resolved', 'in_progress')
+) AS t(from_status, to_status)
+WHERE w.id = '00000000-0000-4000-8000-000000000002'
 ON CONFLICT (workflow_id, from_status, to_status) DO NOTHING;

@@ -1,5 +1,7 @@
 import { App, Button, Card, Empty, Form, Input, List, Modal, Select, Skeleton, Space, Typography } from 'antd'
+import { ProjectOutlined } from '@ant-design/icons'
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 
 import { useAuthStore } from '@/adapters/in/state/auth.store'
 import { useProjectsStore } from '@/adapters/in/state/projects.store'
@@ -7,6 +9,7 @@ import { PageHeader } from '@/shared/ui/PageHeader'
 import styles from './ProjectsPage.module.css'
 
 export function ProjectsPage() {
+  const navigate = useNavigate()
   const { message } = App.useApp()
   const user = useAuthStore((state) => state.user)
   const projects = useProjectsStore((state) => state.projects)
@@ -86,6 +89,19 @@ export function ProjectsPage() {
               key={project.id}
               title={`${project.key} - ${project.name}`}
               hoverable
+              actions={[
+                <Button
+                  key="board"
+                  type="link"
+                  icon={<ProjectOutlined />}
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    navigate(`/projects/${project.id}/board`)
+                  }}
+                >
+                  Abrir tablero
+                </Button>,
+              ]}
               onClick={() => {
                 setSelectedProjectId(project.id)
                 void fetchMembers(project.id)

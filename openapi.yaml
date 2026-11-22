@@ -490,6 +490,38 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+  /projects/{id}/board:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      tags: [projects]
+      summary: Get the default board for a project
+      operationId: getProjectBoard
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Board columns and their issue cards
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/ProjectBoard'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
   /projects/{id}/members:
     parameters:
       - name: id
@@ -1695,6 +1727,83 @@ components:
         visibility:
           type: string
           enum: [private, team]
+    ProjectBoard:
+      type: object
+      required: [id, project_id, name, type, columns]
+      properties:
+        id:
+          type: string
+          format: uuid
+        project_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        type:
+          type: string
+          enum: [kanban, scrum]
+        columns:
+          type: array
+          items:
+            $ref: '#/components/schemas/BoardColumn'
+    BoardColumn:
+      type: object
+      required: [id, name, status, position, count, cards]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        status:
+          type: string
+          enum: [open, in_progress, resolved, closed]
+        position:
+          type: integer
+          minimum: 0
+        wip_limit:
+          type: integer
+          minimum: 1
+          nullable: true
+        count:
+          type: integer
+          minimum: 0
+        cards:
+          type: array
+          items:
+            $ref: '#/components/schemas/BoardCard'
+    BoardCard:
+      type: object
+      required: [id, type, summary, status, priority, rank]
+      properties:
+        id:
+          type: string
+          format: uuid
+        type:
+          type: string
+          enum: [task, bug, story, epic, subtask]
+        summary:
+          type: string
+        status:
+          type: string
+          enum: [open, in_progress, resolved, closed]
+        priority:
+          type: string
+          enum: [low, medium, high, critical]
+        assignee_id:
+          type: string
+          format: uuid
+          nullable: true
+        assignee:
+          type: string
+          nullable: true
+        story_points:
+          type: number
+          format: float
+          nullable: true
+        rank:
+          type: string
+          maxLength: 64
     ProjectMember:
       type: object
       properties:

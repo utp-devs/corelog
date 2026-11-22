@@ -12,6 +12,8 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/jmoiron/sqlx"
 
+	"github.com/jhonsferg/corelog/internal/board"
+	boardpostgres "github.com/jhonsferg/corelog/internal/board/adapter/out/postgres"
 	"github.com/jhonsferg/corelog/internal/platform/config"
 	"github.com/jhonsferg/corelog/internal/platform/database"
 	"github.com/jhonsferg/corelog/internal/platform/httpserver"
@@ -71,6 +73,7 @@ func run() error {
 	userModule := user.NewModule(userRepo, cfg.Auth.JWTSecret, cfg.Auth.JWTExpiration)
 	teamModule := team.NewModule(teamRepo, cfg.Auth.JWTSecret)
 	projectModule := project.NewModule(projectRepo, projectMemberRepo, projectCatalogRepo, cfg.Auth.JWTSecret)
+	boardModule := board.NewModule(boardpostgres.NewBoardRepository(db), projectModule.Service, cfg.Auth.JWTSecret)
 
 	ticketRepo := ticketDBRepo
 	if cfg.Features.TicketRepository == "memory" {
@@ -94,7 +97,7 @@ func run() error {
 
 	router := httpserver.NewRouter(cfg.Server)
 	router.Route("/api/v1", func(r chi.Router) {
-		httpserver.Mount(r, userModule.Handler, teamModule.Handler, projectModule.Handler, ticketModule.Handler)
+		httpserver.Mount(r, userModule.Handler, teamModule.Handler, projectModule.Handler, boardModule.Handler, ticketModule.Handler)
 	})
 
 	server := httpserver.New(cfg.Server, router)

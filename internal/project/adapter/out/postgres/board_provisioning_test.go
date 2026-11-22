@@ -51,6 +51,27 @@ func TestProjectCreationProvisionsDefaultBoardPostgres(t *testing.T) {
 	if _, err := db.Exec(`INSERT INTO projects(id,key,name,type,lead_id,visibility,created_at,updated_at) VALUES($1,'OLD','Existing','kanban',$2,'team',now(),now())`, existingID, leadID); err != nil {
 		t.Fatal(err)
 	}
+	workflowUpPath := filepath.Join("..", "..", "..", "..", "..", "migrations", "postgres", "0010_workflows.up.sql")
+	workflowUp, err := os.ReadFile(workflowUpPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(string(workflowUp)); err != nil {
+		t.Fatal(err)
+	}
+	workflowDownPath := filepath.Join("..", "..", "..", "..", "..", "migrations", "postgres", "0010_workflows.down.sql")
+	workflowDown, err := os.ReadFile(workflowDownPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _, _ = db.Exec(string(workflowDown)) })
+	var seededWorkflows int
+	if err := db.Get(&seededWorkflows, `SELECT count(*) FROM workflows`); err != nil {
+		t.Fatal(err)
+	}
+	if seededWorkflows != 0 {
+		t.Fatalf("workflow migration seeded %d workflows without the default project", seededWorkflows)
+	}
 	upPath := filepath.Join("..", "..", "..", "..", "..", "migrations", "postgres", "000014_boards.up.sql")
 	up, err := os.ReadFile(upPath)
 	if err != nil {
@@ -73,6 +94,16 @@ func TestProjectCreationProvisionsDefaultBoardPostgres(t *testing.T) {
 		t.Fatal(err)
 	}
 	assertDefaultBoard(t, db, created.ID, "scrum")
+	var workflowCount, transitionCount int
+	if err := db.Get(&workflowCount, `SELECT count(*) FROM workflows WHERE project_id=$1 AND is_default`, created.ID); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Get(&transitionCount, `SELECT count(*) FROM workflow_transitions wt JOIN workflows w ON w.id=wt.workflow_id WHERE w.project_id=$1 AND w.is_default`, created.ID); err != nil {
+		t.Fatal(err)
+	}
+	if workflowCount != 1 || transitionCount != 6 {
+		t.Fatalf("default workflow was not provisioned: workflows=%d transitions=%d", workflowCount, transitionCount)
+	}
 	if _, err := service.Create(context.Background(), "NEW", "Duplicate", "", domain.ProjectTypeKanban, leadID, domain.VisibilityTeam); err != domain.ErrProjectKeyTaken {
 		t.Fatalf("duplicate project error=%v, want %v", err, domain.ErrProjectKeyTaken)
 	}
@@ -90,15 +121,18 @@ func TestProjectCreationProvisionsDefaultBoardPostgres(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected project creation to fail when its lead membership cannot be saved")
 	}
-	var projectCount, boardCount int
+	var projectCount, boardCount, remainingWorkflows int
 	if err := db.Get(&projectCount, `SELECT count(*) FROM projects WHERE id=$1`, rollbackProject.ID); err != nil {
 		t.Fatal(err)
 	}
 	if err := db.Get(&boardCount, `SELECT count(*) FROM boards WHERE project_id=$1`, rollbackProject.ID); err != nil {
 		t.Fatal(err)
 	}
-	if projectCount != 0 || boardCount != 0 {
-		t.Fatalf("failed project creation left project=%d boards=%d", projectCount, boardCount)
+	if err := db.Get(&remainingWorkflows, `SELECT count(*) FROM workflows WHERE project_id=$1`, rollbackProject.ID); err != nil {
+		t.Fatal(err)
+	}
+	if projectCount != 0 || boardCount != 0 || remainingWorkflows != 0 {
+		t.Fatalf("failed project creation left project=%d boards=%d workflows=%d", projectCount, boardCount, remainingWorkflows)
 	}
 	if err := repository.Delete(context.Background(), existingID); err != nil {
 		t.Fatal(err)

@@ -82,6 +82,23 @@ func (r *ProjectRepository) CreateWithDefaults(ctx context.Context, p *domain.Pr
 			return apperror.Wrap(apperror.KindInternal, "failed to create default board column", err)
 		}
 	}
+	defaultWorkflowID := uuid.New()
+	if _, err := tx.ExecContext(ctx, `
+		INSERT INTO workflows (id, project_id, name, is_default, created_at, updated_at)
+		VALUES ($1, $2, 'Default', true, now(), now())`, defaultWorkflowID, p.ID); err != nil {
+		return apperror.Wrap(apperror.KindInternal, "failed to create default project workflow", err)
+	}
+	for _, transition := range [][2]string{
+		{"open", "in_progress"}, {"open", "closed"},
+		{"in_progress", "resolved"}, {"in_progress", "closed"},
+		{"resolved", "closed"}, {"resolved", "in_progress"},
+	} {
+		if _, err := tx.ExecContext(ctx, `
+			INSERT INTO workflow_transitions (workflow_id, from_status, to_status, allowed_roles)
+			VALUES ($1, $2, $3, 'admin,agent,requester')`, defaultWorkflowID, transition[0], transition[1]); err != nil {
+			return apperror.Wrap(apperror.KindInternal, "failed to create default project workflow transition", err)
+		}
+	}
 	if err := tx.Commit(); err != nil {
 		return apperror.Wrap(apperror.KindInternal, "failed to commit project creation", err)
 	}

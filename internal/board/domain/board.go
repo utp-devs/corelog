@@ -44,6 +44,19 @@ type Column struct {
 	WIPLimit  *int
 	CreatedAt time.Time
 	UpdatedAt time.Time
+	Cards     []IssueCard
+}
+
+type IssueCard struct {
+	ID          uuid.UUID
+	Type        string
+	Summary     string
+	Status      IssueStatus
+	Priority    string
+	AssigneeID  *uuid.UUID
+	Assignee    *string
+	StoryPoints *float64
+	Rank        string
 }
 
 func NewDefaultBoard(projectID uuid.UUID, boardType Type) (*Board, error) {

@@ -21,3 +21,16 @@
 - [x] `go test ./...`
 - [x] `go vet ./...`
 - [x] `CORELOG_TEST_DATABASE_URL` ejecuta la prueba PostgreSQL de provisionamiento de tableros
+
+## CORE-050 - Vista de tablero por proyecto
+
+- [x] El endpoint autenticado devuelve el tablero predeterminado del proyecto
+- [x] El acceso se valida con la política de lectura existente del proyecto (401/403/404)
+- [x] Columnas se devuelven en orden y las tarjetas se agrupan por estado y rango
+- [x] Cada columna expone su conteo, incluso cuando no tiene tarjetas
+- [x] Las tarjetas incluyen tipo, resumen, responsable legible, prioridad y puntos
+- [x] La UI permite abrir el tablero desde la tarjeta del proyecto y se adapta a pantallas pequeñas
+- [x] La prueba PostgreSQL valida tarjetas, responsable, puntos, columnas vacías y tablero inexistente
+- [x] Smoke test con Compose crea un proyecto, obtiene sus cuatro columnas vacías y confirma 401 sin sesión
+- [ ] QA manual visual en desktop y móvil
+- [ ] QA manual de acceso 403/404 con usuarios/proyectos restringidos
