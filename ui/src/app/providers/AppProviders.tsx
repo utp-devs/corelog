@@ -41,6 +41,8 @@ export function AppProviders({ children }: PropsWithChildren) {
             headerBg: 'transparent',
             siderBg: isDark ? coreLogTheme.bgSurfaceDark : coreLogTheme.bgSurfaceLight,
             bodyBg: isDark ? coreLogTheme.bgPageDark : coreLogTheme.bgPageLight,
+            triggerBg: isDark ? coreLogTheme.bgSunkenDark : coreLogTheme.bgSunkenLight,
+            triggerColor: isDark ? coreLogTheme.textSubtleDark : coreLogTheme.textSubtleLight,
           },
           Table: {
             headerBg: isDark ? coreLogTheme.bgSunkenDark : coreLogTheme.bgSunkenLight,

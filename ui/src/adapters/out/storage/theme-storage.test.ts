@@ -9,8 +9,8 @@ describe('theme-storage', () => {
     document.documentElement.style.colorScheme = ''
   })
 
-  it('defaults to dark when no theme stored', () => {
-    expect(getStoredTheme()).toBe('dark')
+  it('defaults to light when no theme stored', () => {
+    expect(getStoredTheme()).toBe('light')
   })
 
   it('persists and retrieves light theme', () => {

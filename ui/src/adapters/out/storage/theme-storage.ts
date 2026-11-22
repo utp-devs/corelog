@@ -4,13 +4,13 @@ export type ThemeMode = 'light' | 'dark'
 
 export function getStoredTheme(): ThemeMode {
   if (typeof window === 'undefined' || !window.localStorage) {
-    return 'dark'
+    return 'light'
   }
   const stored = localStorage.getItem(THEME_KEY)
   if (stored === 'light' || stored === 'dark') {
     return stored
   }
-  return 'dark'
+  return 'light'
 }
 
 export function setStoredTheme(theme: ThemeMode): void {
