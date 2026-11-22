@@ -1,5 +1,4 @@
 import {
-  BellOutlined,
   CalendarOutlined,
   DashboardOutlined,
   LogoutOutlined,
@@ -22,6 +21,7 @@ import { useAuthStore } from '@/adapters/in/state/auth.store'
 import { navigationItems, type NavigationItem } from '@/app/navigation'
 import { useThemeMode } from '@/app/theme-context'
 import styles from './AppLayout.module.css'
+import { NotificationsBell } from './NotificationsBell'
 
 const { Header, Sider, Content } = Layout
 
@@ -127,12 +127,7 @@ export function AppLayout() {
               disabled
               allowClear
             />
-            <Button
-              type="text"
-              icon={<BellOutlined />}
-              aria-label="Notificaciones"
-              disabled
-            />
+            <NotificationsBell />
             <Button
               type="text"
               icon={themeMode === 'dark' ? <SunOutlined /> : <MoonOutlined />}
