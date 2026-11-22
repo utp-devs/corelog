@@ -31,6 +31,10 @@ func (r *TicketRepository) Save(_ context.Context, t *domain.Ticket) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
+	// Simula la BD: el identificador lo asigna el almacen si el ticket aun no lo tiene.
+	if t.ID == uuid.Nil {
+		t.ID = uuid.New()
+	}
 	r.tickets[t.ID] = cloneTicket(t)
 	return nil
 }

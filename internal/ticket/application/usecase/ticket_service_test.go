@@ -21,6 +21,7 @@ func newFakeTicketRepo() *fakeTicketRepo {
 }
 
 func (r *fakeTicketRepo) Save(_ context.Context, t *domain.Ticket) error {
+	if t.ID == uuid.Nil { t.ID = uuid.New() }
 	copied := *t
 	r.tickets[t.ID] = &copied
 	return nil
@@ -31,6 +32,7 @@ func (r *fakeTicketRepo) FindByID(_ context.Context, id uuid.UUID) (*domain.Tick
 	if !ok {
 		return nil, domain.ErrTicketNotFound
 	}
+	if t.ID == uuid.Nil { t.ID = uuid.New() }
 	copied := *t
 	return &copied, nil
 }
@@ -63,6 +65,7 @@ func (r *fakeTicketRepo) Update(_ context.Context, t *domain.Ticket) error {
 	if _, ok := r.tickets[t.ID]; !ok {
 		return domain.ErrTicketNotFound
 	}
+	if t.ID == uuid.Nil { t.ID = uuid.New() }
 	copied := *t
 	r.tickets[t.ID] = &copied
 	return nil
@@ -104,6 +107,7 @@ type fakeSavedFilterRepository struct {
 }
 
 func (r *fakeSavedFilterRepository) SaveSavedFilter(_ context.Context, filter *domain.SavedFilter) error {
+	if filter.ID == uuid.Nil { filter.ID = uuid.New() }
 	if r.filters == nil {
 		r.filters = make(map[uuid.UUID]*domain.SavedFilter)
 	}

@@ -12,6 +12,7 @@ import (
 	"github.com/jmoiron/sqlx"
 
 	"github.com/jhonsferg/corelog/internal/platform/apperror"
+	"github.com/jhonsferg/corelog/internal/platform/database"
 	"github.com/jhonsferg/corelog/internal/ticket/application/port"
 	"github.com/jhonsferg/corelog/internal/ticket/domain"
 )
@@ -32,44 +33,43 @@ var _ port.AssigneeWatcherRepository = (*TicketRepository)(nil)
 func (r *TicketRepository) Save(ctx context.Context, t *domain.Ticket) error {
 	row := fromDomain(t)
 
-	if _, err := r.db.ExecContext(ctx, `
-		INSERT INTO projects (
-			id, key, name, description, type, lead_id, visibility, archived_at, created_at, updated_at
-		) VALUES (
-			'00000000-0000-4000-8000-000000000001',
-			'CORE',
-			'CoreLog',
-			'Proyecto por defecto',
-			'kanban',
-			$1,
-			'team',
-			NULL,
-			$2,
-			$2
-		) ON CONFLICT (id) DO NOTHING`,
-		t.RequesterID,
-		t.CreatedAt,
-	); err != nil {
-		return apperror.Wrap(apperror.KindInternal, "failed to ensure default project", err)
+	if t.ProjectID == domain.DefaultProjectID {
+		// El proyecto por defecto puede no existir en una BD recien migrada.
+		if _, err := r.db.ExecContext(ctx, `
+			INSERT INTO projects (
+				id, key, name, description, type, lead_id, visibility, archived_at, created_at, updated_at
+			) VALUES (
+				$1, 'CORE', 'CoreLog', 'Proyecto por defecto', 'kanban', $2, 'team', NULL, $3, $3
+			) ON CONFLICT DO NOTHING`,
+			domain.DefaultProjectID, t.RequesterID, t.CreatedAt,
+		); err != nil {
+			return apperror.Wrap(apperror.KindInternal, "failed to ensure default project", err)
+		}
 	}
 
 	const query = `
 		INSERT INTO issues (
-			id, project_id, title, description, status, priority, issue_type, parent_id,
+			project_id, title, description, status, priority, issue_type, parent_id,
 			due_date, story_points, rank, closed_at, requester_id, assignee_id, created_at, updated_at
 		)
 		VALUES (
-			:id, '00000000-0000-4000-8000-000000000001', :title, :description, :status, :priority,
+			:project_id, :title, :description, :status, :priority,
 			:issue_type, :parent_id, :due_date, :story_points, :rank, :closed_at,
 			:requester_id, :assignee_id, :created_at, :updated_at
-		)`
+		)
+		RETURNING id`
 
-	if _, err := r.db.NamedExecContext(ctx, query, row); err != nil {
+	id, err := database.InsertReturningID(ctx, r.db, query, row)
+	if err != nil {
+		if isForeignKeyViolationOn(err, "fk_issues_project") {
+			return apperror.New(apperror.KindNotFound, "project not found")
+		}
 		if isForeignKeyViolation(err) {
 			return domain.ErrRequesterNotFound
 		}
 		return apperror.Wrap(apperror.KindInternal, "failed to save ticket", err)
 	}
+	t.ID = id
 	return nil
 }
 
@@ -234,4 +234,9 @@ func (r *TicketRepository) UpdateAndWatchAssignee(ctx context.Context, t *domain
 func isForeignKeyViolation(err error) bool {
 	var pgErr *pgconn.PgError
 	return errors.As(err, &pgErr) && pgErr.Code == pgForeignKeyViolation
+}
+
+func isForeignKeyViolationOn(err error, constraint string) bool {
+	var pgErr *pgconn.PgError
+	return errors.As(err, &pgErr) && pgErr.Code == pgForeignKeyViolation && pgErr.ConstraintName == constraint
 }

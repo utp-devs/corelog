@@ -7,6 +7,10 @@ import (
 	"github.com/google/uuid"
 )
 
+// DefaultProjectID es el proyecto al que se asignan los tickets creados sin project_id.
+// Coincide con el proyecto CORE de las migraciones.
+var DefaultProjectID = uuid.MustParse("00000000-0000-4000-8000-000000000001")
+
 type Ticket struct {
 	ID          uuid.UUID
 	ProjectID   uuid.UUID
@@ -61,7 +65,6 @@ func NewTicket(title, description string, priority Priority, requesterID uuid.UU
 
 	now := time.Now().UTC()
 	return &Ticket{
-		ID:          uuid.New(),
 		Title:       title,
 		Description: description,
 		Status:      StatusOpen,

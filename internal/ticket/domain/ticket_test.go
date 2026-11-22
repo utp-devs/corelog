@@ -16,8 +16,8 @@ func TestNewTicket(t *testing.T) {
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
-		if ticket.ID == uuid.Nil {
-			t.Errorf("expected non-nil ticket ID")
+		if ticket.ID != uuid.Nil {
+			t.Errorf("constructor must leave ID for the database to generate, got %s", ticket.ID)
 		}
 		if ticket.Title != "Issue title" {
 			t.Errorf("got title %s, want 'Issue title'", ticket.Title)

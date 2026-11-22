@@ -30,6 +30,7 @@ func newMemoryTicketRepo() *memoryTicketRepo {
 }
 
 func (r *memoryTicketRepo) Save(_ context.Context, t *domain.Ticket) error {
+	if t.ID == uuid.Nil { t.ID = uuid.New() }
 	copied := *t
 	r.tickets[t.ID] = &copied
 	return nil
@@ -40,6 +41,7 @@ func (r *memoryTicketRepo) FindByID(_ context.Context, id uuid.UUID) (*domain.Ti
 	if !ok {
 		return nil, domain.ErrTicketNotFound
 	}
+	if t.ID == uuid.Nil { t.ID = uuid.New() }
 	copied := *t
 	return &copied, nil
 }
@@ -72,6 +74,7 @@ func (r *memoryTicketRepo) Update(_ context.Context, t *domain.Ticket) error {
 	if _, ok := r.tickets[t.ID]; !ok {
 		return domain.ErrTicketNotFound
 	}
+	if t.ID == uuid.Nil { t.ID = uuid.New() }
 	copied := *t
 	r.tickets[t.ID] = &copied
 	return nil
@@ -86,6 +89,7 @@ type memorySavedFilterRepository struct {
 }
 
 func (r *memorySavedFilterRepository) SaveSavedFilter(_ context.Context, filter *domain.SavedFilter) error {
+	if filter.ID == uuid.Nil { filter.ID = uuid.New() }
 	if r.filters == nil {
 		r.filters = make(map[uuid.UUID]*domain.SavedFilter)
 	}
