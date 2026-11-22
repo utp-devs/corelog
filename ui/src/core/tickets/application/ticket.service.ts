@@ -1,6 +1,7 @@
 import type {
   CreateTicketInput,
   ListTicketsFilter,
+  TicketPage,
   TicketRepositoryPort,
   UpdateIssueMetadataInput,
   UpdateIssueDetailsInput,
@@ -15,7 +16,7 @@ export class TicketService {
     this.repository = repository
   }
 
-  list(filter: ListTicketsFilter = {}): Promise<Ticket[]> {
+  list(filter: ListTicketsFilter = {}): Promise<TicketPage> {
     return this.repository.list(filter)
   }
 

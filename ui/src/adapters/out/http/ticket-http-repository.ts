@@ -1,6 +1,7 @@
 import type {
   CreateTicketInput,
   ListTicketsFilter,
+  TicketPage,
   TicketRepositoryPort,
   UpdateIssueMetadataInput,
   UpdateIssueDetailsInput,
@@ -119,8 +120,8 @@ function toTicket(dto: TicketDto): Ticket {
 }
 
 export class TicketHttpRepository implements TicketRepositoryPort {
-  async list(filter: ListTicketsFilter): Promise<Ticket[]> {
-    const { data } = await apiClient.get<{ data: TicketDto[] }>('/issues', {
+  async list(filter: ListTicketsFilter): Promise<TicketPage> {
+    const { data } = await apiClient.get<{ data: TicketDto[]; meta: { page: number; page_size: number; total: number } }>('/issues', {
       params: {
         status: filter.status,
         priority: filter.priority,
@@ -134,7 +135,12 @@ export class TicketHttpRepository implements TicketRepositoryPort {
         page_size: filter.pageSize,
       },
     })
-    return data.data.map(toTicket)
+    return {
+      items: data.data.map(toTicket),
+      total: data.meta.total,
+      page: data.meta.page,
+      pageSize: data.meta.page_size,
+    }
   }
 
   async getById(id: string): Promise<Ticket> {

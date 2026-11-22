@@ -21,6 +21,7 @@ type Status = 'idle' | 'loading' | 'error'
 
 interface TicketsState {
   tickets: Ticket[]
+  total: number
   selected: Ticket | null
   comments: IssueComment[]
   commentsIssueId: string | null
@@ -54,6 +55,7 @@ let ticketRequestId = 0
 
 export const useTicketsStore = create<TicketsState>((set, get) => ({
   tickets: [],
+  total: 0,
   selected: null,
   comments: [],
   commentsIssueId: null,
@@ -67,8 +69,8 @@ export const useTicketsStore = create<TicketsState>((set, get) => ({
   fetchTickets: async (filter = {}) => {
     set({ status: 'loading', error: null })
     try {
-      const tickets = await ticketService.list(filter)
-      set({ tickets, status: 'idle' })
+      const page = await ticketService.list(filter)
+      set({ tickets: page.items, total: page.total, status: 'idle' })
     } catch (error) {
       set({ status: 'error', error: extractErrorMessage(error, 'No se pudieron cargar las incidencias') })
     }

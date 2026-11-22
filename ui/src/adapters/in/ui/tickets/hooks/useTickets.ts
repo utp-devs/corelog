@@ -26,6 +26,7 @@ export function useTickets(filter: UseTicketsFilter) {
     pageSize,
   } = filter
   const tickets = useTicketsStore((s) => s.tickets)
+  const total = useTicketsStore((s) => s.total)
   const status = useTicketsStore((s) => s.status)
   const error = useTicketsStore((s) => s.error)
   const fetchTickets = useTicketsStore((s) => s.fetchTickets)
@@ -43,5 +44,5 @@ export function useTickets(filter: UseTicketsFilter) {
     })
   }, [fetchTickets, statusFilter, priorityFilter, query, issueType, dueFrom, dueTo, page, pageSize])
 
-  return { tickets, isLoading: status === 'loading', error }
+  return { tickets, total, isLoading: status === 'loading', error }
 }

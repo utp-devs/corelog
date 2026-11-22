@@ -36,8 +36,16 @@ export interface ListTicketsFilter {
   pageSize?: number
 }
 
+/** Una página de incidencias y el total de coincidencias en todas las páginas. */
+export interface TicketPage {
+  items: Ticket[]
+  total: number
+  page: number
+  pageSize: number
+}
+
 export interface TicketRepositoryPort {
-  list(filter: ListTicketsFilter): Promise<Ticket[]>
+  list(filter: ListTicketsFilter): Promise<TicketPage>
   getById(id: string): Promise<Ticket>
   create(input: CreateTicketInput): Promise<Ticket>
   updateStatus(id: string, status: TicketStatus): Promise<Ticket>
