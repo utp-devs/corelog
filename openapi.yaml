@@ -901,6 +901,309 @@ paths:
           description: Incidencia no encontrada en el proyecto
         '422':
           $ref: '#/components/responses/ValidationError'
+  /sprints:
+    get:
+      tags: [tickets]
+      operationId: listSprints
+      summary: Sprints de un proyecto
+      description: Requiere poder ver el proyecto.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: project_id
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Sprints del proyecto
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Sin permiso para ver el proyecto
+    post:
+      tags: [tickets]
+      operationId: createSprint
+      summary: Planificar un sprint
+      description: Solo el lead del proyecto o el administrador global. Las fechas son opcionales; si se dan, el fin no puede ser anterior al inicio.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: project_id
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+                  maxLength: 80
+                goal:
+                  type: string
+                  maxLength: 500
+                start_date:
+                  type: string
+                  format: date
+                end_date:
+                  type: string
+                  format: date
+      responses:
+        '201':
+          description: Sprint creado en estado planned
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Solo lead o administrador global
+        '422':
+          $ref: '#/components/responses/ValidationError'
+  /sprints/velocity:
+    get:
+      tags: [tickets]
+      operationId: getSprintVelocity
+      summary: Velocidad del proyecto en sus ultimos sprints cerrados
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: project_id
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 20
+            default: 5
+      responses:
+        '200':
+          description: Puntos completados por sprint, del mas reciente al mas antiguo
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Sin permiso para ver el proyecto
+  /sprints/{id}/start:
+    post:
+      tags: [tickets]
+      operationId: startSprint
+      summary: Activar un sprint planificado
+      description: Un proyecto solo puede tener un sprint activo. Si ya hay otro activo responde 409.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: project_id
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Sprint activo
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Solo lead o administrador global
+        '404':
+          description: Sprint no encontrado en el proyecto
+        '409':
+          description: El sprint no esta planificado o ya hay otro sprint activo
+  /sprints/{id}/close:
+    post:
+      tags: [tickets]
+      operationId: closeSprint
+      summary: Cerrar un sprint activo
+      description: unfinished decide que pasa con las incidencias no cerradas. backlog las quita del sprint; sprint las mueve a target_sprint_id, que debe ser un sprint planificado del mismo proyecto.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: project_id
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [unfinished]
+              properties:
+                unfinished:
+                  type: string
+                  enum: [backlog, sprint]
+                target_sprint_id:
+                  type: string
+                  format: uuid
+                  nullable: true
+      responses:
+        '200':
+          description: Sprint cerrado
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Solo lead o administrador global
+        '404':
+          description: Sprint no encontrado en el proyecto
+        '409':
+          description: El sprint no esta activo
+        '422':
+          $ref: '#/components/responses/ValidationError'
+  /sprints/{id}/issues:
+    get:
+      tags: [tickets]
+      operationId: listSprintIssues
+      summary: Incidencias de un sprint
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: project_id
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Incidencias del sprint
+        '403':
+          description: Sin permiso para ver el proyecto
+        '404':
+          description: Sprint no encontrado en el proyecto
+  /sprints/{id}/issues/{issue_id}:
+    put:
+      tags: [tickets]
+      operationId: assignSprintIssue
+      summary: Asignar una incidencia al sprint
+      description: Solo lead o administrador global. Un sprint cerrado no admite cambios.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: issue_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: project_id
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Asignada
+        '403':
+          description: Solo lead o administrador global
+        '404':
+          description: Sprint o incidencia no encontrados en el proyecto
+        '409':
+          description: El sprint esta cerrado
+    delete:
+      tags: [tickets]
+      operationId: removeSprintIssue
+      summary: Quitar una incidencia del sprint
+      description: Solo lead o administrador global. La incidencia vuelve al backlog.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: issue_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: project_id
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Quitada
+        '403':
+          description: Solo lead o administrador global
+        '404':
+          description: La incidencia no esta en este sprint del proyecto
+        '409':
+          description: El sprint esta cerrado
+  /sprints/{id}/burndown:
+    get:
+      tags: [tickets]
+      operationId: getSprintBurndown
+      summary: Burndown del sprint por dia
+      description: Trabajo restante real frente a la linea ideal que baja a cero. El sprint necesita fechas.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: project_id
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Un punto por dia entre el inicio y el fin del sprint
+        '403':
+          description: Sin permiso para ver el proyecto
+        '404':
+          description: Sprint no encontrado en el proyecto
+        '422':
+          description: El sprint no tiene fechas
   /workflows:
     get:
       tags: [tickets]

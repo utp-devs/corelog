@@ -23,6 +23,8 @@ import (
 	"github.com/jhonsferg/corelog/internal/project"
 	projectpostgres "github.com/jhonsferg/corelog/internal/project/adapter/out/postgres"
 	projectport "github.com/jhonsferg/corelog/internal/project/application/port"
+	"github.com/jhonsferg/corelog/internal/sprint"
+	sprintpostgres "github.com/jhonsferg/corelog/internal/sprint/adapter/out/postgres"
 	"github.com/jhonsferg/corelog/internal/team"
 	teampostgres "github.com/jhonsferg/corelog/internal/team/adapter/out/postgres"
 	teamport "github.com/jhonsferg/corelog/internal/team/application/port"
@@ -95,12 +97,13 @@ func run() error {
 	fileStorage := ticketfilesystem.New(attachmentRoot)
 	workflowRepo := ticketpostgres.NewWorkflowRepository(db)
 	ticketModule := ticket.NewModule(ticketRepo, userDirectory, collaborationRepo, issueLinkRepo, workflowRepo, watcherRepo, savedFilterRepo, cfg.Auth.JWTSecret, projectAuthorizer, projectMemberRepo)
+	sprintModule := sprint.NewModule(sprintpostgres.NewSprintRepository(db), projectAuthorizer, cfg.Auth.JWTSecret)
 	boardModule := board.NewModule(boardpostgres.NewBoardRepository(db), projectModule.Service, projectAuthorizer, boardIssueMover{issues: ticketModule.Service}, cfg.Auth.JWTSecret)
 	ticketModule.Handler.WithAttachments(attachmentRepo, fileStorage)
 
 	router := httpserver.NewRouter(cfg.Server)
 	router.Route("/api/v1", func(r chi.Router) {
-		httpserver.Mount(r, userModule.Handler, teamModule.Handler, projectModule.Handler, boardModule.Handler, ticketModule.Handler)
+		httpserver.Mount(r, userModule.Handler, teamModule.Handler, projectModule.Handler, boardModule.Handler, ticketModule.Handler, sprintModule.Handler)
 	})
 
 	server := httpserver.New(cfg.Server, router)
