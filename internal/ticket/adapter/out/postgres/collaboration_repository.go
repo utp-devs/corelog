@@ -68,12 +68,13 @@ func (r *CollaborationRepository) SaveComment(ctx context.Context, comment *doma
 		return apperror.Wrap(apperror.KindInternal, "failed to begin comment transaction", err)
 	}
 	defer func() { _ = tx.Rollback() }()
-	if _, err := tx.ExecContext(ctx, `
-		INSERT INTO comments (id, issue_id, author_id, body, created_at, updated_at, deleted_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-		comment.ID, comment.IssueID, comment.AuthorID, comment.Body,
+	if err := tx.QueryRowContext(ctx, `
+		INSERT INTO comments (issue_id, author_id, body, created_at, updated_at, deleted_at)
+		VALUES ($1, $2, $3, $4, $5, $6)
+		RETURNING id`,
+		comment.IssueID, comment.AuthorID, comment.Body,
 		comment.CreatedAt, comment.UpdatedAt, comment.DeletedAt,
-	); err != nil {
+	).Scan(&comment.ID); err != nil {
 		return apperror.Wrap(apperror.KindInternal, "failed to save comment", err)
 	}
 	for _, mentionedID := range comment.Mentions {
@@ -161,12 +162,13 @@ func (r *CollaborationRepository) DeleteComment(ctx context.Context, comment *do
 }
 
 func (r *CollaborationRepository) SaveActivity(ctx context.Context, activity *domain.Activity) error {
-	_, err := r.db.ExecContext(ctx, `
-		INSERT INTO activities (id, issue_id, actor_id, action, field_name, old_value, new_value, created_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-		activity.ID, activity.IssueID, activity.ActorID, activity.Action,
+	err := r.db.QueryRowContext(ctx, `
+		INSERT INTO activities (issue_id, actor_id, action, field_name, old_value, new_value, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		RETURNING id`,
+		activity.IssueID, activity.ActorID, activity.Action,
 		activity.FieldName, activity.OldValue, activity.NewValue, activity.CreatedAt,
-	)
+	).Scan(&activity.ID)
 	if err != nil {
 		return apperror.Wrap(apperror.KindInternal, "failed to save activity", err)
 	}

@@ -29,7 +29,7 @@ func NewComment(issueID, authorID uuid.UUID, body string) (*Comment, error) {
 	}
 	now := time.Now().UTC()
 	return &Comment{
-		ID: uuid.New(), IssueID: issueID, AuthorID: authorID, Body: body,
+		IssueID: issueID, AuthorID: authorID, Body: body,
 		CreatedAt: now, UpdatedAt: now,
 	}, nil
 }

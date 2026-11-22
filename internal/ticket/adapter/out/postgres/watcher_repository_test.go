@@ -50,6 +50,9 @@ func TestWatcherRepositoryAndCommentAutoFollowPostgres(t *testing.T) {
 	if _, err := db.Exec(string(up)); err != nil {
 		t.Fatal(err)
 	}
+	if _, err := db.Exec(`ALTER TABLE comments ALTER COLUMN id SET DEFAULT gen_random_uuid()`); err != nil {
+		t.Fatal(err)
+	}
 
 	issueID, authorID, otherID := uuid.New(), uuid.New(), uuid.New()
 	if _, err := db.Exec(`INSERT INTO issues(id) VALUES($1)`, issueID); err != nil {
