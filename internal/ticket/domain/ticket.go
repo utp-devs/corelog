@@ -8,14 +8,40 @@ import (
 
 type Ticket struct {
 	ID          uuid.UUID
+	ProjectID   uuid.UUID
 	Title       string
 	Description string
 	Status      Status
 	Priority    Priority
+	IssueType   IssueType
+	ParentID    *uuid.UUID
+	DueDate     *time.Time
+	StoryPoints *float64
+	Rank        string
+	ClosedAt    *time.Time
 	RequesterID uuid.UUID
 	AssigneeID  *uuid.UUID
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
+}
+
+type IssueType string
+
+const (
+	IssueTypeTask    IssueType = "task"
+	IssueTypeBug     IssueType = "bug"
+	IssueTypeStory   IssueType = "story"
+	IssueTypeEpic    IssueType = "epic"
+	IssueTypeSubtask IssueType = "subtask"
+)
+
+func (t IssueType) IsValid() bool {
+	switch t {
+	case IssueTypeTask, IssueTypeBug, IssueTypeStory, IssueTypeEpic, IssueTypeSubtask:
+		return true
+	default:
+		return false
+	}
 }
 
 func NewTicket(title, description string, priority Priority, requesterID uuid.UUID) (*Ticket, error) {
@@ -39,6 +65,8 @@ func NewTicket(title, description string, priority Priority, requesterID uuid.UU
 		Description: description,
 		Status:      StatusOpen,
 		Priority:    priority,
+		IssueType:   IssueTypeTask,
+		Rank:        "m",
 		RequesterID: requesterID,
 		CreatedAt:   now,
 		UpdatedAt:   now,
@@ -53,6 +81,27 @@ func (t *Ticket) ChangeStatus(newStatus Status) error {
 		return ErrIllegalTransition
 	}
 	t.Status = newStatus
+	if newStatus == StatusClosed {
+		now := time.Now().UTC()
+		t.ClosedAt = &now
+	} else if newStatus != StatusClosed {
+		t.ClosedAt = nil
+	}
+	t.UpdatedAt = time.Now().UTC()
+	return nil
+}
+
+func (t *Ticket) UpdateMetadata(issueType IssueType, parentID *uuid.UUID, dueDate *time.Time, storyPoints *float64) error {
+	if !issueType.IsValid() {
+		return ErrInvalidIssueType
+	}
+	if storyPoints != nil && (*storyPoints < 0 || *storyPoints > 999) {
+		return ErrInvalidStoryPoints
+	}
+	t.IssueType = issueType
+	t.ParentID = parentID
+	t.DueDate = dueDate
+	t.StoryPoints = storyPoints
 	t.UpdatedAt = time.Now().UTC()
 	return nil
 }

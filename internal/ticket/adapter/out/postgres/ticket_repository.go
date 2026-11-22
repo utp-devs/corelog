@@ -30,9 +30,37 @@ var _ port.Repository = (*TicketRepository)(nil)
 func (r *TicketRepository) Save(ctx context.Context, t *domain.Ticket) error {
 	row := fromDomain(t)
 
+	if _, err := r.db.ExecContext(ctx, `
+		INSERT INTO projects (
+			id, key, name, description, type, lead_id, visibility, archived_at, created_at, updated_at
+		) VALUES (
+			'00000000-0000-4000-8000-000000000001',
+			'CORE',
+			'CoreLog',
+			'Proyecto por defecto',
+			'kanban',
+			$1,
+			'team',
+			NULL,
+			$2,
+			$2
+		) ON CONFLICT (id) DO NOTHING`,
+		t.RequesterID,
+		t.CreatedAt,
+	); err != nil {
+		return apperror.Wrap(apperror.KindInternal, "failed to ensure default project", err)
+	}
+
 	const query = `
-		INSERT INTO tickets (id, title, description, status, priority, requester_id, assignee_id, created_at, updated_at)
-		VALUES (:id, :title, :description, :status, :priority, :requester_id, :assignee_id, :created_at, :updated_at)`
+		INSERT INTO issues (
+			id, project_id, title, description, status, priority, issue_type, parent_id,
+			due_date, story_points, rank, closed_at, requester_id, assignee_id, created_at, updated_at
+		)
+		VALUES (
+			:id, '00000000-0000-4000-8000-000000000001', :title, :description, :status, :priority,
+			:issue_type, :parent_id, :due_date, :story_points, :rank, :closed_at,
+			:requester_id, :assignee_id, :created_at, :updated_at
+		)`
 
 	if _, err := r.db.NamedExecContext(ctx, query, row); err != nil {
 		if isForeignKeyViolation(err) {
@@ -47,8 +75,9 @@ func (r *TicketRepository) FindByID(ctx context.Context, id uuid.UUID) (*domain.
 	var row ticketRow
 
 	const query = `
-		SELECT id, title, description, status, priority, requester_id, assignee_id, created_at, updated_at
-		FROM tickets WHERE id = $1`
+		SELECT id, project_id, title, description, status, priority, issue_type, parent_id,
+		       due_date, story_points, rank, closed_at, requester_id, assignee_id, created_at, updated_at
+		FROM issues WHERE id = $1`
 
 	if err := r.db.GetContext(ctx, &row, query, id); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -62,8 +91,9 @@ func (r *TicketRepository) FindByID(ctx context.Context, id uuid.UUID) (*domain.
 
 func (r *TicketRepository) FindAll(ctx context.Context, filter port.ListFilter) ([]*domain.Ticket, error) {
 	query := `
-		SELECT id, title, description, status, priority, requester_id, assignee_id, created_at, updated_at
-		FROM tickets WHERE 1 = 1`
+		SELECT id, project_id, title, description, status, priority, issue_type, parent_id,
+		       due_date, story_points, rank, closed_at, requester_id, assignee_id, created_at, updated_at
+		FROM issues WHERE 1 = 1`
 	args := []any{}
 
 	if filter.Status != "" {
@@ -99,8 +129,10 @@ func (r *TicketRepository) Update(ctx context.Context, t *domain.Ticket) error {
 	row := fromDomain(t)
 
 	const query = `
-		UPDATE tickets
+		UPDATE issues
 		SET title = :title, description = :description, status = :status, priority = :priority,
+		    issue_type = :issue_type, parent_id = :parent_id, due_date = :due_date,
+		    story_points = :story_points, rank = :rank, closed_at = :closed_at,
 		    assignee_id = :assignee_id, updated_at = :updated_at
 		WHERE id = :id`
 

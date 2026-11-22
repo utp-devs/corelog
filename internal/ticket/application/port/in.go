@@ -2,6 +2,7 @@ package port
 
 import (
 	"context"
+	"time"
 
 	"github.com/google/uuid"
 
@@ -13,6 +14,23 @@ type CreateInput struct {
 	Description string
 	Priority    domain.Priority
 	RequesterID uuid.UUID
+	IssueType   domain.IssueType
+	ParentID    *uuid.UUID
+	DueDate     *time.Time
+	StoryPoints *float64
+}
+
+type UpdateMetadataInput struct {
+	IssueType   domain.IssueType
+	ParentID    *uuid.UUID
+	DueDate     *time.Time
+	StoryPoints *float64
+}
+
+type CreateCommentInput struct {
+	IssueID  uuid.UUID
+	AuthorID uuid.UUID
+	Body     string
 }
 
 type ListFilter struct {
@@ -28,4 +46,10 @@ type Service interface {
 	List(ctx context.Context, filter ListFilter) ([]*domain.Ticket, error)
 	UpdateStatus(ctx context.Context, id uuid.UUID, status domain.Status) (*domain.Ticket, error)
 	Assign(ctx context.Context, id uuid.UUID, assignerID uuid.UUID, assigneeID uuid.UUID) (*domain.Ticket, error)
+	UpdateMetadata(ctx context.Context, id uuid.UUID, input UpdateMetadataInput) (*domain.Ticket, error)
+	ListComments(ctx context.Context, issueID uuid.UUID) ([]*domain.Comment, error)
+	CreateComment(ctx context.Context, in CreateCommentInput) (*domain.Comment, error)
+	UpdateComment(ctx context.Context, commentID, actorID uuid.UUID, body string) (*domain.Comment, error)
+	DeleteComment(ctx context.Context, commentID, actorID uuid.UUID) error
+	ListActivities(ctx context.Context, issueID uuid.UUID) ([]*domain.Activity, error)
 }

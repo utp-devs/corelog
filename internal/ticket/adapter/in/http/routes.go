@@ -7,7 +7,7 @@ import (
 )
 
 func (h *Handler) RegisterRoutes(r chi.Router) {
-	r.Route("/tickets", func(r chi.Router) {
+	r.Route("/issues", func(r chi.Router) {
 		r.Use(appmw.Authenticate(h.jwtSecret))
 
 		r.Post("/", h.Create)
@@ -15,5 +15,11 @@ func (h *Handler) RegisterRoutes(r chi.Router) {
 		r.Get("/{id}", h.Get)
 		r.Patch("/{id}/status", h.UpdateStatus)
 		r.Patch("/{id}/assign", h.Assign)
+		r.Patch("/{id}/metadata", h.UpdateMetadata)
+		r.Get("/{id}/comments", h.ListComments)
+		r.Post("/{id}/comments", h.CreateComment)
+		r.Patch("/{id}/comments/{comment_id}", h.UpdateComment)
+		r.Delete("/{id}/comments/{comment_id}", h.DeleteComment)
+		r.Get("/{id}/activities", h.ListActivities)
 	})
 }

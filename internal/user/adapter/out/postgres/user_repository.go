@@ -90,6 +90,22 @@ func (r *UserRepository) Update(ctx context.Context, u *domain.User) error {
 		return domain.ErrUserNotFound
 	}
 
+	if _, err := r.db.ExecContext(ctx, `DELETE FROM team_members WHERE user_id = $1`, u.ID); err != nil {
+		return apperror.Wrap(apperror.KindInternal, "failed to sync team membership", err)
+	}
+	if u.TeamID != nil {
+		if _, err := r.db.ExecContext(ctx, `
+			INSERT INTO team_members (team_id, user_id, role, created_at)
+			VALUES ($1, $2, 'member', $3)
+			ON CONFLICT (team_id, user_id) DO NOTHING`,
+			u.TeamID,
+			u.ID,
+			u.UpdatedAt,
+		); err != nil {
+			return apperror.Wrap(apperror.KindInternal, "failed to sync team membership", err)
+		}
+	}
+
 	return nil
 }
 
