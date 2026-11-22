@@ -75,7 +75,31 @@ export function AppLayout() {
     <Layout className={styles.layout}>
       {!isMobile && (
         <Sider className={styles.sider} collapsible collapsed={collapsed} onCollapse={setCollapsed} width={256}>
-          <Link to="/issues" className={styles.brand}>CoreLog</Link>
+          <Link
+            to="/issues"
+            className={collapsed ? `${styles.brand} ${styles.brandCollapsed}` : styles.brand}
+            aria-label="CoreLog"
+          >
+            {collapsed ? (
+              <img
+                src="/brand/corelog-icon-64.png"
+                srcSet="/brand/corelog-icon-64.png 1x, /brand/corelog-icon-128.png 2x"
+                alt=""
+                width={40}
+                height={40}
+                className={styles.brandIcon}
+              />
+            ) : (
+              <img
+                src="/brand/corelog-banner-480.png"
+                srcSet="/brand/corelog-banner-480.png 480w, /brand/corelog-banner-960.png 960w"
+                sizes="152px"
+                alt="CoreLog"
+                width={152}
+                className={styles.brandBanner}
+              />
+            )}
+          </Link>
           <Menu mode="inline" selectedKeys={[selectedKey]} items={menuItems} />
           <Button
             className={styles.collapseButton}

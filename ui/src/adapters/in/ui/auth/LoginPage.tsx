@@ -40,6 +40,14 @@ export function LoginPage() {
   return (
     <div className={styles.wrapper}>
       <Card className={styles.card}>
+        <img
+          src="/brand/corelog-banner-480.png"
+          srcSet="/brand/corelog-banner-480.png 480w, /brand/corelog-banner-960.png 960w"
+          sizes="280px"
+          alt="CoreLog"
+          width={280}
+          className={styles.banner}
+        />
         <Typography.Title level={3} className={styles.title}>
           Iniciar sesion en CoreLog
         </Typography.Title>
