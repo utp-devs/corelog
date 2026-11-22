@@ -15,7 +15,8 @@ import (
 	"github.com/jhonsferg/corelog/internal/user/domain"
 )
 
-const selectColumns = `id, name, email, password_hash, role, team_id, created_at, updated_at`
+// team_id se deriva de team_members (fuente de verdad, ADR-002). users.team_id queda como espejo de escritura.
+const selectColumns = `id, name, email, password_hash, role, (SELECT tm.team_id FROM team_members tm WHERE tm.user_id = users.id ORDER BY tm.created_at LIMIT 1) AS team_id, created_at, updated_at`
 
 type UserRepository struct {
 	db *sqlx.DB
@@ -35,11 +36,30 @@ func (r *UserRepository) Save(ctx context.Context, u *domain.User) error {
 		VALUES (:name, :email, :password_hash, :role, :team_id, :created_at, :updated_at)
 		RETURNING id`
 
-	id, err := database.InsertReturningID(ctx, r.db, query, row)
+	tx, err := r.db.BeginTxx(ctx, nil)
+	if err != nil {
+		return apperror.Wrap(apperror.KindInternal, "failed to save user", err)
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	id, err := database.InsertReturningID(ctx, tx, query, row)
 	if err != nil {
 		return apperror.Wrap(apperror.KindInternal, "failed to save user", err)
 	}
 	u.ID = id
+	if u.TeamID != nil {
+		if _, err := tx.ExecContext(ctx, `
+			INSERT INTO team_members (team_id, user_id, role, created_at)
+			VALUES ($1, $2, 'member', $3)
+			ON CONFLICT (team_id, user_id) DO NOTHING`,
+			u.TeamID, u.ID, u.CreatedAt,
+		); err != nil {
+			return apperror.Wrap(apperror.KindInternal, "failed to sync team membership", err)
+		}
+	}
+	if err := tx.Commit(); err != nil {
+		return apperror.Wrap(apperror.KindInternal, "failed to save user", err)
+	}
 	return nil
 }
 
