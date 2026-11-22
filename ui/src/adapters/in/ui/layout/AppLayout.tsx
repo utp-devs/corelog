@@ -78,7 +78,7 @@ export function AppLayout() {
     .map((group) => ({
       type: 'group' as const,
       key: group,
-      label: group,
+      label: collapsed && isDesktop ? <span className={styles.groupDivider} aria-label={group} /> : group,
       children: navigationItems
         .filter((item: NavigationItem) => item.group === group && item.roles.includes(role))
         .map((item) => ({

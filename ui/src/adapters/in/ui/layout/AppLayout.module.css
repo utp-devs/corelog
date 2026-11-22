@@ -176,3 +176,11 @@
     height: 56px;
   }
 }
+
+/* Sidebar colapsado: los titulos de seccion se ven como una linea separadora. */
+.groupDivider {
+  display: block;
+  height: 1px;
+  margin: var(--cl-space-3) var(--cl-space-3);
+  background: var(--cl-border);
+}
