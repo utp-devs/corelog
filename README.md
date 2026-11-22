@@ -1,4 +1,13 @@
-<h1 align="center">CoreLog</h1>
+<p align="center">
+  <img alt="CoreLog" src="docs/assets/corelog-banner.png" width="640">
+</p>
+
+<h1 align="center">CoreLog - Pequeño pero poderoso gestor de tickets</h1>
+
+<p align="center">
+  Gestión de incidencias y proyectos para equipos de soporte: tableros kanban y scrum, flujos de trabajo,
+  comentarios, adjuntos y control de acceso por equipo y rol, todo en una sola aplicación.
+</p>
 
 <p align="center">
   <img alt="Go" src="https://img.shields.io/badge/Go-1.27.4-00ADD8?style=for-the-badge&logo=go&logoColor=white">
