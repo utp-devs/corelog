@@ -1,4 +1,4 @@
-import { App, Button, Card, DatePicker, Descriptions, Input, InputNumber, List, Select, Skeleton, Space, Tabs, Typography, Upload } from 'antd'
+import { Alert, App, Button, Card, DatePicker, Descriptions, Input, InputNumber, List, Select, Skeleton, Space, Tabs, Typography, Upload } from 'antd'
 import TextArea from 'antd/es/input/TextArea'
 import dayjs from 'dayjs'
 import { useEffect, useState } from 'react'
@@ -12,6 +12,7 @@ import styles from './TicketDetailPage.module.css'
 import { PageHeader } from '@/shared/ui/PageHeader'
 import type { IssueAttachment } from '@/core/tickets/domain/attachment'
 import { AttachmentHttpRepository } from '@/adapters/out/http/attachment-http-repository'
+import { extractErrorMessage } from '@/adapters/out/http/api-client'
 
 const attachmentRepository = new AttachmentHttpRepository()
 
@@ -96,17 +97,21 @@ export function TicketDetailPage() {
 
   const selected = useTicketsStore((s) => s.selected)
   const status = useTicketsStore((s) => s.status)
+  const ticketError = useTicketsStore((s) => s.error)
   const fetchTicket = useTicketsStore((s) => s.fetchTicket)
   const updateStatus = useTicketsStore((s) => s.updateStatus)
   const assign = useTicketsStore((s) => s.assign)
   const updateDetails = useTicketsStore((s) => s.updateDetails)
   const comments = useTicketsStore((s) => s.comments)
+  const commentsIssueId = useTicketsStore((s) => s.commentsIssueId)
   const activities = useTicketsStore((s) => s.activities)
+  const activitiesIssueId = useTicketsStore((s) => s.activitiesIssueId)
   const fetchComments = useTicketsStore((s) => s.fetchComments)
   const createComment = useTicketsStore((s) => s.createComment)
   const deleteComment = useTicketsStore((s) => s.deleteComment)
   const fetchActivities = useTicketsStore((s) => s.fetchActivities)
   const links = useTicketsStore((s) => s.links)
+  const linksIssueId = useTicketsStore((s) => s.linksIssueId)
   const fetchLinks = useTicketsStore((s) => s.fetchLinks)
   const createLink = useTicketsStore((s) => s.createLink)
   const deleteLink = useTicketsStore((s) => s.deleteLink)
@@ -117,7 +122,12 @@ export function TicketDetailPage() {
   const [linkKind, setLinkKind] = useState<'blocks' | 'relates' | 'duplicates'>('relates')
   const [attachments, setAttachments] = useState<IssueAttachment[]>([])
   const [attachmentsIssueId, setAttachmentsIssueId] = useState<string | null>(null)
+  const [attachmentsError, setAttachmentsError] = useState<{ issueId: string; message: string } | null>(null)
   const attachmentsLoading = attachmentsIssueId !== selected?.id
+  const attachmentLoadError = attachmentsError && attachmentsError.issueId === selected?.id ? attachmentsError.message : undefined
+  const [collaborationLoad, setCollaborationLoad] = useState<{ issueId: string; error?: string } | null>(null)
+  const collaborationLoading = !id || collaborationLoad?.issueId !== id
+  const collaborationError = collaborationLoad && collaborationLoad.issueId === id ? collaborationLoad.error : undefined
   const teammateSearch = useTeammateSearch()
 
   useEffect(() => {
@@ -127,26 +137,48 @@ export function TicketDetailPage() {
   useEffect(() => {
     if (!id) return
     let active = true
-    void fetchComments(id)
-    void fetchActivities(id)
-    void fetchLinks(id)
+    void Promise.allSettled([fetchComments(id), fetchActivities(id), fetchLinks(id)]).then((results) => {
+      if (active) {
+        setCollaborationLoad({
+          issueId: id,
+          error: results.some((result) => result.status === 'rejected')
+            ? 'No se pudo cargar toda la información de colaboración.'
+            : undefined,
+        })
+      }
+    })
     void attachmentRepository.list(id).then((items) => {
       if (active) {
         setAttachments(items)
         setAttachmentsIssueId(id)
+        setAttachmentsError(null)
       }
     }).catch((error: unknown) => {
       if (active) {
         setAttachments([])
         setAttachmentsIssueId(id)
-        message.error(error instanceof Error ? error.message : 'No se pudieron cargar los archivos')
+        setAttachmentsError({
+          issueId: id,
+          message: extractErrorMessage(error, 'No se pudieron cargar los archivos'),
+        })
       }
     })
     return () => { active = false }
   }, [id, fetchComments, fetchActivities, fetchLinks, message])
 
-  if (status === 'loading' || !selected) {
+  if (status === 'loading' || (!selected && status === 'idle')) {
     return <Skeleton active />
+  }
+
+  if (status === 'error' || !selected || selected.id !== id) {
+    return (
+      <Alert
+        type="error"
+        showIcon
+        message={ticketError ?? 'No se pudo encontrar la incidencia solicitada.'}
+        action={<Button onClick={() => navigate('/issues')}>Volver a incidencias</Button>}
+      />
+    )
   }
 
   const nextStatuses = allStatuses.filter((s) => canTransitionTo(selected.status, s))
@@ -183,7 +215,18 @@ export function TicketDetailPage() {
         }
       />
 
+      <Tabs
+        className={styles.detailTabs}
+        key={selected.id}
+        defaultActiveKey="detail"
+        items={[
+          {
+            key: 'detail',
+            label: 'Detalle',
+            children: (
+              <>
       <Card title="Vinculos">
+        {collaborationError && <Alert type="error" showIcon message={collaborationError} />}
         <Space wrap>
           <Input
             value={linkTargetId}
@@ -202,7 +245,7 @@ export function TicketDetailPage() {
           />
           <Button
             type="primary"
-            disabled={!linkTargetId}
+            disabled={collaborationLoading || !linkTargetId}
             onClick={async () => {
               try {
                 await createLink(selected.id, linkTargetId, linkKind)
@@ -217,7 +260,8 @@ export function TicketDetailPage() {
           </Button>
         </Space>
         <List
-          dataSource={links}
+          loading={collaborationLoading}
+          dataSource={collaborationLoading || linksIssueId !== selected.id || collaborationError ? [] : links}
           locale={{ emptyText: 'Aun no hay vinculos' }}
           renderItem={(link) => (
             <List.Item
@@ -309,16 +353,17 @@ export function TicketDetailPage() {
           </Button>
         </Space>
       </Card>
-
-      <Card>
-        <Tabs
-          items={[
+              </>
+            ),
+          },
             {
               key: 'comments',
               label: 'Comentarios',
               children: (
                 <Space direction="vertical" className={styles.collaboration}>
+                  {collaborationError && <Alert type="error" showIcon message={collaborationError} />}
                   <TextArea
+                    disabled={collaborationLoading}
                     value={commentBody}
                     onChange={(event) => setCommentBody(event.target.value)}
                     placeholder="Escribe un comentario. Usa @usuario para mencionar."
@@ -327,7 +372,7 @@ export function TicketDetailPage() {
                   />
                   <Button
                     type="primary"
-                    disabled={!commentBody.trim()}
+                    disabled={collaborationLoading || !commentBody.trim()}
                     onClick={async () => {
                       try {
                         await createComment(selected.id, commentBody)
@@ -341,7 +386,8 @@ export function TicketDetailPage() {
                     Comentar
                   </Button>
                   <List
-                    dataSource={comments}
+                    loading={collaborationLoading}
+                    dataSource={collaborationLoading || commentsIssueId !== selected.id || collaborationError ? [] : comments}
                     locale={{ emptyText: 'Aun no hay comentarios' }}
                     renderItem={(comment) => (
                       <List.Item
@@ -377,18 +423,22 @@ export function TicketDetailPage() {
               key: 'activity',
               label: 'Actividad',
               children: (
-                <List
-                  dataSource={activities}
-                  locale={{ emptyText: 'Aun no hay actividad' }}
-                  renderItem={(activity) => (
-                    <List.Item>
-                      <Typography.Text>
-                        {activity.action}
-                        {activity.fieldName ? ` - ${activity.fieldName}` : ''}
-                      </Typography.Text>
-                    </List.Item>
-                  )}
-                />
+                <Space direction="vertical" className={styles.collaboration}>
+                  {collaborationError && <Alert type="error" showIcon message={collaborationError} />}
+                  <List
+                    loading={collaborationLoading}
+                    dataSource={collaborationLoading || activitiesIssueId !== selected.id || collaborationError ? [] : activities}
+                    locale={{ emptyText: 'Aun no hay actividad' }}
+                    renderItem={(activity) => (
+                      <List.Item>
+                        <Typography.Text>
+                          {activity.action}
+                          {activity.fieldName ? ` - ${activity.fieldName}` : ''}
+                        </Typography.Text>
+                      </List.Item>
+                    )}
+                  />
+                </Space>
               ),
             },
             {
@@ -396,6 +446,7 @@ export function TicketDetailPage() {
               label: 'Archivos',
               children: (
                 <Space direction="vertical" className={styles.collaboration}>
+                  {attachmentLoadError && <Alert type="error" showIcon message={attachmentLoadError} />}
                   <Upload
                     maxCount={1}
                     disabled={attachmentsLoading}
@@ -406,7 +457,7 @@ export function TicketDetailPage() {
                         setAttachments((current) => [...current, attachment])
                         message.success('Archivo adjuntado')
                       } catch (error) {
-                        message.error(error instanceof Error ? error.message : 'No se pudo adjuntar el archivo')
+                        message.error(extractErrorMessage(error, 'No se pudo adjuntar el archivo'))
                       }
                       return Upload.LIST_IGNORE
                     }}
@@ -415,10 +466,16 @@ export function TicketDetailPage() {
                   </Upload>
                   <List
                     loading={attachmentsLoading}
-                    dataSource={attachments}
+                    dataSource={attachmentsIssueId === selected.id ? attachments : []}
                     locale={{ emptyText: 'Aún no hay archivos' }}
                     renderItem={(attachment) => (
-                      <List.Item actions={[<Button key="download" onClick={() => void attachmentRepository.download(selected.id, attachment)}>Descargar</Button>]}>
+                      <List.Item actions={[<Button key="download" onClick={async () => {
+                        try {
+                          await attachmentRepository.download(selected.id, attachment)
+                        } catch (error) {
+                          message.error(extractErrorMessage(error, 'No se pudo descargar el archivo'))
+                        }
+                      }}>Descargar</Button>]}>
                         <List.Item.Meta title={attachment.fileName} description={`${attachment.contentType} · ${(attachment.sizeBytes / 1024).toFixed(1)} KB`} />
                       </List.Item>
                     )}
@@ -427,8 +484,7 @@ export function TicketDetailPage() {
               ),
             },
           ]}
-        />
-      </Card>
+      />
     </div>
   )
 }

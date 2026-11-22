@@ -45,6 +45,8 @@ src/
 └── styles/                         global, non-component CSS
 ```
 
+El detalle de una incidencia agrupa sus campos y acciones, comentarios, actividad y archivos en pestañas. Las cargas asociadas a una incidencia se descartan al navegar a otra para no mostrar datos obsoletos.
+
 **Dependency rule**: `adapters/in/ui` → `adapters/in/state` → `core/*/application` → `core/*/domain`, and `core/*/application` → `core/*/ports` ← `adapters/out/*`. Nothing under `core/` imports React, Axios, or Ant Design. It is plain, framework-free TypeScript that could be unit-tested or reused outside a browser.
 
 ## Container / presentational split

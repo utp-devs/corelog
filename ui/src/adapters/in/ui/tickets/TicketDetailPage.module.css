@@ -27,3 +27,8 @@
 .editor {
   width: 100%;
 }
+
+.detailTabs {
+  width: 100%;
+  min-width: 0;
+}

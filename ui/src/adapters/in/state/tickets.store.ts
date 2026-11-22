@@ -23,8 +23,11 @@ interface TicketsState {
   tickets: Ticket[]
   selected: Ticket | null
   comments: IssueComment[]
+  commentsIssueId: string | null
   activities: IssueActivity[]
+  activitiesIssueId: string | null
   links: IssueLink[]
+  linksIssueId: string | null
   status: Status
   error: string | null
   fetchTickets: (filter?: ListTicketsFilter) => Promise<void>
@@ -44,12 +47,20 @@ interface TicketsState {
   updateRank: (id: string, rank: string) => Promise<void>
 }
 
+let commentsRequestId = 0
+let activitiesRequestId = 0
+let linksRequestId = 0
+let ticketRequestId = 0
+
 export const useTicketsStore = create<TicketsState>((set, get) => ({
   tickets: [],
   selected: null,
   comments: [],
+  commentsIssueId: null,
   activities: [],
+  activitiesIssueId: null,
   links: [],
+  linksIssueId: null,
   status: 'idle',
   error: null,
 
@@ -64,12 +75,13 @@ export const useTicketsStore = create<TicketsState>((set, get) => ({
   },
 
   fetchTicket: async (id) => {
+    const requestId = ++ticketRequestId
     set({ status: 'loading', error: null })
     try {
       const selected = await ticketService.getById(id)
-      set({ selected, status: 'idle' })
+      if (requestId === ticketRequestId) set({ selected, status: 'idle' })
     } catch (error) {
-      set({ status: 'error', error: extractErrorMessage(error, 'No se pudo cargar la incidencia') })
+      if (requestId === ticketRequestId) set({ status: 'error', error: extractErrorMessage(error, 'No se pudo cargar la incidencia') })
     }
   },
 
@@ -100,35 +112,45 @@ export const useTicketsStore = create<TicketsState>((set, get) => ({
   },
 
   fetchComments: async (id) => {
-    set({ comments: await ticketService.listComments(id) })
+    const requestId = ++commentsRequestId
+    const comments = await ticketService.listComments(id)
+    if (requestId === commentsRequestId) set({ comments, commentsIssueId: id })
   },
 
   createComment: async (id, body) => {
     const comment = await ticketService.createComment(id, body)
-    set({ comments: [...get().comments, comment] })
+    const state = get()
+    if (state.commentsIssueId === id) set({ comments: [...state.comments, comment] })
   },
 
   deleteComment: async (issueId, commentId) => {
     await ticketService.deleteComment(issueId, commentId)
-    set({ comments: get().comments.filter((comment) => comment.id !== commentId) })
+    const state = get()
+    if (state.commentsIssueId === issueId) set({ comments: state.comments.filter((comment) => comment.id !== commentId) })
   },
 
   fetchActivities: async (id) => {
-    set({ activities: await ticketService.listActivities(id) })
+    const requestId = ++activitiesRequestId
+    const activities = await ticketService.listActivities(id)
+    if (requestId === activitiesRequestId) set({ activities, activitiesIssueId: id })
   },
 
   fetchLinks: async (id) => {
-    set({ links: await ticketService.listLinks(id) })
+    const requestId = ++linksRequestId
+    const links = await ticketService.listLinks(id)
+    if (requestId === linksRequestId) set({ links, linksIssueId: id })
   },
 
   createLink: async (id, targetIssueId, kind) => {
     const link = await ticketService.createLink(id, targetIssueId, kind)
-    set({ links: [...get().links, link] })
+    const state = get()
+    if (state.linksIssueId === id) set({ links: [...state.links, link] })
   },
 
   deleteLink: async (id, linkId) => {
     await ticketService.deleteLink(id, linkId)
-    set({ links: get().links.filter((link) => link.id !== linkId) })
+    const state = get()
+    if (state.linksIssueId === id) set({ links: state.links.filter((link) => link.id !== linkId) })
   },
 
   updateRank: async (id, rank) => {

@@ -54,6 +54,9 @@
 - [ ] Un ID de adjunto de otro issue no permite descargarlo (404)
 - [ ] Los bytes permanecen disponibles tras reiniciar el contenedor API (volumen Docker)
 - [ ] Si falla la insercion de metadatos, se elimina el archivo guardado
+- [ ] El detalle presenta cuatro pestanas: Detalle, Comentarios, Actividad y Archivos
+- [ ] Cada lista de colaboracion muestra carga, error y estado vacio
+- [ ] Cambiar de incidencia no muestra comentarios, actividad ni archivos de la anterior
 
 ## Automatizacion
 
