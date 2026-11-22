@@ -471,8 +471,36 @@ func TestTicketService_UpdateDetailsAuthorization(t *testing.T) {
 }
 
 type fakeWorkflowRepo struct {
-	allowed bool
-	roles   []string
+	allowed  bool
+	roles    []string
+	workflow *port.Workflow
+}
+
+func (r *fakeWorkflowRepo) DefaultWorkflow(_ context.Context, _ uuid.UUID) (*port.Workflow, error) {
+	return r.workflow, nil
+}
+
+// TestTicketService_DefaultWorkflow comprueba que lo puede leer un miembro, que un no miembro recibe
+// prohibido y que un proyecto sin flujo responde no encontrado.
+func TestTicketService_DefaultWorkflow(t *testing.T) {
+	ctx := context.Background()
+	workflowRepo := &fakeWorkflowRepo{workflow: &port.Workflow{Name: "Flujo", ProjectID: domain.DefaultProjectID}}
+
+	member := NewTicketService(newFakeTicketRepo(), newFakeUserDirectory(), workflowRepo, contributorRoleResolver())
+	workflow, err := member.DefaultWorkflow(ctx, uuid.New(), "agent", domain.DefaultProjectID)
+	if err != nil || workflow == nil || workflow.Name != "Flujo" {
+		t.Fatalf("member should read the workflow, got %v, %v", workflow, err)
+	}
+
+	outsider := NewTicketService(newFakeTicketRepo(), newFakeUserDirectory(), workflowRepo, fakeProjectRoleResolver{})
+	if _, err := outsider.DefaultWorkflow(ctx, uuid.New(), "agent", domain.DefaultProjectID); apperror.KindOf(err) != apperror.KindForbidden {
+		t.Fatalf("non member should be forbidden, got %v", err)
+	}
+
+	withoutFlow := NewTicketService(newFakeTicketRepo(), newFakeUserDirectory(), &fakeWorkflowRepo{}, contributorRoleResolver())
+	if _, err := withoutFlow.DefaultWorkflow(ctx, uuid.New(), "agent", domain.DefaultProjectID); apperror.KindOf(err) != apperror.KindNotFound {
+		t.Fatalf("project without workflow should be not found, got %v", err)
+	}
 }
 
 func (r *fakeWorkflowRepo) CanTransition(_ context.Context, _ uuid.UUID, _, _ domain.Status, role string) (bool, error) {

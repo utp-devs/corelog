@@ -563,3 +563,21 @@ func (s *TicketService) transitionRole(ctx context.Context, projectID, actorID u
 	}
 	return *role, nil
 }
+
+// DefaultWorkflow devuelve el flujo por defecto del proyecto. Lo puede leer quien puede ver el proyecto.
+func (s *TicketService) DefaultWorkflow(ctx context.Context, actorID uuid.UUID, globalRole string, projectID uuid.UUID) (*port.Workflow, error) {
+	if err := s.requireIssueView(ctx, projectID, actorID, globalRole); err != nil {
+		return nil, err
+	}
+	if s.workflows == nil {
+		return nil, apperror.New(apperror.KindNotFound, "workflow not found")
+	}
+	workflow, err := s.workflows.DefaultWorkflow(ctx, projectID)
+	if err != nil {
+		return nil, err
+	}
+	if workflow == nil {
+		return nil, apperror.New(apperror.KindNotFound, "workflow not found")
+	}
+	return workflow, nil
+}

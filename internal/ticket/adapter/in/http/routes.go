@@ -33,6 +33,10 @@ func (h *Handler) RegisterRoutes(r chi.Router) {
 		r.Post("/{id}/watchers", h.WatchIssue)
 		r.Delete("/{id}/watchers", h.UnwatchIssue)
 	})
+	r.Route("/workflows", func(r chi.Router) {
+		r.Use(appmw.Authenticate(h.jwtSecret))
+		r.Get("/", h.GetDefaultWorkflow)
+	})
 	r.Route("/saved-filters", func(r chi.Router) {
 		r.Use(appmw.Authenticate(h.jwtSecret))
 		r.Get("/", h.ListSavedFilters)

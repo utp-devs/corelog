@@ -678,3 +678,50 @@ func atoiOrDefault(s string, fallback int) int {
 	}
 	return v
 }
+
+type workflowResponse struct {
+	ID          string                       `json:"id"`
+	ProjectID   string                       `json:"project_id"`
+	Name        string                       `json:"name"`
+	Transitions []workflowTransitionResponse `json:"transitions"`
+}
+
+type workflowTransitionResponse struct {
+	From  string   `json:"from_status"`
+	To    string   `json:"to_status"`
+	Roles []string `json:"allowed_roles"`
+}
+
+// GetDefaultWorkflow devuelve el flujo por defecto del proyecto indicado en project_id.
+func (h *Handler) GetDefaultWorkflow(w http.ResponseWriter, r *http.Request) {
+	actorID, ok := appmw.UserIDFromContext(r.Context())
+	if !ok {
+		httpresponse.Error(w, apperror.New(apperror.KindUnauthorized, "not authenticated"))
+		return
+	}
+	globalRole, _ := appmw.RoleFromContext(r.Context())
+	projectID, err := uuid.Parse(r.URL.Query().Get("project_id"))
+	if err != nil {
+		httpresponse.Error(w, apperror.New(apperror.KindValidation, "invalid project id"))
+		return
+	}
+	workflow, err := h.service.DefaultWorkflow(r.Context(), actorID, globalRole, projectID)
+	if err != nil {
+		httpresponse.Error(w, err)
+		return
+	}
+	response := workflowResponse{
+		ID:          workflow.ID.String(),
+		ProjectID:   workflow.ProjectID.String(),
+		Name:        workflow.Name,
+		Transitions: make([]workflowTransitionResponse, 0, len(workflow.Transitions)),
+	}
+	for _, transition := range workflow.Transitions {
+		response.Transitions = append(response.Transitions, workflowTransitionResponse{
+			From:  string(transition.From),
+			To:    string(transition.To),
+			Roles: transition.Roles,
+		})
+	}
+	httpresponse.JSON(w, http.StatusOK, response)
+}

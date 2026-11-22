@@ -42,6 +42,22 @@ type IssueLinkRepository interface {
 
 type WorkflowRepository interface {
 	CanTransition(ctx context.Context, projectID uuid.UUID, fromStatus, toStatus domain.Status, actorRole string) (bool, error)
+	DefaultWorkflow(ctx context.Context, projectID uuid.UUID) (*Workflow, error)
+}
+
+// Workflow es el flujo por defecto de un proyecto con sus transiciones permitidas.
+type Workflow struct {
+	ID          uuid.UUID
+	ProjectID   uuid.UUID
+	Name        string
+	Transitions []WorkflowTransition
+}
+
+// WorkflowTransition es un cambio de estado permitido y los roles de proyecto que lo pueden ejecutar.
+type WorkflowTransition struct {
+	From  domain.Status
+	To    domain.Status
+	Roles []string
 }
 
 type IssueWatcherRepository interface {

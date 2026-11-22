@@ -748,6 +748,59 @@ paths:
                     $ref: '#/components/schemas/PageMeta'
         '401':
           $ref: '#/components/responses/Unauthorized'
+  /workflows:
+    get:
+      tags: [tickets]
+      operationId: getDefaultWorkflow
+      summary: Flujo por defecto de un proyecto
+      description: Devuelve las transiciones de estado permitidas y los roles de proyecto que pueden ejecutarlas. Requiere poder ver el proyecto.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: project_id
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Flujo por defecto
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                      project_id:
+                        type: string
+                        format: uuid
+                      name:
+                        type: string
+                      transitions:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            from_status:
+                              type: string
+                            to_status:
+                              type: string
+                            allowed_roles:
+                              type: array
+                              items:
+                                type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Sin permiso para ver el proyecto
+        '404':
+          description: El proyecto no tiene flujo por defecto
   /saved-filters:
     get:
       tags: [tickets]
