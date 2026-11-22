@@ -75,7 +75,8 @@ func run() error {
 		log.Warn("ticket module using in-memory repository")
 	}
 	userDirectory := ticketdirectory.NewUserDirectory(db)
-	ticketModule := ticket.NewModule(ticketRepo, userDirectory, cfg.Auth.JWTSecret)
+	collaborationRepo := ticketpostgres.NewCollaborationRepository(db)
+	ticketModule := ticket.NewModule(ticketRepo, userDirectory, collaborationRepo, cfg.Auth.JWTSecret)
 
 	router := httpserver.NewRouter(cfg.Server)
 	router.Route("/api/v1", func(r chi.Router) {
