@@ -45,13 +45,22 @@ func (r *memRepo) Save(_ context.Context, t *domain.Team) error {
 	return nil
 }
 
-func (r *memRepo) FindByID(_ context.Context, id uuid.UUID) (*domain.Team, error) {
+// withView fills the read-side values the repository computes: the member count and the viewer's role.
+func withView(t *domain.Team, members map[uuid.UUID]*domain.Member, viewerID uuid.UUID) *domain.Team {
+	c := *t
+	c.MemberCount = len(members)
+	if m, ok := members[viewerID]; ok {
+		c.MyRole = m.Role
+	}
+	return &c
+}
+
+func (r *memRepo) FindByID(_ context.Context, id, viewerID uuid.UUID) (*domain.Team, error) {
 	t, ok := r.teams[id]
 	if !ok {
 		return nil, domain.ErrTeamNotFound
 	}
-	c := *t
-	return &c, nil
+	return withView(t, r.members[id], viewerID), nil
 }
 
 func (r *memRepo) FindByName(_ context.Context, name string) (*domain.Team, error) {
@@ -64,23 +73,21 @@ func (r *memRepo) FindByName(_ context.Context, name string) (*domain.Team, erro
 	return nil, domain.ErrTeamNotFound
 }
 
-func (r *memRepo) FindByOrganization(_ context.Context, orgID uuid.UUID) ([]*domain.Team, error) {
+func (r *memRepo) FindByOrganization(_ context.Context, orgID, viewerID uuid.UUID) ([]*domain.Team, error) {
 	var out []*domain.Team
 	for _, t := range r.teams {
 		if t.OrganizationID == orgID {
-			c := *t
-			out = append(out, &c)
+			out = append(out, withView(t, r.members[t.ID], viewerID))
 		}
 	}
 	return out, nil
 }
 
-func (r *memRepo) FindByOrganizationAndMember(_ context.Context, orgID, userID uuid.UUID) ([]*domain.Team, error) {
+func (r *memRepo) FindByOrganizationAndMember(_ context.Context, orgID, memberID, viewerID uuid.UUID) ([]*domain.Team, error) {
 	var out []*domain.Team
 	for _, t := range r.teams {
-		if _, ok := r.members[t.ID][userID]; ok && t.OrganizationID == orgID {
-			c := *t
-			out = append(out, &c)
+		if _, ok := r.members[t.ID][memberID]; ok && t.OrganizationID == orgID {
+			out = append(out, withView(t, r.members[t.ID], viewerID))
 		}
 	}
 	return out, nil
@@ -267,6 +274,10 @@ func TestTeamHTTP_Handlers(t *testing.T) {
 		body := env.Data
 		if body["organization_id"] != f.orgID.String() || body["description"] != "Roadmap" || body["avatar_color"] != "#3366FF" || body["created_by"] != f.memberID.String() {
 			t.Errorf("unexpected body %v", body)
+		}
+		// The creator is the only maintainer, so the read-side values are known on create.
+		if body["member_count"] != float64(1) || body["my_role"] != "maintainer" {
+			t.Errorf("member_count/my_role = %v/%v, want 1/maintainer", body["member_count"], body["my_role"])
 		}
 	})
 

@@ -19,10 +19,12 @@ type Organization struct {
 	Name        string
 	Description string
 	Settings    Settings
-	CreatedBy   uuid.UUID
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
-	DeletedAt   *time.Time
+	// HasLogo reports whether the organization has a logo. The storage key is never part of the domain.
+	HasLogo   bool
+	CreatedBy uuid.UUID
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	DeletedAt *time.Time
 }
 
 // Member is a user's membership in an organization. The pair (OrganizationID, UserID) is the key.

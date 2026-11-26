@@ -38,12 +38,22 @@ func (r *fakeRepo) Save(_ context.Context, t *domain.Team) error {
 	return nil
 }
 
-func (r *fakeRepo) FindByID(_ context.Context, id uuid.UUID) (*domain.Team, error) {
+// withView fills the read-side values the repository computes: the member count and the viewer's role.
+func withView(t *domain.Team, members map[uuid.UUID]*domain.Member, viewerID uuid.UUID) *domain.Team {
+	c := *t
+	c.MemberCount = len(members)
+	if m, ok := members[viewerID]; ok {
+		c.MyRole = m.Role
+	}
+	return &c
+}
+
+func (r *fakeRepo) FindByID(_ context.Context, id, viewerID uuid.UUID) (*domain.Team, error) {
 	t, ok := r.teams[id]
 	if !ok {
 		return nil, domain.ErrTeamNotFound
 	}
-	return copyTeam(t), nil
+	return withView(t, r.members[id], viewerID), nil
 }
 
 func (r *fakeRepo) FindByName(_ context.Context, name string) (*domain.Team, error) {
@@ -55,21 +65,21 @@ func (r *fakeRepo) FindByName(_ context.Context, name string) (*domain.Team, err
 	return nil, domain.ErrTeamNotFound
 }
 
-func (r *fakeRepo) FindByOrganization(_ context.Context, orgID uuid.UUID) ([]*domain.Team, error) {
+func (r *fakeRepo) FindByOrganization(_ context.Context, orgID, viewerID uuid.UUID) ([]*domain.Team, error) {
 	var out []*domain.Team
 	for _, t := range r.teams {
 		if t.OrganizationID == orgID {
-			out = append(out, copyTeam(t))
+			out = append(out, withView(t, r.members[t.ID], viewerID))
 		}
 	}
 	return out, nil
 }
 
-func (r *fakeRepo) FindByOrganizationAndMember(_ context.Context, orgID, userID uuid.UUID) ([]*domain.Team, error) {
+func (r *fakeRepo) FindByOrganizationAndMember(_ context.Context, orgID, memberID, viewerID uuid.UUID) ([]*domain.Team, error) {
 	var out []*domain.Team
 	for _, t := range r.teams {
-		if _, ok := r.members[t.ID][userID]; ok && t.OrganizationID == orgID {
-			out = append(out, copyTeam(t))
+		if _, ok := r.members[t.ID][memberID]; ok && t.OrganizationID == orgID {
+			out = append(out, withView(t, r.members[t.ID], viewerID))
 		}
 	}
 	return out, nil

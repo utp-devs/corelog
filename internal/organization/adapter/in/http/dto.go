@@ -77,6 +77,7 @@ type organizationResponse struct {
 	Name        string           `json:"name"`
 	Description string           `json:"description"`
 	Settings    settingsResponse `json:"settings"`
+	HasLogo     bool             `json:"has_logo"`
 	Role        string           `json:"role,omitempty"`
 	CreatedAt   time.Time        `json:"created_at"`
 	UpdatedAt   time.Time        `json:"updated_at"`
@@ -167,6 +168,7 @@ func toOrganizationResponse(o *domain.Organization, role domain.Role) organizati
 		Name:        o.Name,
 		Description: o.Description,
 		Settings:    toSettingsResponse(o.Settings),
+		HasLogo:     o.HasLogo,
 		Role:        string(role),
 		CreatedAt:   o.CreatedAt,
 		UpdatedAt:   o.UpdatedAt,

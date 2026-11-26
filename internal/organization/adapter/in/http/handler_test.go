@@ -277,7 +277,7 @@ func TestCreateOrganizationReturns201WithSnakeCaseShape(t *testing.T) {
 		t.Fatalf("status %d: %s", rec.Code, rec.Body.String())
 	}
 	keys := dataKeys(t, rec)
-	for _, k := range []string{"id", "slug", "name", "description", "settings", "role", "created_at", "updated_at"} {
+	for _, k := range []string{"id", "slug", "name", "description", "settings", "has_logo", "role", "created_at", "updated_at"} {
 		if _, ok := keys[k]; !ok {
 			t.Errorf("organization misses %q", k)
 		}
@@ -612,5 +612,25 @@ func TestDeleteOrganizationRequiresConfirmation(t *testing.T) {
 	rec = doRequest(t, router, http.MethodDelete, path, tokenFor(t, uuid.New()), `{"confirm_slug":"acme"}`)
 	if rec.Code != http.StatusNoContent {
 		t.Fatalf("status %d", rec.Code)
+	}
+}
+
+// TestOrganizationExposesHasLogoWithoutLogoKey checks that has_logo reflects the domain flag and that the
+// storage key never appears in the response.
+func TestOrganizationExposesHasLogoWithoutLogoKey(t *testing.T) {
+	org := sampleOrg()
+	org.HasLogo = true
+	router := newTestRouter(&fakeService{org: org}, fakeEmails{}, "")
+	rec := doRequest(t, router, http.MethodPost, "/api/v1/organizations", tokenFor(t, uuid.New()), `{"name":"Acme"}`)
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("status %d: %s", rec.Code, rec.Body.String())
+	}
+	keys := dataKeys(t, rec)
+	var hasLogo bool
+	if err := json.Unmarshal(keys["has_logo"], &hasLogo); err != nil || !hasLogo {
+		t.Fatalf("has_logo = %s, err = %v; want true", keys["has_logo"], err)
+	}
+	if _, ok := keys["logo_key"]; ok {
+		t.Fatal("logo_key must never be exposed")
 	}
 }

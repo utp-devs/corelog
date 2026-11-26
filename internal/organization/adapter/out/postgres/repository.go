@@ -44,6 +44,7 @@ type orgRow struct {
 	Name        string        `db:"name"`
 	Description string        `db:"description"`
 	Settings    []byte        `db:"settings"`
+	HasLogo     bool          `db:"has_logo"`
 	CreatedBy   uuid.NullUUID `db:"created_by"`
 	CreatedAt   time.Time     `db:"created_at"`
 	UpdatedAt   time.Time     `db:"updated_at"`
@@ -76,7 +77,8 @@ type settingsJSON struct {
 	Timezone                 string  `json:"timezone"`
 }
 
-const orgColumns = `o.id, o.slug, o.name, o.description, o.settings, o.created_by, o.created_at, o.updated_at, o.deleted_at`
+const orgColumns = `o.id, o.slug, o.name, o.description, o.settings, o.created_by, o.created_at, o.updated_at, o.deleted_at,
+    (o.logo_key IS NOT NULL) AS has_logo`
 
 const memberColumns = `m.organization_id, m.user_id, m.role, m.joined_at`
 
@@ -125,6 +127,7 @@ func (row orgRow) toDomain() (*domain.Organization, error) {
 		Name:        row.Name,
 		Description: row.Description,
 		Settings:    settings,
+		HasLogo:     row.HasLogo,
 		CreatedAt:   row.CreatedAt.UTC(),
 		UpdatedAt:   row.UpdatedAt.UTC(),
 	}

@@ -39,6 +39,8 @@ type teamResponse struct {
 	CreatedBy      *string   `json:"created_by"`
 	CreatedAt      time.Time `json:"created_at"`
 	UpdatedAt      time.Time `json:"updated_at"`
+	MemberCount    int       `json:"member_count"`
+	MyRole         *string   `json:"my_role"`
 }
 
 type memberResponse struct {
@@ -70,6 +72,8 @@ func toTeamResponse(t *domain.Team) teamResponse {
 		CreatedBy:      createdBy,
 		CreatedAt:      t.CreatedAt,
 		UpdatedAt:      t.UpdatedAt,
+		MemberCount:    t.MemberCount,
+		MyRole:         optionalString(t.MyRole),
 	}
 }
 

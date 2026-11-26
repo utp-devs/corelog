@@ -13,11 +13,14 @@ import (
 // id from another organization never matches.
 type Repository interface {
 	Save(ctx context.Context, t *domain.Team) error
-	FindByID(ctx context.Context, id uuid.UUID) (*domain.Team, error)
+	// FindByID returns the team with MemberCount and MyRole filled for viewerID, computed in the same query.
+	FindByID(ctx context.Context, id, viewerID uuid.UUID) (*domain.Team, error)
 	FindByName(ctx context.Context, name string) (*domain.Team, error)
-	FindByOrganization(ctx context.Context, organizationID uuid.UUID) ([]*domain.Team, error)
-	// FindByOrganizationAndMember returns the teams of the organization that userID belongs to.
-	FindByOrganizationAndMember(ctx context.Context, organizationID, userID uuid.UUID) ([]*domain.Team, error)
+	// FindByOrganization returns the teams of the organization with MemberCount and MyRole filled for viewerID.
+	FindByOrganization(ctx context.Context, organizationID, viewerID uuid.UUID) ([]*domain.Team, error)
+	// FindByOrganizationAndMember returns the teams of the organization that memberID belongs to, with
+	// MemberCount and MyRole filled for viewerID.
+	FindByOrganizationAndMember(ctx context.Context, organizationID, memberID, viewerID uuid.UUID) ([]*domain.Team, error)
 	Update(ctx context.Context, t *domain.Team) error
 	Delete(ctx context.Context, organizationID, id uuid.UUID) error
 

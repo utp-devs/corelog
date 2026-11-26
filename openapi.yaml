@@ -3510,7 +3510,7 @@ components:
           description: Set to null to remove the user from their current team.
     Team:
       type: object
-      required: [id, organization_id, name, description, avatar_color, created_by, created_at, updated_at]
+      required: [id, organization_id, name, description, avatar_color, created_by, created_at, updated_at, member_count, my_role]
       properties:
         id:
           type: string
@@ -3542,6 +3542,15 @@ components:
         updated_at:
           type: string
           format: date-time
+        member_count:
+          type: integer
+          minimum: 0
+          description: Número de miembros del equipo.
+        my_role:
+          type: string
+          nullable: true
+          enum: [maintainer, member]
+          description: Rol del usuario autenticado en el equipo (maintainer o member), o null si no es miembro del equipo.
     TeamMemberRole:
       type: string
       enum: [maintainer, member]
@@ -4196,7 +4205,7 @@ components:
                     example: un correo valido es obligatorio
     Organization:
       type: object
-      required: [id, slug, name, description, settings, created_at, updated_at]
+      required: [id, slug, name, description, settings, has_logo, created_at, updated_at]
       properties:
         id:
           type: string
@@ -4212,6 +4221,9 @@ components:
           description: Descripción de la organización (puede estar vacía).
         settings:
           $ref: '#/components/schemas/OrganizationSettings'
+        has_logo:
+          type: boolean
+          description: Indica si la organización tiene logo. La URL de la imagen es GET /organizations/{org}/logo.
         role:
           type: string
           enum: [owner, admin, member, guest]

@@ -69,3 +69,56 @@ func TestLogoRepositoryUnknownAndDeletedOrganizations(t *testing.T) {
 		t.Fatalf("get on deleted: key = %v, err = %v; want nil, nil", got, err)
 	}
 }
+
+// TestOrganizationHasLogoFollowsLogoKey checks that every organization read exposes has_logo derived from
+// logo_key, and that the key itself never reaches the domain model.
+func TestOrganizationHasLogoFollowsLogoKey(t *testing.T) {
+	db := testdb.New(t)
+	ctx := context.Background()
+	owner := newUser(t, db)
+	orgs := postgres.NewRepository(db)
+	org := newOrg(t, orgs, owner, "Con logo", "con-logo-"+uuid.NewString()[:8])
+	if org.HasLogo {
+		t.Fatalf("created organization: HasLogo = true, want false")
+	}
+	ownerMember, err := domain.NewMember(org.ID, owner, domain.RoleOwner, testNow)
+	if err != nil {
+		t.Fatalf("new member: %v", err)
+	}
+	if err := orgs.AddMember(ctx, ownerMember); err != nil {
+		t.Fatalf("add owner: %v", err)
+	}
+	repo := postgres.NewLogoRepository(db)
+	key := "77777777777777777777777777777777"
+
+	if _, err := repo.SetLogoKey(ctx, org.ID, &key); err != nil {
+		t.Fatalf("set logo: %v", err)
+	}
+	got, err := orgs.GetByID(ctx, org.ID)
+	if err != nil || !got.HasLogo {
+		t.Fatalf("get after set: HasLogo = %v, err = %v; want true", got != nil && got.HasLogo, err)
+	}
+	list, err := orgs.ListByUser(ctx, owner)
+	if err != nil {
+		t.Fatalf("list after set: %v", err)
+	}
+	found := false
+	for _, m := range list {
+		if m.Organization.ID == org.ID {
+			found = true
+			if !m.Organization.HasLogo {
+				t.Fatalf("list after set: HasLogo = false, want true")
+			}
+		}
+	}
+	if !found {
+		t.Fatalf("list after set: organization %s missing", org.ID)
+	}
+	if _, err := repo.SetLogoKey(ctx, org.ID, nil); err != nil {
+		t.Fatalf("clear logo: %v", err)
+	}
+	got, err = orgs.GetByIDForUpdate(ctx, org.ID)
+	if err != nil || got.HasLogo {
+		t.Fatalf("get for update after clear: HasLogo = %v, err = %v; want false", got != nil && got.HasLogo, err)
+	}
+}

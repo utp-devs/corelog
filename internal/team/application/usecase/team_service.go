@@ -68,11 +68,14 @@ func (s *TeamService) Create(ctx context.Context, actorID uuid.UUID, in port.Cre
 	if err != nil {
 		return nil, err
 	}
+	// The creator is the only member, so the read-side values are known without another query.
+	team.MemberCount = 1
+	team.MyRole = domain.RoleMaintainer
 	return team, nil
 }
 
 func (s *TeamService) Get(ctx context.Context, actorID, id uuid.UUID) (*domain.Team, error) {
-	team, err := s.repo.FindByID(ctx, id)
+	team, err := s.repo.FindByID(ctx, id, actorID)
 	if err != nil {
 		return nil, err
 	}
@@ -94,13 +97,13 @@ func (s *TeamService) List(ctx context.Context, actorID, organizationID, memberI
 		return nil, domain.ErrOrganizationNotFound
 	}
 	if memberID == uuid.Nil {
-		return s.repo.FindByOrganization(ctx, organizationID)
+		return s.repo.FindByOrganization(ctx, organizationID, actorID)
 	}
-	return s.repo.FindByOrganizationAndMember(ctx, organizationID, memberID)
+	return s.repo.FindByOrganizationAndMember(ctx, organizationID, memberID, actorID)
 }
 
 func (s *TeamService) Update(ctx context.Context, actorID, id uuid.UUID, patch domain.TeamPatch) (*domain.Team, error) {
-	team, err := s.repo.FindByID(ctx, id)
+	team, err := s.repo.FindByID(ctx, id, actorID)
 	if err != nil {
 		return nil, err
 	}
@@ -122,7 +125,7 @@ func (s *TeamService) Update(ctx context.Context, actorID, id uuid.UUID, patch d
 }
 
 func (s *TeamService) Delete(ctx context.Context, actorID, id uuid.UUID) error {
-	team, err := s.repo.FindByID(ctx, id)
+	team, err := s.repo.FindByID(ctx, id, actorID)
 	if err != nil {
 		return err
 	}
@@ -133,7 +136,7 @@ func (s *TeamService) Delete(ctx context.Context, actorID, id uuid.UUID) error {
 }
 
 func (s *TeamService) ListMembers(ctx context.Context, actorID, teamID uuid.UUID) ([]*domain.Member, error) {
-	team, err := s.repo.FindByID(ctx, teamID)
+	team, err := s.repo.FindByID(ctx, teamID, actorID)
 	if err != nil {
 		return nil, err
 	}
@@ -144,7 +147,7 @@ func (s *TeamService) ListMembers(ctx context.Context, actorID, teamID uuid.UUID
 }
 
 func (s *TeamService) AddMember(ctx context.Context, actorID, teamID, userID uuid.UUID, role string) (*domain.Member, error) {
-	team, err := s.repo.FindByID(ctx, teamID)
+	team, err := s.repo.FindByID(ctx, teamID, actorID)
 	if err != nil {
 		return nil, err
 	}
@@ -165,7 +168,7 @@ func (s *TeamService) AddMember(ctx context.Context, actorID, teamID, userID uui
 }
 
 func (s *TeamService) UpdateMemberRole(ctx context.Context, actorID, teamID, userID uuid.UUID, role string) (*domain.Member, error) {
-	team, err := s.repo.FindByID(ctx, teamID)
+	team, err := s.repo.FindByID(ctx, teamID, actorID)
 	if err != nil {
 		return nil, err
 	}
@@ -182,7 +185,7 @@ func (s *TeamService) UpdateMemberRole(ctx context.Context, actorID, teamID, use
 }
 
 func (s *TeamService) RemoveMember(ctx context.Context, actorID, teamID, userID uuid.UUID) error {
-	team, err := s.repo.FindByID(ctx, teamID)
+	team, err := s.repo.FindByID(ctx, teamID, actorID)
 	if err != nil {
 		return err
 	}

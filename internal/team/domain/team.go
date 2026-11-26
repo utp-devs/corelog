@@ -44,6 +44,10 @@ type Team struct {
 	CreatedBy      uuid.UUID
 	CreatedAt      time.Time
 	UpdatedAt      time.Time
+	// MemberCount and MyRole are read-side values filled by the repository: the number of team members and
+	// the viewer's role in the team (RoleMaintainer, RoleMember, or empty when the viewer is not a member).
+	MemberCount int
+	MyRole      string
 }
 
 // NewTeamInput carries the attributes required to create a team.

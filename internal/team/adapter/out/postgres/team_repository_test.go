@@ -61,7 +61,7 @@ func TestTeamRepository_SaveAndFind(t *testing.T) {
 		t.Fatal("database must generate the id")
 	}
 
-	got, err := repo.FindByID(ctx, team.ID)
+	got, err := repo.FindByID(ctx, team.ID, creator)
 	if err != nil {
 		t.Fatalf("find: %v", err)
 	}
@@ -69,7 +69,7 @@ func TestTeamRepository_SaveAndFind(t *testing.T) {
 		t.Errorf("round trip lost fields: %+v", got)
 	}
 
-	if _, err := repo.FindByID(ctx, uuid.New()); !errors.Is(err, domain.ErrTeamNotFound) {
+	if _, err := repo.FindByID(ctx, uuid.New(), creator); !errors.Is(err, domain.ErrTeamNotFound) {
 		t.Errorf("missing team: got %v", err)
 	}
 }
@@ -110,7 +110,7 @@ func TestTeamRepository_CrossOrganizationIsolation(t *testing.T) {
 		}
 	}
 
-	list, err := repo.FindByOrganization(ctx, orgA)
+	list, err := repo.FindByOrganization(ctx, orgA, user)
 	if err != nil {
 		t.Fatalf("list: %v", err)
 	}
@@ -223,15 +223,67 @@ func TestTeamRepository_FindByOrganizationAndMember(t *testing.T) {
 		}
 	}
 
-	list, err := repo.FindByOrganizationAndMember(ctx, orgA, user)
+	list, err := repo.FindByOrganizationAndMember(ctx, orgA, user, user)
 	if err != nil {
 		t.Fatalf("filter: %v", err)
 	}
 	if len(list) != 1 || list[0].ID != inA.ID {
 		t.Fatalf("filter of org A = %d teams, want only the team of the user", len(list))
 	}
-	list, err = repo.FindByOrganizationAndMember(ctx, orgA, insertUser(t, repo, "nobody@example.test"))
+	nobody := insertUser(t, repo, "filter-nobody.test")
+	list, err = repo.FindByOrganizationAndMember(ctx, orgA, nobody, nobody)
 	if err != nil || len(list) != 0 {
 		t.Fatalf("user without teams: %v / %d", err, len(list))
+	}
+}
+
+// TestTeamRepository_ReadSideValues checks member_count and my_role: the count covers every member, and the
+// role is the viewer's own (empty for a viewer who is not on the team), on the single-team and list reads.
+func TestTeamRepository_ReadSideValues(t *testing.T) {
+	db := testdb.New(t)
+	repo := NewTeamRepository(db)
+	ctx := context.Background()
+	maintainer := insertUser(t, repo, "values-maint@example.test")
+	member := insertUser(t, repo, "values-member@example.test")
+	outsider := insertUser(t, repo, "values-outsider@example.test")
+	org := insertOrg(t, repo, "org-values")
+
+	team := newTeam(t, org, maintainer, "Valores")
+	if err := repo.Save(ctx, team); err != nil {
+		t.Fatalf("save: %v", err)
+	}
+	for _, m := range []struct {
+		user uuid.UUID
+		role string
+	}{{maintainer, domain.RoleMaintainer}, {member, domain.RoleMember}} {
+		mem, _ := domain.NewMember(team.ID, m.user, m.role)
+		if err := repo.AddMember(ctx, org, mem); err != nil {
+			t.Fatalf("add member: %v", err)
+		}
+	}
+
+	cases := []struct {
+		viewer uuid.UUID
+		role   string
+	}{
+		{maintainer, domain.RoleMaintainer},
+		{member, domain.RoleMember},
+		{outsider, ""},
+	}
+	for _, tc := range cases {
+		got, err := repo.FindByID(ctx, team.ID, tc.viewer)
+		if err != nil {
+			t.Fatalf("find by id: %v", err)
+		}
+		if got.MemberCount != 2 || got.MyRole != tc.role {
+			t.Errorf("find by id for %s: member_count=%d my_role=%q, want 2 and %q", tc.viewer, got.MemberCount, got.MyRole, tc.role)
+		}
+		list, err := repo.FindByOrganization(ctx, org, tc.viewer)
+		if err != nil || len(list) != 1 {
+			t.Fatalf("list: %v / %d", err, len(list))
+		}
+		if list[0].MemberCount != 2 || list[0].MyRole != tc.role {
+			t.Errorf("list for %s: member_count=%d my_role=%q, want 2 and %q", tc.viewer, list[0].MemberCount, list[0].MyRole, tc.role)
+		}
 	}
 }

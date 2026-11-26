@@ -71,11 +71,11 @@ func (r *TeamRepository) Save(ctx context.Context, t *domain.Team) error {
 	return nil
 }
 
-func (r *TeamRepository) FindByID(ctx context.Context, id uuid.UUID) (*domain.Team, error) {
+func (r *TeamRepository) FindByID(ctx context.Context, id, viewerID uuid.UUID) (*domain.Team, error) {
 	var row teamRow
-	const query = `SELECT ` + teamColumns + ` FROM teams WHERE id = $1`
+	query := `SELECT ` + teamViewColumns("$2") + ` FROM teams t WHERE t.id = $1`
 
-	if err := sqlx.GetContext(ctx, r.exec(ctx), &row, query, id); err != nil {
+	if err := sqlx.GetContext(ctx, r.exec(ctx), &row, query, id, viewerID); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, domain.ErrTeamNotFound
 		}
@@ -97,11 +97,11 @@ func (r *TeamRepository) FindByName(ctx context.Context, name string) (*domain.T
 	return row.toDomain(), nil
 }
 
-func (r *TeamRepository) FindByOrganization(ctx context.Context, organizationID uuid.UUID) ([]*domain.Team, error) {
+func (r *TeamRepository) FindByOrganization(ctx context.Context, organizationID, viewerID uuid.UUID) ([]*domain.Team, error) {
 	var rows []teamRow
-	const query = `SELECT ` + teamColumns + ` FROM teams WHERE organization_id = $1 ORDER BY name ASC`
+	query := `SELECT ` + teamViewColumns("$2") + ` FROM teams t WHERE t.organization_id = $1 ORDER BY t.name ASC`
 
-	if err := sqlx.SelectContext(ctx, r.exec(ctx), &rows, query, organizationID); err != nil {
+	if err := sqlx.SelectContext(ctx, r.exec(ctx), &rows, query, organizationID, viewerID); err != nil {
 		return nil, apperror.Wrap(apperror.KindInternal, "failed to list teams", err)
 	}
 	teams := make([]*domain.Team, 0, len(rows))
@@ -112,14 +112,14 @@ func (r *TeamRepository) FindByOrganization(ctx context.Context, organizationID 
 }
 
 // FindByOrganizationAndMember returns the teams of the organization that userID belongs to, by name.
-func (r *TeamRepository) FindByOrganizationAndMember(ctx context.Context, organizationID, userID uuid.UUID) ([]*domain.Team, error) {
+func (r *TeamRepository) FindByOrganizationAndMember(ctx context.Context, organizationID, memberID, viewerID uuid.UUID) ([]*domain.Team, error) {
 	var rows []teamRow
-	const query = `SELECT ` + teamColumns + ` FROM teams t
+	query := `SELECT ` + teamViewColumns("$3") + ` FROM teams t
 		WHERE t.organization_id = $1
 		  AND EXISTS (SELECT 1 FROM team_members tm WHERE tm.team_id = t.id AND tm.user_id = $2)
 		ORDER BY t.name ASC`
 
-	if err := sqlx.SelectContext(ctx, r.exec(ctx), &rows, query, organizationID, userID); err != nil {
+	if err := sqlx.SelectContext(ctx, r.exec(ctx), &rows, query, organizationID, memberID, viewerID); err != nil {
 		return nil, apperror.Wrap(apperror.KindInternal, "failed to list teams of member", err)
 	}
 	teams := make([]*domain.Team, 0, len(rows))
