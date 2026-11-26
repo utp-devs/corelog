@@ -23,7 +23,7 @@ export function OnboardingPage() {
 
   return (
     <main className={styles.page}>
-      <PageContainer variant="reading" pageName="onboarding" ready>
+      <PageContainer variant="reading" pageName="onboarding" ready fill>
         <div className={styles.wizard}>
           <header className={styles.header}>
             <img src="/brand/corelog-banner-480.png" alt="CoreLog" width={128} height={32} className={styles.logo} />
@@ -53,6 +53,7 @@ export function OnboardingPage() {
             </ol>
           </nav>
 
+          <div className={styles.stepBody}>
           {step === 0 && <ChooseStep onCreate={() => setStep(1)} />}
 
           {step === 1 && (
@@ -90,6 +91,7 @@ export function OnboardingPage() {
               </Button>
             </section>
           )}
+          </div>
         </div>
       </PageContainer>
     </main>

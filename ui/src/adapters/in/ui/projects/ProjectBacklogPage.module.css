@@ -12,6 +12,8 @@
 
 .summary {
   display: block;
+  min-width: 0;
+  max-width: 100%;
   overflow: hidden;
   color: var(--cl-brand);
   text-overflow: ellipsis;
@@ -27,7 +29,7 @@
 .mobileCard {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  align-items: stretch;
   gap: var(--cl-space-2);
   min-width: 0;
 }
@@ -44,5 +46,10 @@
   .moveButtons :global(.ant-btn) {
     min-width: 32px;
     min-height: 32px;
+  }
+
+  /* The title link is a 32 px tap target. */
+  .summary {
+    line-height: var(--cl-hit-min-mobile);
   }
 }

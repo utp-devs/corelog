@@ -2,6 +2,8 @@
 .frame {
   display: flex;
   flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
   gap: var(--cl-space-4);
   box-sizing: border-box;
   width: 100%;
@@ -35,6 +37,8 @@
 
 .grid {
   display: grid;
+  flex: 1 1 auto;
+  grid-auto-rows: minmax(96px, 1fr);
   grid-template-columns: repeat(7, minmax(0, 1fr));
   width: 100%;
   min-width: 0;
@@ -136,4 +140,26 @@
     min-height: 32px;
     line-height: 32px;
   }
+}
+
+/* The list and the empty state sit on a surface panel that fills the rest of the page (no bare band). */
+.list {
+  flex: 1 1 auto;
+  align-content: start;
+  min-height: 0;
+  padding: var(--cl-space-4);
+  border: 1px solid var(--cl-border);
+  border-radius: var(--cl-radius-lg);
+  background: var(--cl-bg-surface);
+}
+
+.panel {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  padding: var(--cl-space-4);
+  border: 1px solid var(--cl-border);
+  border-radius: var(--cl-radius-lg);
+  background: var(--cl-bg-surface);
 }

@@ -3,6 +3,7 @@ import dayjs from 'dayjs'
 import type { ReactNode } from 'react'
 
 import type { Ticket } from '@/core/tickets/domain/ticket'
+import { useMediaQuery } from '@/shared/hooks/useMediaQuery'
 import { DataTable, type DataTableColumn, type DataTablePagination } from '@/shared/ui/DataTable'
 import { IssueKey } from '@/shared/ui/IssueKey'
 import { Lozenge } from '@/shared/ui/Lozenge'
@@ -39,11 +40,13 @@ function StatusLozenge({ ticket }: { ticket: Ticket }) {
 
 /** Lista de incidencias sobre DataTable: en escritorio tabla, por debajo de 768 px tarjetas. */
 export function TicketList({ tickets, loading, error, onRetry, onSelect, onMoveUp, onMoveDown, emptyState, pagination, fill = false }: TicketListProps) {
-  const columns: DataTableColumn<Ticket>[] = [
+  // Between 768 and 1023 px the last column is left out so the fixed columns fit the table width.
+  const narrowTable = useMediaQuery('(max-width: 1023.98px)')
+  const allColumns: DataTableColumn<Ticket>[] = [
     {
       key: 'key',
       title: 'Clave',
-      width: 150,
+      width: 130,
       render: (_, ticket) => (
         <IssueKey
           issueKey={issueKeyOf(ticket.id)}
@@ -62,27 +65,27 @@ export function TicketList({ tickets, loading, error, onRetry, onSelect, onMoveU
     {
       key: 'status',
       title: 'Estado',
-      width: 140,
+      width: 130,
       render: (_, ticket) => <StatusLozenge ticket={ticket} />,
     },
     {
       key: 'priority',
       title: 'Prioridad',
-      width: 120,
+      width: 110,
       hideable: true,
       render: (_, ticket) => <PriorityTag priority={ticket.priority} />,
     },
     {
       key: 'assignee',
       title: 'Responsable',
-      width: 200,
+      width: 160,
       hideable: true,
       render: (_, ticket) => <Assignee ticket={ticket} />,
     },
     {
       key: 'updated',
       title: 'Actualizado',
-      width: 150,
+      width: 140,
       hideable: true,
       render: (_, ticket) => (
         <time dateTime={ticket.updatedAt} title={dayjs(ticket.updatedAt).format('DD/MM/YYYY HH:mm')}>
@@ -91,6 +94,7 @@ export function TicketList({ tickets, loading, error, onRetry, onSelect, onMoveU
       ),
     },
   ]
+  const columns = narrowTable ? allColumns.filter((column) => column.key !== 'updated') : allColumns
 
   const rowActions = onMoveUp && onMoveDown
     ? (ticket: Ticket) => [

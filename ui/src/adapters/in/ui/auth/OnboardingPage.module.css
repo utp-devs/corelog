@@ -5,9 +5,25 @@
 }
 
 .wizard {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
   width: min(880px, 100%);
+  min-height: 0;
   margin: 0 auto;
   padding: var(--cl-space-6) 0 var(--cl-space-12);
+}
+
+/* The step fills the rest of the wizard, so the page has no bare band under a short step. */
+.stepBody {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.stepBody > * {
+  flex: 1 1 auto;
 }
 
 .header {
@@ -122,6 +138,10 @@
   .step {
     flex-direction: row;
     text-align: left;
+    padding: var(--cl-space-2) var(--cl-space-3);
+    border: 1px solid var(--cl-border);
+    border-radius: var(--cl-radius-md);
+    background: var(--cl-bg-surface);
   }
 
   .step::before {

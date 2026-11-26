@@ -214,15 +214,15 @@ describe('ProjectsPage', () => {
     restoreViewport = installViewport(390)
     const mobile = renderPage()
 
-    const grid = await screen.findByRole('group', { name: 'Proyectos' })
+    const card = await screen.findByTestId('project-card-CORE')
+    const grid = card.parentElement as HTMLElement
     expect(grid).toHaveAttribute('data-card-grid')
-    expect(within(grid).getByTestId('project-card-CORE').parentElement).toBe(grid)
     mobile.unmount()
 
     restoreViewport()
     restoreViewport = installViewport(1440)
     renderPage()
-    expect(await screen.findByRole('group', { name: 'Proyectos' })).toHaveAttribute('data-card-grid')
+    expect((await screen.findByTestId('project-card-CORE')).parentElement).toHaveAttribute('data-card-grid')
     consoleGuard.expectNoConsoleOutput()
   })
 })

@@ -112,7 +112,7 @@ export function ProjectPermissionsPage() {
   ]
 
   return (
-    <PageContainer variant="reading" pageName="permissions" ready={!loading}>
+    <PageContainer variant="reading" pageName="permissions" ready={!loading} fill>
       <PageHeader title="Permisos" description="Qué puede hacer cada rol en este proyecto." />
 
       {status === 'error' && (
@@ -152,11 +152,13 @@ export function ProjectPermissionsPage() {
         title="Matriz de permisos"
         description="Cada fila es un permiso y cada columna un rol. La columna resaltada es la tuya."
         flush
+        fill
       >
         <DataTable<PermissionDefinition>
           tableKey="project-permissions"
           columns={tableColumns}
           data={[...projectPermissions]}
+          fill
           rowKey="key"
           loading={loading}
           emptyState={<EmptyState title="Sin permisos definidos" />}

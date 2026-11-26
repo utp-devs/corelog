@@ -61,6 +61,8 @@
 .root[data-stacked='true'] {
   display: flex;
   flex-direction: column;
+  /* Stacked: the content takes the full width (the grid rule above aligns to start). */
+  align-items: stretch;
 }
 
 .root[data-stacked='true'] .sidebar {

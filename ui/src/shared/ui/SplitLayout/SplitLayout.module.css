@@ -1,7 +1,7 @@
 .layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 320px;
-  align-items: start;
+  align-items: stretch;
   gap: var(--cl-space-6);
   width: 100%;
   min-width: 0;
@@ -16,6 +16,8 @@
 }
 
 .main {
+  display: flex;
+  flex-direction: column;
   min-width: 0;
 }
 
@@ -33,4 +35,18 @@
 .layout[data-stacked='true'] .side {
   position: static;
   width: 100%;
+}
+
+/* Fill pages: the layout grows with the page column, and a stacked side panel takes the remaining height
+   (its Section is fill), so a short detail page leaves no bare band under its cards. */
+.layout {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.layout[data-stacked='true'] .side {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
 }

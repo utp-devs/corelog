@@ -11,3 +11,21 @@
   display: flex;
   flex-direction: column;
 }
+
+/* fill: the panel stretches with the page column; the grid keeps its cards at the top. */
+.panel {
+  flex: 1 1 auto;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-content: flex-start;
+  min-height: 0;
+  padding: var(--cl-space-4);
+  border: 1px solid var(--cl-border);
+  border-radius: var(--cl-radius-lg);
+  background: var(--cl-bg-surface);
+}
+
+.panel > .grid {
+  align-content: start;
+}

@@ -131,12 +131,12 @@ export function PersonPage({ repository = defaultRepository, teamRepository = de
   const joined = dayjs(person.joinedAt).format('DD/MM/YYYY')
 
   return (
-    <PageContainer variant="wide" pageName="person" ready>
+    <PageContainer variant="wide" pageName="person" ready fill>
       <Breadcrumbs items={[{ label: 'Personas', to: '/people' }, { label: displayName }]} />
       <SplitLayout
         sideLabel="Equipos de la persona"
         main={
-          <Section ariaLabel={`Ficha de ${displayName}`}>
+          <Section ariaLabel={`Ficha de ${displayName}`} fill>
           <div className={styles.header}>
             <UserAvatar id={person.userId} name={displayName} hasAvatar={person.hasAvatar} size={64} data-testid="person-avatar" />
             <div className={styles.identity}>
@@ -159,7 +159,7 @@ export function PersonPage({ repository = defaultRepository, teamRepository = de
           </Section>
         }
         side={
-          <Section title="Equipos">
+          <Section title="Equipos" fill>
             {teams === null && <Typography.Text type="secondary">No se pudieron cargar los equipos.</Typography.Text>}
             {teams !== null && teams.length === 0 && <Typography.Text type="secondary">Sin equipos.</Typography.Text>}
             {teams !== null && teams.length > 0 && (

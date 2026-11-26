@@ -117,7 +117,7 @@ export function ProjectCalendarPage() {
   )
 
   return (
-    <PageContainer variant="fluid" pageName="calendar" ready={!!events && !error}>
+    <PageContainer variant="fluid" pageName="calendar" ready={!!events && !error} fill>
       <div className={styles.frame}>
         <PageHeader title="Calendario" description="Inicios y fines de sprint y fechas límite de incidencias." />
 
@@ -139,7 +139,9 @@ export function ProjectCalendarPage() {
         {!error && !events && <Skeleton active paragraph={{ rows: 5 }} />}
 
         {events && !error && (events.length === 0 ? (
-          <EmptyState title="No hay hitos en este mes" description="Los sprints y las fechas límite aparecerán aquí." />
+          <div className={styles.panel}>
+            <EmptyState title="No hay hitos en este mes" description="Los sprints y las fechas límite aparecerán aquí." />
+          </div>
         ) : view === 'month' ? (
           <div className={styles.grid} role="grid" aria-label={`Calendario de ${monthLabel}`}>
             {weekdays.map((weekday) => (

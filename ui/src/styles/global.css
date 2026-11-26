@@ -87,3 +87,62 @@ body {
   white-space: normal;
   overflow-wrap: anywhere;
 }
+
+/* Phones: the text field inside an affix wrapper (search boxes) is a 32 px tap target. */
+@media (max-width: 767.98px) {
+  .ant-input-affix-wrapper > input.ant-input {
+    min-height: var(--cl-hit-min-mobile);
+  }
+}
+
+@media (max-width: 767.98px) {
+  .ant-select .ant-select-content {
+    min-width: 100%;
+    min-height: var(--cl-hit-min-mobile);
+  }
+
+  .ant-select .ant-select-content .ant-select-input {
+    min-height: var(--cl-hit-min-mobile);
+    width: 100%;
+  }
+}
+
+/* Phones: small switches and number fields are 32 px tap targets. The switch keeps its 16 px track
+   (content-box background) and its handle is re-centred inside the taller box. Desktop is unchanged. */
+@media (max-width: 767.98px) {
+  .ant-switch.ant-switch-small {
+    height: var(--cl-hit-min-mobile);
+    min-height: var(--cl-hit-min-mobile);
+    min-width: var(--cl-hit-min-mobile);
+    padding: var(--cl-space-2) 2px;
+    background-clip: content-box;
+  }
+
+  .ant-switch-small .ant-switch-handle {
+    top: calc(var(--cl-space-2) + 1px);
+  }
+
+  .ant-input-number-input {
+    min-height: var(--cl-hit-min-mobile);
+  }
+}
+
+/* Phones: pagination controls are 32 px tap targets. */
+@media (max-width: 767.98px) {
+  .ant-pagination.ant-pagination .ant-pagination-item,
+  .ant-pagination.ant-pagination .ant-pagination-prev,
+  .ant-pagination.ant-pagination .ant-pagination-next {
+    box-sizing: content-box;
+    min-width: var(--cl-hit-min-mobile);
+    height: var(--cl-hit-min-mobile);
+    line-height: calc(var(--cl-hit-min-mobile) - 2px);
+  }
+
+  .ant-pagination.ant-pagination .ant-pagination-item.ant-pagination-item > a {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+  }
+}

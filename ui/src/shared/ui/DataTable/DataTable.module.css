@@ -109,6 +109,7 @@
 
 .cards {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--cl-space-2);
   margin: 0;
   padding: 0;

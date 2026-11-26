@@ -2,6 +2,7 @@ import { App } from 'antd'
 import { useNavigate } from 'react-router-dom'
 
 import type { Ticket } from '@/core/tickets/domain/ticket'
+import { Section } from '@/shared/ui/Section'
 import { PageContainer } from '@/shared/ui/PageContainer'
 import { PageHeader } from '@/shared/ui/PageHeader'
 import { useCreateTicket } from './hooks/useCreateTicket'
@@ -28,15 +29,17 @@ export function NewTicketPage() {
   }
 
   return (
-    <PageContainer variant="reading" pageName="issue-new">
+    <PageContainer variant="reading" pageName="issue-new" fill>
       <PageHeader title="Nueva incidencia" description="Registra un nuevo incidente." />
-      <TicketForm
-        onSubmit={handleSubmit}
-        onCreated={handleCreated}
-        onCancel={() => navigate('/issues')}
-        isSubmitting={isSubmitting}
-        searchUsers={searchMentionUsers}
-      />
+      <Section fill>
+        <TicketForm
+          onSubmit={handleSubmit}
+          onCreated={handleCreated}
+          onCancel={() => navigate('/issues')}
+          isSubmitting={isSubmitting}
+          searchUsers={searchMentionUsers}
+        />
+      </Section>
     </PageContainer>
   )
 }

@@ -5,17 +5,18 @@
 }
 
 /* Equal-height panels: each grid item stretches to the row height, so no card has dead space under it. */
+/* Wrapping row: a last row with fewer panels stretches to the full width, so no empty block is left beside it. */
 .panels {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr));
-  gap: var(--cl-space-4);
+  display: flex;
+  flex-wrap: wrap;
   align-items: stretch;
+  gap: var(--cl-space-4);
   width: 100%;
 }
 
 .panels > * {
+  flex: 1 1 320px;
   min-width: 0;
-  height: 100%;
 }
 
 .bars {
@@ -77,6 +78,30 @@
 
 @media (max-width: 767px) {
   .panels {
-    grid-template-columns: minmax(0, 1fr);
+    flex-direction: column;
+  }
+
+  .panels > * {
+    flex: none;
+    width: 100%;
+  }
+}
+
+/* Phones: list links are 32 px tap targets. */
+@media (max-width: 767.98px) {
+  .itemLink {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--cl-hit-min-mobile);
+  }
+}
+
+/* Phones: the onboarding and empty-state links are 32 px tap targets. */
+@media (max-width: 767.98px) {
+  .emptyLink,
+  .step a {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--cl-hit-min-mobile);
   }
 }

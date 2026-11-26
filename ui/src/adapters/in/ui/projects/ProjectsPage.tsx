@@ -149,7 +149,7 @@ export function ProjectsPage() {
     body = <ErrorState message={error?.message ?? 'No se pudieron cargar los proyectos.'} onRetry={() => void fetchProjects()} />
   } else if (projects.length === 0) {
     body = (
-      <Section>
+      <Section fill>
         <EmptyState
           title="Aún no hay proyectos"
           description="Crea el primero para organizar el trabajo en espacios independientes."
@@ -159,13 +159,13 @@ export function ProjectsPage() {
     )
   } else if (visible.length === 0) {
     body = (
-      <Section>
+      <Section fill>
         <EmptyState title="Sin resultados" description="Ningún proyecto coincide con los filtros. Cambia la búsqueda o el filtro de estado." />
       </Section>
     )
   } else {
     body = (
-      <CardGrid ariaLabel="Proyectos" minCardWidth={280}>
+      <CardGrid ariaLabel="Proyectos" minCardWidth={280} fill>
         {visible.map((project) => (
           <article key={project.id} className={styles.card} data-testid={`project-card-${project.key}`}>
               <header className={styles.cardHeader}>

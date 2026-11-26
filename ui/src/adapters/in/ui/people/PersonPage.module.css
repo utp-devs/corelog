@@ -23,6 +23,15 @@
   margin-top: var(--cl-space-4);
 }
 
+/* Phones: the link is a 32 px tap target. */
+@media (max-width: 767.98px) {
+  .back {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--cl-hit-min-mobile);
+  }
+}
+
 .teamList {
   display: flex;
   flex-wrap: wrap;

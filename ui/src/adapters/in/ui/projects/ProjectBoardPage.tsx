@@ -269,7 +269,7 @@ export function ProjectBoardPage() {
   const ready = !loading && !currentResult?.error
 
   return (
-    <PageContainer variant="fluid" pageName="board" ready={ready}>
+    <PageContainer variant="fluid" pageName="board" ready={ready} fill>
       <div className={styles.frame}>
         <PageHeader title="Tablero" description="Arrastra una incidencia a otra columna, o usa su selector para cambiarla de columna." />
         <p className={styles.srOnly} role="status" aria-live="polite">{announcement}</p>

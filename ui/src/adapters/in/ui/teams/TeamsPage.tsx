@@ -97,7 +97,7 @@ export function TeamsPage() {
     )
   } else {
     body = (
-      <CardGrid ariaLabel="Equipos">
+      <CardGrid ariaLabel="Equipos" fill>
         {visible.map((team) => (
           <TeamCard key={team.id} team={team} />
         ))}

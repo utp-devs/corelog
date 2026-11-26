@@ -122,4 +122,37 @@ test.describe('layout audit self tests', () => {
     expect(result.violations.some((v) => v.startsWith('console errors'))).toBe(true)
     expect(result.metrics.consoleErrors).toBe(1)
   })
+
+  test('wrapped inline text fragments are not reported as overlap', async ({ page }) => {
+    trackHygiene(page)
+    const wrapped = GOOD_PAGE.replace(
+      '<div data-page>',
+      '<div data-page><p style="width:160px;margin:0"><a href="#">Crea tu primer proyecto</a>' +
+        '<span> para organizar el trabajo en un espacio propio y largo</span></p>',
+    )
+    await page.setContent(pageHtml(wrapped))
+    const result = await collectLayoutAudit(page, WIDE)
+    expect(result.metrics.overlapPairs).toBe(0)
+  })
+
+  test('a declared browser resource error is not a console error', async ({ page }) => {
+    trackHygiene(page)
+    await page.setContent(pageHtml(GOOD_PAGE))
+    await page.evaluate(() => console.error('Failed to load resource: the server responded with a status of 403 (Forbidden)'))
+    const declared = await collectLayoutAudit(page, { ...WIDE, expectedFailures: [{ status: 403, urlPattern: /\/api\/v1\// }] })
+    expect(declared.metrics.consoleErrors).toBe(0)
+    const undeclared = await collectLayoutAudit(page, WIDE)
+    expect(undeclared.metrics.consoleErrors).toBe(1)
+  })
+
+  test('visually hidden text is not reported as clipped', async ({ page }) => {
+    trackHygiene(page)
+    const srOnly = GOOD_PAGE.replace(
+      '<div data-page>',
+      '<div data-page><label>Clave <span style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0"> (obligatorio)</span></label>',
+    )
+    await page.setContent(pageHtml(srOnly))
+    const result = await collectLayoutAudit(page, WIDE)
+    expect(result.metrics.clippedText).toBe(0)
+  })
 })

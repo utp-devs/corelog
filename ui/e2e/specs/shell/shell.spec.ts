@@ -37,8 +37,6 @@ test.describe('navegacion superior y cuenta', () => {
 
   test('el selector de organizacion muestra la organizacion activa', async ({ as }, testInfo) => {
     test.skip((testInfo.project.use.viewport?.width ?? 0) < 768, 'the organization switcher is not in the top bar on phones')
-    // Defect D-03: at 820 px the top bar overlaps and the switcher is pushed out of view.
-    test.fixme(testInfo.project.name === 'tablet', 'D-03: top bar overlaps at 820 px and hides the organization switcher')
     const page = await as('owner')
     await page.goto('/issues')
     await expect(page.getByRole('button', { name: /^Organización actual/ })).toHaveAccessibleName(/Acme/)
@@ -46,7 +44,6 @@ test.describe('navegacion superior y cuenta', () => {
 
   test('cambiar de organizacion persiste la seleccion tras recargar', async ({ as }, testInfo) => {
     test.skip((testInfo.project.use.viewport?.width ?? 0) < 768, 'the organization switcher is not in the top bar on phones')
-    test.fixme(testInfo.project.name === 'tablet', 'D-03: top bar overlaps at 820 px and hides the organization switcher')
     const page = await as('admin')
     await page.goto('/issues')
     await expect(page.getByRole('button', { name: /^Organización actual/ })).toHaveAccessibleName(/CoreLog/)

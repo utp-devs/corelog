@@ -163,16 +163,17 @@ export function ProjectBacklogPage() {
   ]
 
   return (
-    <PageContainer variant="wide" pageName="backlog" ready={current !== null && !current.error}>
+    <PageContainer variant="wide" pageName="backlog" ready={current !== null && !current.error} fill>
       <PageHeader title="Backlog" description="Las incidencias de arriba se trabajan primero. Usa las flechas para reordenarlas." />
       {moveError && (
         <Alert type="warning" showIcon closable message={moveError} onClose={() => setMoveError(undefined)} />
       )}
-      <Section flush>
+      <Section flush fill>
         <DataTable<BacklogItem>
           tableKey="project-backlog"
           columns={columns}
           data={items}
+          fill
           rowKey="id"
           loading={current === null}
           error={current?.error?.message ?? null}
@@ -187,7 +188,7 @@ export function ProjectBacklogPage() {
             const index = items.indexOf(item)
             return (
               <div className={styles.mobileCard}>
-                <Link to={`/issues/${item.id}`} className={styles.summary}>{item.summary}</Link>
+                <Link to={`/issues/${item.id}`} className={styles.summary} title={item.summary}>{item.summary}</Link>
                 <div className={styles.mobileMeta}>
                   <PriorityTag priority={item.priority as TicketPriority} />
                   <Lozenge category={statusCategories[item.status] ?? 'todo'}>{statusLabels[item.status] ?? item.status}</Lozenge>

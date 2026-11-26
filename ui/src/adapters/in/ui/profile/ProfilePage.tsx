@@ -87,7 +87,7 @@ export function ProfilePage() {
               className={styles.menu}
             />
           ) : (
-            <div className={styles.tabsScroll}>
+            <div className={styles.tabsScroll} data-scroll-x="">
               <Segmented
                 aria-label="Secciones de la cuenta"
                 value={active}

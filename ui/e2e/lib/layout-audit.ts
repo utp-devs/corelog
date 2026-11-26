@@ -214,6 +214,11 @@ function measureLayout(input: PageInput): PageOutput {
     const r = el.getBoundingClientRect()
     return { left: r.left, top: r.top, right: r.right, bottom: r.bottom, width: r.width, height: r.height }
   }
+  // Visually hidden pattern (sr-only): a box of 1px or less that clips its content. Not user-facing.
+  const isVisuallyHidden = (el: Element): boolean => {
+    const r = el.getBoundingClientRect()
+    return r.width <= 1 || r.height <= 1
+  }
   const isVisible = (el: Element): boolean => {
     const r = el.getBoundingClientRect()
     if (r.width <= 0 || r.height <= 0) return false
@@ -477,8 +482,11 @@ function measureLayout(input: PageInput): PageOutput {
     if (isInternal(parent)) continue
     const kids = Array.from(parent.children).filter((kid) => {
       if (isInternal(kid) || !isVisible(kid) || kid.closest('[data-overlay]')) return false
-      const position = getComputedStyle(kid).position
-      return position !== 'absolute' && position !== 'fixed'
+      const cs = getComputedStyle(kid)
+      // Inline fragments of text that wraps report the union of their line boxes: they share a line
+      // box by definition, so only boxed (block, flex, inline-block) siblings are compared.
+      if (cs.display === 'inline') return false
+      return cs.position !== 'absolute' && cs.position !== 'fixed'
     })
     for (let i = 0; i < kids.length; i++) {
       for (let j = i + 1; j < kids.length; j++) {
@@ -508,6 +516,8 @@ function measureLayout(input: PageInput): PageOutput {
     const cs = getComputedStyle(el)
     if (cs.overflowX !== 'hidden' && cs.overflowX !== 'clip') continue
     if (cs.display === 'inline' || el.children.length > 0 || !ownText(el)) continue
+    // Visually hidden text (1px clip box, e.g. screen reader hints) is not clipped content.
+    if (isVisuallyHidden(el)) continue
     if (el.closest('.ant-tag, .ant-badge')) continue
     if (el.scrollWidth - el.clientWidth <= 2) continue
     const hasTooltip = el.hasAttribute('title') || el.hasAttribute('aria-label') || el.hasAttribute('data-tooltip')
@@ -525,7 +535,7 @@ function measureLayout(input: PageInput): PageOutput {
   }
 
   // Check 5b: interactive controls partly outside their horizontal scroll container.
-  const interactives = Array.from(main.querySelectorAll(interactiveSelector)).filter(isVisible)
+  const interactives = Array.from(main.querySelectorAll(interactiveSelector)).filter((el) => isVisible(el) && !isVisuallyHidden(el))
   let clippedControls = 0
   const clippedControlMessages: string[] = []
   for (const el of interactives) {
@@ -649,7 +659,7 @@ export async function collectLayoutAudit(page: Page, options: AuditOptions): Pro
   // Browser "Failed to load resource" messages for statuses the test declared are not errors.
   const declaredStatuses = new Set(expected.map((item) => item.status))
   const consoleErrors = (log?.consoleErrors ?? []).filter((text) => {
-    const match = /status of (d{3})/.exec(text)
+    const match = /status of (\d{3})/.exec(text)
     return !(match && declaredStatuses.has(Number(match[1])))
   })
   const pageErrors = log?.pageErrors ?? []

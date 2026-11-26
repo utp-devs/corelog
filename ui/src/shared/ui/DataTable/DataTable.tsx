@@ -76,8 +76,6 @@ const SKELETON_MAX_ROWS = 10
 const SKELETON_DEFAULT_ROWS = 5
 const SKELETON_DELAY_MS = 150
 const MOBILE_QUERY = '(max-width: 767px)'
-/** Altura de la barra superior fija (--cl-topbar-h), usada como offset del encabezado pegajoso. */
-const TOPBAR_OFFSET = 56
 const DENSITY_STORAGE_KEY = 'corelog.density'
 const ROW_CLASS = 'cl-data-row'
 const INTERACTIVE_SELECTOR = 'button, a, input, label, select, textarea, [role="menuitem"]'
@@ -260,7 +258,6 @@ export function DataTable<T extends object>({
           columns={skeletonColumns}
           dataSource={skeletonData}
           pagination={false}
-          sticky={{ offsetHeader: TOPBAR_OFFSET }}
         />
       </div>
     )
@@ -292,7 +289,7 @@ export function DataTable<T extends object>({
         columns={tableColumns}
         dataSource={data}
         pagination={false}
-        sticky={{ offsetHeader: TOPBAR_OFFSET }}
+        tableLayout="fixed"
         rowSelection={rowSelection}
         onRow={rowInteraction}
         locale={{ emptyText: loading ? <span /> : emptyContent }}

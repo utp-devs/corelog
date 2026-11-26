@@ -1,8 +1,6 @@
 import { orgIdBySlug } from '../../lib/api.ts'
 import { expect, test } from '../../fixtures/test.ts'
 
-// Defect D-02: /teams/:id has no route in ui/src/app/router.tsx (the card links there and the 404 page
-// shows instead). The team page tests are fixme until the route exists.
 const TEAMS_PATH = '/teams'
 
 test.describe('equipos (S-25)', () => {
@@ -27,18 +25,18 @@ test.describe('equipos (S-25)', () => {
     if (created) await member.delete(`teams/${created.id}`)
   })
 
-  test.fixme('member agrega a una persona al equipo (D-02: /teams/:id sin ruta)', async ({ as, api, data }) => {
+  test('member agrega a una persona al equipo', async ({ as, api, data }) => {
     const acme = await orgIdBySlug(await api('member'), 'acme')
     const team = await data.createTeam('member', acme, 'team')
     const page = await as('member')
     await page.goto(`/teams/${team.id}`)
-    await page.getByPlaceholder('Buscar una persona de la organización').fill('Carla')
-    await page.getByText('Carla Vega').first().click()
+    await page.getByRole('group', { name: 'Agregar miembro' }).getByRole('combobox').first().fill('Viewer')
+    await page.getByRole('option', { name: /Viewer User/ }).first().click()
     await page.getByRole('group', { name: 'Agregar miembro' }).getByRole('button', { name: 'Agregar miembro' }).click()
-    await expect(page.getByRole('button', { name: /Quitar a Carla Vega del equipo/ })).toBeVisible()
+    await expect(page.getByRole('button', { name: /Quitar a Viewer User del equipo/ })).toBeVisible()
   })
 
-  test.fixme('pestanas de la pagina de equipo (D-02: /teams/:id sin ruta)', async ({ as, api, data }) => {
+  test('pestanas de la pagina de equipo', async ({ as, api, data }) => {
     const acme = await orgIdBySlug(await api('member'), 'acme')
     const team = await data.createTeam('member', acme, 'tabs')
     const page = await as('member')

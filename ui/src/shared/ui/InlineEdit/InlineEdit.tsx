@@ -152,7 +152,12 @@ export function InlineEdit({
         disabled={pending}
         onClick={startEdit}
       >
-        <span className={shown === null || shown === undefined ? styles.empty : styles.text}>{shownText}</span>
+        <span
+          className={shown === null || shown === undefined ? styles.empty : styles.text}
+          title={shown === null || shown === undefined || shownText === '' ? undefined : shownText}
+        >
+          {shownText}
+        </span>
       </button>
       {pending && (
         <span role="status" className={styles.saving}>

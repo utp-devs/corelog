@@ -169,7 +169,7 @@ export function MyDashboardPage() {
               <EmptyState
                 title="Aún no tienes proyectos"
                 description="Crea un proyecto para empezar a organizar el trabajo."
-                action={<Link to="/projects">Ir a proyectos</Link>}
+                action={<Link to="/projects" className={styles.emptyLink}>Ir a proyectos</Link>}
               />
             ) : (
               <ul className={styles.list} aria-label="Mis proyectos">
