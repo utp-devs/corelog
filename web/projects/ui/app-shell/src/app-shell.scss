@@ -1,0 +1,30 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background: var(--cl-bg-page);
+  color: var(--cl-text);
+}
+
+.shell-topbar {
+  display: flex;
+  align-items: center;
+  height: var(--cl-topbar-h);
+  padding: 0 var(--cl-gutter);
+  background: var(--cl-bg-surface);
+  border-bottom: 1px solid var(--cl-border);
+}
+
+.shell-brand {
+  font-size: var(--cl-font-body-strong);
+  font-weight: 600;
+  color: var(--cl-brand);
+}
+
+.shell-content {
+  flex: 1;
+  width: 100%;
+  max-width: var(--cl-content-max);
+  margin: 0 auto;
+  padding: var(--cl-space-6) var(--cl-gutter);
+}

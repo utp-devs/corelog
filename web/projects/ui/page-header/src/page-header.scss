@@ -1,0 +1,17 @@
+:host {
+  display: block;
+  margin-bottom: var(--cl-space-6);
+}
+
+.page-title {
+  margin: 0;
+  font-size: var(--cl-font-h2);
+  font-weight: 600;
+  color: var(--cl-text);
+}
+
+.page-subtitle {
+  margin: var(--cl-space-1) 0 0;
+  font-size: var(--cl-font-body);
+  color: var(--cl-text-subtle);
+}

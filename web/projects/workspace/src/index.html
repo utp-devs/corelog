@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <title>CoreLog · Espacio de trabajo</title>
+    <base href="/workspace/" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script>
+      try {
+        var mode = localStorage.getItem('corelog.theme') === 'dark' ? 'dark' : 'light';
+        document.documentElement.dataset.theme = mode;
+        document.documentElement.style.colorScheme = mode;
+      } catch (_) {}
+    </script>
+    <link rel="icon" type="image/x-icon" href="favicon.ico" />
+    <link rel="icon" type="image/png" sizes="32x32" href="brand/favicon-32.png" />
+    <link rel="apple-touch-icon" href="brand/apple-touch-icon.png" />
+    <meta name="theme-color" content="#0052cc" />
+  </head>
+  <body>
+    <app-root></app-root>
+  </body>
+</html>

@@ -1,0 +1,12 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "outDir": "../../out-tsc/lib",
+    "declaration": true,
+    "declarationMap": true,
+    "paths": { "@corelog/core": ["dist/core"] },
+    "types": []
+  },
+  "include": ["src/**/*.ts", "**/src/**/*.ts"],
+  "exclude": ["**/*.spec.ts"]
+}

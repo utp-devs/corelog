@@ -1,0 +1,16 @@
+node_modules/
+dist/
+.angular/
+coverage/
+out-tsc/
+test-results/
+playwright-report/
+.git/
+.idea/
+.vscode/
+Dockerfile
+Dockerfile.dev
+.dockerignore
+.env
+.env.*
+*.log

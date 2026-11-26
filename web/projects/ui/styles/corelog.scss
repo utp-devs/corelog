@@ -1,0 +1,254 @@
+@import 'primeicons/primeicons.css';
+@import 'primeflex/primeflex.css';
+
+/*
+ * Design tokens. Theme-dependent tokens are declared in :root (light) and in
+ * :root[data-theme='dark']. Theme-independent tokens (spacing, z-index,
+ * layout, density, palettes) are declared once in :root. The tokens.ts file
+ * mirrors the theme-dependent tokens; tests/tokens.test.ts checks key parity,
+ * values and WCAG contrast of the declared pairs.
+ */
+
+:root {
+  --cl-bg-page: #f7f8fa;
+  --cl-bg-surface: #ffffff;
+  --cl-bg-sunken: #f1f2f4;
+  --cl-border: #dfe1e6;
+  --cl-border-strong: #7a869a;
+  --cl-text: #172b4d;
+  --cl-text-subtle: #5e6c84;
+  --cl-text-disabled: #a5adba;
+  --cl-brand: #0052cc;
+  --cl-brand-hover: #2684ff;
+  --cl-brand-pressed: #0747a6;
+  --cl-brand-subtle: #deebff;
+  --cl-success: #22a06b;
+  --cl-success-bg: #e3fcef;
+  --cl-success-text: #216e4e;
+  --cl-warning: #ffab00;
+  --cl-warning-bg: #fff7d6;
+  --cl-warning-text: #a54800;
+  --cl-danger: #de350b;
+  --cl-danger-bg: #ffebe6;
+  --cl-danger-text: #bf2600;
+  --cl-info: #0065ff;
+  --cl-overlay: rgba(9, 30, 66, 0.54);
+  --cl-shadow-1: 0 1px 1px rgba(9, 30, 66, 0.15), 0 0 1px rgba(9, 30, 66, 0.31);
+  --cl-shadow-2: 0 0 1px rgba(9, 30, 66, 0.31), 0 8px 12px rgba(9, 30, 66, 0.15);
+  --cl-shadow-3: 0 8px 16px rgba(9, 30, 66, 0.25), 0 0 1px rgba(9, 30, 66, 0.31);
+  --cl-shadow-focus: 0 0 0 2px var(--cl-bg-surface), 0 0 0 4px var(--cl-brand);
+  --cl-radius-sm: 3px;
+  --cl-radius-md: 6px;
+  --cl-radius-lg: 8px;
+  --cl-radius-full: 999px;
+  --cl-space-1: 4px;
+  --cl-space-2: 8px;
+  --cl-space-3: 12px;
+  --cl-space-4: 16px;
+  --cl-space-5: 20px;
+  --cl-space-6: 24px;
+  --cl-space-8: 32px;
+  --cl-space-10: 40px;
+  --cl-space-12: 48px;
+  --cl-space-16: 64px;
+  --cl-font-caption: 11px;
+  --cl-font-small: 12px;
+  --cl-font-body: 14px;
+  --cl-font-body-strong: 16px;
+  --cl-font-h3: 20px;
+  --cl-font-h2: 24px;
+  --cl-font-h1: 28px;
+  --cl-font-display: 32px;
+
+  /* Z-index scale (theme independent). */
+  --cl-z-header: 100;
+  --cl-z-dropdown: 105;
+  --cl-z-modal: 110;
+  --cl-z-toast: 120;
+  --cl-z-palette: 130;
+
+  /* Layout (theme independent). gutter drops to 16px below 768px. */
+  --cl-topbar-h: 56px;
+  --cl-sidebar-w: 240px;
+  --cl-sidebar-w-collapsed: 64px;
+  --cl-content-max: 1200px;
+  --cl-content-wide: 1680px;
+  --cl-gutter: 24px;
+
+  /* Status categories. */
+  --cl-cat-todo: #5e6c84;
+  --cl-cat-todo-bg: #f1f2f4;
+  --cl-cat-todo-text: #3b4a63;
+  --cl-cat-progress: #0052cc;
+  --cl-cat-progress-bg: #deebff;
+  --cl-cat-progress-text: #0747a6;
+  --cl-cat-done: #1f845a;
+  --cl-cat-done-bg: #e3fcef;
+  --cl-cat-done-text: #216e4e;
+
+  /* Issue types. */
+  --cl-type-epic: #6e5dc6;
+  --cl-type-epic-bg: #eae6ff;
+  --cl-type-epic-text: #403294;
+  --cl-type-story: #1f845a;
+  --cl-type-story-bg: #dffcf0;
+  --cl-type-story-text: #164b35;
+  --cl-type-task: #0c66e4;
+  --cl-type-task-bg: #e9f2ff;
+  --cl-type-task-text: #0055cc;
+  --cl-type-bug: #c9372c;
+  --cl-type-bug-bg: #ffeceb;
+  --cl-type-bug-text: #ae2a19;
+  --cl-type-subtask: #1d7f8c;
+  --cl-type-subtask-bg: #e6fcff;
+  --cl-type-subtask-text: #0e4f57;
+
+  /* Priority. */
+  --cl-prio-highest: #ae2a19;
+  --cl-prio-high: #c25100;
+  --cl-prio-medium: #946f00;
+  --cl-prio-low: #0055cc;
+  --cl-prio-lowest: #5e6c84;
+
+  /* Custom palette, same hues in both themes (ColorPicker). */
+  --cl-palette-1-bg: #ffd5d2;
+  --cl-palette-1-text: #5d1f1a;
+  --cl-palette-2-bg: #ffe2bd;
+  --cl-palette-2-text: #5f3b00;
+  --cl-palette-3-bg: #f8e6a0;
+  --cl-palette-3-text: #533f04;
+  --cl-palette-4-bg: #d3f1a7;
+  --cl-palette-4-text: #37471f;
+  --cl-palette-5-bg: #baf3db;
+  --cl-palette-5-text: #164b35;
+  --cl-palette-6-bg: #c6edfb;
+  --cl-palette-6-text: #0e4f57;
+  --cl-palette-7-bg: #cce0ff;
+  --cl-palette-7-text: #09326c;
+  --cl-palette-8-bg: #ddd6fe;
+  --cl-palette-8-text: #352c63;
+  --cl-palette-9-bg: #e3d8fd;
+  --cl-palette-9-text: #3c2b6e;
+  --cl-palette-10-bg: #fdd0ec;
+  --cl-palette-10-text: #50253f;
+  --cl-palette-11-bg: #dfe1e6;
+  --cl-palette-11-text: #172b4d;
+  --cl-palette-12-bg: #d6deeb;
+  --cl-palette-12-text: #253858;
+
+  /* Avatar backgrounds (deterministic from user id) and chosen text color. */
+  --cl-avatar-1: #0052cc;
+  --cl-avatar-1-text: #ffffff;
+  --cl-avatar-2: #00875a;
+  --cl-avatar-2-text: #ffffff;
+  --cl-avatar-3: #6554c0;
+  --cl-avatar-3-text: #ffffff;
+  --cl-avatar-4: #c25100;
+  --cl-avatar-4-text: #ffffff;
+  --cl-avatar-5: #00758a;
+  --cl-avatar-5-text: #ffffff;
+  --cl-avatar-6: #ae2a19;
+  --cl-avatar-6-text: #ffffff;
+  --cl-avatar-7: #ffab00;
+  --cl-avatar-7-text: #172b4d;
+  --cl-avatar-8: #79e2f2;
+  --cl-avatar-8-text: #172b4d;
+  --cl-avatar-9: #b3d4ff;
+  --cl-avatar-9-text: #172b4d;
+  --cl-avatar-10: #abf5d1;
+  --cl-avatar-10-text: #172b4d;
+
+  /* Table density (theme independent). */
+  --cl-row-h: 40px;
+  --cl-row-h-compact: 32px;
+}
+
+:root[data-theme='dark'] {
+  --cl-bg-page: #1d2125;
+  --cl-bg-surface: #22272b;
+  --cl-bg-sunken: #1b1f23;
+  --cl-border: #44546f;
+  --cl-border-strong: #6b778c;
+  --cl-text: #c7d1db;
+  --cl-text-subtle: #9fadbc;
+  --cl-text-disabled: #6b778c;
+  --cl-brand: #4c9aff;
+  --cl-brand-hover: #79b8ff;
+  --cl-brand-pressed: #2684ff;
+  --cl-brand-subtle: #0c2849;
+  --cl-success: #4bce97;
+  --cl-success-bg: #1b3b2e;
+  --cl-success-text: #7ee2b8;
+  --cl-warning: #f5cd47;
+  --cl-warning-bg: #3b2e00;
+  --cl-warning-text: #f5cd47;
+  --cl-danger: #ff7452;
+  --cl-danger-bg: #421509;
+  --cl-danger-text: #ff9c8f;
+  --cl-info: #4c9aff;
+  --cl-overlay: rgba(9, 30, 66, 0.72);
+  /* Dark shadows keep the light values so current rendering is unchanged. */
+  --cl-shadow-1: 0 1px 1px rgba(9, 30, 66, 0.15), 0 0 1px rgba(9, 30, 66, 0.31);
+  --cl-shadow-2: 0 0 1px rgba(9, 30, 66, 0.31), 0 8px 12px rgba(9, 30, 66, 0.15);
+  --cl-shadow-3: 0 8px 16px rgba(0, 0, 0, 0.5), 0 0 1px rgba(0, 0, 0, 0.6);
+  --cl-shadow-focus: 0 0 0 2px var(--cl-bg-surface), 0 0 0 4px var(--cl-brand);
+
+  --cl-cat-todo: #9fadbc;
+  --cl-cat-todo-bg: #2c333a;
+  --cl-cat-todo-text: #c7d1db;
+  --cl-cat-progress: #4c9aff;
+  --cl-cat-progress-bg: #0c2849;
+  --cl-cat-progress-text: #85b8ff;
+  --cl-cat-done: #4bce97;
+  --cl-cat-done-bg: #1b3b2e;
+  --cl-cat-done-text: #7ee2b8;
+
+  --cl-type-epic: #b8acf6;
+  --cl-type-epic-bg: #2e2a4a;
+  --cl-type-epic-text: #d8cfff;
+  --cl-type-story: #7ee2b8;
+  --cl-type-story-bg: #1b3b2e;
+  --cl-type-story-text: #a5f0cf;
+  --cl-type-task: #85b8ff;
+  --cl-type-task-bg: #123263;
+  --cl-type-task-text: #cfe1fd;
+  --cl-type-bug: #ff8f73;
+  --cl-type-bug-bg: #5d1f1a;
+  --cl-type-bug-text: #ffd2cc;
+  --cl-type-subtask: #60c6d2;
+  --cl-type-subtask-bg: #113b40;
+  --cl-type-subtask-text: #b2f2f9;
+
+  --cl-prio-highest: #ff7452;
+  --cl-prio-high: #ff991f;
+  --cl-prio-medium: #f5cd47;
+  --cl-prio-low: #4c9aff;
+  --cl-prio-lowest: #9fadbc;
+}
+
+@media (max-width: 767.98px) {
+  :root {
+    --cl-gutter: 16px;
+  }
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+  font-family:
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    Roboto,
+    sans-serif;
+  font-size: var(--cl-font-body);
+  color: var(--cl-text);
+  background: var(--cl-bg-page);
+}

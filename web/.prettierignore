@@ -1,0 +1,8 @@
+package-lock.json
+dist
+.angular
+out-tsc
+coverage
+test-results
+playwright-report
+playwright/.auth

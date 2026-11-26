@@ -1,0 +1,91 @@
+server {
+    listen 8080;
+    server_name _;
+    server_tokens off;
+    absolute_redirect off;
+    root /usr/share/nginx/html;
+    index index.html;
+
+    client_max_body_size 25m;
+
+    gzip on;
+    gzip_static on;
+    gzip_vary on;
+    gzip_proxied any;
+    gzip_comp_level 6;
+    gzip_min_length 1024;
+    gzip_types text/plain text/css application/javascript application/json image/svg+xml;
+
+    open_file_cache max=1000 inactive=60s;
+    open_file_cache_valid 60s;
+
+    include /etc/nginx/snippets/security-headers.conf;
+
+    location = /healthz {
+        access_log off;
+        default_type text/plain;
+        return 200 "ok";
+    }
+
+    # API gateway: every /api/ request goes to the backend (API_UPSTREAM, set per environment).
+    location /api/ {
+        proxy_pass ${API_UPSTREAM};
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 60s;
+    }
+
+    location ~* \.map$ {
+        return 404;
+    }
+
+    # Apps without a trailing slash go to the canonical URL.
+    location = /workspace {
+        return 301 /workspace/$is_args$args;
+    }
+
+    location = /admin {
+        return 301 /admin/$is_args$args;
+    }
+
+    # Hashed bundles are immutable; regex locations win over the app prefixes below.
+    location ~* "-[A-Z0-9]{8}\.(?:js|css)$" {
+        include /etc/nginx/snippets/security-headers.conf;
+        add_header Cache-Control "public, max-age=31536000, immutable";
+        try_files $uri =404;
+    }
+
+    location ~* \.(?:ico|png|jpe?g|gif|svg|webp|avif|woff2?)$ {
+        include /etc/nginx/snippets/security-headers.conf;
+        add_header Cache-Control "public, max-age=604800";
+        try_files $uri =404;
+    }
+
+    location = /index.html {
+        include /etc/nginx/snippets/security-headers.conf;
+        add_header Cache-Control "no-cache";
+    }
+
+    # Workspace SPA (base /workspace/): unknown paths fall back to its own index.html.
+    location /workspace/ {
+        include /etc/nginx/snippets/security-headers.conf;
+        add_header Cache-Control "no-cache";
+        try_files $uri /workspace/index.html;
+    }
+
+    # Admin SPA (base /admin/): unknown paths fall back to its own index.html.
+    location /admin/ {
+        include /etc/nginx/snippets/security-headers.conf;
+        add_header Cache-Control "no-cache";
+        try_files $uri /admin/index.html;
+    }
+
+    # Portal SPA (base /).
+    location / {
+        include /etc/nginx/snippets/security-headers.conf;
+        add_header Cache-Control "no-cache";
+        try_files $uri /index.html;
+    }
+}

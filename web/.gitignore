@@ -1,0 +1,27 @@
+# Dependencies and build output
+node_modules/
+dist/
+.angular/
+out-tsc/
+coverage/
+*.tsbuildinfo
+
+# Tests and reports
+/test-results
+/playwright-report
+/playwright/.auth
+*.log
+npm-debug.log*
+yarn-error.log
+
+# Environment files and secrets (keep the example)
+.env
+.env.*
+!.env.example
+
+# Editors and OS
+.idea/
+.vscode/
+*.sublime-workspace
+.DS_Store
+Thumbs.db
