@@ -45,6 +45,7 @@ func TestHTTPResponse(t *testing.T) {
 			{"forbidden error -> 403", apperror.New(apperror.KindForbidden, "access denied"), http.StatusForbidden},
 			{"not found error -> 404", apperror.New(apperror.KindNotFound, "not found"), http.StatusNotFound},
 			{"conflict error -> 409", apperror.New(apperror.KindConflict, "already exists"), http.StatusConflict},
+			{"rate limited error -> 429", apperror.New(apperror.KindRateLimited, "too many requests"), http.StatusTooManyRequests},
 			{"internal error -> 500", errors.New("raw db panic"), http.StatusInternalServerError},
 		}
 

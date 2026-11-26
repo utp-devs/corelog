@@ -74,6 +74,29 @@ El backend desacopla los errores de dominio y aplicación de HTTP mediante `inte
 | `KindNotFound` | `404 Not Found` | El recurso solicitado no existe o no es visible para el actor |
 | `KindConflict` | `409 Conflict` | Conflicto de estado (ej. email ya registrado, nombre de equipo duplicado o transición de estado ilegal) |
 | `KindInternal` | `500 Internal Server Error` | Fallos no controlados del servidor o de base de datos; nunca debe filtrar trazas ni secretos al cliente |
+| `KindRateLimited` | `429 Too Many Requests` | Límite de peticiones superado |
+
+### 3.1 Campos `code` y `details` en los errores
+
+Además de `message`, el cuerpo de error puede incluir:
+
+- `code`: identificador estable y legible por máquina (por ejemplo `issue_not_found`, `team_name_taken`). Los clientes deben basar su lógica en `code`, no en `message`, que puede cambiar.
+- `details`: lista de errores por campo, cada uno con `field` (nombre del campo en snake_case) y `message` (descripción en español). Se usa en fallos de validación de varios campos a la vez.
+
+Ambos campos se **omiten** cuando están vacíos. Ejemplo de error de validación:
+
+```json
+{
+  "error": {
+    "message": "datos de entrada no válidos",
+    "code": "issue_invalid",
+    "details": [
+      { "field": "title", "message": "es obligatorio" },
+      { "field": "priority", "message": "debe ser low, medium, high o critical" }
+    ]
+  }
+}
+```
 
 ---
 

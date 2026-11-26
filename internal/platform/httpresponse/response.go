@@ -17,7 +17,9 @@ type errorEnvelope struct {
 }
 
 type errorBody struct {
-	Message string `json:"message"`
+	Message string                `json:"message"`
+	Code    string                `json:"code,omitempty"`
+	Details []apperror.FieldError `json:"details,omitempty"`
 }
 
 func JSON(w http.ResponseWriter, status int, data any) {
@@ -59,7 +61,11 @@ func Error(w http.ResponseWriter, err error) {
 
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(status)
-	_ = json.NewEncoder(w).Encode(errorEnvelope{Error: errorBody{Message: safeMessage(status, err)}})
+	_ = json.NewEncoder(w).Encode(errorEnvelope{Error: errorBody{
+		Message: safeMessage(status, err),
+		Code:    apperror.CodeOf(err),
+		Details: apperror.DetailsOf(err),
+	}})
 }
 
 func statusFor(kind apperror.Kind) int {
@@ -74,6 +80,8 @@ func statusFor(kind apperror.Kind) int {
 		return http.StatusUnauthorized
 	case apperror.KindForbidden:
 		return http.StatusForbidden
+	case apperror.KindRateLimited:
+		return http.StatusTooManyRequests
 	default:
 		return http.StatusInternalServerError
 	}
