@@ -22,7 +22,9 @@ type projectErrorEnvelope struct {
 
 func TestProjectHTTPErrorCodes(t *testing.T) {
 	project := sampleProject(t)
-	validBody := `{"key":"CORE","name":"Core","description":"x","type":"kanban","lead_id":"` + uuid.New().String() + `","visibility":"team"}`
+	validBody := `{"organization_id":"` + project.OrganizationID.String() + `","key":"CORE","name":"Core","description":"x","type":"kanban","visibility":"open"}`
+	memberPath := "/projects/" + project.ID.String() + "/members"
+	memberBody := `{"user_id":"` + uuid.New().String() + `","role":"viewer"}`
 
 	cases := []struct {
 		name     string
@@ -43,6 +45,24 @@ func TestProjectHTTPErrorCodes(t *testing.T) {
 			wantCode: "project.key_taken",
 		},
 		{
+			name:     "creation not allowed by org policy returns project.creation_not_allowed",
+			service:  &fakeProjects{project: project, err: domain.ErrProjectCreationNotAllowed},
+			method:   http.MethodPost,
+			path:     "/projects",
+			body:     validBody,
+			status:   http.StatusForbidden,
+			wantCode: "project.creation_not_allowed",
+		},
+		{
+			name:     "non member of the organization returns organization.not_found",
+			service:  &fakeProjects{project: project, err: domain.ErrOrganizationNotFound},
+			method:   http.MethodPost,
+			path:     "/projects",
+			body:     validBody,
+			status:   http.StatusNotFound,
+			wantCode: "organization.not_found",
+		},
+		{
 			name:     "missing project returns project.not_found",
 			service:  &fakeProjects{project: project, err: domain.ErrProjectNotFound},
 			method:   http.MethodGet,
@@ -50,11 +70,29 @@ func TestProjectHTTPErrorCodes(t *testing.T) {
 			status:   http.StatusNotFound,
 			wantCode: "project.not_found",
 		},
+		{
+			name:     "member outside the organization returns project.user_not_in_org",
+			service:  &fakeProjects{project: project, err: domain.ErrUserNotInOrg},
+			method:   http.MethodPost,
+			path:     memberPath,
+			body:     memberBody,
+			status:   http.StatusUnprocessableEntity,
+			wantCode: "project.user_not_in_org",
+		},
+		{
+			name:     "non existent user returns project.user_not_found, not 500",
+			service:  &fakeProjects{project: project, err: domain.ErrUserNotFound},
+			method:   http.MethodPost,
+			path:     memberPath,
+			body:     memberBody,
+			status:   http.StatusNotFound,
+			wantCode: "project.user_not_found",
+		},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			h := projectRouter(tc.service)
-			rec := send(h, tc.method, tc.path, tc.body, bearer(t, "admin"))
+			rec := send(h, tc.method, tc.path, tc.body, bearer(t, "user"))
 			if rec.Code != tc.status {
 				t.Fatalf("status %d, want %d; body %s", rec.Code, tc.status, rec.Body.String())
 			}
@@ -70,8 +108,8 @@ func TestProjectHTTPErrorCodes(t *testing.T) {
 
 	t.Run("invalid DTO returns validation.failed with details", func(t *testing.T) {
 		h := projectRouter(&fakeProjects{project: project})
-		bad := `{"key":"","name":"x","type":"waterfall","lead_id":"nope","visibility":"public"}`
-		rec := send(h, http.MethodPost, "/projects", bad, bearer(t, "admin"))
+		bad := `{"organization_id":"nope","key":"","name":"x","type":"waterfall","visibility":"public"}`
+		rec := send(h, http.MethodPost, "/projects", bad, bearer(t, "user"))
 		if rec.Code != http.StatusUnprocessableEntity {
 			t.Fatalf("status %d, want 422", rec.Code)
 		}
@@ -86,11 +124,10 @@ func TestProjectHTTPErrorCodes(t *testing.T) {
 		for _, d := range env.Error.Details {
 			fields[d.Field] = d.Message != ""
 		}
-		for _, want := range []string{"key", "name", "type", "lead_id", "visibility"} {
+		for _, want := range []string{"organization_id", "key", "name", "type", "visibility"} {
 			if !fields[want] {
 				t.Errorf("missing detail for %q; details %+v", want, env.Error.Details)
 			}
 		}
 	})
-
 }

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/jmoiron/sqlx"
@@ -12,17 +13,23 @@ import (
 
 func init() { Register(e2eScenario{}) }
 
-// People indexes of the e2e organization.
+// People indexes of the e2e accounts (see e2ePeople).
 const (
 	e2eAdmin = iota
 	e2eAgent
 	e2eRequester
 	e2eAna
+	e2eOwner
+	e2eOrgAdmin
+	e2eLead
+	e2eMember
+	e2eViewer
+	e2eGuest
+	e2eNewbie
 )
 
-// e2eScenario seeds the accounts used by the Playwright suite (testing strategy
-// 3.1, mapped to the global roles that exist until phase P2) and a small, fixed
-// dataset so every screen has content.
+// e2eScenario seeds the accounts of the Playwright suite (testing strategy 3.1)
+// and a small, fixed dataset so every screen has content.
 type e2eScenario struct{}
 
 func (e2eScenario) Name() string { return "e2e" }
@@ -36,35 +43,136 @@ func (e2eScenario) Run(ctx context.Context, db *sqlx.DB, opts Options) error {
 	return nil
 }
 
-func printE2EAccounts(out io.Writer) {
-	for _, p := range e2eOrgSpec().people {
-		fmt.Fprintf(out, "  %s [%s]\n", p.email, p.role)
+// e2ePeople is the account map of testing strategy 3.1. The legacy accounts
+// (admin, agent, requester, ana) keep their emails for the existing specs.
+func e2ePeople() []person {
+	return []person{
+		{"Admin User", "admin@corelog.local", "admin"},
+		{"Agent User", "agent@corelog.local", "user"},
+		{"Requester User", "requester@corelog.local", "user"},
+		{"Ana Torres Ruiz", "ana.torres@corelog.test", "user"},
+		{"Owner User", "owner@corelog.test", "user"},
+		{"Org Admin User", "orgadmin@corelog.test", "user"},
+		{"Lead User", "lead@corelog.test", "user"},
+		{"Member User", "member@corelog.test", "user"},
+		{"Viewer User", "viewer@corelog.test", "user"},
+		{"Guest User", "guest@corelog.test", "user"},
+		{"Newbie User", "newbie@corelog.test", "user"},
 	}
 }
 
-func e2eOrgSpec() orgSpec {
+// e2eCorelogSpec is the default organization. Its legacy members keep access to
+// it; the platform admin owns it. Newbie belongs to no organization.
+func e2eCorelogSpec() orgSpec {
 	return orgSpec{
-		teams: []string{"Platform"},
-		people: []person{
-			{"Admin User", "admin@corelog.local", "admin", 1},
-			{"Agent User", "agent@corelog.local", "agent", 1},
-			{"Requester User", "requester@corelog.local", "requester", 1},
-			{"Ana Torres Ruiz", "ana.torres@corelog.test", "requester", 1},
+		id:          defaultOrgID,
+		slug:        "corelog",
+		name:        "CoreLog",
+		description: "Organizacion por defecto de CoreLog",
+		members: []member{
+			{e2eAdmin, "owner"},
+			{e2eAgent, "member"},
+			{e2eRequester, "guest"},
+			{e2eAna, "guest"},
+		},
+	}
+}
+
+// e2eAcmeSpec is the organization "Acme" used by the role specs. The legacy
+// accounts also belong to it so the seeded issues they are assigned to stay visible.
+func e2eAcmeSpec() orgSpec {
+	return orgSpec{
+		id:          idFor("organization", "acme"),
+		slug:        "acme",
+		name:        "Acme",
+		description: "Organizacion de prueba para los roles de la suite e2e",
+		members: []member{
+			{e2eAdmin, "owner"},
+			{e2eOwner, "owner"},
+			{e2eOrgAdmin, "admin"},
+			{e2eLead, "member"},
+			{e2eMember, "member"},
+			{e2eViewer, "member"},
+			{e2eGuest, "guest"},
+			{e2eAgent, "member"},
+			{e2eRequester, "guest"},
+			{e2eAna, "guest"},
+		},
+		teams: []teamSpec{
+			{name: "Platform", members: []member{{e2eLead, "maintainer"}, {e2eMember, "member"}, {e2eAgent, "member"}}},
+			{name: "Design", members: []member{{e2eViewer, "member"}}},
 		},
 		projects: []projectSpec{
 			{
 				key: "SCRUM", name: "Proyecto Scrum", description: "Proyecto de prueba con sprint activo",
-				kind: "scrum", visibility: "team", lead: e2eAdmin,
+				kind: "scrum", visibility: "open", lead: e2eLead,
+				members: []member{
+					{e2eLead, "lead"}, {e2eAdmin, "contributor"}, {e2eOwner, "contributor"}, {e2eOrgAdmin, "contributor"},
+					{e2eMember, "contributor"}, {e2eAgent, "contributor"}, {e2eViewer, "viewer"},
+					{e2eRequester, "viewer"}, {e2eAna, "viewer"},
+				},
 				labels:     []labelSpec{{"bug", "red"}, {"feature", "green"}, {"docs", "gray"}},
 				components: []componentSpec{{"API", "Endpoints REST del backend"}, {"Frontend", "Interfaz React del panel"}},
 			},
 			{
 				key: "KAN", name: "Proyecto Kanban", description: "Proyecto de prueba de flujo continuo",
-				kind: "kanban", visibility: "team", lead: e2eAdmin,
+				kind: "kanban", visibility: "open", lead: e2eOwner,
+				members: []member{
+					{e2eOwner, "lead"}, {e2eAdmin, "contributor"}, {e2eMember, "contributor"}, {e2eAgent, "contributor"},
+					{e2eGuest, "viewer"}, {e2eRequester, "viewer"}, {e2eAna, "viewer"},
+				},
 				labels:     []labelSpec{{"bug", "red"}, {"infra", "purple"}},
 				components: []componentSpec{{"Operaciones", "Hosts, certificados y respaldos"}},
 			},
+			{
+				key: "SEC", name: "Seguridad", description: "Proyecto privado: el miembro comun no tiene acceso",
+				kind: "scrum", visibility: "private", lead: e2eOwner,
+				members: []member{{e2eOwner, "lead"}, {e2eOrgAdmin, "contributor"}},
+				labels:  []labelSpec{{"bug", "red"}},
+			},
+			{
+				key: "EMP", name: "Proyecto vacio", description: "Proyecto sin incidencias, para estados vacios",
+				kind: "kanban", visibility: "open", lead: e2eOwner,
+				members: []member{{e2eOwner, "lead"}},
+			},
 		},
+	}
+}
+
+// e2eAccountLines describes the memberships of every e2e account, for the printed summary.
+func e2eAccountLines() []string {
+	people := e2ePeople()
+	orgs := []orgSpec{e2eCorelogSpec(), e2eAcmeSpec()}
+	lines := make([]string, 0, len(people))
+	for i, p := range people {
+		var parts []string
+		for _, o := range orgs {
+			for _, m := range o.members {
+				if m.person == i {
+					parts = append(parts, fmt.Sprintf("org %s:%s", o.slug, m.role))
+				}
+			}
+		}
+		for _, o := range orgs {
+			for _, ps := range o.projects {
+				for _, m := range ps.members {
+					if m.person == i {
+						parts = append(parts, fmt.Sprintf("%s:%s", ps.key, m.role))
+					}
+				}
+			}
+		}
+		if len(parts) == 0 {
+			parts = []string{"sin organizacion"}
+		}
+		lines = append(lines, fmt.Sprintf("  %s platform=%s  %s", p.email, p.platform, strings.Join(parts, "  ")))
+	}
+	return lines
+}
+
+func printE2EAccounts(out io.Writer) {
+	for _, line := range e2eAccountLines() {
+		fmt.Fprintln(out, line)
 	}
 }
 
@@ -109,7 +217,9 @@ var e2eIssues = []e2eIssue{
 // buildE2E builds the e2e dataset. Issue n (1-based) is e2eIssues[n-1].
 func buildE2E(passwordHash string) *dataset {
 	ds := newDataset()
-	org := buildOrg(ds, e2eOrgSpec(), passwordHash)
+	users := buildUsers(ds, e2ePeople(), passwordHash)
+	buildOrg(ds, e2eCorelogSpec(), users)
+	org := buildOrg(ds, e2eAcmeSpec(), users)
 	sprintID := addSprint(ds, org.projects[0].id, org.projects[0].key, "Sprint 1",
 		"Entregar el flujo de alta de incidencias", "active", daysFromBase(-7), daysFromBase(7), nil)
 

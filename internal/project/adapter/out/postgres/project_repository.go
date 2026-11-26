@@ -28,15 +28,15 @@ func NewProjectRepository(db *sqlx.DB) *ProjectRepository {
 var _ port.Repository = (*ProjectRepository)(nil)
 var _ port.ProjectCreationRepository = (*ProjectRepository)(nil)
 
+const insertProjectQuery = `
+	INSERT INTO projects (organization_id, key, name, description, type, lead_id, visibility, archived_at, created_at, updated_at)
+	VALUES (:organization_id, :key, :name, :description, :type, :lead_id, :visibility, :archived_at, :created_at, :updated_at)
+	RETURNING id`
+
 func (r *ProjectRepository) Save(ctx context.Context, p *domain.Project) error {
-	row := fromDomain(p)
-	const query = `
-		INSERT INTO projects (key, name, description, type, lead_id, visibility, archived_at, created_at, updated_at)
-		VALUES (:key, :name, :description, :type, :lead_id, :visibility, :archived_at, :created_at, :updated_at)
-		RETURNING id`
-	id, err := database.InsertReturningID(ctx, r.db, query, row)
+	id, err := database.InsertReturningID(ctx, r.db, insertProjectQuery, fromDomain(p))
 	if err != nil {
-		if strings.Contains(err.Error(), "duplicate key") {
+		if isUniqueConstraintViolation(err) {
 			return domain.ErrProjectKeyTaken
 		}
 		return apperror.Wrap(apperror.KindInternal, "failed to save project", err)
@@ -55,12 +55,7 @@ func (r *ProjectRepository) CreateWithDefaults(ctx context.Context, p *domain.Pr
 	}
 	defer func() { _ = tx.Rollback() }()
 
-	row := fromDomain(p)
-	const projectQuery = `
-		INSERT INTO projects (key, name, description, type, lead_id, visibility, archived_at, created_at, updated_at)
-		VALUES (:key, :name, :description, :type, :lead_id, :visibility, :archived_at, :created_at, :updated_at)
-		RETURNING id`
-	projectID, err := database.InsertReturningID(ctx, tx, projectQuery, row)
+	projectID, err := database.InsertReturningID(ctx, tx, insertProjectQuery, fromDomain(p))
 	if err != nil {
 		if isUniqueConstraintViolation(err) {
 			return domain.ErrProjectKeyTaken
@@ -73,6 +68,9 @@ func (r *ProjectRepository) CreateWithDefaults(ctx context.Context, p *domain.Pr
 	if _, err := tx.ExecContext(ctx, `
 		INSERT INTO project_members (project_id, user_id, role, created_at)
 		VALUES ($1, $2, $3, $4)`, lead.ProjectID, lead.UserID, lead.Role, lead.CreatedAt); err != nil {
+		if isForeignKeyViolation(err) {
+			return domain.ErrUserNotFound
+		}
 		return apperror.Wrap(apperror.KindInternal, "failed to add project lead", err)
 	}
 
@@ -125,14 +123,22 @@ func (r *ProjectRepository) CreateWithDefaults(ctx context.Context, p *domain.Pr
 	return nil
 }
 
+// isUniqueConstraintViolation reports SQLSTATE 23505. On projects the only unique constraints are
+// the primary key and uq_projects_organization_key, so a violation means the key is taken.
 func isUniqueConstraintViolation(err error) bool {
 	var pgErr *pgconn.PgError
 	return errors.As(err, &pgErr) && pgErr.Code == "23505"
 }
 
+// isForeignKeyViolation reports SQLSTATE 23503.
+func isForeignKeyViolation(err error) bool {
+	var pgErr *pgconn.PgError
+	return errors.As(err, &pgErr) && pgErr.Code == "23503"
+}
+
 func (r *ProjectRepository) FindByID(ctx context.Context, id uuid.UUID) (*domain.Project, error) {
 	var row projectRow
-	if err := r.db.GetContext(ctx, &row, `SELECT id, key, name, description, type, lead_id, visibility, archived_at, created_at, updated_at FROM projects WHERE id = $1`, id); err != nil {
+	if err := r.db.GetContext(ctx, &row, `SELECT `+projectColumns+` FROM projects WHERE id = $1`, id); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, domain.ErrProjectNotFound
 		}
@@ -141,9 +147,12 @@ func (r *ProjectRepository) FindByID(ctx context.Context, id uuid.UUID) (*domain
 	return row.toDomain(), nil
 }
 
-func (r *ProjectRepository) FindByKey(ctx context.Context, key string) (*domain.Project, error) {
+// FindByKey busca una clave dentro de una organizacion; las claves son unicas por organizacion.
+func (r *ProjectRepository) FindByKey(ctx context.Context, orgID uuid.UUID, key string) (*domain.Project, error) {
 	var row projectRow
-	if err := r.db.GetContext(ctx, &row, `SELECT id, key, name, description, type, lead_id, visibility, archived_at, created_at, updated_at FROM projects WHERE key = $1`, strings.ToUpper(key)); err != nil {
+	if err := r.db.GetContext(ctx, &row, `
+		SELECT `+projectColumns+` FROM projects
+		WHERE organization_id = $1 AND key = $2`, orgID, strings.ToUpper(strings.TrimSpace(key))); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, domain.ErrProjectNotFound
 		}
@@ -152,9 +161,18 @@ func (r *ProjectRepository) FindByKey(ctx context.Context, key string) (*domain.
 	return row.toDomain(), nil
 }
 
-func (r *ProjectRepository) FindAll(ctx context.Context) ([]*domain.Project, error) {
+// FindByOrganization lista los proyectos de la organizacion que el alcance permite ver.
+// Los proyectos donde el usuario es miembro explicito siempre se incluyen.
+func (r *ProjectRepository) FindByOrganization(ctx context.Context, orgID uuid.UUID, scope port.VisibilityScope) ([]*domain.Project, error) {
 	var rows []projectRow
-	if err := r.db.SelectContext(ctx, &rows, `SELECT id, key, name, description, type, lead_id, visibility, archived_at, created_at, updated_at FROM projects ORDER BY name ASC`); err != nil {
+	if err := r.db.SelectContext(ctx, &rows, `
+		SELECT `+projectColumns+` FROM projects
+		WHERE organization_id = $1
+		  AND ($2::boolean
+		       OR id IN (SELECT pm.project_id FROM project_members pm WHERE pm.user_id = $3)
+		       OR ($4::boolean AND visibility = $5))
+		ORDER BY name ASC`,
+		orgID, scope.All, scope.UserID, scope.Open, storedOpen); err != nil {
 		return nil, apperror.Wrap(apperror.KindInternal, "failed to list projects", err)
 	}
 	projects := make([]*domain.Project, 0, len(rows))
@@ -170,7 +188,7 @@ func (r *ProjectRepository) Update(ctx context.Context, p *domain.Project) error
 		UPDATE projects
 		SET name = :name, description = :description, type = :type, lead_id = :lead_id,
 		    visibility = :visibility, archived_at = :archived_at, updated_at = :updated_at
-		WHERE id = :id`
+		WHERE id = :id AND organization_id = :organization_id`
 	result, err := r.db.NamedExecContext(ctx, query, row)
 	if err != nil {
 		return apperror.Wrap(apperror.KindInternal, "failed to update project", err)
@@ -185,8 +203,8 @@ func (r *ProjectRepository) Update(ctx context.Context, p *domain.Project) error
 	return nil
 }
 
-func (r *ProjectRepository) Delete(ctx context.Context, id uuid.UUID) error {
-	result, err := r.db.ExecContext(ctx, `DELETE FROM projects WHERE id = $1`, id)
+func (r *ProjectRepository) Delete(ctx context.Context, orgID, id uuid.UUID) error {
+	result, err := r.db.ExecContext(ctx, `DELETE FROM projects WHERE id = $1 AND organization_id = $2`, id, orgID)
 	if err != nil {
 		return apperror.Wrap(apperror.KindInternal, "failed to delete project", err)
 	}

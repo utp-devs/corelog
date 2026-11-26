@@ -2,73 +2,25 @@ package postgres
 
 import (
 	"context"
-	"os"
-	"strings"
 	"testing"
 	"time"
 
 	"github.com/google/uuid"
-	_ "github.com/jackc/pgx/v5/stdlib"
-	"github.com/jmoiron/sqlx"
 
+	"github.com/jhonsferg/corelog/internal/platform/database/testdb"
 	"github.com/jhonsferg/corelog/internal/user/domain"
 )
 
 // TestSessionRepositoryPostgres valida el ciclo de vida de las sesiones contra PostgreSQL: creacion,
 // revocacion individual, cerrar las demas, vencimiento y desactivacion de la cuenta.
 func TestSessionRepositoryPostgres(t *testing.T) {
-	dsn := os.Getenv("CORELOG_TEST_DATABASE_URL")
-	if dsn == "" {
-		t.Skip("set CORELOG_TEST_DATABASE_URL to run PostgreSQL integration tests")
-	}
-	db, err := sqlx.Connect("pgx", dsn)
-	if err != nil {
-		t.Fatal(err)
-	}
-	db.SetMaxOpenConns(1)
-	t.Cleanup(func() { _ = db.Close() })
-
-	schema := "session_test_" + strings.ReplaceAll(uuid.NewString(), "-", "")
-	if _, err := db.Exec(`CREATE SCHEMA ` + schema); err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { _, _ = db.Exec(`DROP SCHEMA ` + schema + ` CASCADE`) })
-	if _, err := db.Exec(`SET search_path TO ` + schema); err != nil {
-		t.Fatal(err)
-	}
-	for _, statement := range []string{
-		`CREATE TABLE users (
-			id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-			name VARCHAR(120) NOT NULL,
-			email VARCHAR(255) NOT NULL UNIQUE,
-			password_hash TEXT NOT NULL,
-			role VARCHAR(20) NOT NULL,
-			team_id UUID,
-			created_at TIMESTAMPTZ NOT NULL,
-			updated_at TIMESTAMPTZ NOT NULL,
-			deactivated_at TIMESTAMPTZ
-		)`,
-		`CREATE TABLE team_members (team_id UUID NOT NULL, user_id UUID NOT NULL, role VARCHAR(20) NOT NULL DEFAULT 'member', created_at TIMESTAMPTZ NOT NULL DEFAULT now(), PRIMARY KEY (team_id, user_id))`,
-		`CREATE TABLE user_sessions (
-			id UUID PRIMARY KEY,
-			user_id UUID NOT NULL REFERENCES users (id) ON DELETE CASCADE,
-			user_agent VARCHAR(300) NOT NULL DEFAULT '',
-			created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-			last_seen_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-			expires_at TIMESTAMPTZ NOT NULL,
-			revoked_at TIMESTAMPTZ
-		)`,
-	} {
-		if _, err := db.Exec(statement); err != nil {
-			t.Fatal(err)
-		}
-	}
+	db := testdb.New(t)
 
 	ctx := context.Background()
 	users := NewUserRepository(db)
 	sessions := NewSessionRepository(db)
 
-	user, err := domain.NewUser("Ana Prueba", "ana@example.com", "hash", domain.RoleRequester)
+	user, err := domain.NewUser("Ana Prueba", "ana@example.com", "hash", domain.RoleUser)
 	if err != nil {
 		t.Fatal(err)
 	}

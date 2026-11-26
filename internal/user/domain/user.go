@@ -9,14 +9,16 @@ import (
 type Role string
 
 const (
-	RoleAdmin     Role = "admin"
-	RoleAgent     Role = "agent"
-	RoleRequester Role = "requester"
+	RoleAdmin Role = "admin"
+	RoleUser  Role = "user"
 )
+
+// DefaultTimezone is the timezone of users who never chose one.
+const DefaultTimezone = "UTC"
 
 func (r Role) IsValid() bool {
 	switch r {
-	case RoleAdmin, RoleAgent, RoleRequester:
+	case RoleAdmin, RoleUser:
 		return true
 	default:
 		return false
@@ -29,9 +31,17 @@ type User struct {
 	Email        string
 	PasswordHash string
 	Role         Role
+	DisplayName  string
+	JobTitle     string
+	Department   string
+	AvatarKey    *string
+	Timezone     string
 	TeamID       *uuid.UUID
 	CreatedAt    time.Time
 	UpdatedAt    time.Time
+	LastLoginAt  *time.Time
+	// EmailVerifiedAt is nil until the address is verified.
+	EmailVerifiedAt *time.Time
 	// DeactivatedAt marca una cuenta cerrada por el propio usuario (borrado logico). Nil = activa.
 	DeactivatedAt *time.Time
 }
@@ -56,9 +66,24 @@ func NewUser(name, email, passwordHash string, role Role) (*User, error) {
 		Email:        email,
 		PasswordHash: passwordHash,
 		Role:         role,
+		DisplayName:  name,
+		Timezone:     DefaultTimezone,
 		CreatedAt:    now,
 		UpdatedAt:    now,
 	}, nil
+}
+
+// ValidateTimezone accepts IANA zone names known to the runtime. "Local" is rejected
+// because it depends on the server, and the empty string is rejected because the
+// caller must choose a value explicitly.
+func ValidateTimezone(tz string) error {
+	if tz == "" || tz == "Local" {
+		return ErrInvalidTimezone
+	}
+	if _, err := time.LoadLocation(tz); err != nil {
+		return ErrInvalidTimezone
+	}
+	return nil
 }
 
 func (u *User) UpdateProfile(name, email string) error {
@@ -70,6 +95,38 @@ func (u *User) UpdateProfile(name, email string) error {
 	}
 	u.Name = name
 	u.Email = email
+	u.UpdatedAt = time.Now().UTC()
+	return nil
+}
+
+// SetDisplayName changes the name shown in the UI. It must not be empty.
+func (u *User) SetDisplayName(name string) error {
+	if name == "" {
+		return ErrInvalidDisplayName
+	}
+	u.DisplayName = name
+	u.UpdatedAt = time.Now().UTC()
+	return nil
+}
+
+// SetJobTitle sets the optional job title; an empty value clears it.
+func (u *User) SetJobTitle(title string) {
+	u.JobTitle = title
+	u.UpdatedAt = time.Now().UTC()
+}
+
+// SetDepartment sets the optional department; an empty value clears it.
+func (u *User) SetDepartment(department string) {
+	u.Department = department
+	u.UpdatedAt = time.Now().UTC()
+}
+
+// SetTimezone changes the user timezone after validating it.
+func (u *User) SetTimezone(tz string) error {
+	if err := ValidateTimezone(tz); err != nil {
+		return err
+	}
+	u.Timezone = tz
 	u.UpdatedAt = time.Now().UTC()
 	return nil
 }

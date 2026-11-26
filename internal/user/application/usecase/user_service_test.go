@@ -5,6 +5,7 @@ import (
 	"errors"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 
@@ -13,11 +14,53 @@ import (
 )
 
 type fakeUserRepo struct {
-	users map[uuid.UUID]*domain.User
+	users       map[uuid.UUID]*domain.User
+	logins      map[uuid.UUID]time.Time
+	memberships map[membershipKey]string
+	// sharedProjects lists user pairs that have a project in common (same organization).
+	sharedProjects map[[2]uuid.UUID]bool
 }
 
+type membershipKey struct{ org, user uuid.UUID }
+
 func newFakeUserRepo() *fakeUserRepo {
-	return &fakeUserRepo{users: make(map[uuid.UUID]*domain.User)}
+	return &fakeUserRepo{
+		users:          make(map[uuid.UUID]*domain.User),
+		logins:         make(map[uuid.UUID]time.Time),
+		memberships:    make(map[membershipKey]string),
+		sharedProjects: make(map[[2]uuid.UUID]bool),
+	}
+}
+
+func (r *fakeUserRepo) RecordLogin(_ context.Context, userID uuid.UUID, at time.Time) error {
+	if _, ok := r.users[userID]; !ok {
+		return domain.ErrUserNotFound
+	}
+	r.logins[userID] = at
+	return nil
+}
+
+func (r *fakeUserRepo) FindOrganizationRole(_ context.Context, orgID, userID uuid.UUID) (string, bool, error) {
+	role, ok := r.memberships[membershipKey{orgID, userID}]
+	return role, ok, nil
+}
+
+// SearchOrganizationMembers mirrors the SQL rule: guests only see non-guest members or users sharing a project.
+func (r *fakeUserRepo) SearchOrganizationMembers(_ context.Context, filter port.OrganizationSearchFilter) ([]*domain.User, error) {
+	var list []*domain.User
+	for key, role := range r.memberships {
+		if key.org != filter.OrganizationID {
+			continue
+		}
+		if filter.ActorIsGuest && role == "guest" && !r.sharedProjects[[2]uuid.UUID{filter.ActorID, key.user}] {
+			continue
+		}
+		if u, ok := r.users[key.user]; ok {
+			copied := *u
+			list = append(list, &copied)
+		}
+	}
+	return list, nil
 }
 
 func (r *fakeUserRepo) Save(_ context.Context, u *domain.User) error {
@@ -106,7 +149,7 @@ func TestUserService_Register(t *testing.T) {
 		}
 	})
 
-	t.Run("second registered user defaults to requester", func(t *testing.T) {
+	t.Run("second registered user defaults to user", func(t *testing.T) {
 		user, err := svc.Register(ctx, port.RegisterInput{
 			Name:     "Second User",
 			Email:    "second@example.com",
@@ -115,8 +158,8 @@ func TestUserService_Register(t *testing.T) {
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
-		if user.Role != domain.RoleRequester {
-			t.Errorf("got role %v, want %v", user.Role, domain.RoleRequester)
+		if user.Role != domain.RoleUser {
+			t.Errorf("got role %v, want %v", user.Role, domain.RoleUser)
 		}
 	})
 
@@ -195,8 +238,8 @@ func TestUserService_ProfileAndPassword(t *testing.T) {
 
 	t.Run("updates profile successfully", func(t *testing.T) {
 		updated, err := svc.UpdateProfile(ctx, user1.ID, port.UpdateProfileInput{
-			Name:  "User One Renamed",
-			Email: "one_new@example.com",
+			Name:  strPtr("User One Renamed"),
+			Email: strPtr("one_new@example.com"),
 		})
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -208,8 +251,8 @@ func TestUserService_ProfileAndPassword(t *testing.T) {
 
 	t.Run("rejects email taken by another user", func(t *testing.T) {
 		_, err := svc.UpdateProfile(ctx, user1.ID, port.UpdateProfileInput{
-			Name:  "User One",
-			Email: user2.Email,
+			Name:  strPtr("User One"),
+			Email: strPtr(user2.Email),
 		})
 		if !errors.Is(err, domain.ErrEmailAlreadyTaken) {
 			t.Errorf("expected ErrEmailAlreadyTaken, got %v", err)
@@ -297,3 +340,5 @@ func TestUserService_TeamAndSearch(t *testing.T) {
 		}
 	})
 }
+
+func strPtr(s string) *string { return &s }

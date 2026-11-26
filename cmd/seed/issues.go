@@ -97,8 +97,8 @@ func priorityFor(r float64) string {
 // towards open work. Labels, components, watchers and comments are drawn from
 // the same generator so one scenario always yields the same result.
 func generateIssues(rng *rand.Rand, org orgModel, n int) []issueRec {
-	requesters := org.idsWithRole("requester")
-	agents := org.idsWithRole("agent")
+	requesters := org.requesters
+	agents := org.agents
 	recs := make([]issueRec, 0, n)
 
 	for i := 1; i <= n; i++ {

@@ -15,8 +15,9 @@ func TestRole_IsValid(t *testing.T) {
 		want bool
 	}{
 		{"admin is valid", RoleAdmin, true},
-		{"agent is valid", RoleAgent, true},
-		{"requester is valid", RoleRequester, true},
+		{"user is valid", RoleUser, true},
+		{"agent is retired", Role("agent"), false},
+		{"requester is retired", Role("requester"), false},
 		{"empty string is invalid", "", false},
 		{"unknown role is invalid", "superadmin", false},
 		{"uppercase ADMIN is invalid", "ADMIN", false},
@@ -33,7 +34,7 @@ func TestRole_IsValid(t *testing.T) {
 
 func TestNewUser(t *testing.T) {
 	t.Run("creates valid user", func(t *testing.T) {
-		user, err := NewUser("Ada Lovelace", "ada@example.com", "$2a$10$hashedpassword", RoleRequester)
+		user, err := NewUser("Ada Lovelace", "ada@example.com", "$2a$10$hashedpassword", RoleUser)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -49,8 +50,8 @@ func TestNewUser(t *testing.T) {
 		if user.PasswordHash != "$2a$10$hashedpassword" {
 			t.Errorf("got password hash %s", user.PasswordHash)
 		}
-		if user.Role != RoleRequester {
-			t.Errorf("got role %v, want %v", user.Role, RoleRequester)
+		if user.Role != RoleUser {
+			t.Errorf("got role %v, want %v", user.Role, RoleUser)
 		}
 		if user.TeamID != nil {
 			t.Errorf("expected nil initial TeamID, got %v", user.TeamID)
@@ -90,7 +91,7 @@ func TestNewUser(t *testing.T) {
 }
 
 func TestUser_UpdateProfile(t *testing.T) {
-	user, err := NewUser("Initial Name", "initial@example.com", "$2a$10$hash", RoleRequester)
+	user, err := NewUser("Initial Name", "initial@example.com", "$2a$10$hash", RoleUser)
 	if err != nil {
 		t.Fatalf("failed to create user: %v", err)
 	}

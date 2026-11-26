@@ -25,10 +25,131 @@ func (demoScenario) Run(ctx context.Context, db *sqlx.DB, opts Options) error {
 	return persist(ctx, db, buildDemo(opts.PasswordHash))
 }
 
+// demoEntry describes one member of the demo organization.
+type demoEntry struct {
+	name, email, orgRole string
+	team                 int // 1-based index into demoTeams, 0 for none
+}
+
+var demoTeams = []string{"Core Development", "Soporte Nivel 1", "Soporte Nivel 2", "Seguridad", "Infraestructura"}
+
+// demoRoster lists the people of the demo organization "corelog". Former agents
+// are organization members and former requesters are guests.
+func demoRoster() []demoEntry {
+	return []demoEntry{
+		{"Admin User", "admin@corelog.local", "owner", 1},
+		{"Sebastian Castillo Silva", "sebastian.castillo@corelog.test", "admin", 3},
+		{"Pablo Medina Salazar", "pablo.medina@corelog.test", "admin", 4},
+		{"Agent User", "agent@corelog.local", "member", 2},
+		{"Lucia Medina Torres", "lucia.medina@corelog.test", "member", 2},
+		{"Karina Navarro Salazar", "karina.navarro@corelog.test", "member", 2},
+		{"Luis Paredes Flores", "luis.paredes@corelog.test", "member", 5},
+		{"Javier Castillo Ortega", "javier.castillo@corelog.test", "member", 4},
+		{"Ricardo Campos Salazar", "ricardo.campos@corelog.test", "member", 4},
+		{"Camila Rojas Vega", "camila.rojas@corelog.test", "member", 3},
+		{"Requester User", "requester@corelog.local", "guest", 1},
+		{"Ana Torres Ruiz", "ana.torres@corelog.test", "guest", 1},
+		{"Carlos Vega Mendoza", "carlos.vega@corelog.test", "guest", 5},
+		{"Maria Gonzalez Rios", "maria.gonzalez@corelog.test", "guest", 2},
+		{"Diego Herrera Luna", "diego.herrera@corelog.test", "guest", 3},
+		{"Valeria Soto Pena", "valeria.soto@corelog.test", "guest", 4},
+		{"Jorge Quispe Huanca", "jorge.quispe@corelog.test", "guest", 5},
+		{"Paola Mendoza Diaz", "paola.mendoza@corelog.test", "guest", 2},
+		{"Andres Llanos Vidal", "andres.llanos@corelog.test", "guest", 1},
+		{"Rosa Infante Castro", "rosa.infante@corelog.test", "guest", 3},
+		{"Miguel Ortiz Tapia", "miguel.ortiz@corelog.test", "guest", 4},
+	}
+}
+
+func rosterPeople(entries []demoEntry) []person {
+	out := make([]person, len(entries))
+	for i, e := range entries {
+		out[i] = person{name: e.name, email: e.email, platform: platformRole(e.email)}
+	}
+	return out
+}
+
+// demoOrgSpec turns the roster into the organization "corelog" with its teams and projects.
+func demoOrgSpec(entries []demoEntry) orgSpec {
+	spec := orgSpec{
+		id:          defaultOrgID,
+		slug:        "corelog",
+		name:        "CoreLog",
+		description: "Organizacion por defecto de CoreLog",
+	}
+	teamMembers := make([][]member, len(demoTeams))
+	for i, e := range entries {
+		spec.members = append(spec.members, member{person: i, role: e.orgRole})
+		if e.team > 0 {
+			role := "member"
+			if e.orgRole == "owner" || e.orgRole == "admin" {
+				role = "maintainer"
+			}
+			teamMembers[e.team-1] = append(teamMembers[e.team-1], member{person: i, role: role})
+		}
+	}
+	for i, name := range demoTeams {
+		spec.teams = append(spec.teams, teamSpec{name: name, members: teamMembers[i]})
+	}
+	for _, ps := range demoProjects() {
+		ps.members = projectMembersFor(entries, ps.lead)
+		spec.projects = append(spec.projects, ps)
+	}
+	return spec
+}
+
+// projectMembersFor gives every organization member a project role: the lead is
+// lead, guests are viewers and everyone else contributes.
+func projectMembersFor(entries []demoEntry, lead int) []member {
+	out := make([]member, 0, len(entries))
+	for i, e := range entries {
+		role := "contributor"
+		switch {
+		case i == lead:
+			role = "lead"
+		case e.orgRole == "guest":
+			role = "viewer"
+		}
+		out = append(out, member{person: i, role: role})
+	}
+	return out
+}
+
+func demoProjects() []projectSpec {
+	return []projectSpec{
+		{
+			key: "CORE", name: "Plataforma CoreLog", description: "Proyecto principal de la plataforma",
+			kind: "kanban", visibility: "open", lead: 0, labels: commonLabels,
+			components: []componentSpec{{"API", "Endpoints REST del backend"}, {"Frontend", "Interfaz React del panel"}, {"Base de datos", "Esquema, migraciones y consultas"}},
+		},
+		{
+			key: "OPS", name: "Operaciones e infraestructura", description: "Operacion, despliegues y monitoreo",
+			kind: "kanban", visibility: "open", lead: 1, labels: commonLabels,
+			components: []componentSpec{{"Red", "Conectividad y balanceo"}, {"Servidores", "Hosts, VPS y contenedores"}, {"Monitoreo", "Alertas, metricas y logs"}},
+		},
+		{
+			key: "SEC", name: "Seguridad", description: "Hallazgos de seguridad y cumplimiento",
+			kind: "scrum", visibility: "private", lead: 2, labels: commonLabels,
+			components: []componentSpec{{"Autenticacion", "Login, sesiones y JWT"}, {"Auditoria", "Trazabilidad de cambios"}, {"Politicas", "Politicas de acceso y contrasenas"}},
+		},
+		{
+			key: "WEB", name: "Portal web", description: "Sitio publico y experiencia de usuario",
+			kind: "scrum", visibility: "open", lead: 0, labels: commonLabels,
+			components: []componentSpec{{"UI", "Componentes visuales"}, {"Accesibilidad", "Contraste, teclado y lectores de pantalla"}, {"Rendimiento", "Tiempos de carga y bundle"}},
+		},
+	}
+}
+
+// buildDemoOrg writes the users and the corelog organization of a roster.
+func buildDemoOrg(ds *dataset, entries []demoEntry, passwordHash string) orgModel {
+	users := buildUsers(ds, rosterPeople(entries), passwordHash)
+	return buildOrg(ds, demoOrgSpec(entries), users)
+}
+
 func buildDemo(passwordHash string) *dataset {
 	ds := newDataset()
 	rng := newRNG(streamDemo)
-	org := buildOrg(ds, demoOrgSpec(), passwordHash)
+	org := buildDemoOrg(ds, demoRoster(), passwordHash)
 
 	core := org.projects[0]
 	sprint11 := addSprint(ds, core.id, core.key, "Sprint 11", "Cierre de la iteracion anterior", "closed",

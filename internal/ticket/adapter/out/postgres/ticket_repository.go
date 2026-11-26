@@ -34,13 +34,18 @@ func (r *TicketRepository) Save(ctx context.Context, t *domain.Ticket) error {
 	row := fromDomain(t)
 
 	if t.ProjectID == domain.DefaultProjectID {
-		// El proyecto por defecto puede no existir en una BD recien migrada.
+		// El proyecto por defecto puede no existir en una BD recien migrada. Se crea en la
+		// organizacion mas antigua; si no hay ninguna, no se crea y el INSERT del issue falla con FK.
 		if _, err := r.db.ExecContext(ctx, `
 			INSERT INTO projects (
-				id, key, name, description, type, lead_id, visibility, archived_at, created_at, updated_at
-			) VALUES (
-				$1, 'CORE', 'CoreLog', 'Proyecto por defecto', 'kanban', $2, 'team', NULL, $3, $3
-			) ON CONFLICT DO NOTHING`,
+				id, organization_id, key, name, description, type, lead_id, visibility, archived_at, created_at, updated_at
+			)
+			SELECT $1, o.id, 'CORE', 'CoreLog', 'Proyecto por defecto', 'kanban', $2, 'open', NULL, $3, $3
+			FROM organizations o
+			WHERE o.deleted_at IS NULL
+			ORDER BY o.created_at
+			LIMIT 1
+			ON CONFLICT DO NOTHING`,
 			domain.DefaultProjectID, t.RequesterID, t.CreatedAt,
 		); err != nil {
 			return apperror.Wrap(apperror.KindInternal, "failed to ensure default project", err)

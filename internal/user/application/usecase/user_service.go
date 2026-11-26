@@ -38,7 +38,7 @@ func (s *UserService) Register(ctx context.Context, in port.RegisterInput) (*dom
 
 	role := in.Role
 	if role == "" {
-		role = domain.RoleRequester
+		role = domain.RoleUser
 	}
 
 	count, err := s.repo.Count(ctx)
@@ -79,6 +79,12 @@ func (s *UserService) Authenticate(ctx context.Context, in port.AuthenticateInpu
 		return nil, domain.ErrInvalidCredentials
 	}
 
+	now := time.Now().UTC()
+	if err := s.repo.RecordLogin(ctx, user.ID, now); err != nil {
+		return nil, err
+	}
+	user.LastLoginAt = &now
+
 	return user, nil
 }
 
@@ -92,16 +98,40 @@ func (s *UserService) UpdateProfile(ctx context.Context, userID uuid.UUID, in po
 		return nil, err
 	}
 
-	if in.Email != user.Email {
-		if existing, err := s.repo.FindByEmail(ctx, in.Email); err == nil && existing.ID != userID {
+	name, email := user.Name, user.Email
+	if in.Name != nil {
+		name = *in.Name
+	}
+	if in.Email != nil {
+		email = *in.Email
+	}
+
+	if email != user.Email {
+		if existing, err := s.repo.FindByEmail(ctx, email); err == nil && existing.ID != userID {
 			return nil, domain.ErrEmailAlreadyTaken
 		} else if err != nil && !errors.Is(err, domain.ErrUserNotFound) {
 			return nil, err
 		}
 	}
 
-	if err := user.UpdateProfile(in.Name, in.Email); err != nil {
+	if err := user.UpdateProfile(name, email); err != nil {
 		return nil, err
+	}
+	if in.DisplayName != nil {
+		if err := user.SetDisplayName(*in.DisplayName); err != nil {
+			return nil, err
+		}
+	}
+	if in.JobTitle != nil {
+		user.SetJobTitle(*in.JobTitle)
+	}
+	if in.Department != nil {
+		user.SetDepartment(*in.Department)
+	}
+	if in.Timezone != nil {
+		if err := user.SetTimezone(*in.Timezone); err != nil {
+			return nil, err
+		}
 	}
 
 	if err := s.repo.Update(ctx, user); err != nil {
@@ -158,6 +188,26 @@ func (s *UserService) SearchTeammates(ctx context.Context, actorID uuid.UUID, qu
 
 	return s.repo.Search(ctx, port.SearchFilter{Query: query, TeamID: actor.TeamID})
 }
+
+func (s *UserService) SearchInOrganization(ctx context.Context, actorID, orgID uuid.UUID, query string) ([]*domain.User, error) {
+	role, found, err := s.repo.FindOrganizationRole(ctx, orgID, actorID)
+	if err != nil {
+		return nil, err
+	}
+	if !found {
+		return nil, domain.ErrNotOrganizationMember
+	}
+
+	return s.repo.SearchOrganizationMembers(ctx, port.OrganizationSearchFilter{
+		OrganizationID: orgID,
+		ActorID:        actorID,
+		ActorIsGuest:   role == orgRoleGuest,
+		Query:          query,
+	})
+}
+
+// orgRoleGuest is the organization_members.role value of guests (see migration 000023).
+const orgRoleGuest = "guest"
 
 func (s *UserService) Search(ctx context.Context, filter port.SearchFilter) ([]*domain.User, error) {
 	return s.repo.Search(ctx, filter)

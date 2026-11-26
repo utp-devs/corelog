@@ -7,13 +7,15 @@ import (
 	"github.com/jhonsferg/corelog/internal/project/domain"
 )
 
+// createProjectRequest: el creador queda como lider. visibility es opcional; si falta se usa
+// default_project_visibility de la organizacion.
 type createProjectRequest struct {
-	Key         string `json:"key" validate:"required,min=1,max=20"`
-	Name        string `json:"name" validate:"required,min=2,max=120"`
-	Description string `json:"description" validate:"max=5000"`
-	Type        string `json:"type" validate:"required,oneof=kanban scrum"`
-	LeadID      string `json:"lead_id" validate:"required,uuid"`
-	Visibility  string `json:"visibility" validate:"required,oneof=private team"`
+	OrganizationID string `json:"organization_id" validate:"required,uuid"`
+	Key            string `json:"key" validate:"required,min=1,max=20"`
+	Name           string `json:"name" validate:"required,min=2,max=120"`
+	Description    string `json:"description" validate:"max=5000"`
+	Type           string `json:"type" validate:"required,oneof=kanban scrum"`
+	Visibility     string `json:"visibility" validate:"omitempty,oneof=private open team"`
 }
 
 type updateProjectRequest struct {
@@ -21,20 +23,21 @@ type updateProjectRequest struct {
 	Description string `json:"description" validate:"max=5000"`
 	Type        string `json:"type" validate:"required,oneof=kanban scrum"`
 	LeadID      string `json:"lead_id" validate:"required,uuid"`
-	Visibility  string `json:"visibility" validate:"required,oneof=private team"`
+	Visibility  string `json:"visibility" validate:"required,oneof=private open team"`
 }
 
 type projectResponse struct {
-	ID          string     `json:"id"`
-	Key         string     `json:"key"`
-	Name        string     `json:"name"`
-	Description string     `json:"description"`
-	Type        string     `json:"type"`
-	LeadID      string     `json:"lead_id"`
-	Visibility  string     `json:"visibility"`
-	ArchivedAt  *time.Time `json:"archived_at"`
-	CreatedAt   time.Time  `json:"created_at"`
-	UpdatedAt   time.Time  `json:"updated_at"`
+	ID             string     `json:"id"`
+	OrganizationID string     `json:"organization_id"`
+	Key            string     `json:"key"`
+	Name           string     `json:"name"`
+	Description    string     `json:"description"`
+	Type           string     `json:"type"`
+	LeadID         string     `json:"lead_id"`
+	Visibility     string     `json:"visibility"`
+	ArchivedAt     *time.Time `json:"archived_at"`
+	CreatedAt      time.Time  `json:"created_at"`
+	UpdatedAt      time.Time  `json:"updated_at"`
 }
 
 type projectMemberRequest struct {
@@ -83,7 +86,7 @@ type componentResponse struct {
 
 func toProjectResponse(p *domain.Project) projectResponse {
 	return projectResponse{
-		ID: p.ID.String(), Key: p.Key, Name: p.Name, Description: p.Description,
+		ID: p.ID.String(), OrganizationID: p.OrganizationID.String(), Key: p.Key, Name: p.Name, Description: p.Description,
 		Type: string(p.Type), LeadID: p.LeadID.String(), Visibility: string(p.Visibility),
 		ArchivedAt: p.ArchivedAt, CreatedAt: p.CreatedAt, UpdatedAt: p.UpdatedAt,
 	}

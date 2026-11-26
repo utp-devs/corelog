@@ -2,110 +2,56 @@ package postgres
 
 import (
 	"context"
-	"os"
-	"path/filepath"
-	"strings"
+	"errors"
 	"testing"
 
 	"github.com/google/uuid"
-	_ "github.com/jackc/pgx/v5/stdlib"
+	"github.com/jmoiron/sqlx"
+
+	"github.com/jhonsferg/corelog/internal/platform/apperror"
+	"github.com/jhonsferg/corelog/internal/platform/database/testdb"
 	projectport "github.com/jhonsferg/corelog/internal/project/application/port"
 	projectusecase "github.com/jhonsferg/corelog/internal/project/application/usecase"
 	"github.com/jhonsferg/corelog/internal/project/domain"
-	"github.com/jmoiron/sqlx"
 )
 
+// defaultOrganizationID is the organization that migration 000024 creates.
+const defaultOrganizationID = "00000000-0000-4000-8000-000000000002"
+
+// ownerOrgs reports every user as owner of every organization, with the default policy.
+type ownerOrgs struct{}
+
+func (ownerOrgs) MemberRole(context.Context, uuid.UUID, uuid.UUID) (string, bool, error) {
+	return domain.OrgRoleOwner, true, nil
+}
+
+func (ownerOrgs) ProjectCreationPolicy(context.Context, uuid.UUID) (string, string, error) {
+	return domain.CreationPolicyMembers, "open", nil
+}
+
+func insertUser(t *testing.T, db *sqlx.DB) uuid.UUID {
+	t.Helper()
+	id := uuid.New()
+	if _, err := db.Exec(`INSERT INTO users (id, name, display_name, email, password_hash, role) VALUES ($1, 'Lead', 'Lead', $2, 'x', 'user')`,
+		id, id.String()+"@example.test"); err != nil {
+		t.Fatal(err)
+	}
+	return id
+}
+
 func TestProjectCreationProvisionsDefaultBoardPostgres(t *testing.T) {
-	dsn := os.Getenv("CORELOG_TEST_DATABASE_URL")
-	if dsn == "" {
-		t.Skip("set CORELOG_TEST_DATABASE_URL to run PostgreSQL integration tests")
-	}
-	db, err := sqlx.Connect("pgx", dsn)
-	if err != nil {
-		t.Fatal(err)
-	}
-	db.SetMaxOpenConns(1)
-	t.Cleanup(func() { _ = db.Close() })
-	schema := "board_test_" + strings.ReplaceAll(uuid.NewString(), "-", "")
-	if _, err := db.Exec(`CREATE SCHEMA ` + schema); err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { _, _ = db.Exec(`DROP SCHEMA ` + schema + ` CASCADE`) })
-	if _, err := db.Exec(`SET search_path TO ` + schema); err != nil {
-		t.Fatal(err)
-	}
-	for _, statement := range []string{
-		`CREATE TABLE users(id UUID PRIMARY KEY)`,
-		`CREATE TABLE projects(id UUID PRIMARY KEY, key VARCHAR(20) NOT NULL UNIQUE, name VARCHAR(120) NOT NULL, description TEXT NOT NULL DEFAULT '', type VARCHAR(10) NOT NULL CHECK(type IN ('kanban','scrum')), lead_id UUID NOT NULL REFERENCES users(id), visibility VARCHAR(10) NOT NULL, archived_at TIMESTAMPTZ, created_at TIMESTAMPTZ NOT NULL, updated_at TIMESTAMPTZ NOT NULL)`,
-		`CREATE TABLE project_members(project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE, user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE, role VARCHAR(20) NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT now(), PRIMARY KEY(project_id,user_id))`,
-	} {
-		if _, err := db.Exec(statement); err != nil {
-			t.Fatal(err)
-		}
-	}
-	leadID := uuid.New()
-	if _, err := db.Exec(`INSERT INTO users(id) VALUES($1)`, leadID); err != nil {
-		t.Fatal(err)
-	}
-	existingID := uuid.New()
-	if _, err := db.Exec(`INSERT INTO projects(id,key,name,type,lead_id,visibility,created_at,updated_at) VALUES($1,'OLD','Existing','kanban',$2,'team',now(),now())`, existingID, leadID); err != nil {
-		t.Fatal(err)
-	}
-	workflowUpPath := filepath.Join("..", "..", "..", "..", "..", "migrations", "postgres", "0010_workflows.up.sql")
-	workflowUp, err := os.ReadFile(workflowUpPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if _, err := db.Exec(string(workflowUp)); err != nil {
-		t.Fatal(err)
-	}
-	workflowDownPath := filepath.Join("..", "..", "..", "..", "..", "migrations", "postgres", "0010_workflows.down.sql")
-	workflowDown, err := os.ReadFile(workflowDownPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { _, _ = db.Exec(string(workflowDown)) })
-	var seededWorkflows int
-	if err := db.Get(&seededWorkflows, `SELECT count(*) FROM workflows`); err != nil {
-		t.Fatal(err)
-	}
-	if seededWorkflows != 0 {
-		t.Fatalf("workflow migration seeded %d workflows without the default project", seededWorkflows)
-	}
-	upPath := filepath.Join("..", "..", "..", "..", "..", "migrations", "postgres", "000014_boards.up.sql")
-	up, err := os.ReadFile(upPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if _, err := db.Exec(string(up)); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := db.Exec(`ALTER TABLE projects ALTER COLUMN id SET DEFAULT gen_random_uuid()`); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := db.Exec(`ALTER TABLE boards ALTER COLUMN id SET DEFAULT gen_random_uuid()`); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := db.Exec(`ALTER TABLE board_columns ALTER COLUMN id SET DEFAULT gen_random_uuid()`); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := db.Exec(`ALTER TABLE workflows ALTER COLUMN id SET DEFAULT gen_random_uuid()`); err != nil {
-		t.Fatal(err)
-	}
-	downPath := filepath.Join("..", "..", "..", "..", "..", "migrations", "postgres", "000014_boards.down.sql")
-	down, err := os.ReadFile(downPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { _, _ = db.Exec(string(down)) })
+	db := testdb.New(t)
+	ctx := context.Background()
+	leadID := insertUser(t, db)
 	repository := NewProjectRepository(db)
-	assertDefaultBoard(t, db, existingID, "kanban")
-	service := projectusecase.NewProjectService(repository, nil)
-	created, err := service.Create(context.Background(), "NEW", "New Scrum", "", domain.ProjectTypeScrum, leadID, domain.VisibilityTeam)
+	service := projectusecase.NewProjectService(repository, NewMemberRepository(db), ownerOrgs{})
+
+	created, err := service.Create(ctx, leadID, uuid.MustParse(defaultOrganizationID), "NEW", "New Scrum", "", domain.ProjectTypeScrum, "")
 	if err != nil {
 		t.Fatal(err)
 	}
 	assertDefaultBoard(t, db, created.ID, "scrum")
+
 	var workflowCount, transitionCount int
 	if err := db.Get(&workflowCount, `SELECT count(*) FROM workflows WHERE project_id=$1 AND is_default`, created.ID); err != nil {
 		t.Fatal(err)
@@ -116,59 +62,57 @@ func TestProjectCreationProvisionsDefaultBoardPostgres(t *testing.T) {
 	if workflowCount != 1 || transitionCount != 6 {
 		t.Fatalf("default workflow was not provisioned: workflows=%d transitions=%d", workflowCount, transitionCount)
 	}
-	if _, err := service.Create(context.Background(), "NEW", "Duplicate", "", domain.ProjectTypeKanban, leadID, domain.VisibilityTeam); err != domain.ErrProjectKeyTaken {
-		t.Fatalf("duplicate project error=%v, want %v", err, domain.ErrProjectKeyTaken)
+
+	_, err = service.Create(ctx, leadID, uuid.MustParse(defaultOrganizationID), "NEW", "Duplicate", "", domain.ProjectTypeKanban, "")
+	if apperror.CodeOf(err) != "project.key_taken" {
+		t.Fatalf("duplicate key in the same organization: %v, want project.key_taken", err)
 	}
-	if _, err := db.Exec(`INSERT INTO boards(id,project_id,name,type,is_default) VALUES($1,$2,'Second default','kanban',true)`, uuid.New(), existingID); err == nil {
+
+	otherOrg := uuid.New()
+	if _, err := db.Exec(`INSERT INTO organizations (id, slug, name) VALUES ($1, $2, 'Other')`, otherOrg, "other-"+otherOrg.String()[:8]); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := service.Create(ctx, leadID, otherOrg, "NEW", "Same key elsewhere", "", domain.ProjectTypeKanban, ""); err != nil {
+		t.Fatalf("same key in another organization must be allowed: %v", err)
+	}
+
+	if _, err := db.Exec(`INSERT INTO boards(id,project_id,name,type,is_default) VALUES($1,$2,'Second default','kanban',true)`, uuid.New(), created.ID); err == nil {
 		t.Fatal("expected the database to reject a second default board for the project")
 	}
 
-	rollbackProject, err := domain.NewProject("ROLLBACK", "Rollback", "", domain.ProjectTypeKanban, leadID, domain.VisibilityTeam)
+	rollbackProject, err := domain.NewProject(uuid.MustParse(defaultOrganizationID), "ROLLBACK", "Rollback", "", domain.ProjectTypeKanban, domain.VisibilityOpen, leadID)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = repository.CreateWithDefaults(context.Background(), rollbackProject, projectport.Member{
+	err = repository.CreateWithDefaults(ctx, rollbackProject, projectport.Member{
 		ProjectID: rollbackProject.ID, UserID: uuid.New(), Role: "lead",
 	})
-	if err == nil {
-		t.Fatal("expected project creation to fail when its lead membership cannot be saved")
+	if !errors.Is(err, domain.ErrUserNotFound) {
+		t.Fatalf("lead that does not exist: got %v, want project.user_not_found", err)
 	}
 	var projectCount, boardCount, remainingWorkflows int
-	if err := db.Get(&projectCount, `SELECT count(*) FROM projects WHERE id=$1`, rollbackProject.ID); err != nil {
+	if err := db.Get(&projectCount, `SELECT count(*) FROM projects WHERE key=$1`, "ROLLBACK"); err != nil {
 		t.Fatal(err)
 	}
-	if err := db.Get(&boardCount, `SELECT count(*) FROM boards WHERE project_id=$1`, rollbackProject.ID); err != nil {
+	if err := db.Get(&boardCount, `SELECT count(*) FROM boards b JOIN projects p ON p.id=b.project_id WHERE p.key=$1`, "ROLLBACK"); err != nil {
 		t.Fatal(err)
 	}
-	if err := db.Get(&remainingWorkflows, `SELECT count(*) FROM workflows WHERE project_id=$1`, rollbackProject.ID); err != nil {
+	if err := db.Get(&remainingWorkflows, `SELECT count(*) FROM workflows w JOIN projects p ON p.id=w.project_id WHERE p.key=$1`, "ROLLBACK"); err != nil {
 		t.Fatal(err)
 	}
 	if projectCount != 0 || boardCount != 0 || remainingWorkflows != 0 {
 		t.Fatalf("failed project creation left project=%d boards=%d workflows=%d", projectCount, boardCount, remainingWorkflows)
 	}
-	if err := repository.Delete(context.Background(), existingID); err != nil {
+
+	if err := repository.Delete(ctx, uuid.MustParse(defaultOrganizationID), created.ID); err != nil {
 		t.Fatal(err)
 	}
 	var remainingColumns int
-	if err := db.Get(&remainingColumns, `SELECT count(*) FROM board_columns c JOIN boards b ON b.id=c.board_id WHERE b.project_id=$1`, existingID); err != nil {
+	if err := db.Get(&remainingColumns, `SELECT count(*) FROM board_columns c JOIN boards b ON b.id=c.board_id WHERE b.project_id=$1`, created.ID); err != nil {
 		t.Fatal(err)
 	}
 	if remainingColumns != 0 {
 		t.Fatalf("deleting project left %d board columns", remainingColumns)
-	}
-	if _, err := db.Exec(string(down)); err != nil {
-		t.Fatalf("down migration: %v", err)
-	}
-	var boardsTableExists bool
-	if err := db.Get(&boardsTableExists, `SELECT to_regclass('boards') IS NOT NULL`); err != nil {
-		t.Fatal(err)
-	}
-	var projectsCount int
-	if err := db.Get(&projectsCount, `SELECT count(*) FROM projects`); err != nil {
-		t.Fatal(err)
-	}
-	if boardsTableExists || projectsCount != 1 {
-		t.Fatalf("down migration boards table exists=%v, project count=%d", boardsTableExists, projectsCount)
 	}
 }
 

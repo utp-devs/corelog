@@ -11,6 +11,7 @@ import (
 
 	"github.com/jhonsferg/corelog/internal/platform/apperror"
 	"github.com/jhonsferg/corelog/internal/project/application/port"
+	"github.com/jhonsferg/corelog/internal/project/domain"
 )
 
 type memberRow struct {
@@ -93,6 +94,9 @@ func (r *MemberRepository) Add(ctx context.Context, member port.Member) error {
 		member.CreatedAt,
 	)
 	if err != nil {
+		if isForeignKeyViolation(err) {
+			return domain.ErrUserNotFound
+		}
 		return apperror.Wrap(apperror.KindInternal, "failed to add project member", err)
 	}
 	return nil

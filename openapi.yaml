@@ -22,6 +22,7 @@ paths:
     post:
       tags: [auth]
       summary: Create a user account
+      description: The account gets the role user. The first account created on an empty installation becomes admin.
       operationId: registerUser
       security: []
       requestBody:
@@ -43,7 +44,7 @@ paths:
         '422':
           $ref: '#/components/responses/ValidationError'
         '409':
-          description: The email address is already registered
+          description: The email address is already registered (code auth.email_taken)
           content:
             application/json:
               schema:
@@ -110,6 +111,8 @@ paths:
     patch:
       tags: [users]
       summary: Update the current user's profile
+      description: >-
+        Partial update: omitted fields keep their value. An invalid timezone answers 422 (code user.timezone_invalid).
       operationId: updateProfile
       requestBody:
         required: true
@@ -130,7 +133,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
         '409':
-          description: The email address is already registered to another account
+          description: The email address is already registered to another account (code auth.email_taken)
           content:
             application/json:
               schema:
@@ -252,10 +255,12 @@ paths:
   /users/search:
     get:
       tags: [users]
-      summary: Search users within the current user's own team
+      summary: Search the members of an organization
       description: >-
-        Returns an empty list when the current user does not belong to a team, since there is
-        nobody they are allowed to search for or assign tickets to.
+        Pass organization_id. The caller must be a member of that organization, otherwise the answer is
+        404 (code organization.not_found). Returns at most 20 users whose name or email matches q.
+        Platform administrators may omit organization_id, which keeps the legacy search among their own team;
+        every other caller who omits it gets 422 (code validation.failed).
       operationId: searchTeammates
       parameters:
         - name: q
@@ -264,9 +269,16 @@ paths:
           description: Free-text match against name and email.
           schema:
             type: string
+        - name: organization_id
+          in: query
+          required: false
+          description: Organization whose members are searched. Required for every caller except a platform administrator.
+          schema:
+            type: string
+            format: uuid
       responses:
         '200':
-          description: Teammates matching the search query
+          description: Members matching the search query (at most 20)
           content:
             application/json:
               schema:
@@ -274,10 +286,17 @@ paths:
                 properties:
                   data:
                     type: array
+                    maxItems: 20
                     items:
                       $ref: '#/components/schemas/User'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: The organization does not exist or the caller is not a member of it (code organization.not_found).
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+        '422':
+          description: organization_id is missing for a non-administrator, or is not a UUID (code validation.failed).
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
   /users:
     get:
       tags: [users]
@@ -349,11 +368,20 @@ paths:
   /teams:
     get:
       tags: [teams]
-      summary: List all teams
+      summary: List the teams of an organization
+      description: Returns the teams of the given organization that the authenticated user can see.
       operationId: listTeams
+      parameters:
+        - name: organization_id
+          in: query
+          required: true
+          description: Organization whose teams are listed.
+          schema:
+            type: string
+            format: uuid
       responses:
         '200':
-          description: Every team
+          description: Teams of the organization
           content:
             application/json:
               schema:
@@ -365,10 +393,18 @@ paths:
                       $ref: '#/components/schemas/Team'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: The organization does not exist or is not visible to the user (code team.organization_not_found).
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+        '422':
+          description: organization_id is missing or is not a UUID (code team.organization_required).
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
     post:
       tags: [teams]
-      summary: Create a team
-      description: Administrator only.
+      summary: Create a team in an organization
+      description: >-
+        Whether the caller may create teams in the organization depends on the organization role and policy
+        (code team.creation_not_allowed otherwise).
       operationId: createTeam
       requestBody:
         required: true
@@ -389,15 +425,19 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
-          $ref: '#/components/responses/Forbidden'
+          description: The organization policy does not allow the caller to create teams (code team.creation_not_allowed).
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+        '404':
+          description: The organization does not exist (code team.organization_not_found).
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
         '409':
-          description: A team with this name already exists
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
+          description: A team with this name already exists in the organization (code team.name_taken).
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
         '422':
-          $ref: '#/components/responses/ValidationError'
+          description: >-
+            The body failed validation (codes team.name_required, team.description_too_long,
+            team.avatar_color_invalid, team.organization_required or validation.failed).
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
   /teams/{id}:
     parameters:
       - $ref: '#/components/parameters/TeamId'
@@ -418,21 +458,22 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
         '404':
-          $ref: '#/components/responses/NotFound'
+          description: The team does not exist or is not visible to the user (code team.not_found).
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
     patch:
       tags: [teams]
-      summary: Rename a team
-      description: Administrator only.
-      operationId: renameTeam
+      summary: Update a team
+      description: Partial update. Omitted fields keep their current value. Replaces the former rename operation.
+      operationId: updateTeam
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/RenameTeamRequest'
+              $ref: '#/components/schemas/UpdateTeamRequest'
       responses:
         '200':
-          description: The renamed team
+          description: The updated team
           content:
             application/json:
               schema:
@@ -443,21 +484,23 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
-          $ref: '#/components/responses/Forbidden'
+          description: The user is not allowed to change this team (code team.forbidden).
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
         '404':
-          $ref: '#/components/responses/NotFound'
+          description: The team does not exist or is not visible to the user (code team.not_found).
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
         '409':
-          description: A team with this name already exists
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
+          description: A team with this name already exists in the organization (code team.name_taken).
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
         '422':
-          $ref: '#/components/responses/ValidationError'
+          description: >-
+            The body failed validation (codes team.name_required, team.description_too_long,
+            team.avatar_color_invalid or validation.failed).
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
     delete:
       tags: [teams]
       summary: Delete a team
-      description: Administrator only. Members of the deleted team are left without a team rather than being deleted themselves.
+      description: Members of the deleted team are left without a team rather than being deleted themselves.
       operationId: deleteTeam
       responses:
         '204':
@@ -465,19 +508,143 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
-          $ref: '#/components/responses/Forbidden'
+          description: The user is not allowed to delete this team (code team.forbidden).
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
         '404':
-          $ref: '#/components/responses/NotFound'
+          description: The team does not exist or is not visible to the user (code team.not_found).
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+  /teams/{id}/members:
+    parameters:
+      - $ref: '#/components/parameters/TeamId'
+    get:
+      tags: [teams]
+      summary: List the members of a team
+      operationId: listTeamMembers
+      responses:
+        '200':
+          description: Members of the team
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/TeamMember'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: The user is not allowed to see the members of this team (code team.forbidden).
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+        '404':
+          description: The team does not exist or is not visible to the user (code team.not_found).
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+    post:
+      tags: [teams]
+      summary: Add a member to a team
+      description: >-
+        The user must already belong to the organization of the team (code team.user_not_in_org otherwise).
+        When role is omitted the member is added with the role member.
+      operationId: addTeamMember
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddTeamMemberRequest'
+      responses:
+        '201':
+          description: Team member added
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/TeamMember'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: The user is not allowed to manage members of this team (code team.forbidden).
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+        '409':
+          description: The user is already a member of the team (code team.member_exists).
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+        '422':
+          description: >-
+            The body failed validation (codes team.user_not_in_org, team.role_invalid, team.user_id_invalid
+            or validation.failed).
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+  /teams/{id}/members/{user_id}:
+    parameters:
+      - $ref: '#/components/parameters/TeamId'
+      - $ref: '#/components/parameters/TeamUserId'
+    patch:
+      tags: [teams]
+      summary: Change the role of a team member
+      operationId: updateTeamMember
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateTeamMemberRequest'
+      responses:
+        '200':
+          description: Team member role updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/TeamMember'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: The user is not allowed to manage members of this team (code team.forbidden).
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+        '404':
+          description: The user is not a member of the team (code team.member_not_found).
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+        '422':
+          description: The role is not maintainer or member (code team.role_invalid or validation.failed).
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+    delete:
+      tags: [teams]
+      summary: Remove a member from a team
+      operationId: removeTeamMember
+      responses:
+        '204':
+          description: Team member removed
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: The user is not allowed to manage members of this team (code team.forbidden).
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+        '404':
+          description: The user is not a member of the team (code team.member_not_found).
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
   /projects:
     get:
       tags: [projects]
-      summary: List projects
+      summary: List the projects of an organization
+      description: Returns the projects of the given organization that are visible to the authenticated user.
       operationId: listProjects
       security:
         - bearerAuth: []
+      parameters:
+        - name: organization_id
+          in: query
+          required: true
+          description: Organization whose projects are listed.
+          schema:
+            type: string
+            format: uuid
       responses:
         '200':
-          description: Projects visible to the authenticated user
+          description: Projects of the organization visible to the authenticated user
           content:
             application/json:
               schema:
@@ -489,9 +656,16 @@ paths:
                       $ref: '#/components/schemas/Project'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '422':
+          description: organization_id is missing or is not a UUID (code project.organization_required).
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
     post:
       tags: [projects]
       summary: Create a project
+      description: >-
+        The creator becomes the project lead. Any organization member may call this endpoint, but the
+        organization role and policy decide whether the project is created (code project.creation_not_allowed
+        otherwise). visibility is optional; when omitted the organization default applies.
       operationId: createProject
       security:
         - bearerAuth: []
@@ -514,11 +688,18 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
-          $ref: '#/components/responses/Forbidden'
+          description: The organization policy does not allow the caller to create projects (code project.creation_not_allowed).
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+        '404':
+          description: The organization does not exist (code organization.not_found).
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
         '409':
-          $ref: '#/components/responses/Conflict'
+          description: A project with this key already exists (code project.key_taken).
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
         '422':
-          $ref: '#/components/responses/ValidationError'
+          description: >-
+            The body failed validation (codes project.organization_required, project.invalid or validation.failed).
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
   /projects/{id}:
     parameters:
       - name: id
@@ -530,6 +711,7 @@ paths:
     get:
       tags: [projects]
       summary: Get a project
+      description: Returns 404 (code project.not_found) when the project does not exist or is not visible to the caller.
       operationId: getProject
       security:
         - bearerAuth: []
@@ -745,6 +927,9 @@ paths:
     post:
       tags: [projects]
       summary: Add or update a project member
+      description: >-
+        The user must belong to the organization of the project (code project.user_not_in_org otherwise), and
+        must exist (code project.user_not_found).
       security:
         - bearerAuth: []
       requestBody:
@@ -767,8 +952,18 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+        '404':
+          description: The user does not exist (code project.user_not_found).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '422':
-          $ref: '#/components/responses/ValidationError'
+          description: The user does not belong to the organization of the project (code project.user_not_in_org).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /projects/{id}/members/{user_id}:
     parameters:
       - name: id
@@ -2399,6 +2594,14 @@ components:
       schema:
         type: string
         format: uuid
+    TeamUserId:
+      name: user_id
+      in: path
+      required: true
+      description: The user's unique identifier (a member of the team)
+      schema:
+        type: string
+        format: uuid
   responses:
     Unauthorized:
       description: The request is missing a valid access token
@@ -2433,7 +2636,8 @@ components:
   schemas:
     Role:
       type: string
-      enum: [admin, agent, requester]
+      enum: [admin, user]
+      description: Platform role. The first account created on an empty installation is admin; every other account is user.
     TicketStatus:
       type: string
       enum: [open, in_progress, resolved, closed]
@@ -2483,6 +2687,19 @@ components:
           format: email
         role:
           $ref: '#/components/schemas/Role'
+        display_name:
+          type: string
+        job_title:
+          type: string
+        department:
+          type: string
+        avatar_key:
+          type: string
+          nullable: true
+        timezone:
+          type: string
+          default: UTC
+          description: IANA time zone name (for example America/Bogota). Defaults to UTC.
         team_id:
           type: string
           format: uuid
@@ -2490,9 +2707,18 @@ components:
         created_at:
           type: string
           format: date-time
+        last_login_at:
+          type: string
+          format: date-time
+          nullable: true
+        email_verified_at:
+          type: string
+          format: date-time
+          nullable: true
     UpdateProfileRequest:
       type: object
-      required: [name, email]
+      description: Partial update. Omitted fields keep their current value.
+      additionalProperties: false
       properties:
         name:
           type: string
@@ -2501,6 +2727,19 @@ components:
         email:
           type: string
           format: email
+        display_name:
+          type: string
+          maxLength: 120
+        job_title:
+          type: string
+          maxLength: 120
+        department:
+          type: string
+          maxLength: 120
+        timezone:
+          type: string
+          maxLength: 64
+          description: IANA time zone name. Invalid values answer 422 (code user.timezone_invalid).
     ChangePasswordRequest:
       type: object
       required: [current_password, new_password]
@@ -2522,34 +2761,112 @@ components:
           description: Set to null to remove the user from their current team.
     Team:
       type: object
+      required: [id, organization_id, name, description, avatar_color, created_by, created_at, updated_at]
       properties:
         id:
           type: string
           format: uuid
+        organization_id:
+          type: string
+          format: uuid
         name:
           type: string
+          minLength: 2
+          maxLength: 120
+        description:
+          type: string
+          maxLength: 500
+        avatar_color:
+          type: string
+          nullable: true
+          pattern: '^#[0-9A-Fa-f]{6}$'
+          example: '#1F6FEB'
+          description: Hex color (#RRGGBB), or null when no color is set.
+        created_by:
+          type: string
+          format: uuid
+          nullable: true
+          description: The user who created the team, or null when unknown.
         created_at:
           type: string
           format: date-time
         updated_at:
           type: string
           format: date-time
+    TeamMemberRole:
+      type: string
+      enum: [maintainer, member]
+    TeamMember:
+      type: object
+      required: [team_id, user_id, role, created_at]
+      properties:
+        team_id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        role:
+          $ref: '#/components/schemas/TeamMemberRole'
+        created_at:
+          type: string
+          format: date-time
     CreateTeamRequest:
       type: object
-      required: [name]
+      required: [organization_id, name]
+      additionalProperties: false
       properties:
+        organization_id:
+          type: string
+          format: uuid
+          description: Organization that owns the team.
         name:
           type: string
           minLength: 2
           maxLength: 120
-    RenameTeamRequest:
+        description:
+          type: string
+          maxLength: 500
+        avatar_color:
+          type: string
+          nullable: true
+          pattern: '^#[0-9A-Fa-f]{6}$'
+          description: Hex color (#RRGGBB) or null.
+    UpdateTeamRequest:
       type: object
-      required: [name]
+      description: Partial update. Omitted fields keep their current value.
+      additionalProperties: false
       properties:
         name:
           type: string
           minLength: 2
           maxLength: 120
+        description:
+          type: string
+          maxLength: 500
+        avatar_color:
+          type: string
+          nullable: true
+          pattern: '^#[0-9A-Fa-f]{6}$'
+          description: Hex color (#RRGGBB) or null.
+    AddTeamMemberRequest:
+      type: object
+      required: [user_id]
+      additionalProperties: false
+      properties:
+        user_id:
+          type: string
+          format: uuid
+        role:
+          $ref: '#/components/schemas/TeamMemberRole'
+          default: member
+    UpdateTeamMemberRequest:
+      type: object
+      required: [role]
+      additionalProperties: false
+      properties:
+        role:
+          $ref: '#/components/schemas/TeamMemberRole'
     Project:
       type: object
       properties:
@@ -2569,12 +2886,15 @@ components:
         type:
           type: string
           enum: [kanban, scrum]
+        organization_id:
+          type: string
+          format: uuid
         lead_id:
           type: string
           format: uuid
         visibility:
           type: string
-          enum: [private, team]
+          enum: [private, open]
     ProjectBoard:
       type: object
       required: [id, project_id, name, type, columns]
@@ -2696,8 +3016,12 @@ components:
           format: date-time
     CreateProjectRequest:
       type: object
-      required: [key, name, type, lead_id, visibility]
+      required: [organization_id, key, name, type]
       properties:
+        organization_id:
+          type: string
+          format: uuid
+          description: Organization that owns the project.
         key:
           type: string
           minLength: 1
@@ -2712,12 +3036,12 @@ components:
         type:
           type: string
           enum: [kanban, scrum]
-        lead_id:
-          type: string
-          format: uuid
         visibility:
           type: string
-          enum: [private, team]
+          enum: [private, open]
+          description: >-
+            Optional. When omitted the organization default applies. The legacy value team is accepted on
+            input and stored as open.
     UpdateProjectRequest:
       type: object
       required: [name, type, lead_id, visibility]
@@ -2737,7 +3061,8 @@ components:
           format: uuid
         visibility:
           type: string
-          enum: [private, team]
+          enum: [private, open]
+          description: The legacy value team is accepted on input and stored as open.
     CreateProjectLabelRequest:
       type: object
       required: [name]

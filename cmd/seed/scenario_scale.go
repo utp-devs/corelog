@@ -28,21 +28,21 @@ func buildScale(passwordHash string, issues int) *dataset {
 	ds := newDataset()
 	rng := newRNG(streamScale)
 
-	spec := demoOrgSpec()
+	entries := demoRoster()
 	for k := 1; k <= issues/1000; k++ {
-		role := "requester"
+		orgRole := "guest"
 		if k%5 == 0 {
-			role = "agent"
+			orgRole = "member"
 		}
-		spec.people = append(spec.people, person{
-			name:  fmt.Sprintf("Usuario de escala %03d", k),
-			email: fmt.Sprintf("escala%03d@corelog.test", k),
-			role:  role,
-			team:  1 + k%len(spec.teams),
+		entries = append(entries, demoEntry{
+			name:    fmt.Sprintf("Usuario de escala %03d", k),
+			email:   fmt.Sprintf("escala%03d@corelog.test", k),
+			orgRole: orgRole,
+			team:    1 + k%len(demoTeams),
 		})
 	}
 
-	org := buildOrg(ds, spec, passwordHash)
+	org := buildDemoOrg(ds, entries, passwordHash)
 	emitIssues(ds, generateIssues(rng, org, issues))
 	return ds
 }

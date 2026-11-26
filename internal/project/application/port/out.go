@@ -9,13 +9,22 @@ import (
 	"github.com/jhonsferg/corelog/internal/project/domain"
 )
 
+// VisibilityScope selects the projects of an organization that a viewer may list.
+// All: every project (org owner/admin, platform admin). Open: also the open projects.
+// Projects where UserID is an explicit project member are always included.
+type VisibilityScope struct {
+	UserID uuid.UUID
+	All    bool
+	Open   bool
+}
+
 type Repository interface {
 	Save(ctx context.Context, project *domain.Project) error
 	FindByID(ctx context.Context, id uuid.UUID) (*domain.Project, error)
-	FindByKey(ctx context.Context, key string) (*domain.Project, error)
-	FindAll(ctx context.Context) ([]*domain.Project, error)
+	FindByKey(ctx context.Context, orgID uuid.UUID, key string) (*domain.Project, error)
+	FindByOrganization(ctx context.Context, orgID uuid.UUID, scope VisibilityScope) ([]*domain.Project, error)
 	Update(ctx context.Context, project *domain.Project) error
-	Delete(ctx context.Context, id uuid.UUID) error
+	Delete(ctx context.Context, orgID, id uuid.UUID) error
 }
 
 // ProjectCreationRepository persists a project and its required initial relations atomically.
@@ -53,6 +62,7 @@ const (
 	ActionViewProject   = "view_project"
 	ActionEditProject   = "edit_project"
 	ActionManageMembers = "manage_members"
+	ActionEditIssue     = "edit_issue"
 )
 
 // ProjectAuthorizer decide si un actor puede ejecutar una accion sobre un proyecto.

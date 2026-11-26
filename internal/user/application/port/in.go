@@ -21,9 +21,14 @@ type AuthenticateInput struct {
 	Password string
 }
 
+// UpdateProfileInput is a partial update: nil fields are left unchanged.
 type UpdateProfileInput struct {
-	Name  string
-	Email string
+	Name        *string
+	Email       *string
+	DisplayName *string
+	JobTitle    *string
+	Department  *string
+	Timezone    *string
 }
 
 type ChangePasswordInput struct {
@@ -52,11 +57,15 @@ type Service interface {
 	RevokeOtherSessions(ctx context.Context, userID, currentSessionID uuid.UUID) error
 	DeactivateAccount(ctx context.Context, userID uuid.UUID, password string) error
 	Register(ctx context.Context, in RegisterInput) (*domain.User, error)
+	// Authenticate valida las credenciales y registra last_login_at en un inicio de sesion correcto.
 	Authenticate(ctx context.Context, in AuthenticateInput) (*domain.User, error)
 	GetByID(ctx context.Context, id uuid.UUID) (*domain.User, error)
 	UpdateProfile(ctx context.Context, userID uuid.UUID, in UpdateProfileInput) (*domain.User, error)
 	ChangePassword(ctx context.Context, userID uuid.UUID, in ChangePasswordInput) error
 	SetTeam(ctx context.Context, userID uuid.UUID, teamID *uuid.UUID) (*domain.User, error)
 	SearchTeammates(ctx context.Context, actorID uuid.UUID, query string) ([]*domain.User, error)
+	// SearchInOrganization devuelve los miembros de la organizacion visibles para el actor.
+	// Si el actor no es miembro devuelve domain.ErrNotOrganizationMember.
+	SearchInOrganization(ctx context.Context, actorID, orgID uuid.UUID, query string) ([]*domain.User, error)
 	Search(ctx context.Context, filter SearchFilter) ([]*domain.User, error)
 }

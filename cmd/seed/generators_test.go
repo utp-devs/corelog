@@ -94,9 +94,16 @@ func TestE2EAccounts(t *testing.T) {
 	ds := buildE2E(testHash)
 	want := map[string]string{
 		"admin@corelog.local":     "admin",
-		"agent@corelog.local":     "agent",
-		"requester@corelog.local": "requester",
-		"ana.torres@corelog.test": "requester",
+		"agent@corelog.local":     "user",
+		"requester@corelog.local": "user",
+		"ana.torres@corelog.test": "user",
+		"owner@corelog.test":      "user",
+		"orgadmin@corelog.test":   "user",
+		"lead@corelog.test":       "user",
+		"member@corelog.test":     "user",
+		"viewer@corelog.test":     "user",
+		"guest@corelog.test":      "user",
+		"newbie@corelog.test":     "user",
 	}
 	emails := columnValues(t, ds, "users", "email")
 	roles := columnValues(t, ds, "users", "role")

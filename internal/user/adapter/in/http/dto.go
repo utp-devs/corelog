@@ -18,9 +18,15 @@ type loginRequest struct {
 	Password string `json:"password" validate:"required"`
 }
 
+// updateProfileRequest is a partial update: omitted fields keep their value. Timezone is
+// validated in the domain (IANA name), so an invalid value answers user.timezone_invalid.
 type updateProfileRequest struct {
-	Name  string `json:"name" validate:"required,min=2,max=120"`
-	Email string `json:"email" validate:"required,email"`
+	Name        *string `json:"name" validate:"omitempty,min=2,max=120"`
+	Email       *string `json:"email" validate:"omitempty,email"`
+	DisplayName *string `json:"display_name" validate:"omitempty,max=120"`
+	JobTitle    *string `json:"job_title" validate:"omitempty,max=120"`
+	Department  *string `json:"department" validate:"omitempty,max=120"`
+	Timezone    *string `json:"timezone" validate:"omitempty,max=64"`
 }
 
 type changePasswordRequest struct {
@@ -49,12 +55,19 @@ type setTeamRequest struct {
 }
 
 type userResponse struct {
-	ID        string    `json:"id"`
-	Name      string    `json:"name"`
-	Email     string    `json:"email"`
-	Role      string    `json:"role"`
-	TeamID    *string   `json:"team_id,omitempty"`
-	CreatedAt time.Time `json:"created_at"`
+	ID              string     `json:"id"`
+	Name            string     `json:"name"`
+	Email           string     `json:"email"`
+	Role            string     `json:"role"`
+	DisplayName     string     `json:"display_name"`
+	JobTitle        string     `json:"job_title"`
+	Department      string     `json:"department"`
+	AvatarKey       *string    `json:"avatar_key"`
+	Timezone        string     `json:"timezone"`
+	TeamID          *string    `json:"team_id,omitempty"`
+	CreatedAt       time.Time  `json:"created_at"`
+	LastLoginAt     *time.Time `json:"last_login_at"`
+	EmailVerifiedAt *time.Time `json:"email_verified_at"`
 }
 
 type authResponse struct {
@@ -64,11 +77,18 @@ type authResponse struct {
 
 func toUserResponse(u *domain.User) userResponse {
 	resp := userResponse{
-		ID:        u.ID.String(),
-		Name:      u.Name,
-		Email:     u.Email,
-		Role:      string(u.Role),
-		CreatedAt: u.CreatedAt,
+		ID:              u.ID.String(),
+		Name:            u.Name,
+		Email:           u.Email,
+		Role:            string(u.Role),
+		DisplayName:     u.DisplayName,
+		JobTitle:        u.JobTitle,
+		Department:      u.Department,
+		AvatarKey:       u.AvatarKey,
+		Timezone:        u.Timezone,
+		CreatedAt:       u.CreatedAt,
+		LastLoginAt:     u.LastLoginAt,
+		EmailVerifiedAt: u.EmailVerifiedAt,
 	}
 	if u.TeamID != nil {
 		id := u.TeamID.String()

@@ -21,11 +21,43 @@ import (
 )
 
 type memoryUserRepo struct {
-	users map[uuid.UUID]*domain.User
+	users       map[uuid.UUID]*domain.User
+	memberships map[uuid.UUID]map[uuid.UUID]string // org -> user -> role
 }
 
 func newMemoryUserRepo() *memoryUserRepo {
-	return &memoryUserRepo{users: make(map[uuid.UUID]*domain.User)}
+	return &memoryUserRepo{
+		users:       make(map[uuid.UUID]*domain.User),
+		memberships: make(map[uuid.UUID]map[uuid.UUID]string),
+	}
+}
+
+func (r *memoryUserRepo) RecordLogin(_ context.Context, userID uuid.UUID, at time.Time) error {
+	u, ok := r.users[userID]
+	if !ok {
+		return domain.ErrUserNotFound
+	}
+	u.LastLoginAt = &at
+	return nil
+}
+
+func (r *memoryUserRepo) FindOrganizationRole(_ context.Context, orgID, userID uuid.UUID) (string, bool, error) {
+	role, ok := r.memberships[orgID][userID]
+	return role, ok, nil
+}
+
+func (r *memoryUserRepo) SearchOrganizationMembers(_ context.Context, filter userport.OrganizationSearchFilter) ([]*domain.User, error) {
+	var list []*domain.User
+	for id, role := range r.memberships[filter.OrganizationID] {
+		if filter.ActorIsGuest && role == "guest" {
+			continue
+		}
+		if u, ok := r.users[id]; ok {
+			copied := *u
+			list = append(list, &copied)
+		}
+	}
+	return list, nil
 }
 
 func (r *memoryUserRepo) Save(_ context.Context, u *domain.User) error {
@@ -201,7 +233,7 @@ func TestUserHTTP_AuthAndRoles(t *testing.T) {
 	router, jwtSecret, repo := setupUserRouter()
 
 	adminUser, _ := domain.NewUser("Admin", "admin@example.com", "hash", domain.RoleAdmin)
-	requesterUser, _ := domain.NewUser("Requester", "req@example.com", "hash", domain.RoleRequester)
+	requesterUser, _ := domain.NewUser("Requester", "req@example.com", "hash", domain.RoleUser)
 	_ = repo.Save(context.Background(), adminUser)
 	_ = repo.Save(context.Background(), requesterUser)
 

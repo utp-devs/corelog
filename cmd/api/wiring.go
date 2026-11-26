@@ -19,6 +19,7 @@ import (
 	"github.com/jhonsferg/corelog/internal/notification"
 	notificationpostgres "github.com/jhonsferg/corelog/internal/notification/adapter/out/postgres"
 	"github.com/jhonsferg/corelog/internal/platform/config"
+	"github.com/jhonsferg/corelog/internal/platform/database"
 	"github.com/jhonsferg/corelog/internal/platform/httpserver"
 	"github.com/jhonsferg/corelog/internal/project"
 	projectpostgres "github.com/jhonsferg/corelog/internal/project/adapter/out/postgres"
@@ -59,9 +60,10 @@ func buildRouter(cfg *config.Config, db *sqlx.DB, log *slog.Logger) (chi.Router,
 	sessionRepo := userpostgres.NewSessionRepository(db)
 
 	userModule := user.NewModule(userRepo, sessionRepo, cfg.Auth.JWTSecret, cfg.Auth.JWTExpiration)
-	teamModule := team.NewModule(teamRepo, cfg.Auth.JWTSecret)
+	orgs := newOrgDirectory(db)
+	teamModule := team.NewModule(teamRepo, orgs, database.NewTxManager(db), cfg.Auth.JWTSecret)
 	projectAuthorizer := projectAuthorizerAdapter{authorizer: authusecase.NewAuthorizer(authpostgres.NewRoleLookup(db))}
-	projectModule := project.NewModule(projectRepo, projectMemberRepo, projectCatalogRepo, cfg.Auth.JWTSecret, projectAuthorizer)
+	projectModule := project.NewModule(projectRepo, projectMemberRepo, projectCatalogRepo, orgs, cfg.Auth.JWTSecret, projectAuthorizer)
 
 	ticketRepo := ticketDBRepo
 	if cfg.Features.TicketRepository == "memory" {

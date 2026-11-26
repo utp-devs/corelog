@@ -14,6 +14,7 @@ import (
 	appmw "github.com/jhonsferg/corelog/internal/platform/middleware"
 	"github.com/jhonsferg/corelog/internal/platform/validation"
 	"github.com/jhonsferg/corelog/internal/user/application/port"
+	"github.com/jhonsferg/corelog/internal/user/domain"
 )
 
 type Handler struct {
@@ -118,7 +119,14 @@ func (h *Handler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := h.service.UpdateProfile(r.Context(), userID, port.UpdateProfileInput{Name: req.Name, Email: req.Email})
+	user, err := h.service.UpdateProfile(r.Context(), userID, port.UpdateProfileInput{
+		Name:        req.Name,
+		Email:       req.Email,
+		DisplayName: req.DisplayName,
+		JobTitle:    req.JobTitle,
+		Department:  req.Department,
+		Timezone:    req.Timezone,
+	})
 	if err != nil {
 		httpresponse.Error(w, err)
 		return
@@ -162,9 +170,32 @@ func (h *Handler) Search(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	query := r.URL.Query().Get("q")
+	q := r.URL.Query()
+	query := q.Get("q")
 
-	users, err := h.service.SearchTeammates(r.Context(), userID, query)
+	// Without organization_id only platform admins keep the team-based search; everyone else must name the organization.
+	orgParam := q.Get("organization_id")
+	if orgParam == "" {
+		if role, _ := appmw.RoleFromContext(r.Context()); role != string(domain.RoleAdmin) {
+			httpresponse.Error(w, errOrganizationIDRequired)
+			return
+		}
+		users, err := h.service.SearchTeammates(r.Context(), userID, query)
+		if err != nil {
+			httpresponse.Error(w, err)
+			return
+		}
+		httpresponse.JSON(w, http.StatusOK, toUserResponses(users))
+		return
+	}
+
+	orgID, err := uuid.Parse(orgParam)
+	if err != nil {
+		httpresponse.Error(w, errOrganizationIDInvalid)
+		return
+	}
+
+	users, err := h.service.SearchInOrganization(r.Context(), userID, orgID, query)
 	if err != nil {
 		httpresponse.Error(w, err)
 		return
@@ -172,6 +203,11 @@ func (h *Handler) Search(w http.ResponseWriter, r *http.Request) {
 
 	httpresponse.JSON(w, http.StatusOK, toUserResponses(users))
 }
+
+var (
+	errOrganizationIDRequired = apperror.WithCode(apperror.KindValidation, "validation.failed", "organization_id es obligatorio")
+	errOrganizationIDInvalid  = apperror.WithCode(apperror.KindValidation, "validation.failed", "organization_id no es un UUID valido")
+)
 
 func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()

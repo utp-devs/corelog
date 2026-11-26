@@ -34,12 +34,17 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		httpresponse.Error(w, validation.Failed(req, err))
 		return
 	}
-	leadID, err := uuid.Parse(req.LeadID)
+	orgID, err := uuid.Parse(req.OrganizationID)
 	if err != nil {
-		httpresponse.Error(w, apperror.New(apperror.KindValidation, "invalid lead id"))
+		httpresponse.Error(w, organizationRequiredError())
 		return
 	}
-	project, err := h.service.Create(r.Context(), req.Key, req.Name, req.Description, domain.ProjectType(req.Type), leadID, domain.Visibility(req.Visibility))
+	actorID, _, ok := actorFromRequest(r)
+	if !ok {
+		httpresponse.Error(w, apperror.New(apperror.KindUnauthorized, "no autorizado"))
+		return
+	}
+	project, err := h.service.Create(r.Context(), actorID, orgID, req.Key, req.Name, req.Description, domain.ProjectType(req.Type), domain.Visibility(req.Visibility))
 	if err != nil {
 		httpresponse.Error(w, err)
 		return
@@ -47,13 +52,19 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	httpresponse.JSON(w, http.StatusCreated, toProjectResponse(project))
 }
 
+// List requiere el parametro organization_id; solo devuelve proyectos de esa organizacion visibles para el actor.
 func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
-	actorID, globalRole, ok := actorFromRequest(r)
-	if !ok {
-		httpresponse.Error(w, apperror.New(apperror.KindUnauthorized, "unauthorized"))
+	orgID, err := uuid.Parse(r.URL.Query().Get("organization_id"))
+	if err != nil {
+		httpresponse.Error(w, organizationRequiredError())
 		return
 	}
-	projects, err := h.service.List(r.Context(), actorID, globalRole)
+	actorID, globalRole, ok := actorFromRequest(r)
+	if !ok {
+		httpresponse.Error(w, apperror.New(apperror.KindUnauthorized, "no autorizado"))
+		return
+	}
+	projects, err := h.service.List(r.Context(), actorID, globalRole, orgID)
 	if err != nil {
 		httpresponse.Error(w, err)
 		return
@@ -140,7 +151,12 @@ func (h *Handler) ListLabels(w http.ResponseWriter, r *http.Request) {
 		httpresponse.Error(w, apperror.New(apperror.KindValidation, "invalid project id"))
 		return
 	}
-	labels, err := h.service.ListLabels(r.Context(), projectID)
+	actorID, globalRole, ok := actorFromRequest(r)
+	if !ok {
+		httpresponse.Error(w, apperror.New(apperror.KindUnauthorized, "no autorizado"))
+		return
+	}
+	labels, err := h.service.ListLabels(r.Context(), actorID, globalRole, projectID)
 	if err != nil {
 		httpresponse.Error(w, err)
 		return
@@ -163,7 +179,12 @@ func (h *Handler) CreateLabel(w http.ResponseWriter, r *http.Request) {
 		httpresponse.Error(w, validation.Failed(req, err))
 		return
 	}
-	label, err := h.service.CreateLabel(r.Context(), projectID, req.Name, req.Color)
+	actorID, globalRole, ok := actorFromRequest(r)
+	if !ok {
+		httpresponse.Error(w, apperror.New(apperror.KindUnauthorized, "no autorizado"))
+		return
+	}
+	label, err := h.service.CreateLabel(r.Context(), actorID, globalRole, projectID, req.Name, req.Color)
 	if err != nil {
 		httpresponse.Error(w, err)
 		return
@@ -182,7 +203,12 @@ func (h *Handler) DeleteLabel(w http.ResponseWriter, r *http.Request) {
 		httpresponse.Error(w, apperror.New(apperror.KindValidation, "invalid label id"))
 		return
 	}
-	if err := h.service.DeleteLabel(r.Context(), projectID, labelID); err != nil {
+	actorID, globalRole, ok := actorFromRequest(r)
+	if !ok {
+		httpresponse.Error(w, apperror.New(apperror.KindUnauthorized, "no autorizado"))
+		return
+	}
+	if err := h.service.DeleteLabel(r.Context(), actorID, globalRole, projectID, labelID); err != nil {
 		httpresponse.Error(w, err)
 		return
 	}
@@ -195,7 +221,12 @@ func (h *Handler) ListComponents(w http.ResponseWriter, r *http.Request) {
 		httpresponse.Error(w, apperror.New(apperror.KindValidation, "invalid project id"))
 		return
 	}
-	components, err := h.service.ListComponents(r.Context(), projectID)
+	actorID, globalRole, ok := actorFromRequest(r)
+	if !ok {
+		httpresponse.Error(w, apperror.New(apperror.KindUnauthorized, "no autorizado"))
+		return
+	}
+	components, err := h.service.ListComponents(r.Context(), actorID, globalRole, projectID)
 	if err != nil {
 		httpresponse.Error(w, err)
 		return
@@ -218,7 +249,12 @@ func (h *Handler) CreateComponent(w http.ResponseWriter, r *http.Request) {
 		httpresponse.Error(w, validation.Failed(req, err))
 		return
 	}
-	component, err := h.service.CreateComponent(r.Context(), projectID, req.Name, req.Description)
+	actorID, globalRole, ok := actorFromRequest(r)
+	if !ok {
+		httpresponse.Error(w, apperror.New(apperror.KindUnauthorized, "no autorizado"))
+		return
+	}
+	component, err := h.service.CreateComponent(r.Context(), actorID, globalRole, projectID, req.Name, req.Description)
 	if err != nil {
 		httpresponse.Error(w, err)
 		return
@@ -237,11 +273,21 @@ func (h *Handler) DeleteComponent(w http.ResponseWriter, r *http.Request) {
 		httpresponse.Error(w, apperror.New(apperror.KindValidation, "invalid component id"))
 		return
 	}
-	if err := h.service.DeleteComponent(r.Context(), projectID, componentID); err != nil {
+	actorID, globalRole, ok := actorFromRequest(r)
+	if !ok {
+		httpresponse.Error(w, apperror.New(apperror.KindUnauthorized, "no autorizado"))
+		return
+	}
+	if err := h.service.DeleteComponent(r.Context(), actorID, globalRole, projectID, componentID); err != nil {
 		httpresponse.Error(w, err)
 		return
 	}
 	httpresponse.JSON(w, http.StatusNoContent, nil)
+}
+
+// organizationRequiredError is returned when organization_id is missing or is not a UUID.
+func organizationRequiredError() error {
+	return apperror.WithCode(apperror.KindValidation, "project.organization_required", "organization_id es obligatorio y debe ser un UUID valido")
 }
 
 func actorFromRequest(r *http.Request) (uuid.UUID, string, bool) {

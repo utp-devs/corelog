@@ -22,10 +22,8 @@ func (h *Handler) RegisterRoutes(r chi.Router) {
 		r.Post("/{id}/components", h.CreateComponent)
 		r.Delete("/{id}/components/{component_id}", h.DeleteComponent)
 
-		r.Group(func(r chi.Router) {
-			r.Use(appmw.RequireRole("admin"))
-			r.Post("/", h.Create)
-		})
+		// Creation is decided by the org role and policy in the use case, not by the platform role.
+		r.Post("/", h.Create)
 		r.Patch("/{id}", h.Update)
 		r.Delete("/{id}", h.Delete)
 	})

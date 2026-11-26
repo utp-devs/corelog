@@ -43,18 +43,19 @@ func TestSeedRefusesNonEmptyDatabaseUntilForceReset(t *testing.T) {
 	db := testdb.New(t)
 	opts := testOptions(t)
 
+	wantUsers := len(e2ePeople())
 	if err := runScenario(t, db, "e2e", opts); err != nil {
 		t.Fatalf("first e2e seed: %v", err)
 	}
-	if got := countRows(t, db, "users"); got != 4 {
-		t.Fatalf("users after first seed = %d, want 4", got)
+	if got := countRows(t, db, "users"); got != wantUsers {
+		t.Fatalf("users after first seed = %d, want %d", got, wantUsers)
 	}
 
 	err := runScenario(t, db, "e2e", opts)
 	if !errors.Is(err, errNotEmpty) {
 		t.Fatalf("second seed error = %v, want errNotEmpty", err)
 	}
-	if got := countRows(t, db, "users"); got != 4 {
+	if got := countRows(t, db, "users"); got != wantUsers {
 		t.Fatalf("refused seed changed users: %d", got)
 	}
 
@@ -62,14 +63,101 @@ func TestSeedRefusesNonEmptyDatabaseUntilForceReset(t *testing.T) {
 	if err := runScenario(t, db, "e2e", opts); err != nil {
 		t.Fatalf("force-reset seed: %v", err)
 	}
-	if got := countRows(t, db, "users"); got != 4 {
-		t.Errorf("users after force-reset = %d, want 4", got)
+	if got := countRows(t, db, "users"); got != wantUsers {
+		t.Errorf("users after force-reset = %d, want %d", got, wantUsers)
 	}
 	if got := countRows(t, db, "issues"); got != len(e2eIssues) {
 		t.Errorf("issues after force-reset = %d, want %d", got, len(e2eIssues))
 	}
-	if got := countRows(t, db, "teams"); got != 1 {
-		t.Errorf("teams after force-reset = %d, want 1", got)
+	// Platform "corelog" (re-created by the seed) and "acme".
+	if got := countRows(t, db, "organizations"); got != 2 {
+		t.Errorf("organizations after force-reset = %d, want 2", got)
+	}
+	if got := countRows(t, db, "teams"); got != 2 {
+		t.Errorf("teams after force-reset = %d, want 2", got)
+	}
+}
+
+func TestE2EOrganizationsAndMemberships(t *testing.T) {
+	db := testdb.New(t)
+	if err := runScenario(t, db, "e2e", testOptions(t)); err != nil {
+		t.Fatalf("e2e seed: %v", err)
+	}
+
+	var orgRoles []struct {
+		Email string `db:"email"`
+		Slug  string `db:"slug"`
+		Role  string `db:"role"`
+	}
+	if err := db.Select(&orgRoles, `
+		SELECT u.email, o.slug, m.role
+		FROM organization_members m
+		JOIN organizations o ON o.id = m.organization_id
+		JOIN users u ON u.id = m.user_id
+		WHERE o.slug = 'acme'`); err != nil {
+		t.Fatalf("select acme members: %v", err)
+	}
+	got := map[string]string{}
+	for _, r := range orgRoles {
+		got[r.Email] = r.Role
+	}
+	for email, role := range map[string]string{
+		"owner@corelog.test":      "owner",
+		"orgadmin@corelog.test":   "admin",
+		"member@corelog.test":     "member",
+		"guest@corelog.test":      "guest",
+		"lead@corelog.test":       "member",
+		"viewer@corelog.test":     "member",
+		"admin@corelog.local":     "owner",
+		"newbie@corelog.test":     "",
+		"ana.torres@corelog.test": "guest",
+	} {
+		if role == "" {
+			if _, ok := got[email]; ok {
+				t.Errorf("%s must not belong to acme", email)
+			}
+			continue
+		}
+		if got[email] != role {
+			t.Errorf("acme role of %s = %q, want %q", email, got[email], role)
+		}
+	}
+
+	var orphans []string
+	if err := db.Select(&orphans, `SELECT u.email FROM users u
+		WHERE NOT EXISTS (SELECT 1 FROM organization_members m WHERE m.user_id = u.id)`); err != nil {
+		t.Fatalf("select users without organization: %v", err)
+	}
+	if len(orphans) != 1 || orphans[0] != "newbie@corelog.test" {
+		t.Errorf("users without organization = %v, want [newbie@corelog.test]", orphans)
+	}
+
+	var legacyRoles int
+	if err := db.Get(&legacyRoles, `SELECT count(*) FROM users WHERE role NOT IN ('admin', 'user')`); err != nil {
+		t.Fatal(err)
+	}
+	if legacyRoles != 0 {
+		t.Errorf("users with a legacy platform role = %d, want 0", legacyRoles)
+	}
+}
+
+func TestDemoOrganizationHoldsEveryUser(t *testing.T) {
+	db := testdb.New(t)
+	if err := runScenario(t, db, "demo", testOptions(t)); err != nil {
+		t.Fatalf("demo seed: %v", err)
+	}
+	var missing int
+	if err := db.Get(&missing, `SELECT count(*) FROM users u
+		WHERE NOT EXISTS (SELECT 1 FROM organization_members m
+			JOIN organizations o ON o.id = m.organization_id
+			WHERE m.user_id = u.id AND o.slug = 'corelog')`); err != nil {
+		t.Fatal(err)
+	}
+	if missing != 0 {
+		t.Errorf("%d users are not members of organization corelog", missing)
+	}
+	if got := countRows(t, db, "projects"); got != 4 {
+		t.Errorf("projects = %d, want 4", got)
 	}
 }
 

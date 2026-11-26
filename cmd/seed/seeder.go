@@ -71,7 +71,7 @@ var appTables = []string{
 	"issue_labels", "issue_components", "saved_filters", "issues", "sprints",
 	"board_columns", "boards", "workflow_transitions", "workflows",
 	"labels", "components", "project_members", "projects",
-	"team_members", "teams", "users",
+	"team_members", "teams", "organization_invitations", "organization_members", "organizations", "users",
 }
 
 // Execute hashes the password, prepares the database and runs the scenario.

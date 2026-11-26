@@ -6,27 +6,47 @@ import (
 	"github.com/google/uuid"
 )
 
-// person is a seeded account. team is a 1-based index into orgSpec.teams (0 for none).
+// defaultOrgID is the fixed id of the organization "corelog" that migration 000024
+// creates. Seeders reuse it so the default organization keeps the same id.
+var defaultOrgID = uuid.MustParse("00000000-0000-4000-8000-000000000002")
+
+// person is a platform account. platform is the platform role: "admin" or "user".
 type person struct {
-	name, email, role string
-	team              int
+	name, email, platform string
+}
+
+// member links a person (index into the people list) to a role. The meaning of
+// role depends on the list it sits in: organization roles (owner, admin, member,
+// guest) in orgSpec.members, team roles (maintainer, member) in teamSpec.members
+// and project roles (lead, contributor, viewer) in projectSpec.members.
+type member struct {
+	person int
+	role   string
 }
 
 type labelSpec struct{ name, color string }
 
 type componentSpec struct{ name, description string }
 
+type teamSpec struct {
+	name    string
+	members []member
+}
+
 type projectSpec struct {
 	key, name, description, kind, visibility string
-	lead                                     int // index into orgSpec.people
+	lead                                     int // index into the people list; must also be a lead member
+	members                                  []member
 	labels                                   []labelSpec
 	components                               []componentSpec
 }
 
 type orgSpec struct {
-	teams    []string
-	people   []person
-	projects []projectSpec
+	id                      uuid.UUID
+	slug, name, description string
+	members                 []member
+	teams                   []teamSpec
+	projects                []projectSpec
 }
 
 type projectModel struct {
@@ -38,19 +58,10 @@ type projectModel struct {
 
 // orgModel holds the ids produced by buildOrg that the issue generator needs.
 type orgModel struct {
-	people   []person
-	users    []uuid.UUID // same order as people
-	projects []projectModel
-}
-
-func (o orgModel) idsWithRole(role string) []uuid.UUID {
-	var out []uuid.UUID
-	for i, p := range o.people {
-		if p.role == role {
-			out = append(out, o.users[i])
-		}
-	}
-	return out
+	users      []uuid.UUID // every platform user, same order as the people list
+	requesters []uuid.UUID // organization guests
+	agents     []uuid.UUID // organization members, admins and owners
+	projects   []projectModel
 }
 
 var (
@@ -83,6 +94,15 @@ var commonLabels = []labelSpec{
 	{"bug", "red"}, {"feature", "green"}, {"infra", "purple"}, {"docs", "gray"}, {"urgente", "orange"},
 }
 
+// platformRole returns the platform role of an account. Only the platform
+// administrator is an admin; every other account is a regular user.
+func platformRole(email string) string {
+	if email == "admin@corelog.local" {
+		return "admin"
+	}
+	return "user"
+}
+
 // addBoard writes a board with the standard columns and returns its id.
 func addBoard(ds *dataset, projectID uuid.UUID, projectKey, name, kind string, isDefault bool, at time.Time) uuid.UUID {
 	id := idFor("board", projectKey, name)
@@ -107,33 +127,48 @@ func addSprint(ds *dataset, projectID uuid.UUID, projectKey, name, goal, status 
 	return id
 }
 
-// buildOrg writes teams, users, projects, memberships, labels, components,
-// default boards and default workflows. It is shared by every scenario.
-func buildOrg(ds *dataset, spec orgSpec, passwordHash string) orgModel {
-	teams := ds.table("teams", "id", "name", "created_at", "updated_at")
-	teamIDs := make([]uuid.UUID, len(spec.teams))
-	for i, name := range spec.teams {
-		teamIDs[i] = idFor("team", name)
-		teams.add(teamIDs[i], name, orgCreated, orgCreated)
+// buildUsers writes the platform accounts once. Organizations reference them by index.
+func buildUsers(ds *dataset, people []person, passwordHash string) []uuid.UUID {
+	users := ds.table("users", "id", "name", "display_name", "email", "password_hash", "role", "created_at", "updated_at")
+	ids := make([]uuid.UUID, len(people))
+	for i, p := range people {
+		ids[i] = userID(p.email)
+		users.add(ids[i], p.name, p.name, p.email, passwordHash, p.platform, orgCreated, orgCreated)
 	}
+	return ids
+}
 
-	users := ds.table("users", "id", "name", "email", "password_hash", "role", "created_at", "updated_at")
-	teamMembers := ds.table("team_members", "team_id", "user_id", "role", "created_at")
-	model := orgModel{people: spec.people, users: make([]uuid.UUID, len(spec.people))}
-	for i, p := range spec.people {
-		id := userID(p.email)
-		model.users[i] = id
-		users.add(id, p.name, p.email, passwordHash, p.role, orgCreated, orgCreated)
-		if p.team > 0 {
-			role := "member"
-			if p.role == "admin" {
-				role = "owner"
-			}
-			teamMembers.add(teamIDs[p.team-1], id, role, orgCreated)
+// buildOrg writes one organization with its members, teams, projects, labels,
+// components, default boards and default workflows. users are the ids returned
+// by buildUsers. The organization row is skipped when it already exists, which
+// is the case for the default "corelog" organization created by the migrations.
+func buildOrg(ds *dataset, spec orgSpec, users []uuid.UUID) orgModel {
+	orgs := ds.ignoreDuplicates("organizations", "id", "slug", "name", "description", "created_by", "created_at", "updated_at")
+	orgs.add(spec.id, spec.slug, spec.name, spec.description, nil, orgCreated, orgCreated)
+
+	model := orgModel{users: users}
+	orgMembers := ds.table("organization_members", "organization_id", "user_id", "role", "joined_at")
+	for _, m := range spec.members {
+		uid := users[m.person]
+		orgMembers.add(spec.id, uid, m.role, orgCreated)
+		if m.role == "guest" {
+			model.requesters = append(model.requesters, uid)
+		} else {
+			model.agents = append(model.agents, uid)
 		}
 	}
 
-	projects := ds.table("projects", "id", "key", "name", "description", "type", "lead_id", "visibility", "archived_at", "created_at", "updated_at")
+	teams := ds.table("teams", "id", "organization_id", "name", "created_at", "updated_at")
+	teamMembers := ds.table("team_members", "team_id", "user_id", "role", "created_at")
+	for _, ts := range spec.teams {
+		tid := idFor("team", spec.slug, ts.name)
+		teams.add(tid, spec.id, ts.name, orgCreated, orgCreated)
+		for _, m := range ts.members {
+			teamMembers.add(tid, users[m.person], m.role, orgCreated)
+		}
+	}
+
+	projects := ds.table("projects", "id", "organization_id", "key", "name", "description", "type", "lead_id", "visibility", "archived_at", "created_at", "updated_at")
 	projectMembers := ds.table("project_members", "project_id", "user_id", "role", "created_at")
 	labels := ds.table("labels", "id", "project_id", "name", "color", "created_at", "updated_at")
 	components := ds.table("components", "id", "project_id", "name", "description", "created_at", "updated_at")
@@ -142,18 +177,11 @@ func buildOrg(ds *dataset, spec orgSpec, passwordHash string) orgModel {
 
 	for _, ps := range spec.projects {
 		pid := projectID(ps.key)
-		projects.add(pid, ps.key, ps.name, ps.description, ps.kind, model.users[ps.lead], ps.visibility, nil, projCreated, projCreated)
+		projects.add(pid, spec.id, ps.key, ps.name, ps.description, ps.kind, users[ps.lead], ps.visibility, nil, projCreated, projCreated)
 
 		pm := projectModel{id: pid, key: ps.key}
-		for i, p := range spec.people {
-			role := "contributor"
-			switch {
-			case i == ps.lead:
-				role = "lead"
-			case p.role == "requester":
-				role = "viewer"
-			}
-			projectMembers.add(pid, model.users[i], role, projCreated)
+		for _, m := range ps.members {
+			projectMembers.add(pid, users[m.person], m.role, projCreated)
 		}
 
 		for _, l := range ps.labels {
@@ -177,56 +205,4 @@ func buildOrg(ds *dataset, spec orgSpec, passwordHash string) orgModel {
 		model.projects = append(model.projects, pm)
 	}
 	return model
-}
-
-// demoOrgSpec is the organization of the demo scenario (the former scripts/seed-demo.sql).
-func demoOrgSpec() orgSpec {
-	return orgSpec{
-		teams: []string{"Core Development", "Soporte Nivel 1", "Soporte Nivel 2", "Seguridad", "Infraestructura"},
-		people: []person{
-			{"Admin User", "admin@corelog.local", "admin", 1},
-			{"Sebastian Castillo Silva", "sebastian.castillo@corelog.test", "admin", 3},
-			{"Pablo Medina Salazar", "pablo.medina@corelog.test", "admin", 4},
-			{"Agent User", "agent@corelog.local", "agent", 2},
-			{"Lucia Medina Torres", "lucia.medina@corelog.test", "agent", 2},
-			{"Karina Navarro Salazar", "karina.navarro@corelog.test", "agent", 2},
-			{"Luis Paredes Flores", "luis.paredes@corelog.test", "agent", 5},
-			{"Javier Castillo Ortega", "javier.castillo@corelog.test", "agent", 4},
-			{"Ricardo Campos Salazar", "ricardo.campos@corelog.test", "agent", 4},
-			{"Camila Rojas Vega", "camila.rojas@corelog.test", "agent", 3},
-			{"Requester User", "requester@corelog.local", "requester", 1},
-			{"Ana Torres Ruiz", "ana.torres@corelog.test", "requester", 1},
-			{"Carlos Vega Mendoza", "carlos.vega@corelog.test", "requester", 5},
-			{"Maria Gonzalez Rios", "maria.gonzalez@corelog.test", "requester", 2},
-			{"Diego Herrera Luna", "diego.herrera@corelog.test", "requester", 3},
-			{"Valeria Soto Pena", "valeria.soto@corelog.test", "requester", 4},
-			{"Jorge Quispe Huanca", "jorge.quispe@corelog.test", "requester", 5},
-			{"Paola Mendoza Diaz", "paola.mendoza@corelog.test", "requester", 2},
-			{"Andres Llanos Vidal", "andres.llanos@corelog.test", "requester", 1},
-			{"Rosa Infante Castro", "rosa.infante@corelog.test", "requester", 3},
-			{"Miguel Ortiz Tapia", "miguel.ortiz@corelog.test", "requester", 4},
-		},
-		projects: []projectSpec{
-			{
-				key: "CORE", name: "Plataforma CoreLog", description: "Proyecto principal de la plataforma",
-				kind: "kanban", visibility: "team", lead: 0, labels: commonLabels,
-				components: []componentSpec{{"API", "Endpoints REST del backend"}, {"Frontend", "Interfaz React del panel"}, {"Base de datos", "Esquema, migraciones y consultas"}},
-			},
-			{
-				key: "OPS", name: "Operaciones e infraestructura", description: "Operacion, despliegues y monitoreo",
-				kind: "kanban", visibility: "team", lead: 1, labels: commonLabels,
-				components: []componentSpec{{"Red", "Conectividad y balanceo"}, {"Servidores", "Hosts, VPS y contenedores"}, {"Monitoreo", "Alertas, metricas y logs"}},
-			},
-			{
-				key: "SEC", name: "Seguridad", description: "Hallazgos de seguridad y cumplimiento",
-				kind: "scrum", visibility: "private", lead: 2, labels: commonLabels,
-				components: []componentSpec{{"Autenticacion", "Login, sesiones y JWT"}, {"Auditoria", "Trazabilidad de cambios"}, {"Politicas", "Politicas de acceso y contrasenas"}},
-			},
-			{
-				key: "WEB", name: "Portal web", description: "Sitio publico y experiencia de usuario",
-				kind: "scrum", visibility: "team", lead: 0, labels: commonLabels,
-				components: []componentSpec{{"UI", "Componentes visuales"}, {"Accesibilidad", "Contraste, teclado y lectores de pantalla"}, {"Rendimiento", "Tiempos de carga y bundle"}},
-			},
-		},
-	}
 }
