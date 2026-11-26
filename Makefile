@@ -1,4 +1,4 @@
-.PHONY: run build test test-coverage lint tidy seed \
+.PHONY: run build test test-coverage lint tidy seed e2e stack-up stack-down \
 	docker-up docker-down docker-logs \
 	migrate-up migrate-down migrate-create \
 	ui-install ui-dev ui-build ui-lint ui-test
@@ -10,14 +10,23 @@ build:
 	go build -o bin/api ./cmd/api
 
 test:
-	go test ./...
+	go test ./cmd/... ./internal/...
 
 test-coverage:
-	go test -coverprofile=coverage.out ./internal/...
+	go test -coverprofile=coverage.out ./cmd/... ./internal/...
 	go run ./cmd/coverage-check -min 40
 
 seed:
 	go run ./cmd/seed
+
+e2e:
+	cd ui && npm run e2e
+
+stack-up:
+	docker compose -f docker-compose.local.yaml -f docker-compose.dev.yaml up -d --build
+
+stack-down:
+	docker compose -f docker-compose.local.yaml -f docker-compose.dev.yaml down
 
 lint:
 	go vet ./...
