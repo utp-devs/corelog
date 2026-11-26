@@ -3102,6 +3102,23 @@ components:
           properties:
             message:
               type: string
+              description: Mensaje legible en espanol.
               example: a valid email is required
+            code:
+              type: string
+              description: Codigo estable para el cliente (por ejemplo auth.invalid_credentials). Se omite si el error no tiene codigo.
+              example: validation.failed
+            details:
+              type: array
+              description: Errores por campo (solo en validation.failed). Se omite cuando esta vacio.
+              items:
+                type: object
+                properties:
+                  field:
+                    type: string
+                    example: email
+                  message:
+                    type: string
+                    example: un correo valido es obligatorio
 security:
   - bearerAuth: []

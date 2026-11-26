@@ -24,9 +24,9 @@ const (
 )
 
 var (
-	ErrProjectNotFound = apperror.New(apperror.KindNotFound, "project not found")
-	ErrInvalidProject  = apperror.New(apperror.KindValidation, "invalid project")
-	ErrProjectKeyTaken = apperror.New(apperror.KindConflict, "a project with this key already exists")
+	ErrProjectNotFound = apperror.WithCode(apperror.KindNotFound, "project.not_found", "project not found")
+	ErrInvalidProject  = apperror.WithCode(apperror.KindValidation, "project.invalid", "invalid project")
+	ErrProjectKeyTaken = apperror.WithCode(apperror.KindConflict, "project.key_taken", "a project with this key already exists")
 )
 
 type Project struct {

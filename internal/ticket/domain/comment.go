@@ -9,7 +9,7 @@ import (
 	"github.com/jhonsferg/corelog/internal/platform/apperror"
 )
 
-var ErrInvalidComment = apperror.New(apperror.KindValidation, "comment body is required")
+var ErrInvalidComment = apperror.WithCode(apperror.KindValidation, "issue.invalid_comment", "comment body is required")
 
 type Comment struct {
 	ID        uuid.UUID

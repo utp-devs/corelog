@@ -12,7 +12,7 @@ import (
 
 const MaxAttachmentSize int64 = 10 << 20
 
-var ErrInvalidAttachment = apperror.New(apperror.KindValidation, "unsupported attachment")
+var ErrInvalidAttachment = apperror.WithCode(apperror.KindValidation, "issue.invalid_attachment", "unsupported attachment")
 
 type Attachment struct {
 	ID          uuid.UUID

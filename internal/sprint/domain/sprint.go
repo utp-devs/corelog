@@ -20,17 +20,17 @@ const (
 )
 
 var (
-	ErrInvalidSprint       = apperror.New(apperror.KindValidation, "invalid sprint")
-	ErrInvalidSprintDates  = apperror.New(apperror.KindValidation, "sprint end date must not be before its start date")
-	ErrSprintWithoutDates  = apperror.New(apperror.KindValidation, "the sprint needs start and end dates")
-	ErrSprintNotFound      = apperror.New(apperror.KindNotFound, "sprint not found")
-	ErrIssueNotInProject   = apperror.New(apperror.KindNotFound, "issue not found in this project")
-	ErrSprintNotPlanned    = apperror.New(apperror.KindConflict, "only a planned sprint can be started")
-	ErrSprintNotActive     = apperror.New(apperror.KindConflict, "only an active sprint can be closed")
-	ErrActiveSprintExists  = apperror.New(apperror.KindConflict, "another sprint is already active in this project")
-	ErrSprintClosed        = apperror.New(apperror.KindConflict, "a closed sprint cannot change its issues")
-	ErrInvalidCloseOption  = apperror.New(apperror.KindValidation, "invalid close option")
-	ErrInvalidTargetSprint = apperror.New(apperror.KindValidation, "target sprint must be planned in the same project")
+	ErrInvalidSprint       = apperror.WithCode(apperror.KindValidation, "sprint.invalid", "invalid sprint")
+	ErrInvalidSprintDates  = apperror.WithCode(apperror.KindValidation, "sprint.invalid_dates", "sprint end date must not be before its start date")
+	ErrSprintWithoutDates  = apperror.WithCode(apperror.KindValidation, "sprint.dates_required", "the sprint needs start and end dates")
+	ErrSprintNotFound      = apperror.WithCode(apperror.KindNotFound, "sprint.not_found", "sprint not found")
+	ErrIssueNotInProject   = apperror.WithCode(apperror.KindNotFound, "sprint.issue_not_in_project", "issue not found in this project")
+	ErrSprintNotPlanned    = apperror.WithCode(apperror.KindConflict, "sprint.not_started", "only a planned sprint can be started")
+	ErrSprintNotActive     = apperror.WithCode(apperror.KindConflict, "sprint.not_active", "only an active sprint can be closed")
+	ErrActiveSprintExists  = apperror.WithCode(apperror.KindConflict, "sprint.already_active", "another sprint is already active in this project")
+	ErrSprintClosed        = apperror.WithCode(apperror.KindConflict, "sprint.closed", "a closed sprint cannot change its issues")
+	ErrInvalidCloseOption  = apperror.WithCode(apperror.KindValidation, "sprint.invalid_close_option", "invalid close option")
+	ErrInvalidTargetSprint = apperror.WithCode(apperror.KindValidation, "sprint.invalid_target", "target sprint must be planned in the same project")
 )
 
 // Sprint es una iteracion de trabajo de un proyecto con fechas opcionales.

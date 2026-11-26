@@ -17,8 +17,8 @@ const (
 )
 
 var (
-	ErrInvalidIssueLink = apperror.New(apperror.KindValidation, "invalid issue link")
-	ErrDuplicateLink    = apperror.New(apperror.KindConflict, "issue link already exists")
+	ErrInvalidIssueLink = apperror.WithCode(apperror.KindValidation, "issue.invalid_link", "invalid issue link")
+	ErrDuplicateLink    = apperror.WithCode(apperror.KindConflict, "issue.link_duplicate", "issue link already exists")
 )
 
 type IssueLink struct {

@@ -31,7 +31,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := validation.Struct(req); err != nil {
-		httpresponse.Error(w, apperror.Wrap(apperror.KindValidation, "invalid request body", err))
+		httpresponse.Error(w, validation.Failed(req, err))
 		return
 	}
 	leadID, err := uuid.Parse(req.LeadID)
@@ -92,7 +92,7 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := validation.Struct(req); err != nil {
-		httpresponse.Error(w, apperror.Wrap(apperror.KindValidation, "invalid request body", err))
+		httpresponse.Error(w, validation.Failed(req, err))
 		return
 	}
 	leadID, err := uuid.Parse(req.LeadID)
@@ -160,7 +160,7 @@ func (h *Handler) CreateLabel(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := validation.Struct(req); err != nil {
-		httpresponse.Error(w, apperror.Wrap(apperror.KindValidation, "invalid request body", err))
+		httpresponse.Error(w, validation.Failed(req, err))
 		return
 	}
 	label, err := h.service.CreateLabel(r.Context(), projectID, req.Name, req.Color)
@@ -215,7 +215,7 @@ func (h *Handler) CreateComponent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := validation.Struct(req); err != nil {
-		httpresponse.Error(w, apperror.Wrap(apperror.KindValidation, "invalid request body", err))
+		httpresponse.Error(w, validation.Failed(req, err))
 		return
 	}
 	component, err := h.service.CreateComponent(r.Context(), projectID, req.Name, req.Description)
@@ -287,7 +287,7 @@ func (h *Handler) AddMember(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := validation.Struct(req); err != nil {
-		httpresponse.Error(w, apperror.Wrap(apperror.KindValidation, "invalid request body", err))
+		httpresponse.Error(w, validation.Failed(req, err))
 		return
 	}
 	userID, err := uuid.Parse(req.UserID)
@@ -325,7 +325,7 @@ func (h *Handler) UpdateMember(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := validation.Struct(req); err != nil {
-		httpresponse.Error(w, apperror.Wrap(apperror.KindValidation, "invalid request body", err))
+		httpresponse.Error(w, validation.Failed(req, err))
 		return
 	}
 	actorID, globalRole, ok := actorFromRequest(r)

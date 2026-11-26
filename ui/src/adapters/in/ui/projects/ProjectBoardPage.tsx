@@ -34,11 +34,12 @@ import type { Project } from '@/core/projects/domain/project'
 import type { TicketPriority } from '@/core/tickets/domain/ticket'
 import { PageHeader } from '@/shared/ui/PageHeader'
 import { PriorityTag } from '@/shared/ui/PriorityTag'
+import { httpStatusOf } from '@/core/shared/app-error'
 import styles from './ProjectBoardPage.module.css'
 
 // Mensajes en español para los errores de mover una tarjeta (permiso, límite WIP y flujo).
 function moveErrorMessage(error: unknown): string {
-  const status = (error as { response?: { status?: number } }).response?.status
+  const status = httpStatusOf(error)
   if (status === 403) return 'No tienes permiso para mover incidencias en este proyecto.'
   if (status === 409) return 'La columna destino alcanzó su límite WIP o el flujo no permite ese cambio.'
   return 'No se pudo mover la incidencia. Intenta de nuevo.'
@@ -47,7 +48,7 @@ function moveErrorMessage(error: unknown): string {
 // Una columna está llena cuando tiene límite WIP y ya alcanza ese límite.
 // Mensajes en español para guardar el límite WIP de una columna.
 function wipErrorMessage(error: unknown): string {
-  const status = (error as { response?: { status?: number } }).response?.status
+  const status = httpStatusOf(error)
   if (status === 403) return 'Solo el lead del proyecto o el administrador pueden cambiar el límite WIP.'
   return 'No se pudo guardar el límite WIP. Intenta de nuevo.'
 }

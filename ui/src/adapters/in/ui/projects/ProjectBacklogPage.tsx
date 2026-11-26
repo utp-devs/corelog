@@ -10,6 +10,7 @@ import type { Project } from '@/core/projects/domain/project'
 import type { TicketPriority, TicketStatus } from '@/core/tickets/domain/ticket'
 import { PageHeader } from '@/shared/ui/PageHeader'
 import { PriorityTag } from '@/shared/ui/PriorityTag'
+import { httpStatusOf } from '@/core/shared/app-error'
 import styles from './ProjectBacklogPage.module.css'
 
 const statusLabels: Record<TicketStatus, string> = {
@@ -21,7 +22,7 @@ const statusLabels: Record<TicketStatus, string> = {
 
 // Mensajes en español para reordenar el backlog.
 function backlogErrorMessage(error: unknown): string {
-  const status = (error as { response?: { status?: number } }).response?.status
+  const status = httpStatusOf(error)
   if (status === 403) return 'No tienes permiso para ordenar el backlog de este proyecto.'
   if (status === 422) return 'La posición de la incidencia no es válida.'
   return 'No se pudo reordenar el backlog. Intenta de nuevo.'

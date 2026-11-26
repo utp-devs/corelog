@@ -46,7 +46,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := validation.Struct(req); err != nil {
-		httpresponse.Error(w, apperror.Wrap(apperror.KindValidation, "invalid request body", err))
+		httpresponse.Error(w, validation.Failed(req, err))
 		return
 	}
 	globalRole, _ := appmw.RoleFromContext(r.Context())
@@ -205,7 +205,7 @@ func (h *Handler) CreateSavedFilter(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := validation.Struct(req); err != nil {
-		httpresponse.Error(w, apperror.Wrap(apperror.KindValidation, "invalid request body", err))
+		httpresponse.Error(w, validation.Failed(req, err))
 		return
 	}
 	filter, err := h.service.CreateSavedFilter(r.Context(), ownerID, req.Name, *req.Criteria)
@@ -247,7 +247,7 @@ func (h *Handler) UpdateStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := validation.Struct(req); err != nil {
-		httpresponse.Error(w, apperror.Wrap(apperror.KindValidation, "invalid request body", err))
+		httpresponse.Error(w, validation.Failed(req, err))
 		return
 	}
 
@@ -285,7 +285,7 @@ func (h *Handler) Assign(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := validation.Struct(req); err != nil {
-		httpresponse.Error(w, apperror.Wrap(apperror.KindValidation, "invalid request body", err))
+		httpresponse.Error(w, validation.Failed(req, err))
 		return
 	}
 
@@ -323,7 +323,7 @@ func (h *Handler) UpdateMetadata(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := validation.Struct(req); err != nil {
-		httpresponse.Error(w, apperror.Wrap(apperror.KindValidation, "invalid request body", err))
+		httpresponse.Error(w, validation.Failed(req, err))
 		return
 	}
 	ticket, err := h.service.UpdateMetadata(r.Context(), id, actorID, globalRole, port.UpdateMetadataInput{
@@ -357,7 +357,7 @@ func (h *Handler) UpdateDetails(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := validation.Struct(req); err != nil {
-		httpresponse.Error(w, apperror.Wrap(apperror.KindValidation, "invalid request body", err))
+		httpresponse.Error(w, validation.Failed(req, err))
 		return
 	}
 	ticket, err := h.service.UpdateDetails(r.Context(), id, actorID, globalRole, port.UpdateDetailsInput{
@@ -425,7 +425,7 @@ func (h *Handler) CreateComment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := validation.Struct(req); err != nil {
-		httpresponse.Error(w, apperror.Wrap(apperror.KindValidation, "invalid request body", err))
+		httpresponse.Error(w, validation.Failed(req, err))
 		return
 	}
 	comment, err := h.service.CreateComment(r.Context(), port.CreateCommentInput{
@@ -456,7 +456,7 @@ func (h *Handler) UpdateComment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := validation.Struct(req); err != nil {
-		httpresponse.Error(w, apperror.Wrap(apperror.KindValidation, "invalid request body", err))
+		httpresponse.Error(w, validation.Failed(req, err))
 		return
 	}
 	comment, err := h.service.UpdateComment(r.Context(), commentID, actorID, globalRole, req.Body)
@@ -543,7 +543,7 @@ func (h *Handler) CreateIssueLink(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := validation.Struct(req); err != nil {
-		httpresponse.Error(w, apperror.Wrap(apperror.KindValidation, "invalid request body", err))
+		httpresponse.Error(w, validation.Failed(req, err))
 		return
 	}
 	targetIssueID, err := uuid.Parse(req.TargetIssueID)
@@ -657,7 +657,7 @@ func (h *Handler) UpdateRank(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := validation.Struct(req); err != nil {
-		httpresponse.Error(w, apperror.Wrap(apperror.KindValidation, "invalid request body", err))
+		httpresponse.Error(w, validation.Failed(req, err))
 		return
 	}
 	ticket, err := h.service.UpdateRank(r.Context(), id, actorID, globalRole, req.Rank)

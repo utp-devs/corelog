@@ -29,7 +29,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := validation.Struct(req); err != nil {
-		httpresponse.Error(w, apperror.Wrap(apperror.KindValidation, "invalid request body", err))
+		httpresponse.Error(w, validation.Failed(req, err))
 		return
 	}
 
@@ -81,7 +81,7 @@ func (h *Handler) Rename(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := validation.Struct(req); err != nil {
-		httpresponse.Error(w, apperror.Wrap(apperror.KindValidation, "invalid request body", err))
+		httpresponse.Error(w, validation.Failed(req, err))
 		return
 	}
 

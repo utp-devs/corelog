@@ -5,6 +5,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { z } from 'zod'
 
 import { useAuthStore } from '@/adapters/in/state/auth.store'
+import { fieldErrors } from '@/core/shared/app-error'
 import { AuthLayout } from './AuthLayout'
 import styles from './AuthPage.module.css'
 
@@ -15,6 +16,8 @@ const schema = z.object({
 
 type FormValues = z.infer<typeof schema>
 
+const SERVER_FIELDS = ['email', 'password'] as const
+
 export function LoginPage() {
   const login = useAuthStore((s) => s.login)
   const navigate = useNavigate()
@@ -23,6 +26,7 @@ export function LoginPage() {
   const {
     control,
     handleSubmit,
+    setError,
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -34,6 +38,12 @@ export function LoginPage() {
       await login(values)
       navigate('/issues')
     } catch (error) {
+      const fields = fieldErrors(error)
+      const invalid = SERVER_FIELDS.filter((name) => fields[name])
+      if (invalid.length > 0) {
+        invalid.forEach((name) => setError(name, { type: 'server', message: fields[name] }))
+        return
+      }
       message.error(error instanceof Error ? error.message : 'No se pudo iniciar sesión')
     }
   })

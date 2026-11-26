@@ -33,7 +33,7 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := validation.Struct(req); err != nil {
-		httpresponse.Error(w, apperror.Wrap(apperror.KindValidation, "invalid request body", err))
+		httpresponse.Error(w, validation.Failed(req, err))
 		return
 	}
 
@@ -57,7 +57,7 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := validation.Struct(req); err != nil {
-		httpresponse.Error(w, apperror.Wrap(apperror.KindValidation, "invalid request body", err))
+		httpresponse.Error(w, validation.Failed(req, err))
 		return
 	}
 
@@ -114,7 +114,7 @@ func (h *Handler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := validation.Struct(req); err != nil {
-		httpresponse.Error(w, apperror.Wrap(apperror.KindValidation, "invalid request body", err))
+		httpresponse.Error(w, validation.Failed(req, err))
 		return
 	}
 
@@ -140,7 +140,7 @@ func (h *Handler) ChangePassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := validation.Struct(req); err != nil {
-		httpresponse.Error(w, apperror.Wrap(apperror.KindValidation, "invalid request body", err))
+		httpresponse.Error(w, validation.Failed(req, err))
 		return
 	}
 
@@ -208,7 +208,7 @@ func (h *Handler) SetTeam(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := validation.Struct(req); err != nil {
-		httpresponse.Error(w, apperror.Wrap(apperror.KindValidation, "invalid request body", err))
+		httpresponse.Error(w, validation.Failed(req, err))
 		return
 	}
 
@@ -311,7 +311,7 @@ func (h *Handler) DeactivateAccount(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := validation.Struct(req); err != nil {
-		httpresponse.Error(w, apperror.Wrap(apperror.KindValidation, "invalid request body", err))
+		httpresponse.Error(w, validation.Failed(req, err))
 		return
 	}
 	if err := h.service.DeactivateAccount(r.Context(), userID, req.Password); err != nil {

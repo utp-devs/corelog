@@ -16,8 +16,8 @@ const (
 )
 
 var (
-	ErrQueryTooShort = apperror.New(apperror.KindValidation, "the search needs at least 2 characters")
-	ErrQueryTooLong  = apperror.New(apperror.KindValidation, "the search is at most 100 characters")
+	ErrQueryTooShort = apperror.WithCode(apperror.KindValidation, "search.query_too_short", "the search needs at least 2 characters")
+	ErrQueryTooLong  = apperror.WithCode(apperror.KindValidation, "search.query_too_long", "the search is at most 100 characters")
 )
 
 // Kind es el tipo de resultado: proyecto o incidencia.

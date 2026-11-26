@@ -8,6 +8,7 @@ import type { BacklogItem } from '@/core/projects/domain/backlog'
 import type { BurndownPoint, Sprint, SprintIssue, SprintStatus, VelocityPoint } from '@/core/projects/domain/sprint'
 import { PageHeader } from '@/shared/ui/PageHeader'
 import { BurndownChart } from './BurndownChart'
+import { httpStatusOf } from '@/core/shared/app-error'
 import styles from './ProjectSprintsPage.module.css'
 
 const statusLabels: Record<SprintStatus, string> = { planned: 'Planificado', active: 'Activo', closed: 'Cerrado' }
@@ -15,7 +16,7 @@ const statusColors: Record<SprintStatus, string | undefined> = { planned: undefi
 
 // Mensajes en español para las acciones de sprint, segun el codigo de la API.
 function sprintErrorMessage(error: unknown): string {
-  const status = (error as { response?: { status?: number } }).response?.status
+  const status = httpStatusOf(error)
   if (status === 403) return 'Solo el lead del proyecto o el administrador pueden gestionar sprints.'
   if (status === 409) return 'Esa acción no está permitida en el estado actual del sprint o ya hay otro sprint activo.'
   if (status === 422) return 'Revisa los datos del sprint: fechas en formato AAAA-MM-DD y fin posterior al inicio.'

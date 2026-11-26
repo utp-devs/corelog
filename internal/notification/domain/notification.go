@@ -11,8 +11,8 @@ import (
 )
 
 var (
-	ErrInvalidNotification  = apperror.New(apperror.KindValidation, "invalid notification")
-	ErrNotificationNotFound = apperror.New(apperror.KindNotFound, "notification not found")
+	ErrInvalidNotification  = apperror.WithCode(apperror.KindValidation, "notification.invalid", "invalid notification")
+	ErrNotificationNotFound = apperror.WithCode(apperror.KindNotFound, "notification.not_found", "notification not found")
 )
 
 // Notification avisa a una persona de algo que le afecta. Es solo in-app; el correo queda como puerto

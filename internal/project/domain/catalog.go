@@ -9,7 +9,7 @@ import (
 	"github.com/jhonsferg/corelog/internal/platform/apperror"
 )
 
-var ErrInvalidCatalogItem = apperror.New(apperror.KindValidation, "name is required")
+var ErrInvalidCatalogItem = apperror.WithCode(apperror.KindValidation, "project.catalog_item_invalid", "name is required")
 
 type Label struct {
 	ID        uuid.UUID

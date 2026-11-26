@@ -10,7 +10,7 @@ import (
 const MaxRangeDays = 366
 
 var (
-	ErrInvalidRange = apperror.New(apperror.KindValidation, "invalid calendar range: from must not be after to, and the range is at most one year")
+	ErrInvalidRange = apperror.WithCode(apperror.KindValidation, "calendar.invalid_range", "invalid calendar range: from must not be after to, and the range is at most one year")
 )
 
 // ValidateRange comprueba que el rango sea coherente y no pase del maximo.

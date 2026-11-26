@@ -82,3 +82,8 @@ func DetailsOf(err error) []FieldError {
 	}
 	return nil
 }
+
+// WrapWithCode creates an error with a stable code that keeps cause in the chain.
+func WrapWithCode(kind Kind, code, message string, cause error) *Error {
+	return &Error{Kind: kind, Code: code, Message: message, cause: cause}
+}
