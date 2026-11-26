@@ -1,218 +1,129 @@
-import {
-  DashboardOutlined,
-  LogoutOutlined,
-  MenuFoldOutlined,
-  MenuUnfoldOutlined,
-  MoonOutlined,
-  ProjectOutlined,
-  SettingOutlined,
-  SunOutlined,
-  TeamOutlined,
-  UnorderedListOutlined,
-  UserOutlined,
-} from '@ant-design/icons'
-import { Avatar, Button, Drawer, Dropdown, Grid, Layout, Menu, Space, Tag, Typography } from 'antd'
-import type { MenuProps } from 'antd'
-import { useState } from 'react'
-import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { Drawer } from 'antd'
+import { useState, type MouseEvent, type ReactNode } from 'react'
+import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 
 import { useAuthStore } from '@/adapters/in/state/auth.store'
-import { navigationItems, type NavigationGroup, type NavigationItem, type NavigationRole } from '@/app/navigation'
-import { useThemeMode } from '@/app/theme-context'
+import { useProjectsStore } from '@/adapters/in/state/projects.store'
+import {
+  buildSidebar,
+  buildTopNav,
+  isSidebarItemActive,
+  permissionsFor,
+  resolveSidebarContext,
+  type OrgInfo,
+} from '@/app/navigation'
 import { useGlobalShortcuts } from '@/shared/hooks/useGlobalShortcuts'
+import { useMediaQuery } from '@/shared/hooks/useMediaQuery'
+import { ShortcutsDialog } from '@/shared/ui/ShortcutsDialog'
+
+import { ContextSidebar, SidebarItemIcon } from './ContextSidebar'
 import styles from './AppLayout.module.css'
-import { GlobalSearch } from './GlobalSearch'
-import { NotificationsBell } from './NotificationsBell'
+import { MOBILE_QUERY, TopBar } from './TopBar'
 
-const { Header, Sider, Content } = Layout
-
-const groups: NavigationGroup[] = ['Trabajo', 'Administración', 'Cuenta']
-
-const roleLabels: Record<NavigationRole, string> = {
-  admin: 'Administrador',
-  agent: 'Agente',
-  requester: 'Solicitante',
+export type AppLayoutProps = {
+  org?: OrgInfo | null
+  /** Organization switcher of P2; until then the top bar shows the organization name. */
+  orgSwitcherSlot?: ReactNode
 }
 
-function resolveSelectedKey(pathname: string): string {
-  if (pathname.startsWith('/dashboard')) return '/dashboard'
-  if (pathname.startsWith('/projects')) return '/projects'
-  if (pathname.startsWith('/issues/new')) return '/issues/new'
-  if (pathname.startsWith('/issues')) return '/issues'
-  if (pathname.startsWith('/teams')) return '/teams'
-  if (pathname.startsWith('/profile')) return '/profile'
-  return '/issues'
-}
+const CONTEXT_TITLES = {
+  project: 'Proyecto',
+  'org-admin': 'Organización',
+  profile: 'Mi cuenta',
+} as const
 
-const breadcrumbLabels: Record<string, string> = {
-  '/dashboard': 'Mi resumen',
-  '/projects': 'Proyectos',
-  '/issues': 'Incidencias',
-  '/teams': 'Equipos',
-  '/profile': 'Mi perfil',
-}
-
-const iconMap = {
-  dashboard: <DashboardOutlined />,
-  tickets: <UnorderedListOutlined />,
-  profile: <SettingOutlined />,
-  teams: <TeamOutlined />,
-  projects: <ProjectOutlined />,
-}
-
-export function AppLayout() {
+/** Application shell: skip link, top bar, context sidebar (or mobile drawer) and the main landmark. */
+export function AppLayout({ org = null, orgSwitcherSlot }: AppLayoutProps) {
   const location = useLocation()
-  const navigate = useNavigate()
-  const screens = Grid.useBreakpoint()
-  // En escritorio el menu es fijo; por debajo de lg se usa un cajon deslizable.
-  const isDesktop = screens.lg !== false
-  const [collapsed, setCollapsed] = useState(false)
-  const [drawerOpen, setDrawerOpen] = useState(false)
-  const { themeMode, toggleTheme } = useThemeMode()
   const user = useAuthStore((s) => s.user)
-  const logout = useAuthStore((s) => s.logout)
+  const isMobile = useMediaQuery(MOBILE_QUERY)
+  const [helpOpen, setHelpOpen] = useState(false)
+  const [drawerOpen, setDrawerOpen] = useState(false)
 
-  useGlobalShortcuts()
-  const selectedKey = resolveSelectedKey(location.pathname)
-  const role: NavigationRole = user?.role === 'admin' ? 'admin' : user?.role === 'agent' ? 'agent' : 'requester'
+  const context = resolveSidebarContext(location.pathname)
+  const projectId = context.kind === 'project' ? context.projectId : null
+  const project = useProjectsStore((s) => (projectId ? s.projects.find((p) => p.id === projectId) : undefined))
+  const items = buildSidebar(context, permissionsFor(user))
+  const topMenus = buildTopNav(user, org).menus
+  const title = context.kind === 'global' ? '' : CONTEXT_TITLES[context.kind === 'project' ? 'project' : context.kind]
 
-  const menuItems: MenuProps['items'] = groups
-    .map((group) => ({
-      type: 'group' as const,
-      key: group,
-      label: collapsed && isDesktop ? <span className={styles.groupDivider} aria-label={group} /> : group,
-      children: navigationItems
-        .filter((item: NavigationItem) => item.group === group && item.roles.includes(role))
-        .map((item) => ({
-          key: item.key,
-          icon: iconMap[item.icon],
-          label: <Link to={item.key}>{item.label}</Link>,
-        })),
-    }))
-    .filter((group) => group.children.length > 0)
+  useGlobalShortcuts({ onHelp: () => setHelpOpen((open) => !open), projectId })
 
-  const userMenuItems: MenuProps['items'] = [
-    { key: 'profile', icon: <UserOutlined />, label: 'Mi perfil', onClick: () => navigate('/profile') },
-    { key: 'logout', icon: <LogoutOutlined />, danger: true, label: 'Cerrar sesion', onClick: () => { logout(); navigate('/login') } },
-  ]
-
-  const navigation = (
-    <Menu
-      mode="inline"
-      selectedKeys={[selectedKey]}
-      items={menuItems}
-      onClick={() => setDrawerOpen(false)}
-      className={styles.menu}
-    />
-  )
-
-  const brand = (
-    <Link to="/issues" className={collapsed && isDesktop ? `${styles.brand} ${styles.brandCollapsed}` : styles.brand} aria-label="CoreLog">
-      {collapsed && isDesktop ? (
-        <img
-          src="/brand/corelog-icon-64.png"
-          srcSet="/brand/corelog-icon-64.png 1x, /brand/corelog-icon-128.png 2x"
-          alt=""
-          width={36}
-          height={36}
-          className={styles.brandIcon}
-        />
-      ) : (
-        <img
-          src="/brand/corelog-banner-480.png"
-          srcSet="/brand/corelog-banner-480.png 480w, /brand/corelog-banner-960.png 960w"
-          sizes="152px"
-          alt="CoreLog"
-          width={152}
-          className={styles.brandBanner}
-        />
-      )}
-    </Link>
-  )
+  // The skip link moves focus to the main landmark instead of only changing the hash.
+  const skipToContent = (event: MouseEvent<HTMLAnchorElement>) => {
+    event.preventDefault()
+    document.getElementById('main-content')?.focus()
+  }
 
   return (
-    <Layout className={styles.shell}>
-      {isDesktop && (
-        <Sider
-          className={styles.sider}
-          width={248}
-          collapsedWidth={72}
-          collapsed={collapsed}
-          trigger={null}
-          aria-label="Navegacion principal"
-        >
-          <div className={styles.siderInner}>
-            {brand}
-            <nav className={styles.nav}>{navigation}</nav>
-            <div className={styles.siderFooter}>
-              <Button
-                type="text"
-                block={!collapsed}
-                icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
-                onClick={() => setCollapsed((value) => !value)}
-                aria-label={collapsed ? 'Expandir navegacion' : 'Contraer navegacion'}
-              >
-                {collapsed ? null : 'Contraer menu'}
-              </Button>
-            </div>
-          </div>
-        </Sider>
-      )}
+    <div className={styles.shell}>
+      <a href="#main-content" className={styles.skip} onClick={skipToContent}>
+        Saltar al contenido
+      </a>
 
-      {!isDesktop && (
+      <TopBar
+        org={org}
+        orgSwitcherSlot={orgSwitcherSlot}
+        onOpenMenu={isMobile ? () => setDrawerOpen(true) : undefined}
+        onOpenShortcuts={() => setHelpOpen(true)}
+      />
+
+      <div className={styles.body}>
+        {!isMobile && context.kind !== 'global' && (
+          <ContextSidebar
+            title={title}
+            items={items}
+            project={project ? { id: project.id, name: project.name, key: project.key } : undefined}
+          />
+        )}
+
+        <main id="main-content" tabIndex={-1} className={styles.main}>
+          <Outlet />
+        </main>
+      </div>
+
+      {isMobile && (
         <Drawer
-          title={brand}
-          placement="left"
-          width={272}
           open={drawerOpen}
           onClose={() => setDrawerOpen(false)}
-          aria-label="Navegacion principal"
+          placement="left"
+          size={272}
+          title="Navegación"
         >
-          {navigation}
+          <nav aria-label="Navegación móvil" className={styles.drawerNav}>
+            <ul className={styles.drawerList}>
+              {topMenus.map((menu) => (
+                <li key={menu.key}>
+                  <Link to={menu.path} onClick={() => setDrawerOpen(false)} className={styles.drawerLink}>
+                    {menu.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+            {items.length > 0 && (
+              <>
+                <p className={styles.drawerTitle}>{title}</p>
+                <ul className={styles.drawerList}>
+                  {items.map((item) => (
+                    <li key={item.key}>
+                      <NavLink
+                        to={item.path}
+                        onClick={() => setDrawerOpen(false)}
+                        className={isSidebarItemActive(item, location.pathname) ? styles.drawerLinkActive : styles.drawerLink}
+                      >
+                        <SidebarItemIcon icon={item.icon} />
+                        <span>{item.label}</span>
+                      </NavLink>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
+          </nav>
         </Drawer>
       )}
 
-      <Layout className={styles.main}>
-        <Header className={styles.header}>
-          <div className={styles.headerStart}>
-            {!isDesktop && (
-              <Button
-                type="text"
-                icon={<MenuUnfoldOutlined />}
-                onClick={() => setDrawerOpen(true)}
-                aria-label="Abrir navegacion"
-              />
-            )}
-            <Typography.Text className={styles.breadcrumb}>
-              CoreLog / <span className={styles.breadcrumbCurrent}>{breadcrumbLabels[selectedKey] ?? 'Proyectos'}</span>
-            </Typography.Text>
-          </div>
-          <Space size={8} className={styles.headerEnd}>
-            <GlobalSearch />
-            <NotificationsBell />
-            <Button
-              type="text"
-              icon={themeMode === 'dark' ? <SunOutlined /> : <MoonOutlined />}
-              onClick={toggleTheme}
-              aria-label={themeMode === 'dark' ? 'Usar tema claro' : 'Usar tema oscuro'}
-            />
-            <Dropdown menu={{ items: userMenuItems }} trigger={['click']} placement="bottomRight">
-              <Button type="text" className={styles.userButton} aria-label="Menu de usuario">
-                <Avatar size="small">{user?.name?.charAt(0).toUpperCase()}</Avatar>
-                {isDesktop && (
-                  <span className={styles.userText}>
-                    <span className={styles.userName}>{user?.name}</span>
-                    {user && <Tag className={styles.roleTag}>{roleLabels[role]}</Tag>}
-                  </span>
-                )}
-              </Button>
-            </Dropdown>
-          </Space>
-        </Header>
-        <Content className={styles.content}>
-          <Outlet />
-        </Content>
-      </Layout>
-    </Layout>
+      <ShortcutsDialog open={helpOpen} onClose={() => setHelpOpen(false)} />
+    </div>
   )
 }

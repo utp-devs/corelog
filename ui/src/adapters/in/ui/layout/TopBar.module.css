@@ -1,0 +1,78 @@
+.bar {
+  display: flex;
+  align-items: center;
+  gap: var(--cl-space-2);
+  height: var(--cl-topbar-h);
+  flex: none;
+  padding: 0 var(--cl-space-4);
+  border-bottom: 1px solid var(--cl-border);
+  background: var(--cl-bg-surface);
+  position: relative;
+  z-index: var(--cl-z-header);
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  flex: none;
+  margin-right: var(--cl-space-2);
+  border-radius: var(--cl-radius-sm);
+}
+
+.brand:focus-visible {
+  outline: none;
+  box-shadow: var(--cl-shadow-focus);
+}
+
+.brandBanner {
+  display: block;
+  height: auto;
+}
+
+.nav {
+  display: flex;
+  align-items: center;
+  gap: var(--cl-space-1);
+  min-width: 0;
+}
+
+.navButton {
+  color: var(--cl-text);
+  font-weight: 500;
+}
+
+.caret {
+  margin-left: var(--cl-space-1);
+  font-size: var(--cl-font-caption);
+  color: var(--cl-text-subtle);
+}
+
+.create {
+  flex: none;
+}
+
+.spacer {
+  flex: 1 1 auto;
+  min-width: var(--cl-space-2);
+}
+
+.org {
+  display: inline-flex;
+  align-items: center;
+  max-width: 180px;
+  flex: none;
+  overflow: hidden;
+  color: var(--cl-text-subtle);
+}
+
+.orgName {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 991px) {
+  .org {
+    display: none;
+  }
+}

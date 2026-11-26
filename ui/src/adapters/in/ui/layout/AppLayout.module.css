@@ -1,186 +1,83 @@
-/* Estructura: la pantalla no hace scroll. Sidebar y cabecera quedan fijos;
-   solo el area de contenido (.content) tiene scroll propio. */
+/* Structure: the page does not scroll. The top bar is fixed; only the main area scrolls. */
 
 .shell {
+  display: flex;
+  flex-direction: column;
   height: 100vh;
   height: 100dvh;
   overflow: hidden;
   background: var(--cl-bg-page);
 }
 
-.sider {
-  height: 100vh;
-  height: 100dvh;
-  background: var(--cl-bg-surface) !important;
-  border-right: 1px solid var(--cl-border);
+.skip {
+  position: absolute;
+  top: var(--cl-space-2);
+  left: var(--cl-space-2);
+  z-index: var(--cl-z-modal);
+  padding: var(--cl-space-2) var(--cl-space-4);
+  border-radius: var(--cl-radius-sm);
+  background: var(--cl-bg-surface);
+  color: var(--cl-brand);
+  transform: translateY(-200%);
 }
 
-.siderInner {
+.skip:focus {
+  transform: none;
+  box-shadow: var(--cl-shadow-focus);
+}
+
+.body {
   display: flex;
-  flex-direction: column;
-  height: 100%;
-  min-height: 0;
-}
-
-.brand {
-  display: flex;
-  align-items: center;
-  height: 64px;
-  flex: none;
-  padding: 0 var(--cl-space-5);
-  border-bottom: 1px solid var(--cl-border);
-}
-
-.brandCollapsed {
-  justify-content: center;
-  padding: 0;
-}
-
-.brandBanner {
-  display: block;
-  width: 152px;
-  max-width: 100%;
-  height: auto;
-}
-
-.brandIcon {
-  display: block;
-  width: 36px;
-  height: 36px;
-  object-fit: contain;
-}
-
-.nav {
   flex: 1 1 auto;
   min-height: 0;
-  overflow-y: auto;
-  padding: var(--cl-space-3) 0;
-}
-
-.menu {
-  border-inline-end: 0 !important;
-  background: transparent;
-}
-
-.siderFooter {
-  flex: none;
-  padding: var(--cl-space-3);
-  border-top: 1px solid var(--cl-border);
 }
 
 .main {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  height: 100vh;
-  height: 100dvh;
-  background: transparent;
-}
-
-.header {
-  flex: none;
-  height: 64px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--cl-space-3);
-  padding: 0 var(--cl-space-6);
-  background: var(--cl-bg-surface);
-  border-bottom: 1px solid var(--cl-border);
-  line-height: normal;
-}
-
-.headerStart {
-  display: flex;
-  align-items: center;
-  gap: var(--cl-space-3);
-  min-width: 0;
-}
-
-.headerEnd {
-  flex: none;
-  min-width: 0;
-}
-
-.breadcrumb {
-  color: var(--cl-text-subtle);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.breadcrumbCurrent {
-  color: var(--cl-text);
-  font-weight: 600;
-}
-
-.userButton {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--cl-space-2);
-  height: 40px;
-  padding-inline: var(--cl-space-2);
-}
-
-.userText {
-  display: inline-flex;
-  flex-direction: column;
-  align-items: flex-start;
-  line-height: 1.2;
-  text-align: left;
-}
-
-.userName {
-  font-weight: 600;
-  color: var(--cl-text);
-}
-
-.roleTag {
-  margin: 0;
-  padding: 0 6px;
-  font-size: var(--cl-font-caption);
-  line-height: 16px;
-}
-
-.content {
   flex: 1 1 auto;
+  min-width: 0;
   min-height: 0;
   overflow-y: auto;
-  overflow-x: hidden;
-  padding: var(--cl-space-6);
 }
 
-/* Responsive: en pantallas pequeñas el buscador se compacta y el nombre de usuario desaparece. */
-@media (max-width: 1199px) {
-  .content {
-    padding: var(--cl-space-5);
-  }
+.main:focus {
+  outline: none;
 }
 
-@media (max-width: 991px) {
-  .header {
-    padding: 0 var(--cl-space-3);
-  }
-
-  .content {
-    padding: var(--cl-space-4);
-  }
+.drawerNav {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cl-space-3);
 }
 
-@media (max-width: 640px) {
-  .breadcrumb {
-    display: none;
-  }
-
-  .header {
-    height: 56px;
-  }
+.drawerList {
+  display: grid;
+  gap: var(--cl-space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 
-/* Sidebar colapsado: los titulos de seccion se ven como una linea separadora. */
-.groupDivider {
-  display: block;
-  height: 1px;
-  margin: var(--cl-space-3) var(--cl-space-3);
-  background: var(--cl-border);
+.drawerTitle {
+  margin: var(--cl-space-3) 0 0;
+  color: var(--cl-text-subtle);
+  font-size: var(--cl-font-caption);
+  text-transform: uppercase;
+}
+
+.drawerLink,
+.drawerLinkActive {
+  display: flex;
+  align-items: center;
+  gap: var(--cl-space-3);
+  min-height: var(--cl-row-h);
+  padding: 0 var(--cl-space-3);
+  border-radius: var(--cl-radius-sm);
+  color: var(--cl-text);
+  text-decoration: none;
+}
+
+.drawerLinkActive {
+  background: var(--cl-brand-subtle);
+  color: var(--cl-brand);
+  font-weight: 600;
 }

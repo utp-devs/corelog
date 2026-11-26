@@ -1,30 +1,42 @@
-import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 
-// Un atajo no se dispara cuando el foco esta en un campo editable.
-function isEditable(target: EventTarget | null): boolean {
-  if (!(target instanceof HTMLElement)) return false
-  return target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName)
+import { useHotkeys } from './useHotkeys'
+
+export type GlobalShortcutOptions = {
+  /** Opens the shortcuts dialog ('?'). */
+  onHelp?: () => void
+  /** Project in context: 'g b' opens its board. */
+  projectId?: string | null
 }
 
-// Atajos: 'c' crea una incidencia y '/' lleva el foco al buscador de la cabecera.
-export function useGlobalShortcuts() {
+// Focus the header search field, the same field the old hook targeted.
+function focusSearch(event: KeyboardEvent) {
+  const search = document.querySelector<HTMLInputElement>('input[aria-label="Buscar proyectos e incidencias"]')
+  if (search) {
+    event.preventDefault()
+    search.focus()
+  }
+}
+
+/** Global shortcuts of the shell: c, /, ?, g i, g d, g p, g b and n (coming soon). */
+export function useGlobalShortcuts(options: GlobalShortcutOptions = {}) {
   const navigate = useNavigate()
-  useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.ctrlKey || event.metaKey || event.altKey || isEditable(event.target)) return
-      if (event.key === 'c') {
-        event.preventDefault()
-        navigate('/issues/new')
-      } else if (event.key === '/') {
-        const search = document.querySelector<HTMLInputElement>('input[aria-label="Buscar proyectos e incidencias"]')
-        if (search) {
-          event.preventDefault()
-          search.focus()
-        }
-      }
-    }
-    window.addEventListener('keydown', onKeyDown)
-    return () => window.removeEventListener('keydown', onKeyDown)
-  }, [navigate])
+  const { onHelp, projectId } = options
+  const boardPath = projectId ? `/projects/${encodeURIComponent(projectId)}/board` : '/projects'
+
+  useHotkeys([
+    { keys: 'c', group: 'General', description: 'Crear incidencia', run: () => navigate('/issues/new') },
+    { keys: '/', group: 'General', description: 'Buscar proyectos e incidencias', run: focusSearch },
+    { keys: '?', group: 'General', description: 'Mostrar atajos de teclado', run: () => onHelp?.() },
+    { keys: 'n', group: 'General', description: 'Notas rápidas', comingSoon: true },
+    { keys: 'g i', group: 'Navegación', description: 'Ir a Incidencias', run: () => navigate('/issues') },
+    { keys: 'g d', group: 'Navegación', description: 'Ir a Mi resumen', run: () => navigate('/dashboard') },
+    { keys: 'g p', group: 'Navegación', description: 'Ir a Proyectos', run: () => navigate('/projects') },
+    {
+      keys: 'g b',
+      group: 'Navegación',
+      description: projectId ? 'Ir al tablero del proyecto' : 'Ir a Proyectos (no hay proyecto abierto)',
+      run: () => navigate(boardPath),
+    },
+  ])
 }
