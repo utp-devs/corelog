@@ -13,6 +13,7 @@ function org(role: OrgRole): Organization {
     slug: 'acme',
     name: 'Acme',
     description: '',
+    hasLogo: false,
     settings: {
       whoCanCreateProjects: 'members',
       whoCanCreateTeams: 'members',

@@ -15,6 +15,7 @@ import type {
 } from '@/core/organizations/domain/organization'
 import { OrganizationHttpRepository } from '@/adapters/out/http/organization-http-repository'
 import { AppError, isAppError } from '@/core/shared/app-error'
+import { setOrgIdProvider } from '@/shared/lib/org-context'
 
 /** Persisted id of the active organization. */
 export const CURRENT_ORG_STORAGE_KEY = 'corelog.currentOrg'
@@ -53,6 +54,10 @@ export interface OrgState {
   error: AppError | null
   fetchOrgs: () => Promise<void>
   setCurrentOrg: (id: string | null) => void
+  /** Records a logo upload or removal: updates hasLogo and bumps logoRevision so cached logos refresh. */
+  setOrgLogo: (id: string, hasLogo: boolean) => void
+  /** Per organization counter, bumped on every logo change. */
+  logoRevision: Record<string, number>
   createOrg: (input: CreateOrganizationInput) => Promise<Organization>
   leaveOrg: (id: string) => Promise<void>
   createInvitations: (organizationId: string, items: InvitationItemInput[]) => Promise<InvitationCreated[]>
@@ -65,6 +70,7 @@ type OrgStore = UseBoundStore<StoreApi<OrgState>>
 
 const initialState = {
   orgs: [] as Organization[],
+  logoRevision: {} as Record<string, number>,
   loading: false,
   loaded: false,
   error: null as AppError | null,
@@ -101,6 +107,13 @@ export function createOrgStore(repository: OrganizationRepositoryPort): OrgStore
         select(id)
       },
 
+      setOrgLogo: (id, hasLogo) => {
+        set({
+          orgs: get().orgs.map((org) => (org.id === id ? { ...org, hasLogo } : org)),
+          logoRevision: { ...get().logoRevision, [id]: (get().logoRevision[id] ?? 0) + 1 },
+        })
+      },
+
       createOrg: async (input) => {
         const org = await service.create(input)
         set({ orgs: [...get().orgs.filter((item) => item.id !== org.id), org], loaded: true })
@@ -135,6 +148,9 @@ export const useOrgStore = createOrgStore(new OrganizationHttpRepository())
 export function getCurrentOrgId(): string | null {
   return useOrgStore.getState().currentOrgId
 }
+
+// Shared code (withOrg) reads the active organization through this registration, not by importing the store.
+setOrgIdProvider(getCurrentOrgId)
 
 export interface CurrentOrg {
   org: Organization | null

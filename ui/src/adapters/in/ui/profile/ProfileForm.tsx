@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Button, Input, Select } from 'antd'
-import { useEffect } from 'react'
+import { useUnsavedChangesGuard } from '@/shared/hooks/useUnsavedChangesGuard'
 import { Controller, useForm } from 'react-hook-form'
 import { z } from 'zod'
 
@@ -26,7 +26,6 @@ interface ProfileFormProps {
   isSubmitting: boolean
   /** Rejects on failure; field errors are shown on the form, other errors are the caller's to report. */
   onSave: (payload: ProfileUpdate) => Promise<void>
-  onDirtyChange: (dirty: boolean) => void
 }
 
 function valuesOf(user: User): ProfileFormValues {
@@ -39,7 +38,7 @@ function valuesOf(user: User): ProfileFormValues {
   }
 }
 
-export function ProfileForm({ user, timezones, isSubmitting, onSave, onDirtyChange }: ProfileFormProps) {
+export function ProfileForm({ user, timezones, isSubmitting, onSave }: ProfileFormProps) {
   const {
     control,
     handleSubmit,
@@ -49,12 +48,7 @@ export function ProfileForm({ user, timezones, isSubmitting, onSave, onDirtyChan
     resolver: zodResolver(schema),
     values: valuesOf(user),
   })
-
-  useEffect(() => {
-    onDirtyChange(isDirty)
-  }, [isDirty, onDirtyChange])
-
-  useEffect(() => () => onDirtyChange(false), [onDirtyChange])
+  const unsavedGuard = useUnsavedChangesGuard(isDirty)
 
   const submit = handleSubmit(async (values) => {
     try {
@@ -70,6 +64,8 @@ export function ProfileForm({ user, timezones, isSubmitting, onSave, onDirtyChan
   const fieldMessage = (name: keyof ProfileFormValues) => errors[name]?.message
 
   return (
+    <>
+    {unsavedGuard}
     <form className={styles.form} onSubmit={submit} noValidate aria-label="Datos personales">
       <FieldRow label="Nombre" required error={fieldMessage('name')}>
         {(props) => (
@@ -136,5 +132,6 @@ export function ProfileForm({ user, timezones, isSubmitting, onSave, onDirtyChan
         </Button>
       </div>
     </form>
+    </>
   )
 }

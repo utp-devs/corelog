@@ -117,6 +117,26 @@ describe('org admin store', () => {
     expect(store.getState().logoUrl).toBeNull()
   })
 
+  it('skips the request and clears the preview when the organization has no logo', async () => {
+    const getLogo = vi.fn(async () => new Blob(['x']))
+    const store = createOrgAdminStore(createFakeAdminRepository({ getLogo }))
+    await store.getState().loadLogo(ORG.id, false)
+    expect(getLogo).not.toHaveBeenCalled()
+    expect(store.getState().logoUrl).toBeNull()
+  })
+
+  it('reports logo uploads and removals to the organization list', async () => {
+    const onLogoChanged = vi.fn()
+    const store = createOrgAdminStore(
+      createFakeAdminRepository({ getLogo: vi.fn(async () => new Blob(['x'])) }),
+      { onLogoChanged },
+    )
+    await store.getState().uploadLogo(ORG.id, new File(['x'], 'logo.png', { type: 'image/png' }))
+    expect(onLogoChanged).toHaveBeenLastCalledWith(ORG.id, true)
+    await store.getState().removeLogo(ORG.id)
+    expect(onLogoChanged).toHaveBeenLastCalledWith(ORG.id, false)
+  })
+
   it('uploads a logo and then reloads it', async () => {
     const uploadLogo = vi.fn(async () => '/organizations/org-1/logo')
     const getLogo = vi.fn(async () => new Blob(['x'], { type: 'image/webp' }))

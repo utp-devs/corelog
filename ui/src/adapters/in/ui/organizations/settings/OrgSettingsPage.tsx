@@ -6,6 +6,7 @@ import { Controller, useForm } from 'react-hook-form'
 import { useCurrentOrg, useOrgStore } from '@/adapters/in/state/org.store'
 import { useOrgAdminStore, type OrgAdminStore } from '@/adapters/in/state/org-admin.store'
 import { timezoneOptions } from '@/core/people/domain/timezones'
+import { useUnsavedChangesGuard } from '@/shared/hooks/useUnsavedChangesGuard'
 import { canEditOrgSettings, canUseOwnerDangerZone } from '@/core/organizations/domain/org-permissions'
 import type { Organization } from '@/core/organizations/domain/organization'
 import { EmptyState } from '@/shared/ui/EmptyState'
@@ -59,10 +60,11 @@ export function OrgSettingsPage({ store = useOrgAdminStore }: OrgSettingsPagePro
   const organizationId = org?.id ?? null
   const ownerView = canUseOwnerDangerZone(role)
 
+  const hasLogo = org?.hasLogo
   useEffect(() => {
     if (!organizationId) return
-    void store.getState().loadLogo(organizationId)
-  }, [store, organizationId])
+    void store.getState().loadLogo(organizationId, hasLogo)
+  }, [store, organizationId, hasLogo])
 
   useEffect(() => {
     if (!organizationId || !ownerView) return
@@ -141,15 +143,8 @@ function SettingsForm({ org, canEdit, saving, setSaving, store }: SettingsFormPr
     disabled: !canEdit,
   })
 
-  // Dirty guard: warn before leaving the page with unsaved changes.
-  useEffect(() => {
-    if (!isDirty) return
-    const warn = (event: BeforeUnloadEvent) => {
-      event.preventDefault()
-    }
-    window.addEventListener('beforeunload', warn)
-    return () => window.removeEventListener('beforeunload', warn)
-  }, [isDirty])
+  // Leaving with unsaved changes asks first (in-app dialog) and warns on reload.
+  const unsavedGuard = useUnsavedChangesGuard(isDirty)
 
   const save = handleSubmit(async (formValues) => {
     setSaving(true)
@@ -177,6 +172,8 @@ function SettingsForm({ org, canEdit, saving, setSaving, store }: SettingsFormPr
   const dirtyAndEditable = isDirty && canEdit
 
   return (
+    <>
+    {unsavedGuard}
     <form aria-label="Configuración de la organización" onSubmit={save} noValidate className={styles.form}>
       <div id="org-general">
         <Section title="General" ariaLabel="General">
@@ -325,5 +322,6 @@ function SettingsForm({ org, canEdit, saving, setSaving, store }: SettingsFormPr
         </Button>
       </div>
     </form>
+    </>
   )
 }

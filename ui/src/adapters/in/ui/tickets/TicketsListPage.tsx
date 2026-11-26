@@ -1,22 +1,24 @@
 import { PlusOutlined } from '@ant-design/icons'
-import { Alert, Button, DatePicker, Input, Modal, Pagination, Select, Typography, message as antdMessage } from 'antd'
+import { Alert, Button, DatePicker, Input, Modal, Select, message as antdMessage } from 'antd'
 import dayjs from 'dayjs'
 import { useEffect, useMemo, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 
 import { SavedFilterHttpRepository } from '@/adapters/out/http/saved-filter-http-repository'
 import { useTicketsStore } from '@/adapters/in/state/tickets.store'
 import type { IssueType, Ticket, TicketPriority, TicketStatus } from '@/core/tickets/domain/ticket'
 import type { SavedFilter, SavedFilterCriteria } from '@/core/tickets/domain/saved-filter'
-import { ErrorState } from '@/shared/ui/ErrorState'
+import { EmptyState } from '@/shared/ui/EmptyState'
 import { FilterBar } from '@/shared/ui/FilterBar'
-import { LoadingSkeleton } from '@/shared/ui/LoadingSkeleton'
+import { PageContainer } from '@/shared/ui/PageContainer'
 import { PageHeader } from '@/shared/ui/PageHeader'
+import { Section } from '@/shared/ui/Section'
+import { Toolbar } from '@/shared/ui/Toolbar'
 import { useTickets } from './hooks/useTickets'
 import { TicketList } from './TicketList'
 import styles from './TicketsListPage.module.css'
 
-const PAGE_SIZE = 20
+const DEFAULT_PAGE_SIZE = 20
 
 const statusOptions: { value: TicketStatus; label: string }[] = [
   { value: 'open', label: 'Abierto' },
@@ -51,6 +53,7 @@ export function TicketsListPage() {
   const [dueFrom, setDueFrom] = useState<string | undefined>()
   const [dueTo, setDueTo] = useState<string | undefined>()
   const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE)
   const [search, setSearch] = useState('')
   const [savedFilters, setSavedFilters] = useState<SavedFilter[]>([])
   const [selectedSavedFilter, setSelectedSavedFilter] = useState<string>()
@@ -77,7 +80,7 @@ export function TicketsListPage() {
     dueFrom,
     dueTo,
     page,
-    pageSize: PAGE_SIZE,
+    pageSize,
   })
   const updateRank = useTicketsStore((state) => state.updateRank)
 
@@ -172,97 +175,102 @@ export function TicketsListPage() {
     ])
   }
 
-  const showingSkeleton = isLoading && tickets.length === 0
-
   // Los filtros avanzados (filtro guardado y fechas) se muestran plegados; se abren solos si hay alguno activo.
   const advancedVisible = advancedOpen || Boolean(dueFrom || dueTo || selectedSavedFilter)
+  const emptyState = hasActiveFilters ? (
+    <EmptyState
+      title="Ninguna incidencia coincide con los filtros"
+      description="Cambia o limpia los filtros para ver más resultados."
+      action={<Button onClick={clearFilters}>Limpiar filtros</Button>}
+    />
+  ) : (
+    <EmptyState
+      title="Aún no hay incidencias"
+      description="Crea la primera para empezar."
+      action={<Button type="primary" icon={<PlusOutlined />} onClick={() => navigate('/issues/new')}>Nueva incidencia</Button>}
+    />
+  )
+
   return (
-    <div>
+    <PageContainer variant="wide" pageName="issues" ready={!isLoading}>
       {contextHolder}
       <PageHeader
         title="Incidencias"
         description="Consulta y administra los incidentes registrados."
-        actions={
+      />
+
+      <Toolbar
+        left={
+          <FilterBar
+            search={{ value: search, onChange: (value) => { setSearch(value); setPage(1) }, placeholder: 'Buscar incidencia por título o descripción' }}
+            filters={[
+              { key: 'status', label: 'Filtrar por estado', options: statusOptions, value: statusFilter, onChange: (value) => { setStatusFilter(value as TicketStatus | undefined); setPage(1) } },
+              { key: 'priority', label: 'Filtrar por prioridad', options: priorityOptions, value: priorityFilter, onChange: (value) => { setPriorityFilter(value as TicketPriority | undefined); setPage(1) } },
+              { key: 'issueType', label: 'Filtrar por tipo', options: issueTypeOptions, value: issueTypeFilter, onChange: (value) => { setIssueTypeFilter(value as IssueType | undefined); setPage(1) } },
+            ]}
+            onClear={hasActiveFilters ? clearFilters : undefined}
+          />
+        }
+        right={
           <Button type="primary" icon={<PlusOutlined />} onClick={() => navigate('/issues/new')}>
             Nueva incidencia
           </Button>
         }
+        secondary={
+          <Button aria-expanded={advancedVisible} onClick={() => setAdvancedOpen((value) => !value)}>
+            {advancedVisible ? 'Ocultar filtros avanzados' : 'Filtros avanzados'}
+          </Button>
+        }
       />
 
-      <div className={styles.advancedToggle}>
-        <Button aria-expanded={advancedVisible} onClick={() => setAdvancedOpen((value) => !value)}>
-          {advancedVisible ? 'Ocultar filtros avanzados' : 'Filtros avanzados'}
-        </Button>
-      </div>
-
       {advancedVisible && (
-      <div className={styles.savedRow}>
-        <Select
-          allowClear
-          placeholder="Cargar filtro guardado"
-          className={styles.filterSelect}
-          value={selectedSavedFilter}
-          options={savedFilters.map((filter) => ({ value: filter.id, label: filter.name }))}
-          onChange={applySavedFilter}
-        />
-        <Button onClick={() => setSaveModalOpen(true)}>Guardar filtro actual</Button>
-        <Button danger disabled={!selectedSavedFilter} onClick={() => void deleteSelectedFilter()}>Eliminar filtro</Button>
-        <DatePicker
-          placeholder="Fecha desde"
-          value={dueFrom ? dayjs(dueFrom) : null}
-          onChange={(value) => { setDueFrom(value?.startOf('day').toISOString()); setPage(1) }}
-        />
-        <DatePicker
-          placeholder="Fecha hasta"
-          value={dueTo ? dayjs(dueTo) : null}
-          onChange={(value) => { setDueTo(value?.endOf('day').toISOString()); setPage(1) }}
-        />
-      </div>
+        <div className={styles.savedRow}>
+          <Select
+            allowClear
+            placeholder="Cargar filtro guardado"
+            className={styles.filterSelect}
+            value={selectedSavedFilter}
+            options={savedFilters.map((filter) => ({ value: filter.id, label: filter.name }))}
+            onChange={applySavedFilter}
+          />
+          <Button onClick={() => setSaveModalOpen(true)}>Guardar filtro actual</Button>
+          <Button danger disabled={!selectedSavedFilter} onClick={() => void deleteSelectedFilter()}>Eliminar filtro</Button>
+          <DatePicker
+            placeholder="Fecha desde"
+            value={dueFrom ? dayjs(dueFrom) : null}
+            onChange={(value) => { setDueFrom(value?.startOf('day').toISOString()); setPage(1) }}
+          />
+          <DatePicker
+            placeholder="Fecha hasta"
+            value={dueTo ? dayjs(dueTo) : null}
+            onChange={(value) => { setDueTo(value?.endOf('day').toISOString()); setPage(1) }}
+          />
+        </div>
       )}
 
       {savedFilterError && <Alert type="error" showIcon message={savedFilterError} closable onClose={() => setSavedFilterError(undefined)} />}
 
-      <FilterBar
-        search={{ value: search, onChange: (value) => { setSearch(value); setPage(1) }, placeholder: 'Buscar incidencia por título o descripción' }}
-        filters={[
-          { key: 'status', label: 'Filtrar por estado', options: statusOptions, value: statusFilter, onChange: (value) => { setStatusFilter(value as TicketStatus | undefined); setPage(1) } },
-          { key: 'priority', label: 'Filtrar por prioridad', options: priorityOptions, value: priorityFilter, onChange: (value) => { setPriorityFilter(value as TicketPriority | undefined); setPage(1) } },
-          { key: 'issueType', label: 'Filtrar por tipo', options: issueTypeOptions, value: issueTypeFilter, onChange: (value) => { setIssueTypeFilter(value as IssueType | undefined); setPage(1) } },
-        ]}
-        onClear={hasActiveFilters ? clearFilters : undefined}
-      />
-
-      {error ? (
-        <ErrorState message={error} onRetry={() => void refetch()} />
-      ) : showingSkeleton ? (
-        <LoadingSkeleton variant="table" rows={6} />
-      ) : (
+      <Section flush ariaLabel="Lista de incidencias">
         <TicketList
           tickets={orderedTickets}
-          isLoading={isLoading}
+          loading={isLoading}
+          error={error}
+          onRetry={() => void refetch()}
           onSelect={handleSelect}
           onMoveUp={(ticket) => void handleMove(ticket, -1)}
           onMoveDown={(ticket) => void handleMove(ticket, 1)}
-          emptyText={hasActiveFilters ? 'Ninguna incidencia coincide con los filtros' : 'Aún no hay incidencias'}
+          emptyState={emptyState}
+          pagination={total > 0 ? {
+            page,
+            pageSize,
+            total,
+            onChange: (nextPage, nextSize) => {
+              setPage(nextPage)
+              setPageSize(nextSize)
+            },
+          } : undefined}
         />
-      )}
-
-      {!error && total > 0 && (
-        <Pagination
-          current={page}
-          pageSize={PAGE_SIZE}
-          total={total}
-          showSizeChanger={false}
-          onChange={setPage}
-          className={styles.pagination}
-        />
-      )}
-
-      {!error && !isLoading && tickets.length === 0 && !hasActiveFilters && (
-        <Typography.Paragraph type="secondary" className={styles.hint}>
-          <Link to="/issues/new">Crear la primera incidencia</Link>
-        </Typography.Paragraph>
-      )}
+      </Section>
 
       <Modal
         title="Guardar filtro"
@@ -282,6 +290,6 @@ export function TicketsListPage() {
           placeholder="Nombre del filtro"
         />
       </Modal>
-    </div>
+    </PageContainer>
   )
 }

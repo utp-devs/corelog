@@ -44,6 +44,8 @@
 }
 
 .cardName {
+  flex: 1;
+  min-width: 0;
   overflow: hidden;
   font-size: var(--cl-font-body-strong);
   font-weight: 600;
@@ -82,4 +84,9 @@
   .card {
     transition: none;
   }
+}
+
+.cardMeta {
+  color: var(--cl-text-subtle);
+  font-size: var(--cl-font-caption);
 }

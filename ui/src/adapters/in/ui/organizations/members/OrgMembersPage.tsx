@@ -11,7 +11,7 @@ import {
   canViewMembers,
 } from '@/core/organizations/domain/org-permissions'
 import { canManageOrg, ORG_ROLES, type OrganizationMember, type OrgRole } from '@/core/organizations/domain/organization'
-import { Avatar } from '@/shared/ui/Avatar'
+import { UserAvatar } from '@/adapters/in/ui/people/UserAvatar'
 import { ConfirmDangerModal } from '@/shared/ui/ConfirmDangerModal'
 import { ConfirmModal } from '@/shared/ui/ConfirmModal'
 import { DataTable, type DataTableColumn } from '@/shared/ui/DataTable'
@@ -180,13 +180,18 @@ export function OrgMembersPage({ store = useOrgAdminStore }: OrgMembersPageProps
       mobilePrimary: true,
       render: (_value, member) => (
         <span className={styles.person}>
-          <Avatar id={member.userId} name={member.name} size={32} />
+          <UserAvatar id={member.userId} name={member.name} hasAvatar={member.hasAvatar} size={32} />
           <span className={styles.personName}>
             {member.name}
             {isSelf(member) && <span className={styles.youTag}> (tú)</span>}
           </span>
         </span>
       ),
+    },
+    {
+      key: 'jobTitle',
+      title: 'Cargo',
+      render: (_value, member) => member.jobTitle || <Typography.Text type="secondary">—</Typography.Text>,
     },
     {
       key: 'email',

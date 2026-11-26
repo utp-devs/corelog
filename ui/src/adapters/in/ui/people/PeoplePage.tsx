@@ -13,9 +13,9 @@ import { PageContainer } from '@/shared/ui/PageContainer'
 import { PageHeader } from '@/shared/ui/PageHeader'
 import { SearchInput } from '@/shared/ui/SearchInput'
 import { Toolbar } from '@/shared/ui/Toolbar'
-import { Avatar } from '@/shared/ui/Avatar'
 import { describeDirectoryError } from './errors'
 import { filterMembers, ORG_ROLE_LABELS, ORG_ROLE_TONES } from './roles'
+import { UserAvatar } from './UserAvatar'
 import styles from './PeoplePage.module.css'
 
 interface PeoplePageProps {
@@ -74,10 +74,15 @@ export function PeoplePage({ repository = defaultRepository }: PeoplePageProps) 
       mobilePrimary: true,
       render: (_value, member) => (
         <span className={styles.person}>
-          <Avatar id={member.userId} name={member.name} size={32} />
+          <UserAvatar id={member.userId} name={member.name} hasAvatar={member.hasAvatar} size={32} />
           <span className={styles.personName}>{member.name}</span>
         </span>
       ),
+    },
+    {
+      key: 'jobTitle',
+      title: 'Cargo',
+      render: (_value, member) => member.jobTitle || <Typography.Text type="secondary">—</Typography.Text>,
     },
     {
       key: 'role',

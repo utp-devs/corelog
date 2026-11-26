@@ -1,14 +1,13 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { AppError } from '@/core/shared/app-error'
+import { setOrgIdProvider } from '@/shared/lib/org-context'
 import { apiClient } from './api-client'
 import { ProjectHttpRepository } from './project-http-repository'
 
 const ORG_ID = '00000000-0000-4000-8000-0000000000aa'
 
-vi.mock('@/adapters/in/state/org.store', () => ({
-  getCurrentOrgId: () => '00000000-0000-4000-8000-0000000000aa',
-}))
+setOrgIdProvider(() => ORG_ID)
 
 const projectDto = {
   id: 'project-1',

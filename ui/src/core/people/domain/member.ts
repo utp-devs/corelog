@@ -4,8 +4,27 @@ export type OrgRole = 'owner' | 'admin' | 'member' | 'guest'
 export interface OrganizationMember {
   userId: string
   name: string
+  displayName: string
   email: string
+  jobTitle: string
+  department: string
+  /** When false the avatar is not requested and initials are shown. */
+  hasAvatar: boolean
   role: OrgRole
+  joinedAt: string
+}
+
+/** Public profile of one member (GET /organizations/{org}/people/{user_id}). Timezone is part of it. */
+export interface PersonProfile {
+  userId: string
+  name: string
+  displayName: string
+  email: string
+  jobTitle: string
+  department: string
+  timezone: string
+  hasAvatar: boolean
+  orgRole: OrgRole
   joinedAt: string
 }
 

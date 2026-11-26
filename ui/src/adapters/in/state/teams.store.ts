@@ -112,9 +112,11 @@ export const useTeamsStore = create<TeamsState>((set, get) => ({
   updateTeam: async (id, input) => {
     try {
       const updated = await teamService.update(id, input)
+      // Merge: fields the response does not carry (memberCount, myRole) keep their known values.
+      const merged = (team: Team): Team => ({ ...team, ...updated })
       set({
-        teams: get().teams.map((t) => (t.id === id ? updated : t)),
-        currentTeam: get().currentTeam?.id === id ? updated : get().currentTeam,
+        teams: get().teams.map((t) => (t.id === id ? merged(t) : t)),
+        currentTeam: get().currentTeam?.id === id ? merged(get().currentTeam as Team) : get().currentTeam,
         error: null,
       })
       return updated

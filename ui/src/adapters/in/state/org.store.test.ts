@@ -11,6 +11,7 @@ function org(id: string, role: Organization['role'] = 'member'): Organization {
     slug: `org-${id}`,
     name: `Org ${id}`,
     description: '',
+    hasLogo: false,
     settings: {
       whoCanCreateProjects: 'members',
       whoCanCreateTeams: 'members',
@@ -140,5 +141,19 @@ describe('org.store', () => {
 
   it('getCurrentOrgId reads the default store (null without a choice)', () => {
     expect(getCurrentOrgId()).toBeNull()
+  })
+})
+
+describe('org.store logo state', () => {
+  it('setOrgLogo updates hasLogo and bumps the logo revision of that organization only', () => {
+    const store = createOrgStore(fakeRepo([org('a'), org('b')]).repo)
+    store.setState({ orgs: [org('a'), org('b')] })
+    store.getState().setOrgLogo('a', true)
+    const state = store.getState()
+    expect(state.orgs.find((item) => item.id === 'a')?.hasLogo).toBe(true)
+    expect(state.orgs.find((item) => item.id === 'b')?.hasLogo).toBe(false)
+    expect(state.logoRevision).toEqual({ a: 1 })
+    store.getState().setOrgLogo('a', false)
+    expect(store.getState().logoRevision).toEqual({ a: 2 })
   })
 })

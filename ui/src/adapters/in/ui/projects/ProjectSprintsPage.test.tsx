@@ -39,7 +39,10 @@ vi.mock('./BurndownChart', () => ({
   BurndownChart: () => <div data-testid="burndown-chart" />,
 }))
 
+import { AppError } from '@/core/shared/app-error'
+
 import { ProjectSprintsPage } from './ProjectSprintsPage'
+import { guardConsole } from './testSupport/consoleGuard'
 
 const planned = { id: 'sprint-2', projectId: 'project-1', name: 'Sprint 2', goal: '', status: 'planned' }
 const active = { id: 'sprint-1', projectId: 'project-1', name: 'Sprint 1', goal: 'Entregar exportacion', status: 'active', startDate: '2026-11-02', endDate: '2026-11-08' }
@@ -53,6 +56,16 @@ function renderPage() {
 }
 
 describe('ProjectSprintsPage', () => {
+  const consoleGuard = guardConsole()
+
+  it('shows the 403 page when the sprints are forbidden, without console output', async () => {
+    repositories.list.mockRejectedValue(new AppError({ status: 403, message: 'forbidden' }))
+    renderPage()
+
+    expect(await screen.findByText('No tienes acceso a esta página')).toBeInTheDocument()
+    consoleGuard.expectNoConsoleOutput()
+  })
+
   beforeEach(() => {
     vi.clearAllMocks()
     repositories.getProject.mockResolvedValue({ id: 'project-1', key: 'CORE', name: 'CoreLog' })

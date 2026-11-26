@@ -17,11 +17,10 @@ const profiles = new ProfileHttpRepository()
 interface GeneralSectionProps {
   user: User
   onUserChange: (user: User) => void
-  onDirtyChange: (dirty: boolean) => void
 }
 
 /** Profile general: photo, personal data and timezone. */
-export function GeneralSection({ user, onUserChange, onDirtyChange }: GeneralSectionProps) {
+export function GeneralSection({ user, onUserChange }: GeneralSectionProps) {
   const [isSaving, setIsSaving] = useState(false)
   const timezones = useMemo(() => timezoneOptions(user.timezone), [user.timezone])
 
@@ -59,7 +58,6 @@ export function GeneralSection({ user, onUserChange, onDirtyChange }: GeneralSec
           timezones={timezones}
           isSubmitting={isSaving}
           onSave={save}
-          onDirtyChange={onDirtyChange}
         />
       </Card>
     </section>

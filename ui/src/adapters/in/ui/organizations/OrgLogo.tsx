@@ -8,12 +8,16 @@ type OrgLogoProps = {
   orgId: string
   /** Organization name: origin of the initials shown when there is no logo. */
   name: string
+  /** Organization.hasLogo. False means no request is made and the initials are shown. */
+  hasLogo: boolean
+  /** Changes after an upload or removal so the logo is fetched again. */
+  revision?: number
   size?: 24 | 32
 }
 
 /** Organization logo fetched with the session, or a colored tile with the initials of the name (ProjectAvatar style). */
-export function OrgLogo({ orgId, name, size = 24 }: OrgLogoProps) {
-  const src = useOrgLogoUrl(orgId)
+export function OrgLogo({ orgId, name, hasLogo, revision = 0, size = 24 }: OrgLogoProps) {
+  const src = useOrgLogoUrl(orgId, hasLogo, revision)
   const sizeClass = styles[`size${size}`]
 
   if (src) {

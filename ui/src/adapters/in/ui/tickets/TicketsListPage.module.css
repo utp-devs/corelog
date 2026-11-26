@@ -8,19 +8,5 @@
 
 .filterSelect {
   width: 200px;
-}
-
-.pagination {
-  margin-top: var(--cl-space-4);
-  text-align: right;
-}
-
-.hint {
-  margin-top: var(--cl-space-2);
-}
-
-.advancedToggle {
-  display: flex;
-  justify-content: flex-end;
-  margin-bottom: var(--cl-space-3);
+  max-width: 100%;
 }

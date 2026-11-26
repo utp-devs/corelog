@@ -16,6 +16,8 @@ export interface UpdateTeamInput {
 export interface TeamRepositoryPort {
   /** Teams of the current organization (the organization comes from the session context). */
   list(): Promise<Team[]>
+  /** Teams of an organization where the given user is a member (GET /teams?organization_id=&member_id=). */
+  listForMember(organizationId: string, memberId: string): Promise<Team[]>
   get(id: string): Promise<Team>
   create(input: CreateTeamInput): Promise<Team>
   update(id: string, input: UpdateTeamInput): Promise<Team>

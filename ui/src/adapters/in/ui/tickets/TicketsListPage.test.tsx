@@ -1,7 +1,9 @@
 import { App } from 'antd'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+
+import type { Ticket } from '@/core/tickets/domain/ticket'
 
 const { savedFilters, listSavedFilters, createSavedFilter, deleteSavedFilter, hook } = vi.hoisted(() => ({
   hook: {
@@ -38,6 +40,42 @@ vi.mock('@/adapters/out/http/saved-filter-http-repository', () => ({
 
 import { TicketsListPage } from './TicketsListPage'
 
+const originalMatchMedia = window.matchMedia
+
+const sampleTicket: Ticket = {
+  id: 'a1b2c3d4-0000-0000-0000-000000000001',
+  title: 'Fallo al guardar el perfil',
+  description: 'No guarda los cambios',
+  status: 'in_progress',
+  priority: 'high',
+  projectId: 'project-1',
+  issueType: 'bug',
+  parentId: null,
+  dueDate: null,
+  storyPoints: null,
+  rank: '00000001',
+  closedAt: null,
+  requesterId: 'user-1',
+  requesterName: 'Ana',
+  assigneeId: 'user-2',
+  assigneeName: 'Luis Pérez',
+  createdAt: '2026-01-01T00:00:00Z',
+  updatedAt: '2026-01-02T10:00:00Z',
+}
+
+function mockViewport(query: string) {
+  window.matchMedia = vi.fn((media: string) => ({
+    matches: media === query,
+    media,
+    onchange: null,
+    addEventListener: () => {},
+    removeEventListener: () => {},
+    addListener: () => {},
+    removeListener: () => {},
+    dispatchEvent: () => false,
+  })) as unknown as typeof window.matchMedia
+}
+
 function renderPage() {
   render(
     <App>
@@ -50,6 +88,7 @@ function renderPage() {
 
 describe('TicketsListPage saved filters', () => {
   beforeEach(() => {
+    window.localStorage.clear()
     hook.current = { tickets: [], total: 0, isLoading: false, error: undefined, refetch: vi.fn() }
     listSavedFilters.mockReset().mockResolvedValue(savedFilters)
     createSavedFilter.mockReset().mockResolvedValue({ ...savedFilters[0], id: 'filter-2', name: 'New filter' })
@@ -88,8 +127,14 @@ describe('TicketsListPage saved filters', () => {
 
 describe('TicketsListPage states', () => {
   beforeEach(() => {
+    window.localStorage.clear()
     hook.current = { tickets: [], total: 0, isLoading: false, error: undefined, refetch: vi.fn() }
     listSavedFilters.mockReset().mockResolvedValue([])
+    window.matchMedia = originalMatchMedia
+  })
+
+  afterEach(() => {
+    window.matchMedia = originalMatchMedia
   })
 
   it('shows the error with a retry action that reloads the list', async () => {
@@ -102,7 +147,7 @@ describe('TicketsListPage states', () => {
   })
 
   it('shows pagination based on the total across pages', async () => {
-    hook.current = { tickets: [], total: 45, isLoading: false, error: undefined, refetch: vi.fn() }
+    hook.current = { tickets: [sampleTicket], total: 45, isLoading: false, error: undefined, refetch: vi.fn() }
     renderPage()
     await waitFor(() => expect(document.querySelector('.ant-pagination')).not.toBeNull())
     expect(document.querySelector('.ant-pagination-item-3')).not.toBeNull()
@@ -111,5 +156,53 @@ describe('TicketsListPage states', () => {
   it('hides pagination when there are no results', () => {
     renderPage()
     expect(document.querySelector('.ant-pagination')).toBeNull()
+  })
+
+  it('shows an empty state inside the table area when there are no issues', () => {
+    renderPage()
+    expect(screen.getByText('Aún no hay incidencias')).toBeInTheDocument()
+    expect(screen.getAllByRole('button', { name: /Nueva incidencia/ }).length).toBeGreaterThan(0)
+  })
+
+  it('offers to clear filters when the active filters match nothing', async () => {
+    renderPage()
+    fireEvent.change(screen.getByPlaceholderText('Buscar incidencia por título o descripción'), { target: { value: 'zzz' } })
+    expect(await screen.findByText('Ninguna incidencia coincide con los filtros')).toBeInTheDocument()
+    expect(screen.getAllByRole('button', { name: 'Limpiar filtros' }).length).toBeGreaterThan(0)
+  })
+
+  it('shows a loading skeleton while the first page loads', async () => {
+    hook.current = { tickets: [], total: 0, isLoading: true, error: undefined, refetch: vi.fn() }
+    renderPage()
+    expect(await screen.findByRole('status', { name: 'Cargando' }, { timeout: 1000 })).toBeInTheDocument()
+  })
+
+  it('renders the table with the key, summary, status and assignee columns on desktop', () => {
+    hook.current = { tickets: [sampleTicket], total: 1, isLoading: false, error: undefined, refetch: vi.fn() }
+    renderPage()
+    expect(screen.getByText('Fallo al guardar el perfil')).toBeInTheDocument()
+    expect(screen.getByText('En progreso')).toBeInTheDocument()
+    expect(screen.getByText('Luis Pérez')).toBeInTheDocument()
+  })
+
+  it('renders cards instead of a table on mobile, with no clipped columns', () => {
+    mockViewport('(max-width: 767px)')
+    hook.current = { tickets: [sampleTicket], total: 1, isLoading: false, error: undefined, refetch: vi.fn() }
+    renderPage()
+    expect(screen.queryByRole('table')).not.toBeInTheDocument()
+    expect(screen.getByText('Fallo al guardar el perfil')).toBeInTheDocument()
+    expect(screen.getByText('En progreso')).toBeInTheDocument()
+    expect(screen.getByText('Luis Pérez')).toBeInTheDocument()
+  })
+
+  it('renders without console warnings or errors', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {})
+    hook.current = { tickets: [sampleTicket], total: 1, isLoading: false, error: undefined, refetch: vi.fn() }
+    renderPage()
+    expect(warn).not.toHaveBeenCalled()
+    expect(error).not.toHaveBeenCalled()
+    warn.mockRestore()
+    error.mockRestore()
   })
 })

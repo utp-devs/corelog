@@ -1,6 +1,6 @@
 import { App } from 'antd'
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
-import { MemoryRouter, Route, Routes } from 'react-router-dom'
+import { createMemoryRouter, MemoryRouter, Route, RouterProvider, Routes } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { AppError } from '@/core/shared/app-error'
@@ -106,6 +106,21 @@ function renderAt(path: string) {
   )
 }
 
+function renderInDataRouter(path: string) {
+  const router = createMemoryRouter(
+    [
+      { path: '/profile', element: <ProfilePage /> },
+      { path: '/profile/:section', element: <ProfilePage /> },
+    ],
+    { initialEntries: [path] },
+  )
+  render(
+    <App>
+      <RouterProvider router={router} />
+    </App>,
+  )
+}
+
 describe('ProfilePage', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -174,26 +189,26 @@ describe('ProfilePage', () => {
     })
 
     it('asks before leaving the section with unsaved changes and stays when the user chooses to keep editing', async () => {
-      renderAt('/profile/general')
+      renderInDataRouter('/profile/general')
 
       fireEvent.change(screen.getByRole('textbox', { name: 'Nombre para mostrar' }), { target: { value: 'Ana T.' } })
       fireEvent.click(within(screen.getByRole('navigation', { name: 'Secciones de la cuenta' })).getByText('Notificaciones'))
 
       const dialog = await screen.findByRole('dialog')
-      expect(within(dialog).getAllByText('Tienes cambios sin guardar').length).toBeGreaterThan(0)
+      expect(within(dialog).getByText('Tienes cambios sin guardar')).toBeInTheDocument()
       fireEvent.click(within(dialog).getByRole('button', { name: 'Seguir editando' }))
 
       expect(screen.getByRole('textbox', { name: 'Nombre para mostrar' })).toHaveValue('Ana T.')
       expect(screen.queryByRole('switch', { name: 'Avisos en la aplicación' })).not.toBeInTheDocument()
     })
 
-    it('leaves the section after confirming the discard', async () => {
-      renderAt('/profile/general')
+    it('leaves the section after confirming the exit', async () => {
+      renderInDataRouter('/profile/general')
 
       fireEvent.change(screen.getByRole('textbox', { name: 'Nombre para mostrar' }), { target: { value: 'Ana T.' } })
       fireEvent.click(within(screen.getByRole('navigation', { name: 'Secciones de la cuenta' })).getByText('Notificaciones'))
       const dialog = await screen.findByRole('dialog')
-      fireEvent.click(within(dialog).getByRole('button', { name: 'Descartar cambios' }))
+      fireEvent.click(within(dialog).getByRole('button', { name: 'Salir' }))
 
       expect(await screen.findByRole('switch', { name: 'Avisos en la aplicación' })).toBeInTheDocument()
     })

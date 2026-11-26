@@ -16,6 +16,8 @@ interface TeamDto {
   created_by: string | null
   created_at: string
   updated_at: string
+  member_count?: number
+  my_role?: TeamMemberRole | null
 }
 
 interface TeamMemberDto {
@@ -31,8 +33,9 @@ interface OrganizationMemberDto {
   email: string
 }
 
+/** Optional fields are only set when the API sends them, so a partial response never overwrites known values. */
 function toTeam(dto: TeamDto): Team {
-  return {
+  const team: Team = {
     id: dto.id,
     organizationId: dto.organization_id,
     name: dto.name,
@@ -42,6 +45,9 @@ function toTeam(dto: TeamDto): Team {
     createdAt: dto.created_at,
     updatedAt: dto.updated_at,
   }
+  if (dto.member_count !== undefined) team.memberCount = dto.member_count
+  if (dto.my_role !== undefined) team.myRole = dto.my_role
+  return team
 }
 
 function toTeamMember(dto: TeamMemberDto): TeamMember {
@@ -56,6 +62,13 @@ function toTeamMember(dto: TeamMemberDto): TeamMember {
 export class TeamHttpRepository implements TeamRepositoryPort {
   async list(): Promise<Team[]> {
     const { data } = await apiClient.get<{ data: TeamDto[] }>('/teams', { params: withOrg() })
+    return data.data.map(toTeam)
+  }
+
+  async listForMember(organizationId: string, memberId: string): Promise<Team[]> {
+    const { data } = await apiClient.get<{ data: TeamDto[] }>('/teams', {
+      params: { organization_id: organizationId, member_id: memberId },
+    })
     return data.data.map(toTeam)
   }
 

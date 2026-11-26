@@ -194,15 +194,20 @@ export function DataTable<T extends object>({
     if (!rowActions) {
       return null
     }
+    const items = rowActions(row)
+    if (items.length === 0) {
+      return null
+    }
     return (
-      <Dropdown menu={{ items: rowActions(row) }} trigger={['click']} placement="bottomRight">
+      <Dropdown menu={{ items }} trigger={['click']} placement="bottomRight">
         <Button type="text" size="small" icon={<EllipsisOutlined />} aria-label="Acciones de la fila" />
       </Dropdown>
     )
   }
 
   const tableColumns: ColumnsType<T> = visibleColumns.map((column) => column)
-  if (rowActions && !cardMode) {
+  const anyRowActions = rowActions !== undefined && data.some((row) => rowActions(row).length > 0)
+  if (anyRowActions && !cardMode) {
     tableColumns.push({
       key: '__row-actions',
       title: '',

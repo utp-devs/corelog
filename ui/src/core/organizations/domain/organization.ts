@@ -26,6 +26,8 @@ export interface Organization {
   settings: OrganizationSettings
   /** Role of the caller. Present on list and detail responses. */
   role?: OrgRole
+  /** True when the organization has a logo (GET /organizations/{org}/logo answers 200). */
+  hasLogo: boolean
   createdAt: string
   updatedAt: string
 }
@@ -33,7 +35,12 @@ export interface Organization {
 export interface OrganizationMember {
   userId: string
   name: string
+  displayName: string
   email: string
+  jobTitle: string
+  department: string
+  /** When false the avatar is not requested and initials are shown. */
+  hasAvatar: boolean
   role: OrgRole
   joinedAt: string
 }

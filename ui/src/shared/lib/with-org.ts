@@ -1,5 +1,5 @@
-import { getCurrentOrgId } from '@/adapters/in/state/org.store'
-import { AppError } from '@/core/shared/app-error'
+import { AppError } from '@/shared/lib/app-error'
+import { getOrgId } from './org-context'
 
 export const NO_CURRENT_ORG_CODE = 'org.no_current'
 
@@ -8,7 +8,7 @@ export const NO_CURRENT_ORG_CODE = 'org.no_current'
  * Throws AppError with code org.no_current when no organization is active.
  */
 export function withOrg(params: Record<string, unknown> = {}): Record<string, unknown> {
-  const organizationId = getCurrentOrgId()
+  const organizationId = getOrgId()
   if (!organizationId) {
     throw new AppError({
       status: 0,

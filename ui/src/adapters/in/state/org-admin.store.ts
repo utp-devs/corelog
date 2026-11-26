@@ -15,6 +15,7 @@ import type {
 } from '@/core/organizations/domain/organization'
 import { OrganizationHttpRepository } from '@/adapters/out/http/organization-http-repository'
 import { AppError, isAppError } from '@/core/shared/app-error'
+import { useOrgStore } from '@/adapters/in/state/org.store'
 
 export type LoadStatus = 'idle' | 'loading' | 'ready' | 'error'
 
@@ -53,7 +54,8 @@ export interface OrgAdminState {
   clearCreatedInvitations: () => void
 
   updateOrganization: (organizationId: string, update: OrganizationUpdate) => Promise<Organization>
-  loadLogo: (organizationId: string) => Promise<void>
+  /** hasLogo false skips the request and clears the preview; undefined asks the API. */
+  loadLogo: (organizationId: string, hasLogo?: boolean) => Promise<void>
   uploadLogo: (organizationId: string, file: File) => Promise<void>
   removeLogo: (organizationId: string) => Promise<void>
   deleteOrganization: (organizationId: string, confirmSlug: string) => Promise<void>
@@ -77,8 +79,16 @@ const initialState = {
   error: null as AppError | null,
 }
 
+export interface OrgAdminStoreOptions {
+  /** Called after a logo upload or removal so the organization list can reflect hasLogo. */
+  onLogoChanged?: (organizationId: string, hasLogo: boolean) => void
+}
+
 /** Store factory: tests pass a fake repository; pages use `useOrgAdminStore` below. */
-export function createOrgAdminStore(repository: OrganizationAdminRepositoryPort): OrgAdminStore {
+export function createOrgAdminStore(
+  repository: OrganizationAdminRepositoryPort,
+  options: OrgAdminStoreOptions = {},
+): OrgAdminStore {
   return create<OrgAdminState>((set, get) => {
     let objectUrl: string | null = null
 
@@ -193,7 +203,11 @@ export function createOrgAdminStore(repository: OrganizationAdminRepositoryPort)
         }
       },
 
-      loadLogo: async (organizationId) => {
+      loadLogo: async (organizationId, hasLogo) => {
+        if (hasLogo === false) {
+          replaceObjectUrl(null)
+          return
+        }
         try {
           const blob = await repository.getLogo(organizationId)
           replaceObjectUrl(blob && typeof URL.createObjectURL === 'function' ? URL.createObjectURL(blob) : null)
@@ -208,6 +222,7 @@ export function createOrgAdminStore(repository: OrganizationAdminRepositoryPort)
         } catch (error) {
           throw fail(error, 'No se pudo subir el logo.')
         }
+        options.onLogoChanged?.(organizationId, true)
         await get().loadLogo(organizationId)
       },
 
@@ -218,6 +233,7 @@ export function createOrgAdminStore(repository: OrganizationAdminRepositoryPort)
           throw fail(error, 'No se pudo quitar el logo.')
         }
         replaceObjectUrl(null)
+        options.onLogoChanged?.(organizationId, false)
       },
 
       deleteOrganization: async (organizationId, confirmSlug) => {
@@ -244,5 +260,7 @@ export function createOrgAdminStore(repository: OrganizationAdminRepositoryPort)
   })
 }
 
-/** Application singleton. org.store.ts is not changed by the admin screens. */
-export const useOrgAdminStore = createOrgAdminStore(new OrganizationHttpRepository())
+/** Application singleton. Logo changes are mirrored into the organization list of org.store. */
+export const useOrgAdminStore = createOrgAdminStore(new OrganizationHttpRepository(), {
+  onLogoChanged: (organizationId, hasLogo) => useOrgStore.getState().setOrgLogo(organizationId, hasLogo),
+})

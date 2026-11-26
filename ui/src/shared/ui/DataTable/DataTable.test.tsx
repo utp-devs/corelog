@@ -183,6 +183,18 @@ describe('DataTable', () => {
     fireEvent.click(await screen.findByRole('menuitem', { name: 'Editar Fila 1' }))
     expect(onEdit).toHaveBeenCalledTimes(1)
   })
+
+  it('shows no row action button for rows whose action list is empty', () => {
+    renderTable({
+      rowActions: (row) => (row.id === '2' ? [{ key: 'edit', label: 'Editar', onClick: vi.fn() }] : []),
+    })
+    expect(screen.getAllByRole('button', { name: 'Acciones de la fila' })).toHaveLength(1)
+  })
+
+  it('omits the actions column entirely when no row has actions', () => {
+    renderTable({ rowActions: () => [] })
+    expect(screen.queryByRole('button', { name: 'Acciones de la fila' })).not.toBeInTheDocument()
+  })
 })
 
 describe('DataTable usage notes', () => {

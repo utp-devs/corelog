@@ -21,3 +21,16 @@
   display: inline-block;
   margin-top: var(--cl-space-4);
 }
+
+.teams {
+  margin-top: var(--cl-space-4);
+}
+
+.teamList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--cl-space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}

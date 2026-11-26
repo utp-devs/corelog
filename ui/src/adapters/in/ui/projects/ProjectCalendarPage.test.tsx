@@ -16,7 +16,10 @@ vi.mock('@/adapters/out/http/calendar-http-repository', () => ({
   },
 }))
 
+import { AppError } from '@/core/shared/app-error'
+
 import { ProjectCalendarPage } from './ProjectCalendarPage'
+import { guardConsole } from './testSupport/consoleGuard'
 
 function renderPage() {
   return render(
@@ -27,6 +30,8 @@ function renderPage() {
 }
 
 describe('ProjectCalendarPage', () => {
+  const consoleGuard = guardConsole()
+
   beforeEach(() => {
     // Mes fijo (noviembre de 2026) para que los hitos de la prueba caigan en la vista.
     vi.useFakeTimers({ toFake: ['Date'] })
@@ -72,9 +77,25 @@ describe('ProjectCalendarPage', () => {
   })
 
   it('shows a useful error when the calendar cannot be loaded', async () => {
-    repositories.events.mockRejectedValue(new Error('forbidden'))
+    repositories.events.mockRejectedValue(new Error('network'))
     renderPage()
 
     expect(await screen.findByRole('alert')).toHaveTextContent('No se pudo cargar el calendario')
+  })
+
+  it('shows an empty state inside the calendar when the month has no milestones', async () => {
+    repositories.events.mockResolvedValue([])
+    renderPage()
+
+    expect(await screen.findByText('No hay hitos en este mes')).toBeInTheDocument()
+    consoleGuard.expectNoConsoleOutput()
+  })
+
+  it('shows the 403 page when the calendar is forbidden', async () => {
+    repositories.events.mockRejectedValue(new AppError({ status: 403, message: 'forbidden' }))
+    renderPage()
+
+    expect(await screen.findByText('No tienes acceso a esta página')).toBeInTheDocument()
+    consoleGuard.expectNoConsoleOutput()
   })
 })

@@ -1,12 +1,48 @@
-import { App, Button, Card, Empty, Form, Input, List, Modal, Select, Skeleton, Space, Typography } from 'antd'
-import { ProjectOutlined } from '@ant-design/icons'
-import { useEffect, useState } from 'react'
+import { PlusOutlined, ProjectOutlined } from '@ant-design/icons'
+import { App, Button, Form, Input, Modal, Segmented, Select, Skeleton, Tooltip } from 'antd'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 import { useAuthStore } from '@/adapters/in/state/auth.store'
 import { useProjectsStore } from '@/adapters/in/state/projects.store'
+import type { Project } from '@/core/projects/domain/project'
+import { EmptyState } from '@/shared/ui/EmptyState'
+import { ErrorPage } from '@/shared/ui/ErrorPage'
+import { ErrorState } from '@/shared/ui/ErrorState'
+import { Lozenge } from '@/shared/ui/Lozenge'
+import { PageContainer } from '@/shared/ui/PageContainer'
 import { PageHeader } from '@/shared/ui/PageHeader'
+import { ProjectAvatar } from '@/shared/ui/ProjectAvatar'
+import { Section } from '@/shared/ui/Section'
+import { SearchInput } from '@/shared/ui/SearchInput'
+import { Toolbar } from '@/shared/ui/Toolbar'
+import { accessVariantOf } from './projectLoadError'
 import styles from './ProjectsPage.module.css'
+
+type VisibilityFilter = 'all' | 'open' | 'private'
+type ArchivedFilter = 'active' | 'archived' | 'all'
+type MemberRole = 'lead' | 'contributor' | 'viewer'
+
+const visibilityLabels: Record<Project['visibility'], string> = { open: 'Abierto', private: 'Privado' }
+const typeLabels: Record<Project['type'], string> = { kanban: 'Kanban', scrum: 'Scrum' }
+const roleOptions: { value: MemberRole; label: string }[] = [
+  { value: 'lead', label: 'Líder' },
+  { value: 'contributor', label: 'Colaborador' },
+  { value: 'viewer', label: 'Lector' },
+]
+
+/** Filtra por texto (nombre o clave), visibilidad y estado de archivado. Sin peticiones: trabaja sobre la lista cargada. */
+function filterProjects(projects: Project[], query: string, visibility: VisibilityFilter, archived: ArchivedFilter): Project[] {
+  const term = query.trim().toLowerCase()
+  return projects.filter((project) => {
+    if (visibility !== 'all' && project.visibility !== visibility) return false
+    const isArchived = project.archivedAt !== null
+    if (archived === 'active' && isArchived) return false
+    if (archived === 'archived' && !isArchived) return false
+    if (term && !`${project.name} ${project.key}`.toLowerCase().includes(term)) return false
+    return true
+  })
+}
 
 export function ProjectsPage() {
   const navigate = useNavigate()
@@ -14,6 +50,7 @@ export function ProjectsPage() {
   const user = useAuthStore((state) => state.user)
   const projects = useProjectsStore((state) => state.projects)
   const status = useProjectsStore((state) => state.status)
+  const error = useProjectsStore((state) => state.error)
   const members = useProjectsStore((state) => state.members)
   const labels = useProjectsStore((state) => state.labels)
   const components = useProjectsStore((state) => state.components)
@@ -31,14 +68,21 @@ export function ProjectsPage() {
   const deleteComponent = useProjectsStore((state) => state.deleteComponent)
   const [open, setOpen] = useState(false)
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null)
+  const [query, setQuery] = useState('')
+  const [visibility, setVisibility] = useState<VisibilityFilter>('all')
+  const [archived, setArchived] = useState<ArchivedFilter>('active')
   const [memberUserId, setMemberUserId] = useState('')
-  const [memberRole, setMemberRole] = useState<'lead' | 'contributor' | 'viewer'>('contributor')
+  const [memberRole, setMemberRole] = useState<MemberRole>('contributor')
   const [labelName, setLabelName] = useState('')
   const [labelColor, setLabelColor] = useState('blue')
   const [componentName, setComponentName] = useState('')
   const [componentDescription, setComponentDescription] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [form] = Form.useForm()
+
+  const isAdmin = user?.role === 'admin'
+  const selectedProject = projects.find((project) => project.id === selectedProjectId)
+  const visible = useMemo(() => filterProjects(projects, query, visibility, archived), [projects, query, visibility, archived])
 
   useEffect(() => {
     void fetchProjects()
@@ -58,81 +102,159 @@ export function ProjectsPage() {
       message.success('Proyecto creado')
       form.resetFields()
       setOpen(false)
-    } catch (error) {
-      if (error instanceof Error) message.error(error.message)
+    } catch (failure) {
+      if (failure instanceof Error) message.error(failure.message)
     } finally {
       setSubmitting(false)
     }
   }
 
+  const selectProject = (project: Project) => {
+    setSelectedProjectId(project.id)
+    void fetchMembers(project.id)
+    void fetchLabels(project.id)
+    void fetchComponents(project.id)
+  }
+
+  const accessVariant = accessVariantOf(error)
+  const loading = status === 'loading' && projects.length === 0
+
+  if (accessVariant !== null && projects.length === 0) {
+    return (
+      <PageContainer variant="wide" pageName="projects">
+        <ErrorPage variant={accessVariant} />
+      </PageContainer>
+    )
+  }
+
+  let body
+  if (loading) {
+    body = (
+      <ul className={styles.grid} aria-label="Cargando proyectos" aria-busy="true">
+        {[0, 1, 2].map((index) => (
+          <li key={index} className={styles.cardItem}>
+            <Section>
+              <Skeleton active paragraph={{ rows: 2 }} />
+            </Section>
+          </li>
+        ))}
+      </ul>
+    )
+  } else if (status === 'error' && projects.length === 0) {
+    body = <ErrorState message={error?.message ?? 'No se pudieron cargar los proyectos.'} onRetry={() => void fetchProjects()} />
+  } else if (projects.length === 0) {
+    body = (
+      <Section>
+        <EmptyState
+          title="Aún no hay proyectos"
+          description="Crea el primero para organizar el trabajo en espacios independientes."
+          action={isAdmin ? <Button type="primary" onClick={() => setOpen(true)}>Nuevo proyecto</Button> : undefined}
+        />
+      </Section>
+    )
+  } else if (visible.length === 0) {
+    body = (
+      <Section>
+        <EmptyState title="Sin resultados" description="Ningún proyecto coincide con los filtros. Cambia la búsqueda o el filtro de estado." />
+      </Section>
+    )
+  } else {
+    body = (
+      <ul className={styles.grid} aria-label="Proyectos">
+        {visible.map((project) => (
+          <li key={project.id} className={styles.cardItem}>
+            <article className={styles.card} data-testid={`project-card-${project.key}`}>
+              <header className={styles.cardHeader}>
+                <ProjectAvatar name={project.name} projectKey={project.key} size={40} />
+                <div className={styles.cardTitle}>
+                  <h3 className={styles.name} title={project.name}>{project.name}</h3>
+                  <span className={styles.key}>{project.key}</span>
+                </div>
+              </header>
+              <p className={styles.description} title={project.description || undefined}>
+                {project.description || 'Sin descripción'}
+              </p>
+              <div className={styles.tags}>
+                <Lozenge tone={project.visibility === 'open' ? 'info' : 'warning'}>{visibilityLabels[project.visibility]}</Lozenge>
+                <Lozenge>{typeLabels[project.type]}</Lozenge>
+                {project.archivedAt && <Lozenge tone="neutral">Archivado</Lozenge>}
+              </div>
+              <footer className={styles.cardActions}>
+                <Button type="link" icon={<ProjectOutlined aria-hidden="true" />} onClick={() => navigate(`/projects/${project.id}/board`)}>
+                  Abrir tablero
+                </Button>
+                <Button type="link" onClick={() => selectProject(project)} aria-pressed={selectedProjectId === project.id}>
+                  Miembros y etiquetas
+                </Button>
+              </footer>
+            </article>
+          </li>
+        ))}
+      </ul>
+    )
+  }
+
   return (
-    <div>
+    <PageContainer variant="wide" pageName="projects" ready={!loading && status !== 'loading'}>
       <PageHeader
         title="Proyectos"
         description="Organiza el trabajo en espacios independientes."
         actions={
-          <Button type="primary" onClick={() => setOpen(true)} disabled={user?.role !== 'admin'}>
-            Nuevo proyecto
-          </Button>
+          <Tooltip title={isAdmin ? undefined : 'Solo los administradores pueden crear proyectos.'}>
+            <span>
+              <Button type="primary" icon={<PlusOutlined aria-hidden="true" />} onClick={() => setOpen(true)} disabled={!isAdmin}>
+                Nuevo proyecto
+              </Button>
+            </span>
+          </Tooltip>
         }
       />
 
-      {status === 'loading' ? (
-        <Skeleton active />
-      ) : projects.length === 0 ? (
-        <Empty description="Aun no hay proyectos" />
-      ) : (
-        <div className={styles.grid}>
-          {projects.map((project) => (
-            <Card
-              key={project.id}
-              title={`${project.key} - ${project.name}`}
-              hoverable
-              actions={[
-                <Button
-                  key="board"
-                  type="link"
-                  icon={<ProjectOutlined />}
-                  onClick={(event) => {
-                    event.stopPropagation()
-                    navigate(`/projects/${project.id}/board`)
-                  }}
-                >
-                  Abrir tablero
-                </Button>,
+      <Toolbar
+        left={
+          <div className={styles.filters}>
+            <SearchInput value={query} onChange={setQuery} placeholder="Buscar por nombre o clave" ariaLabel="Buscar proyectos" />
+            <Segmented
+              aria-label="Filtrar por visibilidad"
+              value={visibility}
+              onChange={(value) => setVisibility(value as VisibilityFilter)}
+              options={[
+                { label: 'Todos', value: 'all' },
+                { label: 'Abiertos', value: 'open' },
+                { label: 'Privados', value: 'private' },
               ]}
-              onClick={() => {
-                setSelectedProjectId(project.id)
-                void fetchMembers(project.id)
-                void fetchLabels(project.id)
-                void fetchComponents(project.id)
-              }}
-            >
-              <p className={styles.description}>{project.description || 'Sin descripcion'}</p>
-              <span className={styles.meta}>{project.type === 'scrum' ? 'Scrum' : 'Kanban'} · {project.visibility === 'private' ? 'Privado' : 'Abierto'}</span>
-            </Card>
-          ))}
-        </div>
-      )}
+            />
+            <Select<ArchivedFilter>
+              aria-label="Filtrar por estado"
+              value={archived}
+              onChange={setArchived}
+              className={styles.archivedFilter}
+              options={[
+                { value: 'active', label: 'Activos' },
+                { value: 'archived', label: 'Archivados' },
+                { value: 'all', label: 'Todos los estados' },
+              ]}
+            />
+          </div>
+        }
+      />
+
+      {body}
 
       {selectedProjectId && (
-        <Card title="Miembros del proyecto" className={styles.members}>
-          <Space wrap>
+        <Section
+          title={selectedProject ? `Miembros de ${selectedProject.name}` : 'Miembros del proyecto'}
+          description="Líder, colaborador o lector. Los cambios se aplican al momento."
+        >
+          <div className={styles.inlineForm}>
             <Input
               value={memberUserId}
               onChange={(event) => setMemberUserId(event.target.value)}
               placeholder="UUID del usuario"
+              aria-label="UUID del usuario"
               className={styles.memberInput}
             />
-            <Select
-              value={memberRole}
-              onChange={setMemberRole}
-              options={[
-                { value: 'lead', label: 'Lider' },
-                { value: 'contributor', label: 'Colaborador' },
-                { value: 'viewer', label: 'Lector' },
-              ]}
-            />
+            <Select value={memberRole} onChange={setMemberRole} options={roleOptions} aria-label="Rol del nuevo miembro" />
             <Button
               type="primary"
               disabled={!memberUserId}
@@ -141,127 +263,128 @@ export function ProjectsPage() {
                   await addMember(selectedProjectId, memberUserId, memberRole)
                   setMemberUserId('')
                   message.success('Miembro agregado')
-                } catch (error) {
-                  message.error(error instanceof Error ? error.message : 'No se pudo agregar el miembro')
+                } catch (failure) {
+                  message.error(failure instanceof Error ? failure.message : 'No se pudo agregar el miembro')
                 }
               }}
             >
               Agregar
             </Button>
-          </Space>
+          </div>
 
           {members.length === 0 ? (
-            <Empty description="Aun no hay miembros" />
+            <EmptyState title="Aún no hay miembros" description="Agrega a un usuario con su UUID para empezar." />
           ) : (
-            <List
-              dataSource={members}
-              renderItem={(member) => (
-                <List.Item
-                  actions={[
+            <ul className={styles.itemList} aria-label="Miembros del proyecto">
+              {members.map((member) => (
+                <li key={member.userId} className={styles.item}>
+                  <span className={styles.itemText} title={member.userId}>{member.userId}</span>
+                  <div className={styles.itemActions}>
                     <Select
-                      key="role"
                       size="small"
                       value={member.role}
-                      onChange={(role) => {
-                        void updateMember(selectedProjectId, member.userId, role).catch((error) =>
-                          message.error(error instanceof Error ? error.message : 'No se pudo cambiar el rol'),
+                      aria-label={`Rol de ${member.userId}`}
+                      onChange={(role: MemberRole) => {
+                        void updateMember(selectedProjectId, member.userId, role).catch((failure: unknown) =>
+                          message.error(failure instanceof Error ? failure.message : 'No se pudo cambiar el rol'),
                         )
                       }}
-                      options={[
-                        { value: 'lead', label: 'Lider' },
-                        { value: 'contributor', label: 'Colaborador' },
-                        { value: 'viewer', label: 'Lector' },
-                      ]}
-                    />,
+                      options={roleOptions}
+                    />
                     <Button
-                      key="remove"
                       danger
                       size="small"
                       onClick={() => {
-                        void removeMember(selectedProjectId, member.userId).catch((error) =>
-                          message.error(error instanceof Error ? error.message : 'No se pudo eliminar el miembro'),
+                        void removeMember(selectedProjectId, member.userId).catch((failure: unknown) =>
+                          message.error(failure instanceof Error ? failure.message : 'No se pudo eliminar el miembro'),
                         )
                       }}
                     >
                       Eliminar
-                    </Button>,
-                  ]}
-                >
-                  <Typography.Text>{member.userId}</Typography.Text>
-                </List.Item>
-              )}
-            />
+                    </Button>
+                  </div>
+                </li>
+              ))}
+            </ul>
           )}
-        </Card>
+        </Section>
       )}
 
       {selectedProjectId && (
-        <Card title="Etiquetas y componentes" className={styles.members}>
-          <Space direction="vertical" size="middle" className={styles.fullWidth}>
-            <Space wrap>
-              <Input value={labelName} onChange={(event) => setLabelName(event.target.value)} placeholder="Nueva etiqueta" className={styles.labelInput} />
-              <Select value={labelColor} onChange={setLabelColor} options={[
-                { value: 'blue', label: 'Azul' },
-                { value: 'green', label: 'Verde' },
-                { value: 'gold', label: 'Dorado' },
-                { value: 'red', label: 'Rojo' },
-              ]} />
-              <Button
-                type="primary"
-                disabled={!labelName.trim()}
-                onClick={async () => {
-                  await createLabel(selectedProjectId, labelName, labelColor)
-                  setLabelName('')
-                }}
-              >
-                Crear etiqueta
-              </Button>
-            </Space>
-            <List
-              size="small"
-              dataSource={labels}
-              locale={{ emptyText: 'Aun no hay etiquetas' }}
-              renderItem={(label) => (
-                <List.Item actions={[
-                  <Button key="delete" danger size="small" onClick={() => void deleteLabel(selectedProjectId, label.id)}>
-                    Eliminar
-                  </Button>,
-                ]}>
-                  {label.name} ({label.color})
-                </List.Item>
+        <Section title="Etiquetas y componentes" description="Organizan las incidencias dentro del proyecto.">
+          <div className={styles.twoColumns}>
+            <div className={styles.column}>
+              <h3 className={styles.subtitle}>Etiquetas</h3>
+              <div className={styles.inlineForm}>
+                <Input value={labelName} onChange={(event) => setLabelName(event.target.value)} placeholder="Nueva etiqueta" aria-label="Nombre de la etiqueta" className={styles.labelInput} />
+                <Select
+                  value={labelColor}
+                  onChange={setLabelColor}
+                  aria-label="Color de la etiqueta"
+                  options={[
+                    { value: 'blue', label: 'Azul' },
+                    { value: 'green', label: 'Verde' },
+                    { value: 'gold', label: 'Dorado' },
+                    { value: 'red', label: 'Rojo' },
+                  ]}
+                />
+                <Button
+                  type="primary"
+                  disabled={!labelName.trim()}
+                  onClick={async () => {
+                    await createLabel(selectedProjectId, labelName, labelColor)
+                    setLabelName('')
+                  }}
+                >
+                  Crear etiqueta
+                </Button>
+              </div>
+              {labels.length === 0 ? (
+                <EmptyState title="Aún no hay etiquetas" />
+              ) : (
+                <ul className={styles.itemList} aria-label="Etiquetas del proyecto">
+                  {labels.map((label) => (
+                    <li key={label.id} className={styles.item}>
+                      <span className={styles.itemText}>{label.name} ({label.color})</span>
+                      <Button danger size="small" onClick={() => void deleteLabel(selectedProjectId, label.id)}>Eliminar</Button>
+                    </li>
+                  ))}
+                </ul>
               )}
-            />
-            <Space wrap>
-              <Input value={componentName} onChange={(event) => setComponentName(event.target.value)} placeholder="Nuevo componente" className={styles.componentNameInput} />
-              <Input value={componentDescription} onChange={(event) => setComponentDescription(event.target.value)} placeholder="Descripcion" className={styles.componentDescriptionInput} />
-              <Button
-                type="primary"
-                disabled={!componentName.trim()}
-                onClick={async () => {
-                  await createComponent(selectedProjectId, componentName, componentDescription)
-                  setComponentName('')
-                  setComponentDescription('')
-                }}
-              >
-                Crear componente
-              </Button>
-            </Space>
-            <List
-              size="small"
-              dataSource={components}
-              locale={{ emptyText: 'Aun no hay componentes' }}
-              renderItem={(component) => (
-                <List.Item actions={[
-                  <Button key="delete" danger size="small" onClick={() => void deleteComponent(selectedProjectId, component.id)}>
-                    Eliminar
-                  </Button>,
-                ]}>
-                  {component.name}{component.description ? ` - ${component.description}` : ''}
-                </List.Item>
+            </div>
+
+            <div className={styles.column}>
+              <h3 className={styles.subtitle}>Componentes</h3>
+              <div className={styles.inlineForm}>
+                <Input value={componentName} onChange={(event) => setComponentName(event.target.value)} placeholder="Nuevo componente" aria-label="Nombre del componente" className={styles.componentNameInput} />
+                <Input value={componentDescription} onChange={(event) => setComponentDescription(event.target.value)} placeholder="Descripción" aria-label="Descripción del componente" className={styles.componentDescriptionInput} />
+                <Button
+                  type="primary"
+                  disabled={!componentName.trim()}
+                  onClick={async () => {
+                    await createComponent(selectedProjectId, componentName, componentDescription)
+                    setComponentName('')
+                    setComponentDescription('')
+                  }}
+                >
+                  Crear componente
+                </Button>
+              </div>
+              {components.length === 0 ? (
+                <EmptyState title="Aún no hay componentes" />
+              ) : (
+                <ul className={styles.itemList} aria-label="Componentes del proyecto">
+                  {components.map((component) => (
+                    <li key={component.id} className={styles.item}>
+                      <span className={styles.itemText}>{component.name}{component.description ? ` - ${component.description}` : ''}</span>
+                      <Button danger size="small" onClick={() => void deleteComponent(selectedProjectId, component.id)}>Eliminar</Button>
+                    </li>
+                  ))}
+                </ul>
               )}
-            />
-          </Space>
-        </Card>
+            </div>
+          </div>
+        </Section>
       )}
 
       <Modal
@@ -280,7 +403,7 @@ export function ProjectsPage() {
           <Form.Item name="name" label="Nombre" rules={[{ required: true, min: 2, max: 120 }]}>
             <Input placeholder="Nombre del proyecto" />
           </Form.Item>
-          <Form.Item name="description" label="Descripcion">
+          <Form.Item name="description" label="Descripción">
             <Input.TextArea rows={3} />
           </Form.Item>
           <Form.Item name="type" label="Tipo" rules={[{ required: true }]}>
@@ -291,6 +414,6 @@ export function ProjectsPage() {
           </Form.Item>
         </Form>
       </Modal>
-    </div>
+    </PageContainer>
   )
 }

@@ -5,7 +5,10 @@ import { Controller, useForm } from 'react-hook-form'
 import { z } from 'zod'
 
 import { isAppError } from '@/core/shared/app-error'
+import { useUnsavedChangesGuard } from '@/shared/hooks/useUnsavedChangesGuard'
+import { UNSAVED_DESCRIPTION, UNSAVED_TITLE } from '@/shared/hooks/unsavedChangesCopy'
 import { ColorPicker } from '@/shared/ui/ColorPicker'
+import { ConfirmModal } from '@/shared/ui/ConfirmModal'
 import { resolveAvatarColor } from './teamColors'
 
 const schema = z.object({
@@ -48,15 +51,24 @@ interface TeamFormModalProps {
  */
 export function TeamFormModal({ open, title, initial, onSubmit, onCancel }: TeamFormModalProps) {
   const [serverError, setServerError] = useState<string | null>(null)
+  const [discardOpen, setDiscardOpen] = useState(false)
   const {
     control,
     handleSubmit,
     setError,
-    formState: { errors, isSubmitting },
+    formState: { errors, isSubmitting, isDirty },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
     values: { name: initial.name, description: initial.description, color: initial.avatarColor },
   })
+  // Only an open modal guards navigation: a closed one may keep a stale dirty flag after a save.
+  const unsavedGuard = useUnsavedChangesGuard(open && isDirty)
+
+  // Cancel with unsaved edits asks first; X, Esc and the Cancel button all come through here.
+  const requestCancel = () => {
+    if (isDirty) setDiscardOpen(true)
+    else onCancel()
+  }
 
   const submit = handleSubmit(async (values) => {
     setServerError(null)
@@ -76,10 +88,24 @@ export function TeamFormModal({ open, title, initial, onSubmit, onCancel }: Team
   })
 
   return (
+    <>
+    {unsavedGuard}
+    <ConfirmModal
+      open={discardOpen}
+      title={UNSAVED_TITLE}
+      description={UNSAVED_DESCRIPTION}
+      confirmText="Salir"
+      cancelText="Seguir editando"
+      onConfirm={() => {
+        setDiscardOpen(false)
+        onCancel()
+      }}
+      onCancel={() => setDiscardOpen(false)}
+    />
     <Modal
       open={open}
       title={title}
-      onCancel={onCancel}
+      onCancel={requestCancel}
       onOk={() => void submit()}
       confirmLoading={isSubmitting}
       okText="Guardar"
@@ -119,5 +145,6 @@ export function TeamFormModal({ open, title, initial, onSubmit, onCancel }: Team
         </Form.Item>
       </Form>
     </Modal>
+    </>
   )
 }

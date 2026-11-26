@@ -1,16 +1,72 @@
-.stack {
-  width: 100%;
-}
-
 .stats {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: var(--cl-space-4);
+}
+
+/* Equal-height panels: each grid item stretches to the row height, so no card has dead space under it. */
+.panels {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: var(--cl-space-4);
+  align-items: stretch;
+}
+
+.panels > * {
+  min-width: 0;
+  height: 100%;
+}
+
+.bars {
+  display: grid;
+  gap: var(--cl-space-3);
+}
+
+.steps {
+  display: grid;
+  gap: var(--cl-space-2);
+  margin: 0;
+  padding-inline-start: var(--cl-space-5);
 }
 
 .list {
   display: grid;
   gap: var(--cl-space-2);
   margin: 0;
-  padding: 0 0 0 var(--cl-space-4);
+  padding: 0;
+  list-style: none;
+}
+
+.listItem,
+.projectItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--cl-space-3);
+  min-width: 0;
+  padding: var(--cl-space-2) var(--cl-space-3);
+  border: 1px solid var(--cl-border);
+  border-radius: var(--cl-radius-md);
+}
+
+.projectItem {
+  justify-content: flex-start;
+}
+
+.itemLink {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.meta {
+  flex-shrink: 0;
+  font-size: var(--cl-font-small);
+}
+
+@media (max-width: 767px) {
+  .panels {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }

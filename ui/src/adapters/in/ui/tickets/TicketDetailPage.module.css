@@ -1,85 +1,141 @@
-.wrapper {
+.header {
   display: flex;
   flex-direction: column;
-  gap: var(--cl-space-4);
-  width: 100%;
-  max-width: 1280px;
+  align-items: flex-start;
+  gap: var(--cl-space-2);
+  min-width: 0;
 }
 
-.backButton {
-  align-self: flex-start;
+.back {
+  padding-inline: 0;
 }
 
 .title {
-  margin-top: 0;
-}
-
-.statusSelect {
-  width: 100%;
-}
-
-.assigneeInput {
-  width: 100%;
-}
-
-.parentInput {
-  width: 100%;
-}
-
-.linkInput {
-  width: 100%;
-}
-
-.collaboration {
-  width: 100%;
-}
-
-.editor {
-  width: 100%;
-}
-
-.detailTabs {
+  margin: 0;
   width: 100%;
   min-width: 0;
+  overflow-wrap: anywhere;
+  font-size: var(--cl-font-h2);
+  font-weight: 600;
 }
 
-.columns {
+.details {
   display: grid;
-  grid-template-columns: minmax(0, 2fr) minmax(280px, 1fr);
-  gap: var(--cl-space-4);
-  align-items: start;
+  grid-template-columns: minmax(0, max-content) minmax(0, 1fr);
+  gap: var(--cl-space-2) var(--cl-space-4);
+  margin: 0;
 }
 
-.mainColumn,
-.sideColumn {
+.details dt {
+  color: var(--cl-text-subtle);
+}
+
+.details dd {
+  margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.fieldGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--cl-space-4);
+}
+
+.editForm {
   display: flex;
   flex-direction: column;
   gap: var(--cl-space-4);
   min-width: 0;
 }
 
-@media (max-width: 991px) {
-  .columns {
-    grid-template-columns: 1fr;
-  }
-}
-
-/* Fila de controles de una tarjeta: envuelve y cada control ocupa el ancho disponible. */
-.controlRow {
+.linkForm,
+.inlineRow {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: var(--cl-space-2);
-  width: 100%;
+  margin-bottom: var(--cl-space-3);
   min-width: 0;
 }
 
-.controlRow > * {
-  flex: 1 1 180px;
+.linkForm > * {
+  flex: 1 1 160px;
   min-width: 0;
-  max-width: 100%;
 }
 
-.controlRow > button {
+.linkForm > button,
+.inlineRow > button {
   flex: 0 0 auto;
+}
+
+.inlineRow > .ant-select {
+  flex: 1 1 160px;
+  min-width: 0;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--cl-space-2);
+  margin-top: var(--cl-space-2);
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cl-space-2);
+  margin: var(--cl-space-3) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.listItem,
+.activity {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--cl-space-2);
+  min-width: 0;
+}
+
+.fileInfo {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.fileName {
+  overflow-wrap: anywhere;
+  font-weight: 600;
+}
+
+.comment {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cl-space-1);
+  min-width: 0;
+  padding-block: var(--cl-space-2);
+  border-bottom: 1px solid var(--cl-border);
+}
+
+.commentHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--cl-space-2);
+}
+
+.author {
+  font-weight: 600;
+}
+
+.muted {
+  color: var(--cl-text-subtle);
+}
+
+.backRow {
+  margin-top: var(--cl-space-3);
 }

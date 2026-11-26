@@ -1,4 +1,4 @@
-import { Alert, Button, Empty, Input, Radio, Select, Skeleton, Space, Statistic, Tag, Typography } from 'antd'
+import { Alert, Button, Input, Radio, Select, Skeleton, Space } from 'antd'
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 
@@ -6,13 +6,24 @@ import { BacklogHttpRepository } from '@/adapters/out/http/backlog-http-reposito
 import { SprintHttpRepository } from '@/adapters/out/http/sprint-http-repository'
 import type { BacklogItem } from '@/core/projects/domain/backlog'
 import type { BurndownPoint, Sprint, SprintIssue, SprintStatus, VelocityPoint } from '@/core/projects/domain/sprint'
-import { PageHeader } from '@/shared/ui/PageHeader'
-import { BurndownChart } from './BurndownChart'
 import { httpStatusOf } from '@/core/shared/app-error'
+import { ChartCard } from '@/shared/ui/ChartCard'
+import { DataTable, type DataTableColumn } from '@/shared/ui/DataTable'
+import { EmptyState } from '@/shared/ui/EmptyState'
+import { ErrorPage } from '@/shared/ui/ErrorPage'
+import { ErrorState } from '@/shared/ui/ErrorState'
+import { Lozenge, type LozengeTone } from '@/shared/ui/Lozenge'
+import { PageContainer } from '@/shared/ui/PageContainer'
+import { PageHeader } from '@/shared/ui/PageHeader'
+import { Section } from '@/shared/ui/Section'
+import { StatTile } from '@/shared/ui/StatTile'
+import { BurndownChart } from './BurndownChart'
+import { accessVariantOf, type AccessVariant } from './projectLoadError'
 import styles from './ProjectSprintsPage.module.css'
 
 const statusLabels: Record<SprintStatus, string> = { planned: 'Planificado', active: 'Activo', closed: 'Cerrado' }
-const statusColors: Record<SprintStatus, string | undefined> = { planned: undefined, active: 'processing', closed: 'default' }
+const statusTones: Record<SprintStatus, LozengeTone> = { planned: 'info', active: 'success', closed: 'neutral' }
+const issueStatusLabels: Record<string, string> = { open: 'Abierta', in_progress: 'En curso', resolved: 'Resuelta', closed: 'Cerrada' }
 
 // Mensajes en español para las acciones de sprint, segun el codigo de la API.
 function sprintErrorMessage(error: unknown): string {
@@ -23,11 +34,14 @@ function sprintErrorMessage(error: unknown): string {
   return 'No se pudo completar la acción. Intenta de nuevo.'
 }
 
+type LoadError = { variant: AccessVariant | null; message: string }
+
 export function ProjectSprintsPage() {
   const { id = '' } = useParams()
   const [sprints, setSprints] = useState<Sprint[] | undefined>(undefined)
   const [velocity, setVelocity] = useState<VelocityPoint[]>([])
-  const [loadError, setLoadError] = useState<string | undefined>(undefined)
+  const [loadError, setLoadError] = useState<LoadError | undefined>(undefined)
+  const [attempt, setAttempt] = useState(0)
   const [selectedId, setSelectedId] = useState<string | undefined>(undefined)
   const [issues, setIssues] = useState<SprintIssue[]>([])
   const [burndown, setBurndown] = useState<BurndownPoint[]>([])
@@ -61,17 +75,21 @@ export function ProjectSprintsPage() {
     void Promise.all([sprintRepo.list(id), sprintRepo.velocity(id)])
       .then(([loadedSprints, loadedVelocity]) => {
         if (!active) return
+        setLoadError(undefined)
         setSprints(loadedSprints)
         setVelocity(loadedVelocity)
         const first = loadedSprints.find((sprint) => sprint.status === 'active') ?? loadedSprints.find((sprint) => sprint.status === 'planned') ?? loadedSprints[0]
         setSelectedId(first?.id)
       })
-      .catch(() => {
-        if (active) setLoadError('No se pudieron cargar los sprints. Verifica que tengas acceso al proyecto e intenta de nuevo.')
+      .catch((failure: unknown) => {
+        if (active) setLoadError({
+          variant: accessVariantOf(failure),
+          message: 'No se pudieron cargar los sprints. Verifica que tengas acceso al proyecto e intenta de nuevo.',
+        })
       })
     return () => { active = false }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- la carga inicial depende solo del proyecto
-  }, [id])
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- la carga inicial depende solo del proyecto y del reintento
+  }, [id, attempt])
 
   // Al cambiar de sprint cargamos sus incidencias, el burndown y el backlog para asignar.
   useEffect(() => {
@@ -124,156 +142,202 @@ export function ProjectSprintsPage() {
       .catch((error: unknown) => setActionError(sprintErrorMessage(error)))
   }
 
-  if (loadError) {
+  if (loadError?.variant) {
     return (
-      <div>
-        <PageHeader title="Sprints" description="Planifica y sigue las iteraciones del proyecto." />
-        <Alert type="error" showIcon message={loadError} />
-      </div>
+      <PageContainer variant="wide" pageName="sprints">
+        <ErrorPage variant={loadError.variant} />
+      </PageContainer>
     )
   }
 
+  const issueColumns: DataTableColumn<SprintIssue>[] = [
+    { key: 'title', title: 'Incidencia', mobilePrimary: true, render: (_value, issue) => <span className={styles.issueTitle} title={issue.title}>{issue.title}</span> },
+    {
+      key: 'status',
+      title: 'Estado',
+      render: (_value, issue) => <Lozenge tone="neutral">{issueStatusLabels[issue.status] ?? issue.status}</Lozenge>,
+    },
+    {
+      key: 'points',
+      title: 'Puntos',
+      align: 'right',
+      render: (_value, issue) => (issue.storyPoints !== undefined ? String(issue.storyPoints) : '-'),
+    },
+    {
+      key: 'actions',
+      title: '',
+      align: 'right',
+      render: (_value, issue) => selected && selected.status !== 'closed' ? (
+        <Button size="small" aria-label={`Quitar ${issue.title}`} onClick={() => run(() => sprintRepo.removeIssue(id, selected.id, issue.id), selected.id)}>
+          Quitar
+        </Button>
+      ) : null,
+    },
+  ]
+
   return (
-    <div>
+    <PageContainer variant="wide" pageName="sprints" ready={sprints !== undefined}>
       <PageHeader title="Sprints" description="Planifica el trabajo, activa un sprint y ciérralo al terminar." />
-      {actionError && <Alert type="warning" showIcon closable message={actionError} onClose={() => setActionError(undefined)} className={styles.alert} />}
+      {loadError && <ErrorState message={loadError.message} onRetry={() => setAttempt((value) => value + 1)} />}
+      {actionError && <Alert type="warning" showIcon closable message={actionError} onClose={() => setActionError(undefined)} />}
 
-      {!sprints ? <Skeleton active paragraph={{ rows: 6 }} /> : (
+      {!loadError && !sprints && <Skeleton active paragraph={{ rows: 6 }} />}
+
+      {sprints && !loadError && (
         <div className={styles.layout}>
-          <section className={styles.sidebar} aria-label="Sprints del proyecto">
-            <Typography.Title level={5}>Sprints</Typography.Title>
-            {sprints.length === 0 ? <Empty description="Aún no hay sprints." /> : (
-              <ul className={styles.sprintList}>
-                {sprints.map((sprint) => (
-                  <li key={sprint.id}>
-                    <button
-                      type="button"
-                      className={sprint.id === selectedId ? styles.sprintSelected : styles.sprintItem}
-                      aria-pressed={sprint.id === selectedId}
-                      onClick={() => setSelectedId(sprint.id)}
-                    >
-                      <span>{sprint.name}</span>
-                      <Tag color={statusColors[sprint.status]}>{statusLabels[sprint.status]}</Tag>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
+          <div className={styles.side}>
+            <Section title="Sprints" ariaLabel="Sprints del proyecto">
+              {sprints.length === 0 ? (
+                <EmptyState title="Aún no hay sprints" description="Planifica el primero con el formulario de abajo." />
+              ) : (
+                <ul className={styles.sprintList} aria-label="Lista de sprints">
+                  {sprints.map((sprint) => (
+                    <li key={sprint.id}>
+                      <button
+                        type="button"
+                        className={sprint.id === selectedId ? styles.sprintSelected : styles.sprintItem}
+                        aria-pressed={sprint.id === selectedId}
+                        onClick={() => setSelectedId(sprint.id)}
+                      >
+                        <span className={styles.sprintName}>{sprint.name}</span>
+                        <Lozenge tone={statusTones[sprint.status]}>{statusLabels[sprint.status]}</Lozenge>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </Section>
 
-            <Typography.Title level={5}>Nuevo sprint</Typography.Title>
-            <Space orientation="vertical" className={styles.form}>
-              <Input placeholder="Nombre" aria-label="Nombre del sprint" value={name} maxLength={80} onChange={(event) => setName(event.target.value)} />
-              <Input placeholder="Objetivo" aria-label="Objetivo del sprint" value={goal} maxLength={500} onChange={(event) => setGoal(event.target.value)} />
-              <Input type="date" aria-label="Fecha de inicio" value={startDate} onChange={(event) => setStartDate(event.target.value)} />
-              <Input type="date" aria-label="Fecha de fin" value={endDate} onChange={(event) => setEndDate(event.target.value)} />
-              <Button type="primary" onClick={create}>Planificar sprint</Button>
-            </Space>
-          </section>
+            <Section title="Nuevo sprint">
+              <Space orientation="vertical" className={styles.form}>
+                <Input placeholder="Nombre" aria-label="Nombre del sprint" value={name} maxLength={80} onChange={(event) => setName(event.target.value)} />
+                <Input placeholder="Objetivo" aria-label="Objetivo del sprint" value={goal} maxLength={500} onChange={(event) => setGoal(event.target.value)} />
+                <Input type="date" aria-label="Fecha de inicio" value={startDate} onChange={(event) => setStartDate(event.target.value)} />
+                <Input type="date" aria-label="Fecha de fin" value={endDate} onChange={(event) => setEndDate(event.target.value)} />
+                <Button type="primary" onClick={create}>Planificar sprint</Button>
+              </Space>
+            </Section>
+          </div>
 
-          <section className={styles.main} aria-label="Detalle del sprint">
-            {!selected ? <Empty description="Selecciona o planifica un sprint." /> : (
+          <div className={styles.main}>
+            {!selected ? (
+              <Section>
+                <EmptyState title="Selecciona un sprint" description="Elige un sprint de la lista o planifica uno nuevo." />
+              </Section>
+            ) : (
               <>
-                <div className={styles.header}>
-                  <div>
-                    <Typography.Title level={4} className={styles.title}>{selected.name}</Typography.Title>
-                    <Typography.Text type="secondary">{selected.goal || 'Sin objetivo definido.'}</Typography.Text>
-                  </div>
-                  <Space wrap>
-                    {selected.status === 'planned' && (
-                      <Button type="primary" onClick={() => run(() => sprintRepo.start(id, selected.id), selected.id)}>Iniciar sprint</Button>
-                    )}
-                    {selected.status === 'active' && (
-                      <Space wrap>
-                        <Radio.Group value={closeMode} onChange={(event) => setCloseMode(event.target.value)} aria-label="Destino de las incidencias no cerradas">
-                          <Radio value="backlog">Al backlog</Radio>
-                          <Radio value="sprint">A otro sprint</Radio>
-                        </Radio.Group>
-                        {closeMode === 'sprint' && (
-                          <Select
-                            aria-label="Sprint destino"
-                            placeholder="Sprint planificado"
-                            value={closeTarget}
-                            onChange={setCloseTarget}
-                            options={plannedTargets.map((sprint) => ({ value: sprint.id, label: sprint.name }))}
-                            className={styles.targetSelect}
-                          />
-                        )}
-                        <Button
-                          danger
-                          onClick={() => run(() => sprintRepo.close(id, selected.id, closeMode, closeMode === 'sprint' ? closeTarget : undefined))}
-                          disabled={closeMode === 'sprint' && !closeTarget}
-                        >
-                          Cerrar sprint
-                        </Button>
-                      </Space>
-                    )}
-                  </Space>
-                </div>
-
-                <Space wrap size="large" className={styles.stats}>
-                  <Statistic title="Incidencias" value={issues.length} />
-                  <Statistic title="Puntos" value={issues.reduce((total, issue) => total + (issue.storyPoints ?? 0), 0)} />
-                  <Statistic title="Fechas" value={selected.startDate && selected.endDate ? `${selected.startDate} → ${selected.endDate}` : 'Sin fechas'} />
-                </Space>
-
-                <Typography.Title level={5}>Burndown</Typography.Title>
-                {burndown.length === 0 ? (
-                  <Empty description="El burndown necesita fechas de inicio y fin." />
-                ) : (
-                  <BurndownChart points={burndown} />
-                )}
-
-                <Typography.Title level={5}>Incidencias del sprint</Typography.Title>
-                {selected.status !== 'closed' && (
-                  <Space wrap className={styles.addRow}>
-                    <Select
-                      aria-label="Incidencia a añadir"
-                      placeholder="Añadir desde el backlog"
-                      value={issueToAdd}
-                      onChange={setIssueToAdd}
-                      options={assignable.map((item) => ({ value: item.id, label: item.summary }))}
-                      className={styles.targetSelect}
-                    />
-                    <Button disabled={!issueToAdd} onClick={() => {
-                      const chosen = issueToAdd
-                      if (!chosen) return
-                      setIssueToAdd(undefined)
-                      run(() => sprintRepo.assignIssue(id, selected.id, chosen), selected.id)
-                    }}>Añadir</Button>
-                  </Space>
-                )}
-                {issues.length === 0 ? <Empty description="El sprint no tiene incidencias." /> : (
-                  <ul className={styles.issueList} aria-label="Incidencias del sprint">
-                    {issues.map((issue) => (
-                      <li key={issue.id} className={styles.issueRow}>
-                        <span className={styles.issueTitle}>{issue.title}</span>
-                        <Space size="small">
-                          <Tag>{issue.status}</Tag>
-                          {issue.storyPoints !== undefined && <Tag>{issue.storyPoints} puntos</Tag>}
-                          {selected.status !== 'closed' && (
-                            <Button size="small" aria-label={`Quitar ${issue.title}`} onClick={() => run(() => sprintRepo.removeIssue(id, selected.id, issue.id), selected.id)}>
-                              Quitar
-                            </Button>
+                <Section
+                  title={selected.name}
+                  description={selected.goal || 'Sin objetivo definido.'}
+                  actions={
+                    <Space wrap>
+                      {selected.status === 'planned' && (
+                        <Button type="primary" onClick={() => run(() => sprintRepo.start(id, selected.id), selected.id)}>Iniciar sprint</Button>
+                      )}
+                      {selected.status === 'active' && (
+                        <Space wrap>
+                          <Radio.Group value={closeMode} onChange={(event) => setCloseMode(event.target.value)} aria-label="Destino de las incidencias no cerradas">
+                            <Radio value="backlog">Al backlog</Radio>
+                            <Radio value="sprint">A otro sprint</Radio>
+                          </Radio.Group>
+                          {closeMode === 'sprint' && (
+                            <Select
+                              aria-label="Sprint destino"
+                              placeholder="Sprint planificado"
+                              value={closeTarget}
+                              onChange={setCloseTarget}
+                              options={plannedTargets.map((sprint) => ({ value: sprint.id, label: sprint.name }))}
+                              className={styles.targetSelect}
+                            />
                           )}
+                          <Button
+                            danger
+                            onClick={() => run(() => sprintRepo.close(id, selected.id, closeMode, closeMode === 'sprint' ? closeTarget : undefined))}
+                            disabled={closeMode === 'sprint' && !closeTarget}
+                          >
+                            Cerrar sprint
+                          </Button>
                         </Space>
-                      </li>
-                    ))}
-                  </ul>
-                )}
+                      )}
+                    </Space>
+                  }
+                  footer={
+                    <Lozenge tone={statusTones[selected.status]}>{statusLabels[selected.status]}</Lozenge>
+                  }
+                >
+                  <div className={styles.stats}>
+                    <StatTile label="Incidencias" value={issues.length} />
+                    <StatTile label="Puntos" value={issues.reduce((total, issue) => total + (issue.storyPoints ?? 0), 0)} />
+                    <StatTile label="Fechas" value={selected.startDate && selected.endDate ? `${selected.startDate} → ${selected.endDate}` : 'Sin fechas'} />
+                  </div>
+                </Section>
+
+                <Section title="Incidencias del sprint">
+                  {selected.status !== 'closed' && (
+                    <Space wrap className={styles.addRow}>
+                      <Select
+                        aria-label="Incidencia a añadir"
+                        placeholder="Añadir desde el backlog"
+                        value={issueToAdd}
+                        onChange={setIssueToAdd}
+                        options={assignable.map((item) => ({ value: item.id, label: item.summary }))}
+                        className={styles.targetSelect}
+                      />
+                      <Button disabled={!issueToAdd} onClick={() => {
+                        const chosen = issueToAdd
+                        if (!chosen) return
+                        setIssueToAdd(undefined)
+                        run(() => sprintRepo.assignIssue(id, selected.id, chosen), selected.id)
+                      }}>Añadir</Button>
+                    </Space>
+                  )}
+                  <DataTable<SprintIssue>
+                    tableKey="sprint-issues"
+                    columns={issueColumns}
+                    data={issues}
+                    rowKey="id"
+                    emptyState={<EmptyState title="El sprint no tiene incidencias" description="Añade incidencias desde el backlog." />}
+                    mobileRender={(issue) => (
+                      <div className={styles.mobileIssue}>
+                        <span className={styles.issueTitle}>{issue.title}</span>
+                        <Lozenge tone="neutral">{issueStatusLabels[issue.status] ?? issue.status}</Lozenge>
+                      </div>
+                    )}
+                  />
+                </Section>
+
+                <ChartCard
+                  title="Burndown"
+                  description="Trabajo restante frente a la línea ideal."
+                  isEmpty={burndown.length === 0}
+                  emptyText="El burndown necesita fechas de inicio y fin."
+                  table={{
+                    headers: ['Fecha', 'Ideal', 'Restante'],
+                    rows: burndown.map((point) => [point.date, point.ideal, point.remaining]),
+                  }}
+                >
+                  <BurndownChart points={burndown} />
+                </ChartCard>
               </>
             )}
 
-            <Typography.Title level={5}>Velocidad (sprints cerrados)</Typography.Title>
-            {velocity.length === 0 ? <Empty description="Aún no hay sprints cerrados." /> : (
-              <ul className={styles.velocityList}>
-                {velocity.map((point) => (
-                  <li key={point.sprintId}>{point.name}: <strong>{point.points}</strong> puntos</li>
-                ))}
-              </ul>
-            )}
-          </section>
+            <Section title="Velocidad (sprints cerrados)">
+              {velocity.length === 0 ? (
+                <EmptyState title="Aún no hay sprints cerrados" description="La velocidad aparecerá al cerrar el primer sprint." />
+              ) : (
+                <ul className={styles.velocityList}>
+                  {velocity.map((point) => (
+                    <li key={point.sprintId} className={styles.velocityItem}>
+                      <span>{point.name}</span>
+                      <strong>{point.points} puntos</strong>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </Section>
+          </div>
         </div>
       )}
-    </div>
+    </PageContainer>
   )
 }

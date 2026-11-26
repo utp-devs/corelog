@@ -172,7 +172,7 @@ describe('OrgInvitationsPage', () => {
     )
     expect(await screen.findByText('marta@acme.test')).toBeInTheDocument()
     expect(screen.getByText('Aceptada')).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: 'Acciones de la fila' }))
+    expect(screen.queryByRole('button', { name: 'Acciones de la fila' })).not.toBeInTheDocument()
     expect(screen.queryByText('Revocar')).not.toBeInTheDocument()
     expect(screen.queryByText('Reenviar (nuevo enlace)')).not.toBeInTheDocument()
   })

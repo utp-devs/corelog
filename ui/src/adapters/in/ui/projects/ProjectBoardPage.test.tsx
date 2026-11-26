@@ -1,8 +1,8 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-const repositories = vi.hoisted(() => ({ getProject: vi.fn(), getBoard: vi.fn(), updateWip: vi.fn() }))
+const repositories = vi.hoisted(() => ({ getProject: vi.fn(), getBoard: vi.fn(), updateWip: vi.fn(), moveCard: vi.fn() }))
 
 vi.mock('@/adapters/out/http/project-http-repository', () => ({
   ProjectHttpRepository: class {
@@ -14,12 +14,16 @@ vi.mock('@/adapters/out/http/board-http-repository', () => ({
   BoardHttpRepository: class {
     getProjectBoard = repositories.getBoard
     updateColumnWip = repositories.updateWip
+    moveCard = repositories.moveCard
   },
 }))
 
 import { ProjectBoardPage } from './ProjectBoardPage'
+import { guardConsole } from './testSupport/consoleGuard'
 
 describe('ProjectBoardPage', () => {
+  const consoleGuard = guardConsole()
+
   beforeEach(() => {
     vi.clearAllMocks()
     repositories.getProject.mockResolvedValue({ id: 'project-1', key: 'CORE', name: 'CoreLog' })
@@ -48,6 +52,29 @@ describe('ProjectBoardPage', () => {
     expect(screen.getByText('3 puntos')).toBeInTheDocument()
     await waitFor(() => expect(repositories.getBoard).toHaveBeenCalledWith('project-1'))
     expect(screen.getByText('Sin incidencias')).toBeInTheDocument()
+    consoleGuard.expectNoConsoleOutput()
+  })
+
+  it('moves a card to another column with the keyboard select alternative', async () => {
+    repositories.moveCard.mockResolvedValue({
+      id: 'board-1', projectId: 'project-1', name: 'Default', type: 'kanban',
+      columns: [
+        { id: 'column-1', name: 'Abierto', status: 'open', position: 0, count: 0, cards: [] },
+        { id: 'column-2', name: 'En progreso', status: 'in_progress', position: 1, count: 1, cards: [] },
+      ],
+    })
+    render(
+      <MemoryRouter initialEntries={['/projects/project-1/board']}>
+        <Routes><Route path="/projects/:id/board" element={<ProjectBoardPage />} /></Routes>
+      </MemoryRouter>,
+    )
+
+    fireEvent.mouseDown(await screen.findByRole('combobox', { name: 'Mover No carga la pantalla a columna' }))
+    fireEvent.click(await screen.findByText('En progreso', { selector: '.ant-select-item-option-content' }))
+
+    await waitFor(() => expect(repositories.moveCard).toHaveBeenCalledWith('project-1', 'issue-1', 'column-2'))
+    expect(await screen.findByText('Incidencia movida a En progreso')).toBeInTheDocument()
+    consoleGuard.expectNoConsoleOutput()
   })
 
   it('shows a useful error when project access or board loading fails', async () => {

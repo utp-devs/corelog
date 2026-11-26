@@ -101,6 +101,15 @@ describe('teams.store', () => {
     expect(useTeamsStore.getState().error?.code).toBe('team.name_taken')
   })
 
+  it('keeps memberCount and myRole when the update response does not carry them', async () => {
+    useTeamsStore.setState({ teams: [{ ...team('t1', 'Alfa'), memberCount: 3, myRole: 'maintainer' }] })
+    repo.update.mockResolvedValueOnce(team('t1', 'Alfa renombrado'))
+
+    await useTeamsStore.getState().updateTeam('t1', { name: 'Alfa renombrado' })
+
+    expect(useTeamsStore.getState().teams[0]).toMatchObject({ name: 'Alfa renombrado', memberCount: 3, myRole: 'maintainer' })
+  })
+
   it('replaces the updated team in the list', async () => {
     useTeamsStore.setState({ teams: [team('t1', 'Alfa')] })
     repo.update.mockResolvedValueOnce(team('t1', 'Alfa renombrado'))

@@ -38,6 +38,7 @@ interface OrganizationDto {
   description: string
   settings: SettingsDto
   role?: OrgRole
+  has_logo?: boolean
   created_at: string
   updated_at: string
 }
@@ -70,7 +71,11 @@ interface InvitationPreviewDto {
 interface OrganizationMemberDto {
   user_id: string
   name: string
+  display_name?: string
   email: string
+  job_title?: string
+  department?: string
+  has_avatar?: boolean
   role: OrgRole
   joined_at: string
 }
@@ -100,6 +105,7 @@ function toOrganization(dto: OrganizationDto): Organization {
     },
     // The create response carries no role; the caller of POST /organizations is always its owner.
     role: dto.role ?? 'owner',
+    hasLogo: dto.has_logo ?? false,
     createdAt: dto.created_at,
     updatedAt: dto.updated_at,
   }
@@ -134,7 +140,17 @@ function toPreview(dto: InvitationPreviewDto): InvitationPreview {
 }
 
 function toMember(dto: OrganizationMemberDto): OrganizationMember {
-  return { userId: dto.user_id, name: dto.name, email: dto.email, role: dto.role, joinedAt: dto.joined_at }
+  return {
+    userId: dto.user_id,
+    name: dto.name,
+    displayName: dto.display_name ?? '',
+    email: dto.email,
+    jobTitle: dto.job_title ?? '',
+    department: dto.department ?? '',
+    hasAvatar: dto.has_avatar ?? false,
+    role: dto.role,
+    joinedAt: dto.joined_at,
+  }
 }
 
 /** Sends only the fields present in the update, in snake_case (PATCH is a partial update). */

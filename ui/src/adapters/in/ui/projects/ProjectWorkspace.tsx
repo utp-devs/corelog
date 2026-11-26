@@ -1,11 +1,16 @@
-import { ArrowLeftOutlined } from '@ant-design/icons'
-import { Alert, Button, Skeleton, Space, Tabs, Tag, Typography } from 'antd'
-import { useEffect, useState } from 'react'
+import { Skeleton, Tabs } from 'antd'
+import { useCallback, useEffect, useState } from 'react'
 import { Outlet, useLocation, useNavigate, useParams } from 'react-router-dom'
 
 import { ProjectHttpRepository } from '@/adapters/out/http/project-http-repository'
 import type { Project, ProjectType, ProjectVisibility } from '@/core/projects/domain/project'
+import { Breadcrumbs } from '@/shared/ui/Breadcrumbs'
+import { ErrorPage } from '@/shared/ui/ErrorPage'
+import { ErrorState } from '@/shared/ui/ErrorState'
+import { Lozenge } from '@/shared/ui/Lozenge'
+import { ProjectAvatar } from '@/shared/ui/ProjectAvatar'
 import { useTrackRecent } from '@/shared/ui/CommandPalette/recent'
+import { accessVariantOf } from './projectLoadError'
 import styles from './ProjectWorkspace.module.css'
 
 // Secciones del proyecto. Cada una es una ruta hija del espacio de trabajo.
@@ -20,63 +25,99 @@ const sections = [
 const typeLabels: Record<ProjectType, string> = { kanban: 'Kanban', scrum: 'Scrum' }
 const visibilityLabels: Record<ProjectVisibility, string> = { private: 'Privado', open: 'Abierto' }
 
-// Cabecera comun de los proyectos: nombre, clave, metadatos y pestañas de navegacion entre secciones.
+type LoadState =
+  | { status: 'loading' }
+  | { status: 'ready'; project: Project }
+  | { status: 'error'; variant: 403 | 404 | null }
+
+// Cabecera comun de los proyectos: identidad, migas de pan y pestañas de navegacion entre secciones.
 export function ProjectWorkspace() {
   const { id = '' } = useParams()
   const navigate = useNavigate()
   const location = useLocation()
-  const [loaded, setLoaded] = useState<{ id: string; project?: Project; error?: string } | null>(null)
+  const [attempt, setAttempt] = useState(0)
+  const [loaded, setLoaded] = useState<{ key: string; state: LoadState } | null>(null)
+  const requestKey = `${id}|${attempt}`
 
   useEffect(() => {
     let active = true
     new ProjectHttpRepository().get(id)
-      .then((project) => { if (active) setLoaded({ id, project }) })
-      .catch(() => {
-        if (active) setLoaded({ id, error: 'No se pudo abrir el proyecto. Verifica que tengas acceso e intenta de nuevo.' })
+      .then((project) => { if (active) setLoaded({ key: requestKey, state: { status: 'ready', project } }) })
+      .catch((failure: unknown) => {
+        if (active) setLoaded({ key: requestKey, state: { status: 'error', variant: accessVariantOf(failure) } })
       })
     return () => { active = false }
-  }, [id])
+    // requestKey encodes id and attempt
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id, attempt])
 
-  const current = loaded?.id === id ? loaded : null
+  const state: LoadState = loaded?.key === requestKey ? loaded.state : { status: 'loading' }
+  const project = state.status === 'ready' ? state.project : undefined
+
   // Recents: the project once its header has loaded.
-  useTrackRecent(current?.project
-    ? { kind: 'project', id: current.project.id, title: current.project.name, subtitle: current.project.key, link: `/projects/${id}` }
+  useTrackRecent(project
+    ? { kind: 'project', id: project.id, title: project.name, subtitle: project.key, link: `/projects/${id}` }
     : null)
   const activeKey = sections.find((section) => location.pathname.startsWith(`/projects/${id}/${section.key}`))?.key ?? 'board'
+  const activeLabel = sections.find((section) => section.key === activeKey)?.label ?? 'Tablero'
+  const retry = useCallback(() => setAttempt((value) => value + 1), [])
+
+  if (state.status === 'error' && state.variant !== null) {
+    return (
+      <div className={styles.workspace}>
+        <ErrorPage variant={state.variant} />
+      </div>
+    )
+  }
 
   return (
     <div className={styles.workspace}>
-      <header className={styles.header}>
-        <Button type="link" icon={<ArrowLeftOutlined />} onClick={() => navigate('/projects')} className={styles.back}>
-          Proyectos
-        </Button>
-        {current?.project ? (
-          <div className={styles.identity}>
-            <div className={styles.titleRow}>
-              <Typography.Title level={3} className={styles.title}>{current.project.name}</Typography.Title>
-              <Tag className={styles.keyTag}>{current.project.key}</Tag>
-            </div>
-            <Space size="small" wrap>
-              <Tag>{typeLabels[current.project.type]}</Tag>
-              <Tag>{visibilityLabels[current.project.visibility]}</Tag>
-              {current.project.description && <Typography.Text type="secondary">{current.project.description}</Typography.Text>}
-            </Space>
-          </div>
-        ) : !current?.error ? (
-          <Skeleton active paragraph={{ rows: 1 }} />
-        ) : null}
-      </header>
+      <Breadcrumbs
+        items={[
+          { label: 'Proyectos', to: '/projects' },
+          { label: project?.key ?? activeLabel },
+        ]}
+      />
 
-      {current?.error ? (
-        <Alert type="error" showIcon message={current.error} />
-      ) : (
+      {state.status === 'loading' && (
+        <div className={styles.header} aria-busy="true">
+          <Skeleton active avatar={{ size: 40, shape: 'square' }} paragraph={{ rows: 1 }} />
+        </div>
+      )}
+
+      {state.status === 'error' && (
+        <div className={styles.header}>
+          <ErrorState message="No se pudo abrir el proyecto. Verifica que tengas acceso e intenta de nuevo." onRetry={retry} />
+        </div>
+      )}
+
+      {project && (
+        <header className={styles.header}>
+          <div className={styles.identity}>
+            <ProjectAvatar name={project.name} projectKey={project.key} size={40} />
+            <div className={styles.titleBlock}>
+              <h2 className={styles.title}>{project.name}</h2>
+              <div className={styles.meta}>
+                <span className={styles.keyTag}>{project.key}</span>
+                <Lozenge tone={project.visibility === 'open' ? 'info' : 'warning'}>{visibilityLabels[project.visibility]}</Lozenge>
+                <Lozenge>{typeLabels[project.type]}</Lozenge>
+              </div>
+            </div>
+          </div>
+          {project.description && <p className={styles.description}>{project.description}</p>}
+        </header>
+      )}
+
+      {state.status !== 'error' && (
         <>
-          <Tabs
-            activeKey={activeKey}
-            onChange={(key) => navigate(`/projects/${id}/${key}`)}
-            items={sections.map((section) => ({ key: section.key, label: section.label }))}
-            className={styles.tabs}
-          />
+          <nav aria-label="Secciones del proyecto" className={styles.nav}>
+            <Tabs
+              activeKey={activeKey}
+              onChange={(key) => navigate(`/projects/${id}/${key}`)}
+              items={sections.map((section) => ({ key: section.key, label: section.label }))}
+              className={styles.tabs}
+            />
+          </nav>
           <Outlet />
         </>
       )}

@@ -28,6 +28,7 @@ export const ORG: Organization = {
     timezone: 'Europe/Madrid',
   },
   role: 'owner',
+  hasLogo: false,
   createdAt: '2026-01-01T00:00:00Z',
   updatedAt: '2026-01-02T00:00:00Z',
 }
@@ -35,7 +36,17 @@ export const ORG: Organization = {
 export const ME_ID = 'me'
 
 export function memberOf(userId: string, name: string, role: OrgRole): OrganizationMember {
-  return { userId, name, email: `${userId}@acme.test`, role, joinedAt: '2026-02-01T00:00:00Z' }
+  return {
+    userId,
+    name,
+    displayName: '',
+    email: `${userId}@acme.test`,
+    jobTitle: '',
+    department: '',
+    hasAvatar: false,
+    role,
+    joinedAt: '2026-02-01T00:00:00Z',
+  }
 }
 
 export function invitationOf(id: string, email: string, status: Invitation['status'] = 'pending'): Invitation {

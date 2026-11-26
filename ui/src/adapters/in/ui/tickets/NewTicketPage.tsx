@@ -1,10 +1,11 @@
-import { App, Card } from 'antd'
+import { App } from 'antd'
 import { useNavigate } from 'react-router-dom'
 
-import { useCreateTicket } from './hooks/useCreateTicket'
-import { TicketForm } from './TicketForm'
-import styles from './NewTicketPage.module.css'
+import { PageContainer } from '@/shared/ui/PageContainer'
 import { PageHeader } from '@/shared/ui/PageHeader'
+import { useCreateTicket } from './hooks/useCreateTicket'
+import { searchMentionUsers } from './mentions'
+import { TicketForm } from './TicketForm'
 
 export function NewTicketPage() {
   const navigate = useNavigate()
@@ -23,11 +24,14 @@ export function NewTicketPage() {
   }
 
   return (
-    <div>
+    <PageContainer variant="reading" pageName="issue-new">
       <PageHeader title="Nueva incidencia" description="Registra un nuevo incidente." />
-      <Card className={styles.card}>
-        <TicketForm onSubmit={handleSubmit} isSubmitting={isSubmitting} />
-      </Card>
-    </div>
+      <TicketForm
+        onSubmit={handleSubmit}
+        onCancel={() => navigate('/issues')}
+        isSubmitting={isSubmitting}
+        searchUsers={searchMentionUsers}
+      />
+    </PageContainer>
   )
 }

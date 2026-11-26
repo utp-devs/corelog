@@ -1,89 +1,125 @@
-import { Button, Space, Table, Typography } from 'antd'
 import { DownOutlined, UpOutlined } from '@ant-design/icons'
-import type { ColumnsType } from 'antd/es/table'
 import dayjs from 'dayjs'
+import type { ReactNode } from 'react'
 
 import type { Ticket } from '@/core/tickets/domain/ticket'
-import { AvatarGroup } from '@/shared/ui/AvatarGroup'
-import { EmptyState } from '@/shared/ui/EmptyState'
-import { IssueTypeIcon } from '@/shared/ui/IssueTypeIcon'
+import { DataTable, type DataTableColumn, type DataTablePagination } from '@/shared/ui/DataTable'
+import { IssueKey } from '@/shared/ui/IssueKey'
+import { Lozenge } from '@/shared/ui/Lozenge'
 import { PriorityTag } from '@/shared/ui/PriorityTag'
-import { StatusTag } from '@/shared/ui/StatusTag'
+import { UserChip } from '@/shared/ui/UserChip'
+import { issueKeyOf, statusMeta } from './ticketLabels'
 import styles from './TicketList.module.css'
 
 interface TicketListProps {
   tickets: Ticket[]
-  isLoading: boolean
+  loading: boolean
+  error?: string | null
+  onRetry?: () => void
   onSelect: (ticket: Ticket) => void
   onMoveUp?: (ticket: Ticket) => void
   onMoveDown?: (ticket: Ticket) => void
-  emptyText?: string
+  emptyState: ReactNode
+  pagination?: DataTablePagination
 }
 
-export function TicketList({ tickets, isLoading, onSelect, onMoveUp, onMoveDown, emptyText = 'Aún no hay incidencias' }: TicketListProps) {
-  const columns: ColumnsType<Ticket> = [
+function Assignee({ ticket }: { ticket: Ticket }) {
+  if (!ticket.assigneeId || !ticket.assigneeName) {
+    return <span className={styles.muted}>Sin asignar</span>
+  }
+  return <UserChip user={{ id: ticket.assigneeId, name: ticket.assigneeName }} />
+}
+
+function StatusLozenge({ ticket }: { ticket: Ticket }) {
+  const meta = statusMeta[ticket.status]
+  return <Lozenge category={meta.category}>{meta.label}</Lozenge>
+}
+
+/** Lista de incidencias sobre DataTable: en escritorio tabla, por debajo de 768 px tarjetas. */
+export function TicketList({ tickets, loading, error, onRetry, onSelect, onMoveUp, onMoveDown, emptyState, pagination }: TicketListProps) {
+  const columns: DataTableColumn<Ticket>[] = [
     {
-      title: 'Tipo',
-      key: 'issueType',
-      width: 72,
-      render: (_, ticket) => <IssueTypeIcon type={ticket.issueType} />,
-    },
-    {
-      title: 'Título',
-      dataIndex: 'title',
-      key: 'title',
-      render: (value: string) => <span className={styles.titleText}>{value}</span>,
-    },
-    {
-      title: 'Estado',
-      key: 'status',
-      render: (_, ticket) => <StatusTag status={ticket.status} />,
-    },
-    {
-      title: 'Prioridad',
-      key: 'priority',
-      render: (_, ticket) => <PriorityTag priority={ticket.priority} />,
-    },
-    {
-      title: 'Responsable',
-      key: 'assignee',
-      render: (_, ticket) => ticket.assigneeId && ticket.assigneeName ? (
-        <Space size="small">
-          <AvatarGroup users={[{ id: ticket.assigneeId, name: ticket.assigneeName }]} />
-          <span>{ticket.assigneeName}</span>
-        </Space>
-      ) : (
-        <Typography.Text type="secondary">Sin asignar</Typography.Text>
+      key: 'key',
+      title: 'Clave',
+      width: 150,
+      render: (_, ticket) => (
+        <IssueKey
+          issueKey={issueKeyOf(ticket.id)}
+          href={`/issues/${ticket.id}`}
+          summary={ticket.title}
+          type={ticket.issueType}
+          resolved={ticket.status === 'resolved' || ticket.status === 'closed'}
+        />
       ),
     },
     {
-      title: 'Creado',
-      dataIndex: 'createdAt',
-      key: 'createdAt',
-      render: (value: string) => dayjs(value).format('DD/MM/YYYY HH:mm'),
+      key: 'summary',
+      title: 'Resumen',
+      render: (_, ticket) => <span className={styles.summary} title={ticket.title}>{ticket.title}</span>,
     },
     {
-      title: 'Orden',
-      key: 'rank',
+      key: 'status',
+      title: 'Estado',
+      width: 140,
+      render: (_, ticket) => <StatusLozenge ticket={ticket} />,
+    },
+    {
+      key: 'priority',
+      title: 'Prioridad',
+      width: 120,
+      hideable: true,
+      render: (_, ticket) => <PriorityTag priority={ticket.priority} />,
+    },
+    {
+      key: 'assignee',
+      title: 'Responsable',
+      width: 200,
+      hideable: true,
+      render: (_, ticket) => <Assignee ticket={ticket} />,
+    },
+    {
+      key: 'updated',
+      title: 'Actualizado',
+      width: 150,
+      hideable: true,
       render: (_, ticket) => (
-        <Space>
-          <Button size="small" icon={<UpOutlined />} onClick={(event) => { event.stopPropagation(); onMoveUp?.(ticket) }} aria-label="Mover arriba" />
-          <Button size="small" icon={<DownOutlined />} onClick={(event) => { event.stopPropagation(); onMoveDown?.(ticket) }} aria-label="Mover abajo" />
-        </Space>
+        <time dateTime={ticket.updatedAt} title={dayjs(ticket.updatedAt).format('DD/MM/YYYY HH:mm')}>
+          {dayjs(ticket.updatedAt).format('DD/MM/YYYY HH:mm')}
+        </time>
       ),
     },
   ]
 
+  const rowActions = onMoveUp && onMoveDown
+    ? (ticket: Ticket) => [
+        { key: 'up', label: 'Mover arriba', icon: <UpOutlined />, onClick: () => onMoveUp(ticket) },
+        { key: 'down', label: 'Mover abajo', icon: <DownOutlined />, onClick: () => onMoveDown(ticket) },
+      ]
+    : undefined
+
   return (
-    <Table<Ticket>
+    <DataTable<Ticket>
+      tableKey="issues"
       rowKey="id"
-      loading={isLoading}
-      dataSource={tickets}
       columns={columns}
-      onRow={(record) => ({ onClick: () => onSelect(record) })}
-      rowClassName={() => styles.row}
-      pagination={false}
-      locale={{ emptyText: <EmptyState title={emptyText} /> }}
+      data={tickets}
+      loading={loading}
+      error={error}
+      onRetry={onRetry}
+      emptyState={emptyState}
+      pagination={pagination}
+      onRowOpen={onSelect}
+      rowActions={rowActions}
+      mobileRender={(ticket) => (
+        <div className={styles.card}>
+          <span className={styles.cardTitle}>{ticket.title}</span>
+          <div className={styles.cardMeta}>
+            <StatusLozenge ticket={ticket} />
+            <PriorityTag priority={ticket.priority} />
+            <Assignee ticket={ticket} />
+          </div>
+        </div>
+      )}
     />
   )
 }

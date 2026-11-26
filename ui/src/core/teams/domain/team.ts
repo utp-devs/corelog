@@ -1,5 +1,8 @@
 export type TeamMemberRole = 'maintainer' | 'member'
 
+/** Role of the caller inside a team; null when the caller is not a member. */
+export type TeamMyRole = TeamMemberRole | null
+
 export interface Team {
   id: string
   organizationId: string
@@ -11,6 +14,10 @@ export interface Team {
   createdBy: string | null
   createdAt: string
   updatedAt: string
+  /** Number of members. Optional: absent when the API response does not carry it (merged, not reset, on update). */
+  memberCount?: number
+  /** Caller role in the team. Optional for the same reason as memberCount. */
+  myRole?: TeamMyRole
 }
 
 export interface TeamMember {

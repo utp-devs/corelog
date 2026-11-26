@@ -117,7 +117,17 @@ describe('OrganizationHttpRepository admin calls', () => {
     const members = await new OrganizationHttpRepository().listMembers('org-1')
     expect(calls[0]).toMatchObject({ method: 'get', url: '/organizations/org-1/members' })
     expect(members).toEqual([
-      { userId: 'u-2', name: 'Luis Pardo', email: 'luis@acme.test', role: 'member', joinedAt: '2026-02-01T00:00:00Z' },
+      {
+        userId: 'u-2',
+        name: 'Luis Pardo',
+        displayName: '',
+        email: 'luis@acme.test',
+        jobTitle: '',
+        department: '',
+        hasAvatar: false,
+        role: 'member',
+        joinedAt: '2026-02-01T00:00:00Z',
+      },
     ])
   })
 

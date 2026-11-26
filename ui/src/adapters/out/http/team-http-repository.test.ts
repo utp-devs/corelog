@@ -1,14 +1,13 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { AppError } from '@/core/shared/app-error'
+import { setOrgIdProvider } from '@/shared/lib/org-context'
 import { apiClient } from './api-client'
 import { TeamHttpRepository } from './team-http-repository'
 
 const ORG_ID = '00000000-0000-4000-8000-0000000000aa'
 
-vi.mock('@/adapters/in/state/org.store', () => ({
-  getCurrentOrgId: () => '00000000-0000-4000-8000-0000000000aa',
-}))
+setOrgIdProvider(() => ORG_ID)
 
 const teamDto = {
   id: 'team-1',
@@ -49,6 +48,33 @@ describe('TeamHttpRepository', () => {
       createdAt: '2026-11-01T10:00:00Z',
       updatedAt: '2026-11-02T10:00:00Z',
     })
+  })
+
+  it('maps member_count and my_role when the API sends them', async () => {
+    vi.spyOn(apiClient, 'get').mockResolvedValue({ data: { data: [{ ...teamDto, member_count: 4, my_role: 'maintainer' }] } })
+
+    const [team] = await new TeamHttpRepository().list()
+
+    expect(team.memberCount).toBe(4)
+    expect(team.myRole).toBe('maintainer')
+  })
+
+  it('leaves member_count and my_role unset when the API omits them', async () => {
+    vi.spyOn(apiClient, 'get').mockResolvedValue({ data: { data: [teamDto] } })
+
+    const [team] = await new TeamHttpRepository().list()
+
+    expect('memberCount' in team).toBe(false)
+    expect('myRole' in team).toBe(false)
+  })
+
+  it('lists the teams where a person is a member, with explicit ids', async () => {
+    const get = vi.spyOn(apiClient, 'get').mockResolvedValue({ data: { data: [teamDto] } })
+
+    const teams = await new TeamHttpRepository().listForMember(ORG_ID, 'user-9')
+
+    expect(get).toHaveBeenCalledWith('/teams', { params: { organization_id: ORG_ID, member_id: 'user-9' } })
+    expect(teams[0].id).toBe('team-1')
   })
 
   it('sends organization_id in the body when creating a team', async () => {

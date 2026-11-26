@@ -17,7 +17,10 @@ vi.mock('@/adapters/out/http/backlog-http-repository', () => ({
   },
 }))
 
+import { AppError } from '@/core/shared/app-error'
+
 import { ProjectBacklogPage } from './ProjectBacklogPage'
+import { guardConsole } from './testSupport/consoleGuard'
 
 const items = [
   { id: 'issue-1', projectId: 'project-1', summary: 'Primera', type: 'task', status: 'open', priority: 'high', rank: '000001' },
@@ -33,10 +36,28 @@ function renderPage() {
 }
 
 describe('ProjectBacklogPage', () => {
+  const consoleGuard = guardConsole()
+
   beforeEach(() => {
     vi.clearAllMocks()
     repositories.getProject.mockResolvedValue({ id: 'project-1', key: 'CORE', name: 'CoreLog' })
     repositories.list.mockResolvedValue(items)
+  })
+
+  it('renders the ordered rows and an empty state inside the table when there are no issues', async () => {
+    repositories.list.mockResolvedValue([])
+    renderPage()
+
+    expect(await screen.findByText('El backlog está vacío')).toBeInTheDocument()
+    consoleGuard.expectNoConsoleOutput()
+  })
+
+  it('shows the 403 page when the backlog is forbidden', async () => {
+    repositories.list.mockRejectedValue(new AppError({ status: 403, message: 'forbidden' }))
+    renderPage()
+
+    expect(await screen.findByText('No tienes acceso a esta página')).toBeInTheDocument()
+    consoleGuard.expectNoConsoleOutput()
   })
 
   it('lists the issues in rank order with their position', async () => {

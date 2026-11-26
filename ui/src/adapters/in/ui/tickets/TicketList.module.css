@@ -1,16 +1,32 @@
-.row {
-  cursor: pointer;
-}
-
-.row:hover td {
-  background: var(--cl-bg-sunken);
-}
-
-.titleText {
+.summary {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   color: var(--cl-brand);
   font-weight: 600;
 }
 
-.titleText:hover {
-  text-decoration: underline;
+.muted {
+  color: var(--cl-text-subtle);
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cl-space-2);
+  min-width: 0;
+}
+
+.cardTitle {
+  overflow-wrap: anywhere;
+  color: var(--cl-brand);
+  font-weight: 600;
+}
+
+.cardMeta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--cl-space-2);
 }

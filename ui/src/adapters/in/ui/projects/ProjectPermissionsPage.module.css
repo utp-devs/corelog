@@ -1,40 +1,24 @@
-.page {
+.yourRole {
   display: flex;
-  flex-direction: column;
-  gap: var(--cl-space-4);
-  width: 100%;
-}
-
-.summary {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: var(--cl-space-4);
-}
-
-.yourRole,
-.counts,
-.matrix {
-  box-shadow: var(--cl-shadow-1);
-}
-
-.roleTitle {
-  margin: var(--cl-space-1) 0 var(--cl-space-2) !important;
-}
-
-.countList {
-  display: flex;
-  flex-direction: column;
-  gap: var(--cl-space-2);
-}
-
-.countItem {
-  display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
+  gap: var(--cl-space-3);
+}
+
+.countGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: var(--cl-space-3);
+}
+
+.permission {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cl-space-1);
+  min-width: 0;
 }
 
 .description {
-  margin: 0 !important;
   font-size: var(--cl-font-small);
 }
 
@@ -57,4 +41,26 @@
 
 .currentColumn {
   background: var(--cl-brand-subtle);
+}
+
+.mobileCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cl-space-2);
+  min-width: 0;
+}
+
+.mobileRoles {
+  display: grid;
+  gap: var(--cl-space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.mobileRole {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--cl-space-2);
 }

@@ -1,32 +1,75 @@
 import type { User } from '@/core/auth/domain/user'
 import type { PeopleRepositoryPort, ProfileRepositoryPort, ProfileUpdate } from '@/core/people/application/ports/people-repository.port'
-import type { OrganizationMember, OrgRole } from '@/core/people/domain/member'
+import type { OrganizationMember, OrgRole, PersonProfile } from '@/core/people/domain/member'
 import { apiClient } from './api-client'
 import { toUser, type UserDto } from './user-dto'
 
 interface MemberDto {
   user_id: string
   name: string
+  display_name?: string
   email: string
+  job_title?: string
+  department?: string
+  has_avatar?: boolean
   role: OrgRole
   joined_at: string
 }
 
+interface PersonDto {
+  user_id: string
+  name: string
+  display_name?: string
+  email: string
+  job_title?: string
+  department?: string
+  timezone?: string
+  has_avatar?: boolean
+  org_role: OrgRole
+  joined_at: string
+}
+
+/** Missing fields (older API) fall back to empty strings and false, never to undefined. */
 function toMember(dto: MemberDto): OrganizationMember {
-  return { userId: dto.user_id, name: dto.name, email: dto.email, role: dto.role, joinedAt: dto.joined_at }
+  return {
+    userId: dto.user_id,
+    name: dto.name,
+    displayName: dto.display_name ?? '',
+    email: dto.email,
+    jobTitle: dto.job_title ?? '',
+    department: dto.department ?? '',
+    hasAvatar: dto.has_avatar ?? false,
+    role: dto.role,
+    joinedAt: dto.joined_at,
+  }
+}
+
+function toPerson(dto: PersonDto): PersonProfile {
+  return {
+    userId: dto.user_id,
+    name: dto.name,
+    displayName: dto.display_name ?? '',
+    email: dto.email,
+    jobTitle: dto.job_title ?? '',
+    department: dto.department ?? '',
+    timezone: dto.timezone || 'UTC',
+    hasAvatar: dto.has_avatar ?? false,
+    orgRole: dto.org_role,
+    joinedAt: dto.joined_at,
+  }
 }
 
 export class PeopleHttpRepository implements PeopleRepositoryPort {
   async listMembers(organizationId: string): Promise<OrganizationMember[]> {
-    const { data } = await apiClient.get<{ data: MemberDto[] }>(`/organizations/${organizationId}/members`)
+    const { data } = await apiClient.get<{ data: MemberDto[] }>(`/organizations/${encodeURIComponent(organizationId)}/members`)
     return data.data.map(toMember)
   }
 
-  async searchUsers(organizationId: string, query: string): Promise<User[]> {
-    const { data } = await apiClient.get<{ data: UserDto[] }>('/users/search', {
-      params: { q: query, organization_id: organizationId },
-    })
-    return data.data.map(toUser)
+  async getPerson(organizationId: string, userId: string): Promise<PersonProfile> {
+    const { data } = await apiClient.get<{ data: PersonDto }>(
+      `/organizations/${encodeURIComponent(organizationId)}/people/${encodeURIComponent(userId)}`,
+    )
+    return toPerson(data.data)
   }
 }
 

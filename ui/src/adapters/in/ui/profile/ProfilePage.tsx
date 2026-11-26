@@ -1,8 +1,8 @@
 import { BellOutlined, BgColorsOutlined, KeyOutlined, LockOutlined, UserOutlined } from '@ant-design/icons'
-import { App, Card, Grid, Menu, Space, Tag, Typography } from 'antd'
+import { Card, Grid, Menu, Space, Tag, Typography } from 'antd'
 import type { MenuProps } from 'antd'
 import dayjs from 'dayjs'
-import { useCallback, useEffect, useState, type ReactNode } from 'react'
+import { useCallback, type ReactNode } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 
 import { useAuthStore } from '@/adapters/in/state/auth.store'
@@ -36,46 +36,22 @@ function sectionOf(value: string | undefined): SectionKey {
 
 /** Profile page: left section navigation under /profile/:section (general when no section). */
 export function ProfilePage() {
-  const { modal } = App.useApp()
   const screens = Grid.useBreakpoint()
   const isDesktop = screens.lg !== false
   const navigate = useNavigate()
   const { section } = useParams<{ section?: string }>()
   const active = sectionOf(section)
   const user = useAuthStore((s) => s.user)
-  const [generalDirty, setGeneralDirty] = useState(false)
-
-  const onGeneralDirty = useCallback((dirty: boolean) => setGeneralDirty(dirty), [])
   const setUser = useCallback((next: User) => useAuthStore.setState({ user: next }), [])
-
-  // Warn before leaving the page with unsaved profile changes.
-  useEffect(() => {
-    if (!generalDirty) return
-    const warn = (event: BeforeUnloadEvent) => {
-      event.preventDefault()
-    }
-    window.addEventListener('beforeunload', warn)
-    return () => window.removeEventListener('beforeunload', warn)
-  }, [generalDirty])
 
   if (!user) {
     return null
   }
 
+  // Leaving a section with unsaved changes is guarded by the form (useUnsavedChangesGuard).
   const goTo = (key: SectionKey) => {
     if (key === active) return
-    const change = () => navigate(`/profile/${key}`)
-    if (active === 'general' && generalDirty) {
-      modal.confirm({
-        title: 'Tienes cambios sin guardar',
-        content: 'Si cambias de sección, los cambios de tu perfil se perderán.',
-        okText: 'Descartar cambios',
-        cancelText: 'Seguir editando',
-        onOk: change,
-      })
-      return
-    }
-    change()
+    navigate(`/profile/${key}`)
   }
 
   const navItems: MenuProps['items'] = SECTIONS.map((item) => ({ key: item.key, icon: item.icon, label: item.label }))
@@ -111,7 +87,7 @@ export function ProfilePage() {
 
         <div className={styles.sections}>
           {active === 'general' && (
-            <GeneralSection user={user} onUserChange={setUser} onDirtyChange={onGeneralDirty} />
+            <GeneralSection user={user} onUserChange={setUser} />
           )}
           {active === 'security' && <SecuritySection />}
           {active === 'notifications' && <NotificationsSection />}

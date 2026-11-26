@@ -1,10 +1,10 @@
 import type { User } from '@/core/auth/domain/user'
-import type { OrganizationMember } from '../../domain/member'
+import type { OrganizationMember, PersonProfile } from '../../domain/member'
 
 export interface PeopleRepositoryPort {
   listMembers(organizationId: string): Promise<OrganizationMember[]>
-  /** Members of the organization whose name or email matches the query (server caps at 20). */
-  searchUsers(organizationId: string, query: string): Promise<User[]>
+  /** Profile of one member. Rejects with 404 when the user is not a member, 403 for guests. */
+  getPerson(organizationId: string, userId: string): Promise<PersonProfile>
 }
 
 export interface ProfileUpdate {

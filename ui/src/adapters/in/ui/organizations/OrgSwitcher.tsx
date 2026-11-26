@@ -14,6 +14,7 @@ export function OrgSwitcher() {
   const navigate = useNavigate()
   const orgs = useOrgStore((s) => s.orgs)
   const setCurrentOrg = useOrgStore((s) => s.setCurrentOrg)
+  const logoRevision = useOrgStore((s) => (s.currentOrgId ? (s.logoRevision[s.currentOrgId] ?? 0) : 0))
   const { org, role } = useCurrentOrg()
 
   if (!org) return null
@@ -57,7 +58,7 @@ export function OrgSwitcher() {
   return (
     <Dropdown menu={{ items }} trigger={['click']}>
       <Button type="text" className={styles.trigger} aria-label={`Organización actual: ${org.name}`} aria-haspopup="menu">
-        <OrgLogo orgId={org.id} name={org.name} />
+        <OrgLogo orgId={org.id} name={org.name} hasLogo={org.hasLogo} revision={logoRevision} />
         <span className={styles.name}>{org.name}</span>
         <DownOutlined className={styles.caret} aria-hidden="true" />
       </Button>

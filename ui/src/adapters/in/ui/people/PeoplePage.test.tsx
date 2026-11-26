@@ -22,15 +22,17 @@ import { PeoplePage } from './PeoplePage'
 import { FORBIDDEN_DIRECTORY_MESSAGE } from './errors'
 
 const members: OrganizationMember[] = [
-  { userId: 'u-1', name: 'Ana Torres', email: 'ana@corelog.test', role: 'owner', joinedAt: '2026-01-10T00:00:00Z' },
-  { userId: 'u-2', name: 'Luis Pardo', email: 'luis@corelog.test', role: 'member', joinedAt: '2026-02-01T00:00:00Z' },
-  { userId: 'u-3', name: 'Marta Ruiz', email: 'marta@corelog.test', role: 'guest', joinedAt: '2026-03-01T00:00:00Z' },
+  { userId: 'u-1', name: 'Ana Torres', displayName: '', email: 'ana@corelog.test', jobTitle: '', department: '', hasAvatar: false, role: 'owner', joinedAt: '2026-01-10T00:00:00Z' },
+  { userId: 'u-2', name: 'Luis Pardo', displayName: '', email: 'luis@corelog.test', jobTitle: '', department: '', hasAvatar: false, role: 'member', joinedAt: '2026-02-01T00:00:00Z' },
+  { userId: 'u-3', name: 'Marta Ruiz', displayName: '', email: 'marta@corelog.test', jobTitle: '', department: '', hasAvatar: false, role: 'guest', joinedAt: '2026-03-01T00:00:00Z' },
 ]
 
 function fakeRepository(overrides: Partial<PeopleRepositoryPort> = {}): PeopleRepositoryPort {
   return {
     listMembers: vi.fn(async () => members),
-    searchUsers: vi.fn(async () => []),
+    getPerson: vi.fn(async () => {
+      throw new Error('not used')
+    }),
     ...overrides,
   }
 }
@@ -62,6 +64,17 @@ describe('PeoplePage', () => {
     expect(await screen.findByText('Ana Torres')).toBeInTheDocument()
     expect(screen.getByText('Propietario')).toBeInTheDocument()
     expect(screen.getByText('marta@corelog.test')).toBeInTheDocument()
+  })
+
+  it('shows the job title of each member in the directory', async () => {
+    renderPeople(
+      fakeRepository({
+        listMembers: vi.fn(async () => [{ ...members[1], jobTitle: 'Analista de datos' }]),
+      }),
+    )
+
+    expect(await screen.findByText('Analista de datos')).toBeInTheDocument()
+    expect(screen.getByRole('columnheader', { name: 'Cargo' })).toBeInTheDocument()
   })
 
   it('filters the members by name or email from the search box', async () => {
