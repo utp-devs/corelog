@@ -24,7 +24,7 @@ import { ruleIdOf } from '../lib/known-violations.ts'
 const REPORT_ROOT = fileURLToPath(new URL('../../test-results/journeys/', import.meta.url))
 
 /** Teams link is part of the navigation only for admins (asserted on the desktop project). */
-const canSeeTeams: Record<RoleKey, boolean> = {
+const canSeeTeams: Partial<Record<RoleKey, boolean>> = {
   admin: true,
   agent: false,
   requester: false,
@@ -127,7 +127,8 @@ async function visitScreen(
   }
 }
 
-for (const key of ROLE_KEYS) {
+// Only the legacy accounts are walked until P2-S5..S9 adapt the UI to organizations; new roles join then.
+for (const key of ROLE_KEYS.filter((k) => k in canSeeTeams)) {
   test(`recorre todas las pantallas como ${key} @smoke`, async ({ as, api, data, shots }, testInfo) => {
     test.setTimeout(300_000)
     const viewport = testInfo.project.name
