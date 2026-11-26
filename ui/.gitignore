@@ -22,3 +22,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Playwright storage states (session tokens per role, written by e2e/global-setup.ts)
+playwright/.auth/

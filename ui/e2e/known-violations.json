@@ -1,0 +1,170 @@
+{
+  "dashboard|desktop": [],
+  "dashboard|mobile": [
+    "console errors",
+    "overlap",
+    "tap targets"
+  ],
+  "dashboard|tablet": [
+    "console errors",
+    "dead space"
+  ],
+  "issue-detail|desktop": [
+    "clipped text",
+    "console errors",
+    "dead space"
+  ],
+  "issue-detail|mobile": [
+    "clipped text",
+    "console errors",
+    "dead space",
+    "tap targets"
+  ],
+  "issue-detail|tablet": [
+    "console errors",
+    "dead space"
+  ],
+  "issue-new|desktop": [
+    "dead space"
+  ],
+  "issue-new|mobile": [
+    "console errors",
+    "tap targets"
+  ],
+  "issue-new|tablet": [
+    "console errors",
+    "dead space"
+  ],
+  "issues|desktop": [
+    "clipped text"
+  ],
+  "issues|mobile": [
+    "clipped control",
+    "clipped text",
+    "console errors",
+    "horizontal overflow",
+    "tap targets"
+  ],
+  "issues|tablet": [
+    "clipped text",
+    "console errors"
+  ],
+  "login|desktop": [],
+  "login|mobile": [
+    "tap targets"
+  ],
+  "login|tablet": [],
+  "profile|desktop": [],
+  "profile|mobile": [
+    "console errors",
+    "overlap",
+    "tap targets"
+  ],
+  "profile|tablet": [
+    "console errors"
+  ],
+  "project-backlog|desktop": [
+    "console errors",
+    "dead space"
+  ],
+  "project-backlog|mobile": [
+    "clipped control",
+    "console errors",
+    "dead space",
+    "horizontal overflow",
+    "tap targets"
+  ],
+  "project-backlog|tablet": [
+    "console errors",
+    "dead space"
+  ],
+  "project-board|desktop": [
+    "console errors",
+    "dead space"
+  ],
+  "project-board|mobile": [
+    "clipped control",
+    "console errors",
+    "dead space",
+    "horizontal overflow",
+    "tap targets"
+  ],
+  "project-board|tablet": [
+    "console errors",
+    "dead space",
+    "horizontal overflow"
+  ],
+  "project-calendar|desktop": [
+    "console errors",
+    "dead space"
+  ],
+  "project-calendar|mobile": [
+    "clipped control",
+    "console errors",
+    "dead space",
+    "horizontal overflow",
+    "tap targets"
+  ],
+  "project-calendar|tablet": [
+    "console errors",
+    "dead space"
+  ],
+  "project-permissions|desktop": [
+    "console errors",
+    "dead space"
+  ],
+  "project-permissions|mobile": [
+    "clipped control",
+    "console errors",
+    "dead space",
+    "horizontal overflow",
+    "tap targets"
+  ],
+  "project-permissions|tablet": [
+    "console errors",
+    "dead space"
+  ],
+  "project-sprints|desktop": [
+    "console errors",
+    "dead space"
+  ],
+  "project-sprints|mobile": [
+    "clipped control",
+    "console errors",
+    "dead space",
+    "horizontal overflow",
+    "tap targets"
+  ],
+  "project-sprints|tablet": [
+    "console errors",
+    "dead space"
+  ],
+  "projects|desktop": [
+    "clipped text",
+    "dead space"
+  ],
+  "projects|mobile": [
+    "console errors"
+  ],
+  "projects|tablet": [
+    "console errors",
+    "dead space"
+  ],
+  "teams|desktop": [
+    "clipped text",
+    "dead space"
+  ],
+  "teams|mobile": [
+    "clipped control",
+    "clipped text",
+    "console errors",
+    "dead space",
+    "horizontal overflow",
+    "tap targets"
+  ],
+  "teams|tablet": [
+    "clipped text",
+    "console errors",
+    "dead space"
+  ]
+}
