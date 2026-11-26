@@ -1,7 +1,9 @@
 import { initialsOf } from '@/shared/ui/initials'
 import { paletteIndex } from '@/shared/ui/Avatar/avatarColor'
 
-import { useOrgLogoUrl } from './org-logo'
+import type { OrganizationLogoPort } from '@/core/organizations/application/ports/organization-logo.port'
+
+import { defaultLogoRepository, useOrgLogoUrl } from './org-logo'
 import styles from './OrgLogo.module.css'
 
 type OrgLogoProps = {
@@ -13,11 +15,13 @@ type OrgLogoProps = {
   /** Changes after an upload or removal so the logo is fetched again. */
   revision?: number
   size?: 24 | 32
+  /** Port that fetches the logo; defaults to the HTTP repository. */
+  repository?: OrganizationLogoPort
 }
 
 /** Organization logo fetched with the session, or a colored tile with the initials of the name (ProjectAvatar style). */
-export function OrgLogo({ orgId, name, hasLogo, revision = 0, size = 24 }: OrgLogoProps) {
-  const src = useOrgLogoUrl(orgId, hasLogo, revision)
+export function OrgLogo({ orgId, name, hasLogo, revision = 0, size = 24, repository = defaultLogoRepository }: OrgLogoProps) {
+  const src = useOrgLogoUrl(repository, orgId, hasLogo, revision)
   const sizeClass = styles[`size${size}`]
 
   if (src) {

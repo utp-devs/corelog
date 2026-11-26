@@ -24,6 +24,7 @@ import { RichTextEditor } from '@/shared/ui/RichTextEditor'
 import { RichTextView } from '@/shared/ui/RichTextView'
 import { Section } from '@/shared/ui/Section'
 import { IssuePicker } from './IssuePicker'
+import { useMemberNames } from './hooks/useMemberNames'
 import { useTeammateSearch } from './hooks/useTeammateSearch'
 import { issueKeyOf, issueTypeLabels, priorityLabels, statusMeta } from './ticketLabels'
 import { searchMentionUsers } from './mentions'
@@ -211,7 +212,7 @@ export function TicketDetailPage() {
     ? { kind: 'issue', id: selected.id, title: selected.title, subtitle: 'Incidencia', link: `/issues/${selected.id}` }
     : null)
 
-  const [assigneeId, setAssigneeId] = useState('')
+  const [assigning, setAssigning] = useState(false)
   const [commentBody, setCommentBody] = useState('')
   const [linkTargetId, setLinkTargetId] = useState('')
   const [linkKind, setLinkKind] = useState<'blocks' | 'relates' | 'duplicates'>('relates')
@@ -229,6 +230,7 @@ export function TicketDetailPage() {
   const watcherError = watcherResult?.issueId === selected?.id ? watcherResult?.error : undefined
   const [watcherActionLoading, setWatcherActionLoading] = useState(false)
   const teammateSearch = useTeammateSearch()
+  const { nameOf } = useMemberNames()
 
   useEffect(() => {
     if (id) fetchTicket(id)
@@ -293,6 +295,14 @@ export function TicketDetailPage() {
     )
   }
 
+  // The current assignee stays selectable even when the last search did not return it.
+  const assigneeOptions = [
+    ...(selected.assigneeId && !teammateSearch.results.some((u) => u.id === selected.assigneeId)
+      ? [{ value: selected.assigneeId, label: selected.assigneeName ?? selected.assigneeId }]
+      : []),
+    ...teammateSearch.results.map((u) => ({ value: u.id, label: `${u.name} (${u.email})` })),
+  ]
+
   const nextStatuses = allStatuses.filter((s) => canTransitionTo(selected.status, s))
   const statusOptions = allStatuses
     .filter((s) => s === selected.status || nextStatuses.includes(s))
@@ -337,15 +347,17 @@ export function TicketDetailPage() {
     }
   }
 
-  const handleAssign = async () => {
-    if (!assigneeId) return
+  // Assigning saves on selection, like status and priority. The API has no way to clear the assignee yet.
+  const handleAssign = async (assigneeId: string) => {
+    setAssigning(true)
     try {
       await assign(selected.id, assigneeId)
       await refreshWatcherState(selected.id)
       message.success('Incidencia asignada')
-      setAssigneeId('')
     } catch (error) {
       message.error(extractErrorMessage(error, 'No se pudo asignar la incidencia'))
+    } finally {
+      setAssigning(false)
     }
   }
 
@@ -499,7 +511,7 @@ export function TicketDetailPage() {
                 <span className={styles.fileInfo}>
                   <span className={styles.fileName}>{attachment.fileName}</span>
                   <span className={styles.muted}>
-                    {attachment.contentType} · {(attachment.sizeBytes / 1024).toFixed(1)} KB
+                    {attachment.contentType} · {(attachment.sizeBytes / 1024).toFixed(1)} KB · Subido por {nameOf(attachment.uploaderId)}
                   </span>
                 </span>
                 <Button onClick={() => void downloadAttachment(attachment)}>Descargar</Button>
@@ -538,7 +550,7 @@ export function TicketDetailPage() {
             {visibleComments.map((comment) => (
               <li key={comment.id} className={styles.comment}>
                 <div className={styles.commentHeader}>
-                  <span className={styles.author}>Usuario {comment.authorId.slice(0, 8)}</span>
+                  <span className={styles.author}>{nameOf(comment.authorId)}</span>
                   <time dateTime={comment.createdAt} className={styles.muted}>{formatDateTime(comment.createdAt)}</time>
                   <Button danger size="small" onClick={() => void removeComment(comment.id)}>
                     Eliminar
@@ -563,6 +575,7 @@ export function TicketDetailPage() {
                 <span>
                   {activity.action}
                   {activity.fieldName ? ` - ${activity.fieldName}` : ''}
+                  <span className={styles.muted}> · {nameOf(activity.actorId)}</span>
                 </span>
                 <time dateTime={activity.createdAt} className={styles.muted}>{formatDateTime(activity.createdAt)}</time>
               </li>
@@ -591,24 +604,20 @@ export function TicketDetailPage() {
       <Section title="Responsable">
         <FieldRow label="Buscar compañero" helper={`Actual: ${selected.assigneeName ?? 'Sin asignar'}`}>
           {({ id, 'aria-describedby': describedBy }) => (
-            <div className={styles.inlineRow}>
-              <Select
-                id={id}
-                aria-describedby={describedBy}
-                showSearch
-                filterOption={false}
-                placeholder="Nombre o correo"
-                loading={teammateSearch.isLoading}
-                notFoundContent={teammateSearch.isLoading ? 'Buscando...' : 'No se encontraron compañeros'}
-                onSearch={teammateSearch.search}
-                onChange={(value: string) => setAssigneeId(value)}
-                value={assigneeId || undefined}
-                options={teammateSearch.results.map((u) => ({ value: u.id, label: `${u.name} (${u.email})` }))}
-              />
-              <Button type="primary" onClick={() => void handleAssign()} disabled={!assigneeId}>
-                Asignar
-              </Button>
-            </div>
+            <Select
+              id={id}
+              aria-describedby={describedBy}
+              showSearch
+              filterOption={false}
+              placeholder="Nombre o correo"
+              loading={teammateSearch.isLoading || assigning}
+              disabled={assigning}
+              notFoundContent={teammateSearch.isLoading ? 'Buscando...' : 'No se encontraron compañeros'}
+              onSearch={teammateSearch.search}
+              onChange={(value: string) => void handleAssign(value)}
+              value={selected.assigneeId ?? undefined}
+              options={assigneeOptions}
+            />
           )}
         </FieldRow>
       </Section>

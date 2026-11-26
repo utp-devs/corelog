@@ -98,4 +98,28 @@ describe('ProjectCalendarPage', () => {
     expect(await screen.findByText('No tienes acceso a esta página')).toBeInTheDocument()
     consoleGuard.expectNoConsoleOutput()
   })
+
+  it('shows the calendar skeleton while the events load, without the empty state', async () => {
+    repositories.events.mockReturnValue(new Promise(() => undefined))
+    renderPage()
+
+    expect(await screen.findByRole('heading', { name: 'Calendario' })).toBeInTheDocument()
+    expect(screen.queryByText('No hay hitos en este mes')).not.toBeInTheDocument()
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+    consoleGuard.expectNoConsoleOutput()
+  })
+
+  it('retries loading the events from the error state', async () => {
+    repositories.events
+      .mockRejectedValueOnce(new Error('network'))
+      .mockResolvedValueOnce([{ kind: 'issue_due', date: '2026-11-05', title: 'Entregar exportacion', sourceId: 'issue-1', link: '/issues/issue-1' }])
+    renderPage()
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('No se pudo cargar el calendario')
+    fireEvent.click(screen.getByRole('button', { name: 'Reintentar' }))
+
+    expect(await screen.findByText('Entregar exportacion')).toBeInTheDocument()
+    expect(repositories.events).toHaveBeenCalledTimes(2)
+    consoleGuard.expectNoConsoleOutput()
+  })
 })

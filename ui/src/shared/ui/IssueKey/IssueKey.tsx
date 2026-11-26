@@ -1,7 +1,7 @@
 import { CopyOutlined } from '@ant-design/icons'
 import { Button, Tooltip } from 'antd'
 
-import type { IssueType } from '@/core/tickets/domain/ticket'
+import type { IssueTypeKind } from '@/shared/types/issue'
 
 import { IssueTypeIcon } from '../IssueTypeIcon'
 import { toast } from '../Toaster'
@@ -13,7 +13,7 @@ type IssueKeyProps = {
   href: string
   /** Resumen mostrado en el tooltip. */
   summary?: string
-  type?: IssueType
+  type?: IssueTypeKind
   /** Resuelta o cerrada: la clave se tacha. */
   resolved?: boolean
   'data-testid'?: string

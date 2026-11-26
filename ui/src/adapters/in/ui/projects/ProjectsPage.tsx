@@ -9,6 +9,8 @@ import type { Project } from '@/core/projects/domain/project'
 import { EmptyState } from '@/shared/ui/EmptyState'
 import { ErrorPage } from '@/shared/ui/ErrorPage'
 import { ErrorState } from '@/shared/ui/ErrorState'
+import { useMediaQuery } from '@/shared/hooks/useMediaQuery'
+import { useOrgMembersById } from '@/adapters/in/ui/organizations/useOrgMembersById'
 import { Lozenge } from '@/shared/ui/Lozenge'
 import { PageContainer } from '@/shared/ui/PageContainer'
 import { PageHeader } from '@/shared/ui/PageHeader'
@@ -16,7 +18,9 @@ import { ProjectAvatar } from '@/shared/ui/ProjectAvatar'
 import { Section } from '@/shared/ui/Section'
 import { SearchInput } from '@/shared/ui/SearchInput'
 import { Toolbar } from '@/shared/ui/Toolbar'
+import { leadNameOf } from './projectLead'
 import { accessVariantOf } from './projectLoadError'
+import { MOBILE_QUERY } from './layout'
 import styles from './ProjectsPage.module.css'
 
 type VisibilityFilter = 'all' | 'open' | 'private'
@@ -81,8 +85,11 @@ export function ProjectsPage() {
   const [form] = Form.useForm()
 
   const isAdmin = user?.role === 'admin'
+  const isMobile = useMediaQuery(MOBILE_QUERY)
   const selectedProject = projects.find((project) => project.id === selectedProjectId)
   const visible = useMemo(() => filterProjects(projects, query, visibility, archived), [projects, query, visibility, archived])
+  // All projects of the list belong to the current organization: its members resolve the leads.
+  const { members: orgMembers, status: orgMembersStatus } = useOrgMembersById(projects[0]?.organizationId)
 
   useEffect(() => {
     void fetchProjects()
@@ -160,7 +167,7 @@ export function ProjectsPage() {
     )
   } else {
     body = (
-      <ul className={styles.grid} aria-label="Proyectos">
+      <ul className={styles.grid} aria-label="Proyectos" data-layout={isMobile ? 'single-column' : 'auto-grid'}>
         {visible.map((project) => (
           <li key={project.id} className={styles.cardItem}>
             <article className={styles.card} data-testid={`project-card-${project.key}`}>
@@ -173,6 +180,9 @@ export function ProjectsPage() {
               </header>
               <p className={styles.description} title={project.description || undefined}>
                 {project.description || 'Sin descripción'}
+              </p>
+              <p className={styles.lead}>
+                Responsable: <span data-testid={`project-lead-${project.key}`}>{leadNameOf(project.leadId, orgMembers, orgMembersStatus)}</span>
               </p>
               <div className={styles.tags}>
                 <Lozenge tone={project.visibility === 'open' ? 'info' : 'warning'}>{visibilityLabels[project.visibility]}</Lozenge>

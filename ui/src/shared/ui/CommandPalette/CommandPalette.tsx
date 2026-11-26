@@ -11,7 +11,7 @@ import { Button } from 'antd'
 import { useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 
-import type { SearchHit } from '@/core/search/domain/search'
+import type { SearchHit } from '@/shared/types/search'
 import { useCommands, type Command, type CommandGroup } from './commandRegistry'
 import { groupHits, matchesQuery } from './groups'
 import { getRecent } from './recent'

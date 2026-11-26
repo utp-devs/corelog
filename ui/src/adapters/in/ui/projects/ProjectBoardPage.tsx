@@ -22,6 +22,7 @@ import type { BoardCard, BoardColumn, ProjectBoard } from '@/core/projects/domai
 import type { Project } from '@/core/projects/domain/project'
 import { httpStatusOf } from '@/core/shared/app-error'
 import type { IssueType, TicketPriority } from '@/core/tickets/domain/ticket'
+import { useMediaQuery } from '@/shared/hooks/useMediaQuery'
 import { Avatar } from '@/shared/ui/Avatar'
 import { EmptyState } from '@/shared/ui/EmptyState'
 import { ErrorPage } from '@/shared/ui/ErrorPage'
@@ -32,6 +33,7 @@ import { PageContainer } from '@/shared/ui/PageContainer'
 import { PageHeader } from '@/shared/ui/PageHeader'
 import { PriorityTag } from '@/shared/ui/PriorityTag'
 import { accessVariantOf, type AccessVariant } from './projectLoadError'
+import { MOBILE_QUERY } from './layout'
 import styles from './ProjectBoardPage.module.css'
 
 const ISSUE_TYPES: readonly IssueType[] = ['task', 'bug', 'story', 'epic', 'subtask']
@@ -162,6 +164,7 @@ export function ProjectBoardPage() {
   const [activeCardId, setActiveCardId] = useState<string | null>(null)
   const [moveError, setMoveError] = useState<string | undefined>(undefined)
   const [announcement, setAnnouncement] = useState('')
+  const isMobile = useMediaQuery(MOBILE_QUERY)
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -318,7 +321,13 @@ export function ProjectBoardPage() {
                 <Typography.Text>Solo mis incidencias</Typography.Text>
               </label>
             </div>
-            <div className={styles.board} role="region" aria-label={`Tablero ${board.name}`}>
+            <div
+              className={styles.board}
+              role="region"
+              aria-label={`Tablero ${board.name}`}
+              data-scroll="inside-board"
+              data-layout={isMobile ? 'mobile-columns' : 'desktop-columns'}
+            >
               {visibleColumns.map((column) => (
                 <DroppableColumn key={column.id} column={column} canManage={board.canManageBoard} onSaveWip={saveWip}>
                   {column.cards.length === 0 ? (

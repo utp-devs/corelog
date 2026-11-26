@@ -3,6 +3,7 @@ import type {
   OrganizationAdminRepositoryPort,
   OrganizationUpdate,
 } from '@/core/organizations/application/ports/organization-admin-repository.port'
+import type { OrganizationLogoPort } from '@/core/organizations/application/ports/organization-logo.port'
 import type {
   CreateOrganizationInput,
   InvitationItemInput,
@@ -182,7 +183,7 @@ function toMembership(dto: MembershipDto): OrganizationMembership {
   }
 }
 
-export class OrganizationHttpRepository implements OrganizationAdminRepositoryPort {
+export class OrganizationHttpRepository implements OrganizationAdminRepositoryPort, OrganizationLogoPort {
   async list(): Promise<Organization[]> {
     const { data } = await apiClient.get<{ data: OrganizationDto[] }>('/organizations')
     return data.data.map(toOrganization)
@@ -247,6 +248,14 @@ export class OrganizationHttpRepository implements OrganizationAdminRepositoryPo
     } catch (error) {
       if ((error as { status?: number }).status === 404) return null
       throw error
+    }
+  }
+
+  async fetchLogoBlob(organizationId: string): Promise<Blob | null> {
+    try {
+      return await this.getLogo(organizationId)
+    } catch {
+      return null
     }
   }
 

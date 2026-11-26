@@ -1,7 +1,7 @@
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import type { SearchHit } from '@/core/search/domain/search'
+import type { SearchHit } from '@/shared/types/search'
 import { CommandPalette, PALETTE_DEBOUNCE_MS, type CommandPaletteProps } from './CommandPalette'
 import { clearCommandRegistry, registerCommand } from './commandRegistry'
 import { RECENT_STORAGE_KEY } from './recent'

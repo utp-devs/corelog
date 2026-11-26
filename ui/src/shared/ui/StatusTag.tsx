@@ -1,8 +1,8 @@
-import type { TicketStatus } from '@/core/tickets/domain/ticket'
+import type { IssueStatusKind } from '@/shared/types/issue'
 
 import { ToneTag, type Tone } from './ToneTag'
 
-const statusMap: Record<TicketStatus, { label: string; tone: Tone }> = {
+const statusMap: Record<IssueStatusKind, { label: string; tone: Tone }> = {
   open: { label: 'Abierto', tone: 'blue' },
   in_progress: { label: 'En progreso', tone: 'gold' },
   resolved: { label: 'Resuelto', tone: 'green' },
@@ -10,7 +10,7 @@ const statusMap: Record<TicketStatus, { label: string; tone: Tone }> = {
 }
 
 type StatusTagProps = {
-  status: TicketStatus
+  status: IssueStatusKind
 }
 
 /** Estado de una incidencia con su color semántico. */

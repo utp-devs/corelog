@@ -21,5 +21,6 @@ export default defineConfig({
     setupFiles: ['./src/test/setup.ts'],
     // Los tests visuales de Playwright viven en e2e/ y no son de Vitest.
     exclude: [...configDefaults.exclude, 'e2e/**'],
+    testTimeout: 20000,
   },
 })

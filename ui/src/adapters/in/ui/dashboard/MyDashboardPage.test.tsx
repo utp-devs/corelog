@@ -1,9 +1,10 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { RECENT_STORAGE_KEY } from '@/shared/ui/CommandPalette/recent'
 import { guardConsole } from '../projects/testSupport/consoleGuard'
+import { installViewport } from '../projects/testSupport/viewport'
 
 const repositories = vi.hoisted(() => ({ me: vi.fn(), listProjects: vi.fn() }))
 
@@ -41,6 +42,8 @@ const idleSummary = {
 
 const project = { id: 'p-1', key: 'CORE', name: 'CoreLog', description: '', type: 'kanban', visibility: 'open', archivedAt: null }
 
+let restoreViewport: (() => void) | undefined
+
 describe('MyDashboardPage', () => {
   const consoleGuard = guardConsole()
 
@@ -49,6 +52,11 @@ describe('MyDashboardPage', () => {
     window.localStorage.clear()
     repositories.me.mockResolvedValue(busySummary)
     repositories.listProjects.mockResolvedValue([project])
+  })
+
+  afterEach(() => {
+    restoreViewport?.()
+    restoreViewport = undefined
   })
 
   it('shows the personal figures, the active sprints and the urgent issues', async () => {
@@ -107,5 +115,30 @@ describe('MyDashboardPage', () => {
     render(<MemoryRouter><MyDashboardPage /></MemoryRouter>)
 
     expect(await screen.findByRole('alert')).toHaveTextContent('No se pudo cargar tu resumen')
+  })
+
+  it('shows the skeleton instead of the figures while the summary loads', async () => {
+    repositories.me.mockReturnValue(new Promise(() => undefined))
+    render(<MemoryRouter><MyDashboardPage /></MemoryRouter>)
+
+    expect(screen.queryByText('Abiertas asignadas')).not.toBeInTheDocument()
+    expect(screen.queryByRole('list', { name: 'Mis proyectos' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+    consoleGuard.expectNoConsoleOutput()
+  })
+
+  it('stacks the panels in one column on mobile and keeps the grid on desktop', async () => {
+    restoreViewport = installViewport(390)
+    const mobile = render(<MemoryRouter><MyDashboardPage /></MemoryRouter>)
+    expect(await screen.findByRole('list', { name: 'Mis proyectos' })).toBeInTheDocument()
+    expect(screen.getByRole('list', { name: 'Mis proyectos' }).closest('[data-layout]')).toHaveAttribute('data-layout', 'stacked')
+    mobile.unmount()
+
+    restoreViewport()
+    restoreViewport = installViewport(1440)
+    render(<MemoryRouter><MyDashboardPage /></MemoryRouter>)
+    expect(await screen.findByRole('list', { name: 'Mis proyectos' })).toBeInTheDocument()
+    expect(screen.getByRole('list', { name: 'Mis proyectos' }).closest('[data-layout]')).toHaveAttribute('data-layout', 'grid')
+    consoleGuard.expectNoConsoleOutput()
   })
 })

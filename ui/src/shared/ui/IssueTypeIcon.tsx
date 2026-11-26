@@ -1,11 +1,11 @@
 import type { ReactElement } from 'react'
 import { ApartmentOutlined, BookOutlined, BugOutlined, CheckSquareOutlined, ThunderboltOutlined } from '@ant-design/icons'
 
-import type { IssueType } from '@/core/tickets/domain/ticket'
+import type { IssueTypeKind } from '@/shared/types/issue'
 
 import styles from './IssueTypeIcon.module.css'
 
-const typeMap: Record<IssueType, { label: string; icon: ReactElement; className: string }> = {
+const typeMap: Record<IssueTypeKind, { label: string; icon: ReactElement; className: string }> = {
   task: { label: 'Tarea', icon: <CheckSquareOutlined />, className: styles.task },
   bug: { label: 'Error', icon: <BugOutlined />, className: styles.bug },
   story: { label: 'Historia', icon: <BookOutlined />, className: styles.story },
@@ -14,7 +14,7 @@ const typeMap: Record<IssueType, { label: string; icon: ReactElement; className:
 }
 
 type IssueTypeIconProps = {
-  type: IssueType
+  type: IssueTypeKind
   /** Muestra el nombre del tipo junto al icono. */
   showLabel?: boolean
 }

@@ -2,8 +2,10 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { OrganizationHttpRepository } from '@/adapters/out/http/organization-http-repository'
 import { ProjectHttpRepository } from '@/adapters/out/http/project-http-repository'
 import { AppError } from '@/core/shared/app-error'
+import { resetOrgMembersByIdCache } from '@/adapters/in/ui/organizations/useOrgMembersById'
 
 import { ProjectWorkspace } from './ProjectWorkspace'
 import { guardConsole } from './testSupport/consoleGuard'
@@ -91,5 +93,36 @@ describe('ProjectWorkspace recents', () => {
       const recent = JSON.parse(window.localStorage.getItem('corelog.recent') ?? '[]') as { kind: string; id: string; subtitle: string }[]
       expect(recent[0]).toMatchObject({ kind: 'project', id: 'p1', subtitle: 'DEM' })
     })
+  })
+})
+
+describe('ProjectWorkspace lead', () => {
+  const consoleGuard = guardConsole()
+
+  beforeEach(() => {
+    window.localStorage.clear()
+    vi.restoreAllMocks()
+    resetOrgMembersByIdCache()
+  })
+
+  it('shows the lead name resolved through the organization members', async () => {
+    vi.spyOn(ProjectHttpRepository.prototype, 'get').mockResolvedValue({ ...project, organizationId: 'o1', leadId: 'u1' } as typeof project)
+    const listMembers = vi.spyOn(OrganizationHttpRepository.prototype, 'listMembers').mockResolvedValue([
+      { userId: 'u1', name: 'Ana Pérez' } as Awaited<ReturnType<OrganizationHttpRepository['listMembers']>>[number],
+    ])
+    renderWorkspace()
+
+    await waitFor(() => expect(screen.getByTestId('workspace-lead')).toHaveTextContent('Ana Pérez'))
+    expect(listMembers).toHaveBeenCalledWith('o1')
+    consoleGuard.expectNoConsoleOutput()
+  })
+
+  it('shows "Sin responsable" when the project has no lead', async () => {
+    vi.spyOn(ProjectHttpRepository.prototype, 'get').mockResolvedValue({ ...project, organizationId: 'o1', leadId: '' } as typeof project)
+    vi.spyOn(OrganizationHttpRepository.prototype, 'listMembers').mockResolvedValue([])
+    renderWorkspace()
+
+    await waitFor(() => expect(screen.getByTestId('workspace-lead')).toHaveTextContent('Sin responsable'))
+    consoleGuard.expectNoConsoleOutput()
   })
 })

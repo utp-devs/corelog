@@ -1,10 +1,12 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Button, Input, Select } from 'antd'
+import { flushSync } from 'react-dom'
 import { Controller, useForm } from 'react-hook-form'
 import { z } from 'zod'
 
 import type { CreateTicketInput } from '@/core/tickets/application/ports/ticket-repository.port'
-import type { IssueType, TicketPriority } from '@/core/tickets/domain/ticket'
+import type { IssueType, Ticket, TicketPriority } from '@/core/tickets/domain/ticket'
+import { useUnsavedChangesGuard } from '@/shared/hooks/useUnsavedChangesGuard'
 import { FieldRow } from '@/shared/ui/FieldRow'
 import { RichTextEditor, type UserLite } from '@/shared/ui/RichTextEditor'
 import { Section } from '@/shared/ui/Section'
@@ -33,128 +35,138 @@ const priorityOptions: { value: TicketPriority; label: string }[] = [
 ]
 
 interface TicketFormProps {
-  onSubmit: (input: CreateTicketInput) => Promise<unknown>
+  /** Creates the issue. Rejects when the server refuses it; the form then keeps the typed values. */
+  onSubmit: (input: CreateTicketInput) => Promise<Ticket>
+  /** Called after the issue is created and the form is already clean (the unsaved-changes guard lets the redirect through). */
+  onCreated: (ticket: Ticket) => void
   onCancel: () => void
   isSubmitting: boolean
   searchUsers?: (query: string) => Promise<UserLite[]>
 }
 
 /** Formulario de alta de incidencia: datos principales y descripción en Markdown. */
-export function TicketForm({ onSubmit, onCancel, isSubmitting, searchUsers }: TicketFormProps) {
+export function TicketForm({ onSubmit, onCreated, onCancel, isSubmitting, searchUsers }: TicketFormProps) {
   const {
     control,
     handleSubmit,
     reset,
-    formState: { errors },
+    formState: { errors, isDirty },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: { title: '', description: '', priority: 'medium', issueType: 'task' },
   })
+  const unsavedGuard = useUnsavedChangesGuard(isDirty)
 
   const submit = handleSubmit(async (values) => {
+    let ticket: Ticket
     try {
-      await onSubmit(values)
-      reset()
+      ticket = await onSubmit(values)
     } catch {
       return
     }
+    // Clean the form synchronously so the guard sees it as saved before the caller navigates away.
+    flushSync(() => reset())
+    onCreated(ticket)
   })
 
   return (
-    <form className={styles.form} onSubmit={(event) => void submit(event)} noValidate aria-label="Nueva incidencia">
-      <Section title="Datos principales">
-        <div className={styles.grid}>
-          <div className={styles.wide}>
+    <>
+      {unsavedGuard}
+      <form className={styles.form} onSubmit={(event) => void submit(event)} noValidate aria-label="Nueva incidencia">
+        <Section title="Datos principales">
+          <div className={styles.grid}>
+            <div className={styles.wide}>
+              <Controller
+                name="title"
+                control={control}
+                render={({ field }) => (
+                  <FieldRow label="Título" required error={errors.title?.message} helper="Describe el problema en una frase.">
+                    {(props) => (
+                      <Input
+                        {...props}
+                        value={field.value}
+                        onChange={field.onChange}
+                        onBlur={field.onBlur}
+                        name={field.name}
+                        ref={field.ref}
+                        status={errors.title ? 'error' : undefined}
+                        maxLength={200}
+                      />
+                    )}
+                  </FieldRow>
+                )}
+              />
+            </div>
             <Controller
-              name="title"
+              name="issueType"
               control={control}
               render={({ field }) => (
-                <FieldRow label="Título" required error={errors.title?.message} helper="Describe el problema en una frase.">
+                <FieldRow label="Tipo" required error={errors.issueType?.message}>
                   {(props) => (
-                    <Input
+                    <Select<IssueType>
                       {...props}
                       value={field.value}
                       onChange={field.onChange}
                       onBlur={field.onBlur}
-                      name={field.name}
-                      ref={field.ref}
-                      status={errors.title ? 'error' : undefined}
-                      maxLength={200}
+                      options={issueTypeOptions}
+                      status={errors.issueType ? 'error' : undefined}
+                    />
+                  )}
+                </FieldRow>
+              )}
+            />
+            <Controller
+              name="priority"
+              control={control}
+              render={({ field }) => (
+                <FieldRow label="Prioridad" required error={errors.priority?.message}>
+                  {(props) => (
+                    <Select<TicketPriority>
+                      {...props}
+                      value={field.value}
+                      onChange={field.onChange}
+                      onBlur={field.onBlur}
+                      options={priorityOptions}
+                      status={errors.priority ? 'error' : undefined}
                     />
                   )}
                 </FieldRow>
               )}
             />
           </div>
+        </Section>
+  
+        <Section title="Descripción">
           <Controller
-            name="issueType"
+            name="description"
             control={control}
             render={({ field }) => (
-              <FieldRow label="Tipo" required error={errors.issueType?.message}>
-                {(props) => (
-                  <Select<IssueType>
-                    {...props}
-                    value={field.value}
-                    onChange={field.onChange}
-                    onBlur={field.onBlur}
-                    options={issueTypeOptions}
-                    status={errors.issueType ? 'error' : undefined}
-                  />
+              <div className={styles.editor}>
+                <RichTextEditor
+                  ariaLabel="Descripción"
+                  value={field.value}
+                  onChange={field.onChange}
+                  onSubmit={() => void submit()}
+                  placeholder="Describe el problema, los pasos para reproducirlo y el resultado esperado. Usa @ para mencionar."
+                  minRows={8}
+                  searchUsers={searchUsers}
+                  disabled={isSubmitting}
+                />
+                {errors.description && (
+                  <p className={styles.error} role="alert">{errors.description.message}</p>
                 )}
-              </FieldRow>
+              </div>
             )}
           />
-          <Controller
-            name="priority"
-            control={control}
-            render={({ field }) => (
-              <FieldRow label="Prioridad" required error={errors.priority?.message}>
-                {(props) => (
-                  <Select<TicketPriority>
-                    {...props}
-                    value={field.value}
-                    onChange={field.onChange}
-                    onBlur={field.onBlur}
-                    options={priorityOptions}
-                    status={errors.priority ? 'error' : undefined}
-                  />
-                )}
-              </FieldRow>
-            )}
-          />
+        </Section>
+  
+        <div className={styles.actions}>
+          <Button onClick={onCancel}>Cancelar</Button>
+          <Button type="primary" htmlType="submit" loading={isSubmitting}>
+            Crear incidencia
+          </Button>
         </div>
-      </Section>
-
-      <Section title="Descripción">
-        <Controller
-          name="description"
-          control={control}
-          render={({ field }) => (
-            <div className={styles.editor}>
-              <RichTextEditor
-                ariaLabel="Descripción"
-                value={field.value}
-                onChange={field.onChange}
-                onSubmit={() => void submit()}
-                placeholder="Describe el problema, los pasos para reproducirlo y el resultado esperado. Usa @ para mencionar."
-                minRows={8}
-                searchUsers={searchUsers}
-                disabled={isSubmitting}
-              />
-              {errors.description && (
-                <p className={styles.error} role="alert">{errors.description.message}</p>
-              )}
-            </div>
-          )}
-        />
-      </Section>
-
-      <div className={styles.actions}>
-        <Button onClick={onCancel}>Cancelar</Button>
-        <Button type="primary" htmlType="submit" loading={isSubmitting}>
-          Crear incidencia
-        </Button>
-      </div>
-    </form>
+      </form>
+    </>
   )
 }

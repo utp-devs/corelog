@@ -1,4 +1,4 @@
-import type { SearchHit } from '@/core/search/domain/search'
+import type { SearchHit } from '@/shared/types/search'
 
 export type HitGroup = 'Proyectos' | 'Incidencias'
 

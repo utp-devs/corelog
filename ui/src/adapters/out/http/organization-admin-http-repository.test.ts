@@ -112,6 +112,15 @@ describe('OrganizationHttpRepository admin calls', () => {
     expect(blob).toBeNull()
   })
 
+  it('fetchLogoBlob requests the logo as a blob and resolves null when the request fails', async () => {
+    const { calls } = respondWith('png-bytes')
+    await new OrganizationHttpRepository().fetchLogoBlob('org-1')
+    expect(calls[0]).toMatchObject({ method: 'get', url: '/organizations/org-1/logo' })
+
+    respondWith({ error: { code: 'server.error', message: 'boom' } }, 500)
+    await expect(new OrganizationHttpRepository().fetchLogoBlob('org-1')).resolves.toBeNull()
+  })
+
   it('maps members to camelCase', async () => {
     const { calls } = respondWith({ data: [memberDto] })
     const members = await new OrganizationHttpRepository().listMembers('org-1')

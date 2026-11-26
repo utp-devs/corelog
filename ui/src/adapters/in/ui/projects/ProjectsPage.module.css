@@ -183,3 +183,19 @@
   font-size: var(--cl-font-body-strong);
   font-weight: 600;
 }
+
+.lead {
+  margin: 0;
+  color: var(--cl-text-subtle);
+  font-size: var(--cl-font-small);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Mobile: one card per row, full width. */
+@media (max-width: 767px) {
+  .grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

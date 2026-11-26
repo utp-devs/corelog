@@ -3,7 +3,10 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-const { ticketState, attachmentList, watcherGetState, watcherWatch } = vi.hoisted(() => ({
+import type { IssueActivity, IssueComment } from '@/core/tickets/application/ports/ticket-repository.port'
+
+const { ticketState, attachmentList, watcherGetState, watcherWatch, teammateState } = vi.hoisted(() => ({
+  teammateState: { results: [] as { id: string; name: string; email: string }[] },
   ticketState: {
     selected: {
       id: 'issue-1', title: 'Error de prueba', description: 'Descripción de la incidencia', status: 'open',
@@ -14,8 +17,10 @@ const { ticketState, attachmentList, watcherGetState, watcherWatch } = vi.hoiste
     },
     status: 'idle' as 'idle' | 'loading' | 'error',
     error: null as string | null,
-    comments: [], commentsIssueId: 'issue-1', activities: [], activitiesIssueId: 'issue-1', links: [], linksIssueId: 'issue-1',
-    fetchTicket: vi.fn(), updateStatus: vi.fn(), assign: vi.fn(), updateDetails: vi.fn(),
+    comments: [] as IssueComment[], commentsIssueId: 'issue-1',
+    activities: [] as IssueActivity[], activitiesIssueId: 'issue-1',
+    links: [], linksIssueId: 'issue-1',
+    fetchTicket: vi.fn(), updateStatus: vi.fn(), assign: vi.fn().mockResolvedValue(undefined), updateDetails: vi.fn(),
     fetchComments: vi.fn().mockResolvedValue(undefined), createComment: vi.fn(), deleteComment: vi.fn(),
     fetchActivities: vi.fn().mockResolvedValue(undefined), fetchLinks: vi.fn().mockResolvedValue(undefined),
     createLink: vi.fn(), deleteLink: vi.fn(),
@@ -46,7 +51,14 @@ vi.mock('@/adapters/out/http/issue-watcher-http-repository', () => ({
 }))
 
 vi.mock('./hooks/useTeammateSearch', () => ({
-  useTeammateSearch: () => ({ results: [], isLoading: false, search: vi.fn() }),
+  useTeammateSearch: () => ({ results: teammateState.results, isLoading: false, search: vi.fn() }),
+}))
+
+vi.mock('./hooks/useMemberNames', () => ({
+  useMemberNames: () => ({
+    nameOf: (userId: string) => (userId === 'user-2' ? 'Luis Pérez' : 'Usuario desconocido'),
+    isLoading: false,
+  }),
 }))
 
 import { TicketDetailPage } from './TicketDetailPage'
@@ -159,6 +171,38 @@ describe('TicketDetailPage', () => {
     expect(error).not.toHaveBeenCalled()
     warn.mockRestore()
     error.mockRestore()
+  })
+
+  it('shows the member name of comment authors, history actors and attachment uploaders', async () => {
+    const at = '2026-01-02T10:00:00Z'
+    ticketState.comments = [{ id: 'c1', issueId: 'issue-1', authorId: 'user-2', body: 'Hola equipo', createdAt: at, updatedAt: at, deletedAt: null }]
+    ticketState.activities = [{ id: 'a1', issueId: 'issue-1', actorId: 'user-2', action: 'status_changed', fieldName: 'status', oldValue: 'open', newValue: 'in_progress', createdAt: at }]
+    attachmentList.mockResolvedValue([{ id: 'f1', issueId: 'issue-1', uploaderId: 'user-9', fileName: 'captura.png', contentType: 'image/png', sizeBytes: 2048, createdAt: at }])
+    try {
+      renderDetail()
+      expect(await screen.findByText('Luis Pérez', { selector: 'span' })).toBeInTheDocument()
+      expect(screen.queryByText(/Usuario [0-9a-f]{8}/)).not.toBeInTheDocument()
+      expect(await screen.findByText(/Subido por Usuario desconocido/)).toBeInTheDocument()
+    } finally {
+      ticketState.comments = []
+      ticketState.activities = []
+    }
+  })
+
+  it('assigns the issue as soon as a teammate is picked, without an extra button', async () => {
+    teammateState.results = [{ id: 'user-2', name: 'Luis Pérez', email: 'luis@example.test' }]
+    try {
+      renderDetail()
+      const section = (await screen.findByRole('heading', { name: 'Responsable' })).closest('section') as HTMLElement
+      expect(within(section).queryByRole('button', { name: 'Asignar' })).not.toBeInTheDocument()
+      fireEvent.mouseDown(within(section).getByRole('combobox'))
+      fireEvent.click(await screen.findByText('Luis Pérez (luis@example.test)'))
+      await waitFor(() => expect(ticketState.assign).toHaveBeenCalledWith('issue-1', 'user-2'))
+      expect(await screen.findByText('Incidencia asignada')).toBeInTheDocument()
+    } finally {
+      teammateState.results = []
+      ticketState.assign.mockClear()
+    }
   })
 
   it('records the issue in the recent items once it is shown', async () => {

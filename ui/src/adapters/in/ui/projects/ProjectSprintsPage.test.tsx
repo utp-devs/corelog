@@ -112,4 +112,35 @@ describe('ProjectSprintsPage', () => {
 
     expect(await screen.findByRole('alert')).toHaveTextContent('El nombre del sprint es obligatorio')
   })
+
+  it('shows the skeleton while the sprints load, without empty or list content', async () => {
+    repositories.list.mockReturnValue(new Promise(() => undefined))
+    renderPage()
+
+    expect(await screen.findByRole('heading', { name: 'Sprints' })).toBeInTheDocument()
+    expect(screen.queryByText('Aún no hay sprints')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Sprint 1/ })).not.toBeInTheDocument()
+    consoleGuard.expectNoConsoleOutput()
+  })
+
+  it('shows the empty state for sprints when the project has none', async () => {
+    repositories.list.mockResolvedValue([])
+    renderPage()
+
+    expect(await screen.findByText('Aún no hay sprints')).toBeInTheDocument()
+    expect(screen.getByText('Planifica el primero con el formulario de abajo.')).toBeInTheDocument()
+    consoleGuard.expectNoConsoleOutput()
+  })
+
+  it('shows an error with retry when the sprints fail for another reason', async () => {
+    repositories.list.mockRejectedValueOnce(new AppError({ status: 500, message: 'boom' }))
+    renderPage()
+
+    expect(await screen.findByRole('alert')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Reintentar' }))
+
+    expect(await screen.findByRole('heading', { name: 'Sprint 1' })).toBeInTheDocument()
+    expect(repositories.list).toHaveBeenCalledTimes(2)
+    consoleGuard.expectNoConsoleOutput()
+  })
 })

@@ -6,6 +6,7 @@ import { DashboardHttpRepository } from '@/adapters/out/http/dashboard-http-repo
 import { ProjectHttpRepository } from '@/adapters/out/http/project-http-repository'
 import type { MyDashboard } from '@/core/projects/domain/dashboard'
 import type { Project } from '@/core/projects/domain/project'
+import { useMediaQuery } from '@/shared/hooks/useMediaQuery'
 import { ChartCard } from '@/shared/ui/ChartCard'
 import { EmptyState } from '@/shared/ui/EmptyState'
 import { ErrorState } from '@/shared/ui/ErrorState'
@@ -30,7 +31,11 @@ type DataState = { attempt: number; data?: MyDashboard; error?: string }
 type ProjectsState = { attempt: number; items?: Project[]; error: boolean }
 
 /** Panel "Mi resumen": trabajo asignado, proyectos y recientes. Sin trabajo asignado muestra primeros pasos. */
+/** Below 768 px the panels stack in one column. */
+const MOBILE_QUERY = '(max-width: 767px)'
+
 export function MyDashboardPage() {
+  const isMobile = useMediaQuery(MOBILE_QUERY)
   const [attempt, setAttempt] = useState(0)
   const [state, setState] = useState<DataState | null>(null)
   const [projectsState, setProjectsState] = useState<ProjectsState | null>(null)
@@ -82,7 +87,7 @@ export function MyDashboardPage() {
           <StatTile label="Proyectos" value={data.projectCount} />
         </div>
 
-        <div className={styles.panels}>
+        <div className={styles.panels} data-layout={isMobile ? 'stacked' : 'grid'}>
           {!hasWork && (
             <Section title="Primeros pasos" description="Lo que puedes hacer para empezar a trabajar.">
               <ol className={styles.steps}>

@@ -77,6 +77,35 @@ describe('PeoplePage', () => {
     expect(screen.getByRole('columnheader', { name: 'Cargo' })).toBeInTheDocument()
   })
 
+  it('shows the avatar, job title and role in the mobile card list', async () => {
+    const originalMatchMedia = window.matchMedia
+    window.matchMedia = vi.fn((query: string) => ({
+      matches: query === '(max-width: 767px)',
+      media: query,
+      onchange: null,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+      addListener: () => {},
+      removeListener: () => {},
+      dispatchEvent: () => false,
+    })) as unknown as typeof window.matchMedia
+
+    try {
+      renderPeople(
+        fakeRepository({
+          listMembers: vi.fn(async () => [{ ...members[1], jobTitle: 'Analista de datos' }]),
+        }),
+      )
+
+      expect(await screen.findByText('Analista de datos')).toBeInTheDocument()
+      expect(screen.queryByRole('columnheader', { name: 'Cargo' })).not.toBeInTheDocument()
+      expect(screen.getByText('LP')).toBeInTheDocument()
+      expect(screen.getByText('Miembro')).toBeInTheDocument()
+    } finally {
+      window.matchMedia = originalMatchMedia
+    }
+  })
+
   it('filters the members by name or email from the search box', async () => {
     renderPeople(fakeRepository())
     await screen.findByText('Ana Torres')

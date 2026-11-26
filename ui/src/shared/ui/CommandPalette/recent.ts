@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 
-import type { SearchHit } from '@/core/search/domain/search'
+import type { SearchHit } from '@/shared/types/search'
 
 /** localStorage key for the recently visited projects and issues (JSON array, newest first). */
 export const RECENT_STORAGE_KEY = 'corelog.recent'

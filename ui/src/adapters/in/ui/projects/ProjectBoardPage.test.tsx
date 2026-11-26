@@ -1,6 +1,8 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+
+import { AppError } from '@/core/shared/app-error'
 
 const repositories = vi.hoisted(() => ({ getProject: vi.fn(), getBoard: vi.fn(), updateWip: vi.fn(), moveCard: vi.fn() }))
 
@@ -20,6 +22,9 @@ vi.mock('@/adapters/out/http/board-http-repository', () => ({
 
 import { ProjectBoardPage } from './ProjectBoardPage'
 import { guardConsole } from './testSupport/consoleGuard'
+import { installViewport } from './testSupport/viewport'
+
+let restoreViewport: (() => void) | undefined
 
 describe('ProjectBoardPage', () => {
   const consoleGuard = guardConsole()
@@ -37,6 +42,11 @@ describe('ProjectBoardPage', () => {
         { id: 'column-2', name: 'En progreso', status: 'in_progress', position: 1, count: 0, cards: [] },
       ],
     })
+  })
+
+  afterEach(() => {
+    restoreViewport?.()
+    restoreViewport = undefined
   })
 
   it('renders ordered columns, counts and issue card details', async () => {
@@ -135,5 +145,63 @@ describe('ProjectBoardPage', () => {
 
     expect(await screen.findByText('En progreso')).toBeInTheDocument()
     expect(screen.queryByLabelText('Límite WIP de En progreso')).not.toBeInTheDocument()
+  })
+
+  function renderBoard() {
+    return render(
+      <MemoryRouter initialEntries={['/projects/project-1/board']}>
+        <Routes><Route path="/projects/:id/board" element={<ProjectBoardPage />} /></Routes>
+      </MemoryRouter>,
+    )
+  }
+
+  it('shows skeleton columns with busy feedback while the board loads', async () => {
+    repositories.getBoard.mockReturnValue(new Promise(() => undefined))
+    renderBoard()
+
+    const loading = await screen.findByLabelText('Cargando tablero')
+    expect(loading).toHaveAttribute('aria-busy', 'true')
+    expect(screen.queryByRole('region', { name: /Tablero/ })).not.toBeInTheDocument()
+    consoleGuard.expectNoConsoleOutput()
+  })
+
+  it('shows the 403 page when the board is forbidden', async () => {
+    repositories.getBoard.mockRejectedValue(new AppError({ status: 403, message: 'forbidden' }))
+    renderBoard()
+
+    expect(await screen.findByText('No tienes acceso a esta página')).toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: /Tablero/ })).not.toBeInTheDocument()
+    consoleGuard.expectNoConsoleOutput()
+  })
+
+  it('shows an empty hint inside a column that has no issues', async () => {
+    renderBoard()
+
+    const column = await screen.findByRole('region', { name: 'Tablero Default' })
+    expect(within(column).getByText('Arrastra incidencias aquí.')).toBeInTheDocument()
+    consoleGuard.expectNoConsoleOutput()
+  })
+
+  it('shows an empty state when the project has no columns', async () => {
+    repositories.getBoard.mockResolvedValue({ id: 'board-1', projectId: 'project-1', name: 'Default', type: 'kanban', columns: [] })
+    renderBoard()
+
+    expect(await screen.findByText('El proyecto todavía no tiene columnas de tablero.')).toBeInTheDocument()
+    consoleGuard.expectNoConsoleOutput()
+  })
+
+  it('scrolls the columns inside the board region on mobile and lays them out on desktop', async () => {
+    restoreViewport = installViewport(390)
+    const mobile = renderBoard()
+    const mobileBoard = await screen.findByRole('region', { name: 'Tablero Default' })
+    expect(mobileBoard).toHaveAttribute('data-scroll', 'inside-board')
+    expect(mobileBoard).toHaveAttribute('data-layout', 'mobile-columns')
+    mobile.unmount()
+
+    restoreViewport()
+    restoreViewport = installViewport(1440)
+    renderBoard()
+    expect(await screen.findByRole('region', { name: 'Tablero Default' })).toHaveAttribute('data-layout', 'desktop-columns')
+    consoleGuard.expectNoConsoleOutput()
   })
 })

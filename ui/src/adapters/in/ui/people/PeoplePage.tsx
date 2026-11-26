@@ -131,7 +131,11 @@ export function PeoplePage({ repository = defaultRepository }: PeoplePageProps) 
         onRowOpen={(member) => navigate(`/people/${member.userId}`)}
         mobileRender={(member) => (
           <div className={styles.mobileCard}>
-            <span className={styles.personName}>{member.name}</span>
+            <span className={styles.person}>
+              <UserAvatar id={member.userId} name={member.name} hasAvatar={member.hasAvatar} size={32} />
+              <span className={styles.personName}>{member.name}</span>
+            </span>
+            {member.jobTitle && <Typography.Text>{member.jobTitle}</Typography.Text>}
             <Lozenge tone={ORG_ROLE_TONES[member.role]}>{ORG_ROLE_LABELS[member.role]}</Lozenge>
             <Typography.Text type="secondary">{member.email}</Typography.Text>
           </div>

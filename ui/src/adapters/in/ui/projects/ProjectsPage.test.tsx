@@ -1,17 +1,36 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { useAuthStore } from '@/adapters/in/state/auth.store'
 import { useProjectsStore } from '@/adapters/in/state/projects.store'
 import { useOrgStore } from '@/adapters/in/state/org.store'
+import { OrganizationHttpRepository } from '@/adapters/out/http/organization-http-repository'
 import { ProjectHttpRepository } from '@/adapters/out/http/project-http-repository'
 import type { User } from '@/core/auth/domain/user'
 import type { Project } from '@/core/projects/domain/project'
 import { AppError } from '@/core/shared/app-error'
+import { resetOrgMembersByIdCache } from '@/adapters/in/ui/organizations/useOrgMembersById'
 
 import { guardConsole } from './testSupport/consoleGuard'
+import { installViewport } from './testSupport/viewport'
 import { ProjectsPage } from './ProjectsPage'
+
+let restoreViewport: (() => void) | undefined
+
+function memberDto(userId: string, name: string) {
+  return {
+    userId,
+    name,
+    displayName: '',
+    email: `${userId}@example.com`,
+    jobTitle: '',
+    department: '',
+    hasAvatar: false,
+    role: 'member',
+    joinedAt: '2026-01-01T00:00:00Z',
+  } as unknown as Awaited<ReturnType<OrganizationHttpRepository['listMembers']>>[number]
+}
 
 function makeUser(role: User['role']): User {
   return {
@@ -70,6 +89,13 @@ describe('ProjectsPage', () => {
     useAuthStore.setState({ user: makeUser('admin'), status: 'authenticated', sessionChecked: true })
     useOrgStore.setState({ orgs: [], currentOrgId: 'o1', loaded: true })
     useProjectsStore.setState({ projects: [], status: 'idle', error: null, members: [], labels: [], components: [] })
+    resetOrgMembersByIdCache()
+    vi.spyOn(OrganizationHttpRepository.prototype, 'listMembers').mockResolvedValue([])
+  })
+
+  afterEach(() => {
+    restoreViewport?.()
+    restoreViewport = undefined
   })
 
   it('shows the projects as cards with key, visibility and type, hiding archived ones by default', async () => {
@@ -153,5 +179,49 @@ describe('ProjectsPage', () => {
     renderPage()
 
     await waitFor(() => expect(screen.getByRole('list', { name: 'Cargando proyectos' })).toHaveAttribute('aria-busy', 'true'))
+  })
+
+  it('shows the lead name on each card, resolved through the organization members', async () => {
+    vi.spyOn(ProjectHttpRepository.prototype, 'list').mockResolvedValue(projects)
+    vi.spyOn(OrganizationHttpRepository.prototype, 'listMembers').mockResolvedValue([memberDto('u1', 'Ana Pérez')])
+    renderPage()
+
+    await screen.findByRole('list', { name: 'Proyectos' })
+    await waitFor(() => expect(screen.getByTestId('project-lead-CORE')).toHaveTextContent('Ana Pérez'))
+    expect(screen.getByTestId('project-card-SEC')).toHaveTextContent('Responsable: Ana Pérez')
+    expect(OrganizationHttpRepository.prototype.listMembers).toHaveBeenCalledWith('o1')
+    consoleGuard.expectNoConsoleOutput()
+  })
+
+  it('shows "Sin responsable" when the lead is not a member of the organization', async () => {
+    vi.spyOn(ProjectHttpRepository.prototype, 'list').mockResolvedValue([makeProject({ leadId: 'ghost' })])
+    renderPage()
+
+    await waitFor(() => expect(screen.getByTestId('project-lead-CORE')).toHaveTextContent('Sin responsable'))
+    consoleGuard.expectNoConsoleOutput()
+  })
+
+  it('shows the lead as loading until the organization members arrive', async () => {
+    vi.spyOn(ProjectHttpRepository.prototype, 'list').mockResolvedValue([makeProject({})])
+    vi.spyOn(OrganizationHttpRepository.prototype, 'listMembers').mockReturnValue(new Promise(() => undefined))
+    renderPage()
+
+    expect(await screen.findByTestId('project-lead-CORE')).toHaveTextContent('Cargando responsable')
+  })
+
+  it('renders one column of cards at 390px and the auto grid on desktop', async () => {
+    vi.spyOn(ProjectHttpRepository.prototype, 'list').mockResolvedValue(projects)
+    restoreViewport = installViewport(390)
+    const mobile = renderPage()
+
+    expect(await screen.findByRole('list', { name: 'Proyectos' })).toHaveAttribute('data-layout', 'single-column')
+    expect(screen.getByTestId('project-card-CORE')).toBeInTheDocument()
+    mobile.unmount()
+
+    restoreViewport()
+    restoreViewport = installViewport(1440)
+    renderPage()
+    expect(await screen.findByRole('list', { name: 'Proyectos' })).toHaveAttribute('data-layout', 'auto-grid')
+    consoleGuard.expectNoConsoleOutput()
   })
 })

@@ -77,4 +77,22 @@ describe('ProjectPermissionsPage', () => {
     expect(await screen.findByText('No tienes acceso a esta página')).toBeInTheDocument()
     consoleGuard.expectNoConsoleOutput()
   })
+
+  it('shows the skeleton for the role section while the members load', async () => {
+    vi.spyOn(ProjectHttpRepository.prototype, 'listMembers').mockReturnValue(new Promise(() => undefined))
+    renderPage()
+
+    expect(await screen.findByRole('heading', { name: 'Matriz de permisos' })).toBeInTheDocument()
+    expect(screen.queryByText('Sin acceso como miembro')).not.toBeInTheDocument()
+    consoleGuard.expectNoConsoleOutput()
+  })
+
+  it('keeps the permission matrix and warns when the members fail for another reason', async () => {
+    vi.spyOn(ProjectHttpRepository.prototype, 'listMembers').mockRejectedValue(new AppError({ status: 500, message: 'boom' }))
+    renderPage()
+
+    expect(await screen.findByText('No se pudieron cargar los miembros. La matriz de permisos sigue vigente.')).toBeInTheDocument()
+    expect(screen.getByText('Ver el proyecto')).toBeInTheDocument()
+    consoleGuard.expectNoConsoleOutput()
+  })
 })

@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const repositories = vi.hoisted(() => ({ getProject: vi.fn(), list: vi.fn(), move: vi.fn() }))
 
@@ -21,6 +21,9 @@ import { AppError } from '@/core/shared/app-error'
 
 import { ProjectBacklogPage } from './ProjectBacklogPage'
 import { guardConsole } from './testSupport/consoleGuard'
+import { installViewport } from './testSupport/viewport'
+
+let restoreViewport: (() => void) | undefined
 
 const items = [
   { id: 'issue-1', projectId: 'project-1', summary: 'Primera', type: 'task', status: 'open', priority: 'high', rank: '000001' },
@@ -42,6 +45,11 @@ describe('ProjectBacklogPage', () => {
     vi.clearAllMocks()
     repositories.getProject.mockResolvedValue({ id: 'project-1', key: 'CORE', name: 'CoreLog' })
     repositories.list.mockResolvedValue(items)
+  })
+
+  afterEach(() => {
+    restoreViewport?.()
+    restoreViewport = undefined
   })
 
   it('renders the ordered rows and an empty state inside the table when there are no issues', async () => {
@@ -86,5 +94,46 @@ describe('ProjectBacklogPage', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Bajar Primera' }))
 
     expect(await screen.findByRole('alert')).toHaveTextContent('No tienes permiso para ordenar el backlog')
+  })
+
+  it('shows the table skeleton with busy feedback while the backlog loads', async () => {
+    repositories.list.mockReturnValue(new Promise(() => undefined))
+    renderPage()
+
+    expect(await screen.findByRole('status', { name: 'Cargando' })).toHaveAttribute('aria-busy', 'true')
+    expect(screen.queryByText('El backlog está vacío')).not.toBeInTheDocument()
+    consoleGuard.expectNoConsoleOutput()
+  })
+
+  it('shows an error inside the table with retry when the backlog fails for another reason', async () => {
+    repositories.list.mockRejectedValueOnce(new AppError({ status: 500, message: 'boom' }))
+    renderPage()
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('No se pudo cargar el backlog')
+    fireEvent.click(screen.getByRole('button', { name: 'Reintentar' }))
+
+    expect(await screen.findByText('Primera')).toBeInTheDocument()
+    expect(repositories.list).toHaveBeenCalledTimes(2)
+    consoleGuard.expectNoConsoleOutput()
+  })
+
+  it('renders a table on desktop and issue cards with move buttons on mobile', async () => {
+    restoreViewport = installViewport(1440)
+    const desktop = renderPage()
+
+    // antd renders a sticky header table next to the body table, so several table roles are expected.
+    expect((await screen.findAllByRole('table')).length).toBeGreaterThan(0)
+    desktop.unmount()
+
+    restoreViewport()
+    restoreViewport = installViewport(390)
+    renderPage()
+
+    expect(await screen.findByText('Primera')).toBeInTheDocument()
+    expect(screen.queryByRole('table')).not.toBeInTheDocument()
+    const cards = screen.getAllByRole('listitem')
+    expect(cards).toHaveLength(2)
+    expect(cards[0]).toContainElement(screen.getByRole('button', { name: 'Bajar Primera' }))
+    consoleGuard.expectNoConsoleOutput()
   })
 })

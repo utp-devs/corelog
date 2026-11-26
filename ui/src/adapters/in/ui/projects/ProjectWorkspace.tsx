@@ -9,7 +9,9 @@ import { ErrorPage } from '@/shared/ui/ErrorPage'
 import { ErrorState } from '@/shared/ui/ErrorState'
 import { Lozenge } from '@/shared/ui/Lozenge'
 import { ProjectAvatar } from '@/shared/ui/ProjectAvatar'
+import { useOrgMembersById } from '@/adapters/in/ui/organizations/useOrgMembersById'
 import { useTrackRecent } from '@/shared/ui/CommandPalette/recent'
+import { leadNameOf } from './projectLead'
 import { accessVariantOf } from './projectLoadError'
 import styles from './ProjectWorkspace.module.css'
 
@@ -53,6 +55,7 @@ export function ProjectWorkspace() {
 
   const state: LoadState = loaded?.key === requestKey ? loaded.state : { status: 'loading' }
   const project = state.status === 'ready' ? state.project : undefined
+  const { members: orgMembers, status: orgMembersStatus } = useOrgMembersById(project?.organizationId)
 
   // Recents: the project once its header has loaded.
   useTrackRecent(project
@@ -102,6 +105,9 @@ export function ProjectWorkspace() {
                 <Lozenge tone={project.visibility === 'open' ? 'info' : 'warning'}>{visibilityLabels[project.visibility]}</Lozenge>
                 <Lozenge>{typeLabels[project.type]}</Lozenge>
               </div>
+              <p className={styles.lead}>
+                Responsable: <span data-testid="workspace-lead">{leadNameOf(project.leadId, orgMembers, orgMembersStatus)}</span>
+              </p>
             </div>
           </div>
           {project.description && <p className={styles.description}>{project.description}</p>}

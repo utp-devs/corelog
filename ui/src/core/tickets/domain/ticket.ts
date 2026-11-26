@@ -1,6 +1,8 @@
-export type TicketStatus = 'open' | 'in_progress' | 'resolved' | 'closed'
-export type TicketPriority = 'low' | 'medium' | 'high' | 'critical'
-export type IssueType = 'task' | 'bug' | 'story' | 'epic' | 'subtask'
+import type { IssuePriorityKind, IssueStatusKind, IssueTypeKind } from '@/shared/types/issue'
+
+export type TicketStatus = IssueStatusKind
+export type TicketPriority = IssuePriorityKind
+export type IssueType = IssueTypeKind
 
 export interface Ticket {
   id: string
