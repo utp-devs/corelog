@@ -1,61 +1,62 @@
 package domain
 
-import "testing"
+import (
+	"testing"
 
-// TestPolicyMatrix verifica cada accion del proyecto contra cada rol, segun la matriz de
-// permisos de ARQUITECTURA.md (seccion 5). Cada fila es una accion; cada columna, un rol.
-// Admin es rol global y se evalua sin rol de proyecto.
+	"github.com/jhonsferg/corelog/internal/authorization/authztest"
+)
+
+// projectRoleOf converts the actor's project role name into the domain value (nil = no membership).
+func projectRoleOf(a authztest.Actor) *ProjectRole {
+	if a.ProjectRole == "" {
+		return nil
+	}
+	return role(ProjectRole(a.ProjectRole))
+}
+
+// TestPolicyMatrix verifies every project permission against every standard actor, following the
+// permission matrix of docs/05-architecture.md section 3. Admin is a global role and is evaluated
+// without a project role. Any actor not listed for a permission is denied.
 func TestPolicyMatrix(t *testing.T) {
 	policy := Policy{}
 
-	type check func(globalRole string, projectRole *ProjectRole) bool
-
-	// Orden de las columnas: admin global, lead, contributor, viewer, sin acceso.
-	const (
-		colAdmin = iota
-		colLead
-		colContributor
-		colViewer
-		colNone
-	)
-
-	matrix := []struct {
-		action string
-		fn     check
-		want   [5]bool
-	}{
-		{"ver proyecto e incidencias", policy.CanViewProject, [5]bool{true, true, true, true, false}},
-		{"editar datos del proyecto", policy.CanEditProject, [5]bool{true, true, false, false, false}},
-		{"eliminar proyecto", policy.CanDeleteProject, [5]bool{true, false, false, false, false}},
-		{"gestionar miembros y roles", policy.CanManageProjectMembers, [5]bool{true, true, false, false, false}},
-		{"crear incidencia", policy.CanCreateIssue, [5]bool{true, true, true, false, false}},
-		{"editar incidencia", policy.CanEditIssue, [5]bool{true, true, true, false, false}},
-		{"comentar y adjuntar", policy.CanComment, [5]bool{true, true, true, false, false}},
-		{"seguir incidencia", policy.CanWatchIssue, [5]bool{true, true, true, true, false}},
-		{"mover tarjetas y backlog", policy.CanMoveCards, [5]bool{true, true, true, false, false}},
-		{"gestionar tablero y columnas", policy.CanManageBoard, [5]bool{true, true, false, false, false}},
-		{"gestionar flujo de estados", policy.CanManageWorkflow, [5]bool{true, true, false, false, false}},
-		{"gestionar sprints", policy.CanManageSprints, [5]bool{true, true, false, false, false}},
+	checks := map[string]func(globalRole string, projectRole *ProjectRole) bool{
+		"view_project":    policy.CanViewProject,
+		"edit_project":    policy.CanEditProject,
+		"delete_project":  policy.CanDeleteProject,
+		"manage_members":  policy.CanManageProjectMembers,
+		"create_issue":    policy.CanCreateIssue,
+		"edit_issue":      policy.CanEditIssue,
+		"comment":         policy.CanComment,
+		"watch_issue":     policy.CanWatchIssue,
+		"move_cards":      policy.CanMoveCards,
+		"manage_board":    policy.CanManageBoard,
+		"manage_workflow": policy.CanManageWorkflow,
+		"manage_sprints":  policy.CanManageSprints,
 	}
 
-	roles := [5]struct {
-		global  string
-		project *ProjectRole
-	}{
-		{"admin", nil},
-		{"requester", role(ProjectRoleLead)},
-		{"requester", role(ProjectRoleContributor)},
-		{"requester", role(ProjectRoleViewer)},
-		{"requester", nil},
+	permissions := []string{
+		"view_project", "edit_project", "delete_project", "manage_members",
+		"create_issue", "edit_issue", "comment", "watch_issue",
+		"move_cards", "manage_board", "manage_workflow", "manage_sprints",
 	}
-	names := [5]string{"admin", "lead", "contributor", "viewer", "sin acceso"}
 
-	for _, row := range matrix {
-		for col := colAdmin; col <= colNone; col++ {
-			got := row.fn(roles[col].global, roles[col].project)
-			if got != row.want[col] {
-				t.Errorf("%s para %s: got %v, want %v", row.action, names[col], got, row.want[col])
-			}
-		}
+	allowed := map[string][]string{
+		"view_project":    {"admin", "lead", "contributor", "viewer"},
+		"edit_project":    {"admin", "lead"},
+		"delete_project":  {"admin"},
+		"manage_members":  {"admin", "lead"},
+		"create_issue":    {"admin", "lead", "contributor"},
+		"edit_issue":      {"admin", "lead", "contributor"},
+		"comment":         {"admin", "lead", "contributor"},
+		"watch_issue":     {"admin", "lead", "contributor", "viewer"},
+		"move_cards":      {"admin", "lead", "contributor"},
+		"manage_board":    {"admin", "lead"},
+		"manage_workflow": {"admin", "lead"},
+		"manage_sprints":  {"admin", "lead"},
 	}
+
+	authztest.RunMatrix(t, authztest.StandardActors, permissions, allowed, func(a authztest.Actor, permission string) bool {
+		return checks[permission](a.PlatformRole, projectRoleOf(a))
+	})
 }
