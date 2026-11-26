@@ -1,0 +1,118 @@
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cl-space-3);
+  min-width: 0;
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--cl-space-2);
+}
+
+.tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--cl-space-2);
+  margin-left: auto;
+}
+
+.comfortable :global(.ant-table-tbody > tr > td) {
+  height: var(--cl-row-h);
+  padding-block: 0;
+}
+
+.compact :global(.ant-table-tbody > tr > td) {
+  height: var(--cl-row-h-compact);
+  padding-block: 0;
+}
+
+.root :global(.ant-table-tbody > tr.ant-table-row:hover > td) {
+  background: var(--cl-brand-subtle);
+}
+
+.clickable :global(tr.cl-data-row),
+.clickable :global(li.cl-data-row) {
+  cursor: pointer;
+}
+
+.root :global(tr.cl-data-row:focus-visible > td),
+.root :global(li.cl-data-row:focus-visible) {
+  outline: none;
+  box-shadow: inset 0 0 0 2px var(--cl-brand);
+}
+
+.empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  max-height: 280px;
+  overflow: hidden;
+}
+
+.footer {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.skeletonBar {
+  display: block;
+  width: 70%;
+  height: var(--cl-font-small);
+  border-radius: var(--cl-radius-sm);
+  background: var(--cl-bg-sunken);
+  animation: pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeletonBar {
+    animation: none;
+  }
+}
+
+.cards {
+  display: grid;
+  gap: var(--cl-space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.card {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--cl-space-3);
+  padding: var(--cl-space-3);
+  border: 1px solid var(--cl-border);
+  border-radius: var(--cl-radius-md);
+  background: var(--cl-bg-surface);
+}
+
+.cardBody {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.chooser {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cl-space-2);
+  padding: var(--cl-space-3);
+  border-radius: var(--cl-radius-md);
+  background: var(--cl-bg-surface);
+  box-shadow: var(--cl-shadow-2);
+}
