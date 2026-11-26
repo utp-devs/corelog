@@ -1,18 +1,22 @@
 import { App } from 'antd'
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { useAuthStore } from '@/adapters/in/state/auth.store'
 import type { IssueActivity, IssueComment } from '@/core/tickets/application/ports/ticket-repository.port'
 
-const { ticketState, attachmentList, watcherGetState, watcherWatch, teammateState } = vi.hoisted(() => ({
+const { ticketState, attachmentList, watcherGetState, watcherWatch, teammateState, projectState } = vi.hoisted(() => ({
   teammateState: { results: [] as { id: string; name: string; email: string }[] },
+  projectState: {
+    members: [] as { projectId: string; userId: string; role: 'lead' | 'contributor' | 'viewer'; createdAt: string }[],
+  },
   ticketState: {
     selected: {
       id: 'issue-1', title: 'Error de prueba', description: 'Descripción de la incidencia', status: 'open',
       priority: 'medium', projectId: 'project-1', issueType: 'bug', parentId: null, dueDate: null,
       storyPoints: null, rank: 'm', closedAt: null, requesterId: 'user-1', requesterName: 'Ana',
-      assigneeId: null, assigneeName: null,
+      assigneeId: null as string | null, assigneeName: null as string | null,
       createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z',
     },
     status: 'idle' as 'idle' | 'loading' | 'error',
@@ -20,7 +24,8 @@ const { ticketState, attachmentList, watcherGetState, watcherWatch, teammateStat
     comments: [] as IssueComment[], commentsIssueId: 'issue-1',
     activities: [] as IssueActivity[], activitiesIssueId: 'issue-1',
     links: [], linksIssueId: 'issue-1',
-    fetchTicket: vi.fn(), updateStatus: vi.fn(), assign: vi.fn().mockResolvedValue(undefined), updateDetails: vi.fn(),
+    fetchTicket: vi.fn(), updateStatus: vi.fn(), assign: vi.fn().mockResolvedValue(undefined),
+    unassign: vi.fn().mockResolvedValue(undefined), updateDetails: vi.fn(),
     fetchComments: vi.fn().mockResolvedValue(undefined), createComment: vi.fn(), deleteComment: vi.fn(),
     fetchActivities: vi.fn().mockResolvedValue(undefined), fetchLinks: vi.fn().mockResolvedValue(undefined),
     createLink: vi.fn(), deleteLink: vi.fn(),
@@ -47,6 +52,12 @@ vi.mock('@/adapters/out/http/issue-watcher-http-repository', () => ({
     getState = watcherGetState
     watch = watcherWatch
     unwatch = vi.fn().mockResolvedValue({ isWatching: false, count: 0 })
+  },
+}))
+
+vi.mock('@/adapters/out/http/project-http-repository', () => ({
+  ProjectHttpRepository: class {
+    listMembers = vi.fn(async () => projectState.members)
   },
 }))
 
@@ -95,6 +106,11 @@ describe('TicketDetailPage', () => {
     window.localStorage.clear()
     ticketState.status = 'idle'
     ticketState.error = null
+    // Platform admins may edit any issue, so the assignee control is enabled by default.
+    useAuthStore.setState({ user: { id: 'user-1', role: 'admin' } as never })
+    projectState.members = []
+    ticketState.unassign.mockClear()
+    ticketState.unassign.mockResolvedValue(undefined)
     attachmentList.mockClear()
     attachmentList.mockResolvedValue([])
     watcherGetState.mockClear()
@@ -202,6 +218,78 @@ describe('TicketDetailPage', () => {
     } finally {
       teammateState.results = []
       ticketState.assign.mockClear()
+    }
+  })
+
+  it('clears the assignee from the detail page and announces the change', async () => {
+    const original = ticketState.selected
+    ticketState.selected = { ...original, assigneeId: 'user-2', assigneeName: 'Luis Pérez' }
+    try {
+      renderDetail()
+      const section = (await screen.findByRole('heading', { name: 'Responsable' })).closest('section') as HTMLElement
+      fireEvent.click(await within(section).findByRole('button', { name: 'Quitar responsable' }))
+
+      await waitFor(() => expect(ticketState.unassign).toHaveBeenCalledWith('issue-1'))
+      expect(await screen.findByText('Responsable quitado')).toBeInTheDocument()
+      expect(within(section).getByRole('status')).toHaveTextContent('Sin asignar')
+    } finally {
+      ticketState.selected = original
+    }
+  })
+
+  it('hides the clear option when the issue has no assignee', async () => {
+    renderDetail()
+    const section = (await screen.findByRole('heading', { name: 'Responsable' })).closest('section') as HTMLElement
+    expect(within(section).queryByRole('button', { name: 'Quitar responsable' })).not.toBeInTheDocument()
+  })
+
+  it('keeps the assignee and reports the error when clearing fails', async () => {
+    const original = ticketState.selected
+    ticketState.selected = { ...original, assigneeId: 'user-2', assigneeName: 'Luis Pérez' }
+    ticketState.unassign.mockRejectedValueOnce(new Error('network down'))
+    try {
+      renderDetail()
+      const section = (await screen.findByRole('heading', { name: 'Responsable' })).closest('section') as HTMLElement
+      fireEvent.click(await within(section).findByRole('button', { name: 'Quitar responsable' }))
+
+      expect(await screen.findByText('No se pudo quitar el responsable')).toBeInTheDocument()
+      expect(within(section).getByRole('status')).not.toHaveTextContent('Sin asignar')
+    } finally {
+      ticketState.selected = original
+    }
+  })
+
+  it('hides the clear option and locks the assignee control for members who cannot edit', async () => {
+    const original = ticketState.selected
+    ticketState.selected = { ...original, assigneeId: 'user-2', assigneeName: 'Luis Pérez' }
+    useAuthStore.setState({ user: { id: 'user-1', role: 'user' } as never })
+    projectState.members = [{ projectId: 'project-1', userId: 'user-1', role: 'viewer', createdAt: '2026-01-01T00:00:00Z' }]
+    try {
+      renderDetail()
+      const section = (await screen.findByRole('heading', { name: 'Responsable' })).closest('section') as HTMLElement
+      // Let the membership request settle before checking the read-only state.
+      await act(async () => { await new Promise((done) => setTimeout(done, 0)) })
+
+      expect(within(section).getByRole('combobox')).toBeDisabled()
+      expect(within(section).queryByRole('button', { name: 'Quitar responsable' })).not.toBeInTheDocument()
+    } finally {
+      ticketState.selected = original
+      projectState.members = []
+    }
+  })
+
+  it('shows the clear option to a project contributor who is not a platform admin', async () => {
+    const original = ticketState.selected
+    ticketState.selected = { ...original, assigneeId: 'user-2', assigneeName: 'Luis Pérez' }
+    useAuthStore.setState({ user: { id: 'user-1', role: 'user' } as never })
+    projectState.members = [{ projectId: 'project-1', userId: 'user-1', role: 'contributor', createdAt: '2026-01-01T00:00:00Z' }]
+    try {
+      renderDetail()
+      const section = (await screen.findByRole('heading', { name: 'Responsable' })).closest('section') as HTMLElement
+      expect(await within(section).findByRole('button', { name: 'Quitar responsable' })).toBeInTheDocument()
+    } finally {
+      ticketState.selected = original
+      projectState.members = []
     }
   })
 

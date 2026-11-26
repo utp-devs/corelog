@@ -32,7 +32,7 @@ export class TicketService {
     return this.repository.updateStatus(id, status)
   }
 
-  assign(id: string, assigneeId: string): Promise<Ticket> {
+  assign(id: string, assigneeId: string | null): Promise<Ticket> {
     return this.repository.assign(id, assigneeId)
   }
 

@@ -49,7 +49,8 @@ export interface TicketRepositoryPort {
   getById(id: string): Promise<Ticket>
   create(input: CreateTicketInput): Promise<Ticket>
   updateStatus(id: string, status: TicketStatus): Promise<Ticket>
-  assign(id: string, assigneeId: string): Promise<Ticket>
+  /** Passing null clears the assignee (the issue becomes unassigned). */
+  assign(id: string, assigneeId: string | null): Promise<Ticket>
   updateMetadata(id: string, input: UpdateIssueMetadataInput): Promise<Ticket>
   updateDetails(id: string, input: UpdateIssueDetailsInput): Promise<Ticket>
   listComments(id: string): Promise<IssueComment[]>

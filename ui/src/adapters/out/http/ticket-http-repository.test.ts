@@ -77,3 +77,30 @@ describe('TicketHttpRepository.list', () => {
     expect(page.items[0].assigneeName).toBeNull()
   })
 })
+
+describe('TicketHttpRepository.assign', () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('sends the assignee id to the assign endpoint', async () => {
+    const patch = vi.spyOn(apiClient, 'patch').mockResolvedValue({
+      data: { data: { ...issue, assignee_id: '33333333-3333-4333-8333-333333333333' } },
+    })
+
+    const ticket = await new TicketHttpRepository().assign(issue.id, '33333333-3333-4333-8333-333333333333')
+
+    expect(patch).toHaveBeenCalledWith(`/issues/${issue.id}/assign`, { assignee_id: '33333333-3333-4333-8333-333333333333' })
+    expect(ticket.assigneeId).toBe('33333333-3333-4333-8333-333333333333')
+  })
+
+  it('sends null to clear the assignee and maps the unassigned issue', async () => {
+    const patch = vi.spyOn(apiClient, 'patch').mockResolvedValue({ data: { data: issue } })
+
+    const ticket = await new TicketHttpRepository().assign(issue.id, null)
+
+    expect(patch).toHaveBeenCalledWith(`/issues/${issue.id}/assign`, { assignee_id: null })
+    expect(ticket.assigneeId).toBeNull()
+    expect(ticket.assigneeName).toBeNull()
+  })
+})

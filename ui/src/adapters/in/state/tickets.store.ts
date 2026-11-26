@@ -35,7 +35,8 @@ interface TicketsState {
   fetchTicket: (id: string) => Promise<void>
   createTicket: (input: CreateTicketInput) => Promise<Ticket>
   updateStatus: (id: string, status: TicketStatus) => Promise<void>
-  assign: (id: string, assigneeId: string) => Promise<void>
+  assign: (id: string, assigneeId: string | null) => Promise<void>
+  unassign: (id: string) => Promise<void>
   updateMetadata: (id: string, input: UpdateIssueMetadataInput) => Promise<void>
   updateDetails: (id: string, input: UpdateIssueDetailsInput) => Promise<void>
   fetchComments: (id: string) => Promise<void>
@@ -99,8 +100,11 @@ export const useTicketsStore = create<TicketsState>((set, get) => ({
   },
 
   assign: async (id, assigneeId) => {
-    const updated = await ticketService.assign(id, assigneeId)
-    applyUpdate(set, get, updated)
+    await assignWithRollback(set, get, id, assigneeId)
+  },
+
+  unassign: async (id) => {
+    await assignWithRollback(set, get, id, null)
   },
 
   updateMetadata: async (id, input) => {
@@ -160,6 +164,32 @@ export const useTicketsStore = create<TicketsState>((set, get) => ({
     applyUpdate(set, get, updated)
   },
 }))
+
+/**
+ * Assigns (or clears, with null) optimistically: the issue shows the new assignee at once and the
+ * previous state comes back if the API rejects the change. The error is rethrown for the caller to notify.
+ */
+async function assignWithRollback(
+  set: (partial: Partial<TicketsState>) => void,
+  get: () => TicketsState,
+  id: string,
+  assigneeId: string | null,
+) {
+  const previous = get().selected?.id === id
+    ? get().selected
+    : get().tickets.find((ticket) => ticket.id === id)
+  if (previous) {
+    // The name is unknown until the API answers, so it is cleared rather than shown stale.
+    applyUpdate(set, get, { ...previous, assigneeId, assigneeName: null })
+  }
+  try {
+    const updated = await ticketService.assign(id, assigneeId)
+    applyUpdate(set, get, updated)
+  } catch (error) {
+    if (previous) applyUpdate(set, get, previous)
+    throw error
+  }
+}
 
 function applyUpdate(
   set: (partial: Partial<TicketsState>) => void,

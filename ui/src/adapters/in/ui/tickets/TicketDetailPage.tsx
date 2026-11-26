@@ -7,8 +7,12 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { extractErrorMessage } from '@/adapters/out/http/api-client'
 import { AttachmentHttpRepository } from '@/adapters/out/http/attachment-http-repository'
 import { IssueWatcherHttpRepository } from '@/adapters/out/http/issue-watcher-http-repository'
+import { ProjectHttpRepository } from '@/adapters/out/http/project-http-repository'
+import { useAuthStore } from '@/adapters/in/state/auth.store'
 import { useTicketsStore } from '@/adapters/in/state/tickets.store'
 import type { UpdateIssueDetailsInput } from '@/core/tickets/application/ports/ticket-repository.port'
+import type { ProjectMember } from '@/core/projects/domain/project'
+import { effectiveProjectRole, hasProjectPermission } from '@/core/projects/domain/permissions'
 import type { IssueAttachment } from '@/core/tickets/domain/attachment'
 import type { IssueWatcherState } from '@/core/tickets/domain/issue-watcher'
 import { canTransitionTo, type IssueType, type Ticket, type TicketPriority, type TicketStatus } from '@/core/tickets/domain/ticket'
@@ -32,6 +36,7 @@ import styles from './TicketDetailPage.module.css'
 
 const attachmentRepository = new AttachmentHttpRepository()
 const watcherRepository = new IssueWatcherHttpRepository()
+const projectRepository = new ProjectHttpRepository()
 
 const allStatuses: TicketStatus[] = ['open', 'in_progress', 'resolved', 'closed']
 const issueTypeOptions = (Object.keys(issueTypeLabels) as IssueType[]).map((value) => ({ value, label: issueTypeLabels[value] }))
@@ -193,6 +198,8 @@ export function TicketDetailPage() {
   const fetchTicket = useTicketsStore((s) => s.fetchTicket)
   const updateStatus = useTicketsStore((s) => s.updateStatus)
   const assign = useTicketsStore((s) => s.assign)
+  const unassign = useTicketsStore((s) => s.unassign)
+  const currentUser = useAuthStore((s) => s.user)
   const updateDetails = useTicketsStore((s) => s.updateDetails)
   const comments = useTicketsStore((s) => s.comments)
   const commentsIssueId = useTicketsStore((s) => s.commentsIssueId)
@@ -213,6 +220,9 @@ export function TicketDetailPage() {
     : null)
 
   const [assigning, setAssigning] = useState(false)
+  // Polite live region: announces assignment changes to screen readers.
+  const [assignAnnouncement, setAssignAnnouncement] = useState('')
+  const [membersResult, setMembersResult] = useState<{ projectId: string; members: ProjectMember[] } | null>(null)
   const [commentBody, setCommentBody] = useState('')
   const [linkTargetId, setLinkTargetId] = useState('')
   const [linkKind, setLinkKind] = useState<'blocks' | 'relates' | 'duplicates'>('relates')
@@ -273,6 +283,17 @@ export function TicketDetailPage() {
     return () => { active = false }
   }, [id, fetchComments, fetchActivities, fetchLinks])
 
+  // Project membership decides whether the assignee can be changed here; the server still enforces it.
+  const projectId = selected?.projectId
+  useEffect(() => {
+    if (!projectId) return
+    let active = true
+    projectRepository.listMembers(projectId)
+      .then((members) => { if (active) setMembersResult({ projectId, members }) })
+      .catch(() => { if (active) setMembersResult({ projectId, members: [] }) })
+    return () => { active = false }
+  }, [projectId])
+
   if (status === 'loading' || (!selected && status === 'idle')) {
     return (
       <PageContainer variant="wide" pageName="issue-detail" ready={false}>
@@ -294,6 +315,12 @@ export function TicketDetailPage() {
       </PageContainer>
     )
   }
+
+  const membersLoaded = membersResult?.projectId === selected.projectId
+  const canChangeAssignee = membersLoaded && hasProjectPermission(
+    effectiveProjectRole(currentUser?.role, currentUser?.id, membersResult?.members ?? []),
+    'edit_issue',
+  )
 
   // The current assignee stays selectable even when the last search did not return it.
   const assigneeOptions = [
@@ -347,15 +374,30 @@ export function TicketDetailPage() {
     }
   }
 
-  // Assigning saves on selection, like status and priority. The API has no way to clear the assignee yet.
+  // Assigning saves on selection, like status and priority. The store applies the change optimistically and rolls back on error.
   const handleAssign = async (assigneeId: string) => {
     setAssigning(true)
     try {
       await assign(selected.id, assigneeId)
       await refreshWatcherState(selected.id)
       message.success('Incidencia asignada')
+      setAssignAnnouncement('Responsable actualizado')
     } catch (error) {
       message.error(extractErrorMessage(error, 'No se pudo asignar la incidencia'))
+    } finally {
+      setAssigning(false)
+    }
+  }
+
+  const handleUnassign = async () => {
+    setAssigning(true)
+    try {
+      await unassign(selected.id)
+      await refreshWatcherState(selected.id)
+      message.success('Responsable quitado')
+      setAssignAnnouncement('Sin asignar')
+    } catch (error) {
+      message.error(extractErrorMessage(error, 'No se pudo quitar el responsable'))
     } finally {
       setAssigning(false)
     }
@@ -602,16 +644,21 @@ export function TicketDetailPage() {
       </Section>
 
       <Section title="Responsable">
-        <FieldRow label="Buscar compañero" helper={`Actual: ${selected.assigneeName ?? 'Sin asignar'}`}>
+        <FieldRow
+          label="Buscar compañero"
+          helper={canChangeAssignee
+            ? `Actual: ${selected.assigneeName ?? 'Sin asignar'}`
+            : `Actual: ${selected.assigneeName ?? 'Sin asignar'}. No tienes permiso para cambiar el responsable.`}
+        >
           {({ id, 'aria-describedby': describedBy }) => (
             <Select
               id={id}
               aria-describedby={describedBy}
               showSearch
               filterOption={false}
-              placeholder="Nombre o correo"
+              placeholder={selected.assigneeId ? 'Nombre o correo' : 'Sin asignar'}
               loading={teammateSearch.isLoading || assigning}
-              disabled={assigning}
+              disabled={assigning || !canChangeAssignee}
               notFoundContent={teammateSearch.isLoading ? 'Buscando...' : 'No se encontraron compañeros'}
               onSearch={teammateSearch.search}
               onChange={(value: string) => void handleAssign(value)}
@@ -620,6 +667,14 @@ export function TicketDetailPage() {
             />
           )}
         </FieldRow>
+        {canChangeAssignee && selected.assigneeId && (
+          <div className={styles.inlineRow}>
+            <Button disabled={assigning} onClick={() => void handleUnassign()}>
+              Quitar responsable
+            </Button>
+          </div>
+        )}
+        <p role="status" aria-live="polite" className={styles.srOnly}>{assignAnnouncement}</p>
       </Section>
 
       <Section title="Seguimiento">

@@ -170,7 +170,7 @@ export class TicketHttpRepository implements TicketRepositoryPort {
     return toTicket(data.data)
   }
 
-  async assign(id: string, assigneeId: string): Promise<Ticket> {
+  async assign(id: string, assigneeId: string | null): Promise<Ticket> {
     const { data } = await apiClient.patch<{ data: TicketDto }>(`/issues/${id}/assign`, {
       assignee_id: assigneeId,
     })
