@@ -6,46 +6,16 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"path/filepath"
 	"syscall"
 
-	"github.com/go-chi/chi/v5"
 	"github.com/jmoiron/sqlx"
 
-	authpostgres "github.com/jhonsferg/corelog/internal/authorization/adapter/out/postgres"
-	authusecase "github.com/jhonsferg/corelog/internal/authorization/application/usecase"
-	"github.com/jhonsferg/corelog/internal/board"
-	boardpostgres "github.com/jhonsferg/corelog/internal/board/adapter/out/postgres"
-	"github.com/jhonsferg/corelog/internal/calendar"
-	calendarpostgres "github.com/jhonsferg/corelog/internal/calendar/adapter/out/postgres"
-	"github.com/jhonsferg/corelog/internal/dashboard"
-	dashboardpostgres "github.com/jhonsferg/corelog/internal/dashboard/adapter/out/postgres"
-	"github.com/jhonsferg/corelog/internal/notification"
-	notificationpostgres "github.com/jhonsferg/corelog/internal/notification/adapter/out/postgres"
 	"github.com/jhonsferg/corelog/internal/platform/config"
 	"github.com/jhonsferg/corelog/internal/platform/database"
 	"github.com/jhonsferg/corelog/internal/platform/httpserver"
 	"github.com/jhonsferg/corelog/internal/platform/logger"
 	appmw "github.com/jhonsferg/corelog/internal/platform/middleware"
-	"github.com/jhonsferg/corelog/internal/project"
-	projectpostgres "github.com/jhonsferg/corelog/internal/project/adapter/out/postgres"
-	projectport "github.com/jhonsferg/corelog/internal/project/application/port"
-	"github.com/jhonsferg/corelog/internal/search"
-	searchpostgres "github.com/jhonsferg/corelog/internal/search/adapter/out/postgres"
-	"github.com/jhonsferg/corelog/internal/sprint"
-	sprintpostgres "github.com/jhonsferg/corelog/internal/sprint/adapter/out/postgres"
-	"github.com/jhonsferg/corelog/internal/team"
-	teampostgres "github.com/jhonsferg/corelog/internal/team/adapter/out/postgres"
-	teamport "github.com/jhonsferg/corelog/internal/team/application/port"
-	"github.com/jhonsferg/corelog/internal/ticket"
-	ticketdirectory "github.com/jhonsferg/corelog/internal/ticket/adapter/out/directory"
-	ticketfilesystem "github.com/jhonsferg/corelog/internal/ticket/adapter/out/filesystem"
-	ticketmemory "github.com/jhonsferg/corelog/internal/ticket/adapter/out/memory"
-	ticketpostgres "github.com/jhonsferg/corelog/internal/ticket/adapter/out/postgres"
-	ticketport "github.com/jhonsferg/corelog/internal/ticket/application/port"
-	"github.com/jhonsferg/corelog/internal/user"
 	userpostgres "github.com/jhonsferg/corelog/internal/user/adapter/out/postgres"
-	userport "github.com/jhonsferg/corelog/internal/user/application/port"
 )
 
 func main() {
@@ -71,57 +41,13 @@ func run() error {
 	defer func() { _ = db.Close() }()
 	log.Info("connected to database", "driver", "postgresql")
 
-	var userRepo userport.Repository
-	var teamRepo teamport.Repository
-	var ticketDBRepo ticketport.Repository
-	var projectRepo projectport.Repository
-	var projectMemberRepo projectport.MemberRepository
-	userRepo = userpostgres.NewUserRepository(db)
-	teamRepo = teampostgres.NewTeamRepository(db)
-	ticketDBRepo = ticketpostgres.NewTicketRepository(db)
-	projectRepo = projectpostgres.NewProjectRepository(db)
-	projectMemberRepo = projectpostgres.NewMemberRepository(db)
-	projectCatalogRepo := projectpostgres.NewCatalogRepository(db)
-
 	// Cada peticion autenticada confirma que su sesion sigue activa (revocacion y cuentas desactivadas).
-	sessionRepo := userpostgres.NewSessionRepository(db)
-	appmw.SetSessionValidator(sessionRepo.Validate)
+	appmw.SetSessionValidator(userpostgres.NewSessionRepository(db).Validate)
 
-	userModule := user.NewModule(userRepo, sessionRepo, cfg.Auth.JWTSecret, cfg.Auth.JWTExpiration)
-	teamModule := team.NewModule(teamRepo, cfg.Auth.JWTSecret)
-	projectAuthorizer := projectAuthorizerAdapter{authorizer: authusecase.NewAuthorizer(authpostgres.NewRoleLookup(db))}
-	projectModule := project.NewModule(projectRepo, projectMemberRepo, projectCatalogRepo, cfg.Auth.JWTSecret, projectAuthorizer)
-
-	ticketRepo := ticketDBRepo
-	if cfg.Features.TicketRepository == "memory" {
-		ticketRepo = ticketmemory.NewTicketRepository()
-		log.Warn("ticket module using in-memory repository")
+	router, err := buildRouter(cfg, db, log)
+	if err != nil {
+		return err
 	}
-	userDirectory := ticketdirectory.NewUserDirectory(db)
-	collaborationRepo := ticketpostgres.NewCollaborationRepository(db)
-	issueLinkRepo := ticketpostgres.NewIssueLinkRepository(db)
-	watcherRepo := ticketpostgres.NewWatcherRepository(db)
-	savedFilterRepo := ticketpostgres.NewSavedFilterRepository(db)
-	attachmentRepo := ticketpostgres.NewAttachmentRepository(db)
-	attachmentRoot := os.Getenv("ATTACHMENTS_DIR")
-	if attachmentRoot == "" {
-		attachmentRoot = filepath.Join("data", "attachments")
-	}
-	fileStorage := ticketfilesystem.New(attachmentRoot)
-	workflowRepo := ticketpostgres.NewWorkflowRepository(db)
-	notificationModule := notification.NewModule(notificationpostgres.NewNotificationRepository(db), cfg.Auth.JWTSecret)
-	ticketModule := ticket.NewModule(ticketRepo, userDirectory, collaborationRepo, issueLinkRepo, workflowRepo, watcherRepo, savedFilterRepo, cfg.Auth.JWTSecret, projectAuthorizer, notificationModule.Service, projectMemberRepo)
-	searchModule := search.NewModule(searchpostgres.NewSearchIndex(db), cfg.Auth.JWTSecret)
-	dashboardModule := dashboard.NewModule(dashboardpostgres.NewDashboardReader(db), cfg.Auth.JWTSecret)
-	calendarModule := calendar.NewModule(calendarpostgres.NewCalendarRepository(db), projectAuthorizer, cfg.Auth.JWTSecret)
-	sprintModule := sprint.NewModule(sprintpostgres.NewSprintRepository(db), projectAuthorizer, cfg.Auth.JWTSecret)
-	boardModule := board.NewModule(boardpostgres.NewBoardRepository(db), projectModule.Service, projectAuthorizer, boardIssueMover{issues: ticketModule.Service}, cfg.Auth.JWTSecret)
-	ticketModule.Handler.WithAttachments(attachmentRepo, fileStorage)
-
-	router := httpserver.NewRouter(cfg.Server)
-	router.Route("/api/v1", func(r chi.Router) {
-		httpserver.Mount(r, userModule.Handler, teamModule.Handler, projectModule.Handler, boardModule.Handler, ticketModule.Handler, sprintModule.Handler, notificationModule.Handler, calendarModule.Handler, searchModule.Handler, dashboardModule.Handler)
-	})
 
 	server := httpserver.New(cfg.Server, router)
 

@@ -2366,6 +2366,8 @@ paths:
                   status:
                     type: string
                     example: ok
+        '405':
+          description: Método HTTP no permitido para esta ruta
 components:
   securitySchemes:
     bearerAuth:
