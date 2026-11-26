@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "lint": "eslint .",
+    "lint": "eslint . && npm run check:tokens",
+    "check:tokens": "node scripts/check-no-hex.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
     "preview": "vite preview",
