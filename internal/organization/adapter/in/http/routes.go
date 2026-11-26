@@ -27,6 +27,7 @@ func (h *Handler) RegisterRoutes(r chi.Router) {
 			r.Post("/transfer-ownership", h.TransferOwnership)
 
 			r.Get("/members", h.ListMembers)
+			r.Get("/people/{user_id}", h.GetPerson)
 			r.Patch("/members/{user_id}", h.ChangeMemberRole)
 			r.Delete("/members/{user_id}", h.RemoveMember)
 

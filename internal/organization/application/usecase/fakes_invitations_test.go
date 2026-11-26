@@ -11,6 +11,32 @@ import (
 	"github.com/jhonsferg/corelog/internal/organization/domain"
 )
 
+// view builds the member read model of one membership from the fake user table.
+func (r *fakeRepo) view(k memberKey, m *domain.Member) port.MemberView {
+	u := r.users[k.user]
+	return port.MemberView{
+		UserID:      k.user,
+		Name:        u.name,
+		DisplayName: u.name,
+		Email:       u.email,
+		JobTitle:    u.jobTitle,
+		Department:  u.department,
+		HasAvatar:   u.hasAvatar,
+		Role:        m.Role,
+		JoinedAt:    m.JoinedAt,
+	}
+}
+
+// GetMemberProfile returns the profile of a member, or domain.ErrMemberNotFound.
+func (r *fakeRepo) GetMemberProfile(_ context.Context, orgID, userID uuid.UUID) (*port.MemberProfile, error) {
+	k := memberKey{orgID, userID}
+	m, ok := r.members[k]
+	if !ok {
+		return nil, domain.ErrMemberNotFound
+	}
+	return &port.MemberProfile{MemberView: r.view(k, m), Timezone: r.users[userID].timezone}, nil
+}
+
 // ListMemberViews joins memberships with the fake user table, oldest first.
 func (r *fakeRepo) ListMemberViews(_ context.Context, orgID uuid.UUID) ([]port.MemberView, error) {
 	var out []port.MemberView
@@ -18,8 +44,7 @@ func (r *fakeRepo) ListMemberViews(_ context.Context, orgID uuid.UUID) ([]port.M
 		if k.org != orgID {
 			continue
 		}
-		u := r.users[k.user]
-		out = append(out, port.MemberView{UserID: k.user, Name: u.name, Email: u.email, Role: m.Role, JoinedAt: m.JoinedAt})
+		out = append(out, r.view(k, m))
 	}
 	sort.Slice(out, func(i, j int) bool {
 		if !out[i].JoinedAt.Equal(out[j].JoinedAt) {

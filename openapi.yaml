@@ -483,6 +483,13 @@ paths:
           schema:
             type: string
             format: uuid
+        - name: member_id
+          in: query
+          required: false
+          description: Keeps only the teams of the organization that this user belongs to. Same visibility rules as the list without the filter.
+          schema:
+            type: string
+            format: uuid
       responses:
         '200':
           description: Teams of the organization
@@ -501,7 +508,7 @@ paths:
           description: The organization does not exist or is not visible to the user (code team.organization_not_found).
           content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
         '422':
-          description: organization_id is missing or is not a UUID (code team.organization_required).
+          description: organization_id is missing or is not a UUID (code team.organization_required), or member_id is not a UUID (code team.member_id_invalid).
           content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
     post:
       tags: [teams]
@@ -2952,7 +2959,7 @@ paths:
     get:
       tags: [organizations]
       summary: List the members of an organization
-      description: Returns the members with their name and email. Guests may not read the list.
+      description: Returns the members with their name, display name, job title, department, avatar flag and email. Guests may not read the list.
       operationId: listOrganizationMembers
       responses:
         '200':
@@ -2973,6 +2980,35 @@ paths:
           content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
         '404':
           description: The organization does not exist or the caller is not a member (code org.not_found).
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+  /organizations/{org}/people/{user_id}:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationId'
+      - $ref: '#/components/parameters/OrganizationUserId'
+    get:
+      tags: [organizations]
+      summary: Get the profile of a member
+      description: >-
+        Returns the profile of a member of the organization. Any member may read it, except that guests may only read
+        their own profile (code org.forbidden). Users outside the organization and targets that are not members get 404.
+      operationId: getOrganizationPerson
+      responses:
+        '200':
+          description: Profile of the member
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/OrganizationPerson'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: The caller is a guest and the target is not the caller (code org.forbidden).
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+        '404':
+          description: The organization does not exist, the caller is not a member, or the target is not a member (code org.not_found or org.member_not_found).
           content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
   /organizations/{org}/members/{user_id}:
     parameters:
@@ -4223,19 +4259,61 @@ components:
           description: Zona horaria IANA, por ejemplo Europe/Madrid.
     OrganizationMember:
       type: object
-      required: [user_id, name, email, role, joined_at]
+      required: [user_id, name, display_name, email, job_title, department, has_avatar, role, joined_at]
       properties:
         user_id:
           type: string
           format: uuid
         name:
           type: string
+          description: Nombre visible del miembro (el nombre a mostrar si existe, si no el nombre de la cuenta).
+        display_name:
+          type: string
         email:
           type: string
           format: email
+        job_title:
+          type: string
+          description: Cargo; cadena vacía si no está informado.
+        department:
+          type: string
+          description: Departamento; cadena vacía si no está informado.
+        has_avatar:
+          type: boolean
+          description: Indica si la cuenta tiene avatar. La clave de almacenamiento no se expone.
         role:
           type: string
           enum: [owner, admin, member, guest]
+        joined_at:
+          type: string
+          format: date-time
+    OrganizationPerson:
+      type: object
+      required: [user_id, name, display_name, email, job_title, department, timezone, has_avatar, org_role, joined_at]
+      properties:
+        user_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        display_name:
+          type: string
+        email:
+          type: string
+          format: email
+        job_title:
+          type: string
+        department:
+          type: string
+        timezone:
+          type: string
+          description: Zona horaria IANA de la cuenta.
+        has_avatar:
+          type: boolean
+        org_role:
+          type: string
+          enum: [owner, admin, member, guest]
+          description: Rol del miembro en la organización consultada.
         joined_at:
           type: string
           format: date-time

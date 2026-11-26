@@ -46,6 +46,10 @@ type Service interface {
 
 	// ListMembers returns the members with their account data. Any member except guests may read.
 	ListMembers(ctx context.Context, actorID, orgID uuid.UUID) ([]MemberView, error)
+	// GetMemberProfile returns the profile of targetUserID. Any member may read profiles, but a guest may
+	// only read its own (domain.ErrForbidden otherwise). Outsiders get domain.ErrNotFound and a
+	// non-member target gets domain.ErrMemberNotFound.
+	GetMemberProfile(ctx context.Context, actorID, orgID, targetUserID uuid.UUID) (*MemberProfile, error)
 	// ChangeMemberRole sets the role of targetUserID. Owner and admin only. Admins may only switch
 	// members and guests between those two roles; only owners grant or revoke owner or admin.
 	// Changing one's own role returns domain.ErrSelfRoleChange.

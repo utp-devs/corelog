@@ -52,6 +52,9 @@ type Repository interface {
 	// ListMemberViews returns the members of a non-deleted organization joined with their user's name
 	// and email, oldest first. It is the read model for the members screen.
 	ListMemberViews(ctx context.Context, orgID uuid.UUID) ([]MemberView, error)
+	// GetMemberProfile returns the profile of one member of a non-deleted organization. A user who is not
+	// a member returns domain.ErrMemberNotFound.
+	GetMemberProfile(ctx context.Context, orgID, userID uuid.UUID) (*MemberProfile, error)
 	// FindMemberByEmail reports whether a member of the organization has this email (case-insensitive).
 	FindMemberByEmail(ctx context.Context, orgID uuid.UUID, email string) (bool, error)
 
@@ -70,11 +73,22 @@ type Repository interface {
 	UpdateInvitation(ctx context.Context, inv *domain.Invitation) error
 }
 
-// MemberView is a membership with the member's account data, as shown to other members.
+// MemberView is a membership with the member's account data, as shown to other members. HasAvatar reports
+// whether the account has an avatar; the storage key never leaves the adapter.
 type MemberView struct {
-	UserID   uuid.UUID
-	Name     string
-	Email    string
-	Role     domain.Role
-	JoinedAt time.Time
+	UserID      uuid.UUID
+	Name        string
+	DisplayName string
+	Email       string
+	JobTitle    string
+	Department  string
+	HasAvatar   bool
+	Role        domain.Role
+	JoinedAt    time.Time
+}
+
+// MemberProfile is the member view plus the account timezone, shown on the person screen.
+type MemberProfile struct {
+	MemberView
+	Timezone string
 }

@@ -21,7 +21,9 @@ type CreateInput struct {
 type Service interface {
 	Create(ctx context.Context, actorID uuid.UUID, in CreateInput) (*domain.Team, error)
 	Get(ctx context.Context, actorID, id uuid.UUID) (*domain.Team, error)
-	List(ctx context.Context, actorID, organizationID uuid.UUID) ([]*domain.Team, error)
+	// List returns the teams of organizationID visible to actorID. A non-nil memberID keeps only the teams
+	// that user belongs to; uuid.Nil means no member filter.
+	List(ctx context.Context, actorID, organizationID, memberID uuid.UUID) ([]*domain.Team, error)
 	Update(ctx context.Context, actorID, id uuid.UUID, patch domain.TeamPatch) (*domain.Team, error)
 	Delete(ctx context.Context, actorID, id uuid.UUID) error
 	ListMembers(ctx context.Context, actorID, teamID uuid.UUID) ([]*domain.Member, error)

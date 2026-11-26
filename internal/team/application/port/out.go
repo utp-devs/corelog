@@ -16,6 +16,8 @@ type Repository interface {
 	FindByID(ctx context.Context, id uuid.UUID) (*domain.Team, error)
 	FindByName(ctx context.Context, name string) (*domain.Team, error)
 	FindByOrganization(ctx context.Context, organizationID uuid.UUID) ([]*domain.Team, error)
+	// FindByOrganizationAndMember returns the teams of the organization that userID belongs to.
+	FindByOrganizationAndMember(ctx context.Context, organizationID, userID uuid.UUID) ([]*domain.Team, error)
 	Update(ctx context.Context, t *domain.Team) error
 	Delete(ctx context.Context, organizationID, id uuid.UUID) error
 

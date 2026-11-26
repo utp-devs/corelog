@@ -169,6 +169,25 @@ func (h *Handler) ListMembers(w http.ResponseWriter, r *http.Request) {
 	httpresponse.JSON(w, http.StatusOK, toMemberResponses(views))
 }
 
+// GetPerson returns the profile of one member. Guests may read only their own profile.
+func (h *Handler) GetPerson(w http.ResponseWriter, r *http.Request) {
+	actor, orgID, ok := h.actorAndOrg(w, r)
+	if !ok {
+		return
+	}
+	target, err := pathUUID(r, "user_id")
+	if err != nil {
+		fail(w, err)
+		return
+	}
+	profile, err := h.service.GetMemberProfile(r.Context(), actor, orgID, target)
+	if err != nil {
+		fail(w, err)
+		return
+	}
+	httpresponse.JSON(w, http.StatusOK, toMemberProfileResponse(profile))
+}
+
 // ChangeMemberRole sets the role of a member. Owners and admins, within the role rules of the domain.
 func (h *Handler) ChangeMemberRole(w http.ResponseWriter, r *http.Request) {
 	actor, orgID, ok := h.actorAndOrg(w, r)

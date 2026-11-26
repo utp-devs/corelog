@@ -30,6 +30,18 @@ func (s *OrganizationService) ListMembers(ctx context.Context, actorID, orgID uu
 	return s.repo.ListMemberViews(ctx, orgID)
 }
 
+// GetMemberProfile returns the profile of a member. Guests may read only their own profile.
+func (s *OrganizationService) GetMemberProfile(ctx context.Context, actorID, orgID, targetID uuid.UUID) (*port.MemberProfile, error) {
+	actorRole, err := s.RequireRole(ctx, actorID, orgID, domain.RoleGuest)
+	if err != nil {
+		return nil, err
+	}
+	if actorRole == domain.RoleGuest && actorID != targetID {
+		return nil, domain.ErrForbidden
+	}
+	return s.repo.GetMemberProfile(ctx, orgID, targetID)
+}
+
 // ChangeMemberRole changes the role of another member. See port.Service for the rules.
 func (s *OrganizationService) ChangeMemberRole(ctx context.Context, actorID, orgID, targetID uuid.UUID, role domain.Role) error {
 	actorRole, err := s.RequireRole(ctx, actorID, orgID, domain.RoleAdmin)

@@ -100,7 +100,17 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 		orgID = parsed
 	}
 
-	teams, err := h.service.List(r.Context(), actor, orgID)
+	memberID := uuid.Nil
+	if raw := strings.TrimSpace(r.URL.Query().Get("member_id")); raw != "" {
+		parsed, err := uuid.Parse(raw)
+		if err != nil {
+			httpresponse.Error(w, domain.ErrMemberIDInvalid)
+			return
+		}
+		memberID = parsed
+	}
+
+	teams, err := h.service.List(r.Context(), actor, orgID, memberID)
 	if err != nil {
 		httpresponse.Error(w, err)
 		return

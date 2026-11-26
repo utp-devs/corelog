@@ -75,6 +75,17 @@ func (r *memRepo) FindByOrganization(_ context.Context, orgID uuid.UUID) ([]*dom
 	return out, nil
 }
 
+func (r *memRepo) FindByOrganizationAndMember(_ context.Context, orgID, userID uuid.UUID) ([]*domain.Team, error) {
+	var out []*domain.Team
+	for _, t := range r.teams {
+		if _, ok := r.members[t.ID][userID]; ok && t.OrganizationID == orgID {
+			c := *t
+			out = append(out, &c)
+		}
+	}
+	return out, nil
+}
+
 func (r *memRepo) Update(_ context.Context, t *domain.Team) error {
 	cur, ok := r.teams[t.ID]
 	if !ok || cur.OrganizationID != t.OrganizationID {
@@ -354,4 +365,54 @@ func TestTeamHTTP_Handlers(t *testing.T) {
 			t.Errorf("remove status %d", rec.Code)
 		}
 	})
+}
+
+func TestTeamListMemberFilterHTTP(t *testing.T) {
+	f := newFixture(t)
+	ctx := context.Background()
+	mine, _ := domain.NewTeam(domain.NewTeamInput{OrganizationID: f.orgID, Name: "Con miembro"})
+	_ = f.repo.Save(ctx, mine)
+	_ = f.repo.AddMember(ctx, f.orgID, &domain.Member{TeamID: mine.ID, UserID: f.memberID, Role: domain.RoleMember})
+	other, _ := domain.NewTeam(domain.NewTeamInput{OrganizationID: f.orgID, Name: "Sin miembro"})
+	_ = f.repo.Save(ctx, other)
+
+	listIDs := func(t *testing.T, rec *httptest.ResponseRecorder) []string {
+		t.Helper()
+		var body struct {
+			Data []struct {
+				ID string `json:"id"`
+			} `json:"data"`
+		}
+		if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
+			t.Fatalf("decode %q: %v", rec.Body.String(), err)
+		}
+		ids := make([]string, 0, len(body.Data))
+		for _, d := range body.Data {
+			ids = append(ids, d.ID)
+		}
+		return ids
+	}
+
+	rec := f.do(http.MethodGet, "/teams?organization_id="+f.orgID.String()+"&member_id="+f.memberID.String(), "", f.ownerTok)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("filter status %d: %s", rec.Code, rec.Body.String())
+	}
+	if ids := listIDs(t, rec); len(ids) != 1 || ids[0] != mine.ID.String() {
+		t.Fatalf("filtered ids = %v, want [%s]", ids, mine.ID)
+	}
+
+	// A guest of the organization may use the filter; an outsider gets the organization 404.
+	rec = f.do(http.MethodGet, "/teams?organization_id="+f.orgID.String()+"&member_id="+f.memberID.String(), "", f.guestTok)
+	if rec.Code != http.StatusOK || len(listIDs(t, rec)) != 1 {
+		t.Fatalf("guest filter status %d: %s", rec.Code, rec.Body.String())
+	}
+	rec = f.do(http.MethodGet, "/teams?organization_id="+uuid.New().String()+"&member_id="+f.memberID.String(), "", f.ownerTok)
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("foreign org filter status %d", rec.Code)
+	}
+
+	rec = f.do(http.MethodGet, "/teams?organization_id="+f.orgID.String()+"&member_id=nope", "", f.ownerTok)
+	if rec.Code != http.StatusUnprocessableEntity || errorCode(t, rec) != "team.member_id_invalid" {
+		t.Fatalf("invalid member_id: status %d body %s", rec.Code, rec.Body.String())
+	}
 }

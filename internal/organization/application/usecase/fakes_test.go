@@ -33,8 +33,12 @@ type fakeRepo struct {
 
 // fakeUser is the account data the member read model needs.
 type fakeUser struct {
-	name  string
-	email string
+	name       string
+	email      string
+	jobTitle   string
+	department string
+	timezone   string
+	hasAvatar  bool
 }
 
 var _ port.Repository = (*fakeRepo)(nil)

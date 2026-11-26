@@ -65,6 +65,16 @@ func (r *fakeRepo) FindByOrganization(_ context.Context, orgID uuid.UUID) ([]*do
 	return out, nil
 }
 
+func (r *fakeRepo) FindByOrganizationAndMember(_ context.Context, orgID, userID uuid.UUID) ([]*domain.Team, error) {
+	var out []*domain.Team
+	for _, t := range r.teams {
+		if _, ok := r.members[t.ID][userID]; ok && t.OrganizationID == orgID {
+			out = append(out, copyTeam(t))
+		}
+	}
+	return out, nil
+}
+
 func (r *fakeRepo) Update(_ context.Context, t *domain.Team) error {
 	cur, ok := r.teams[t.ID]
 	if !ok || cur.OrganizationID != t.OrganizationID {
@@ -329,15 +339,15 @@ func TestCrossOrgIsolation(t *testing.T) {
 	if _, err := f.svc.AddMember(ctx, f.owner, teamB.ID, f.member, ""); apperror.KindOf(err) != apperror.KindNotFound {
 		t.Errorf("AddMember across orgs: want NotFound, got %v", err)
 	}
-	wantCode(t, errOf(f.svc.List(ctx, f.owner, f.orgB)), "team.organization_not_found")
+	wantCode(t, errOf(f.svc.List(ctx, f.owner, f.orgB, uuid.Nil)), "team.organization_not_found")
 
 	// Lists are scoped to the requested organization.
-	teams, err := f.svc.List(ctx, f.outsider, f.orgB)
+	teams, err := f.svc.List(ctx, f.outsider, f.orgB, uuid.Nil)
 	if err != nil || len(teams) != 1 {
 		t.Fatalf("org B member list: %v / %d", err, len(teams))
 	}
 	f.seedTeam(t, f.orgA, "Equipo A", f.owner)
-	teams, _ = f.svc.List(ctx, f.owner, f.orgA)
+	teams, _ = f.svc.List(ctx, f.owner, f.orgA, uuid.Nil)
 	for _, tm := range teams {
 		if tm.OrganizationID != f.orgA {
 			t.Fatalf("list leaked team of another org")

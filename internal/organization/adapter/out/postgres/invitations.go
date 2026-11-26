@@ -32,13 +32,48 @@ type invitationRow struct {
 	CreatedAt      time.Time     `db:"created_at"`
 }
 
-// memberViewRow is the join of organization_members and users used by ListMemberViews.
+// memberViewRow is the join of organization_members and users used by the member read models.
 type memberViewRow struct {
-	UserID   uuid.UUID `db:"user_id"`
-	Name     string    `db:"name"`
-	Email    string    `db:"email"`
-	Role     string    `db:"role"`
-	JoinedAt time.Time `db:"joined_at"`
+	UserID      uuid.UUID `db:"user_id"`
+	Name        string    `db:"name"`
+	DisplayName string    `db:"display_name"`
+	Email       string    `db:"email"`
+	JobTitle    string    `db:"job_title"`
+	Department  string    `db:"department"`
+	HasAvatar   bool      `db:"has_avatar"`
+	Timezone    string    `db:"timezone"`
+	Role        string    `db:"role"`
+	JoinedAt    time.Time `db:"joined_at"`
+}
+
+// memberViewSelect projects the member read model. The name is the display name when set, falling back to
+// the account name; the avatar storage key is reduced to a boolean.
+const memberViewSelect = `SELECT m.user_id,
+    COALESCE(u.display_name, u.name) AS name,
+    COALESCE(u.display_name, u.name) AS display_name,
+    u.email,
+    COALESCE(u.job_title, '') AS job_title,
+    COALESCE(u.department, '') AS department,
+    (u.avatar_key IS NOT NULL AND u.avatar_key <> '') AS has_avatar,
+    u.timezone,
+    m.role,
+    m.joined_at
+FROM organization_members m
+JOIN organizations o ON o.id = m.organization_id AND o.deleted_at IS NULL
+JOIN users u ON u.id = m.user_id`
+
+func (row memberViewRow) toView() port.MemberView {
+	return port.MemberView{
+		UserID:      row.UserID,
+		Name:        row.Name,
+		DisplayName: row.DisplayName,
+		Email:       row.Email,
+		JobTitle:    row.JobTitle,
+		Department:  row.Department,
+		HasAvatar:   row.HasAvatar,
+		Role:        domain.Role(row.Role),
+		JoinedAt:    row.JoinedAt.UTC(),
+	}
 }
 
 // invitationColumns lists the explicit columns of organization_invitations. The alias i is required.
@@ -173,15 +208,11 @@ func timePtrUTC(t *time.Time) *time.Time {
 	return &at
 }
 
-// ListMemberViews returns the members of a live organization with the account name and email.
+// ListMemberViews returns the members of a live organization with their account data.
 // A single statement joins users, so there is no per-member query.
 func (r *Repository) ListMemberViews(ctx context.Context, orgID uuid.UUID) ([]port.MemberView, error) {
 	var rows []memberViewRow
-	err := sqlx.SelectContext(ctx, r.exec(ctx), &rows, `
-SELECT m.user_id, COALESCE(u.display_name, u.name) AS name, u.email, m.role, m.joined_at
-FROM organization_members m
-JOIN organizations o ON o.id = m.organization_id AND o.deleted_at IS NULL
-JOIN users u ON u.id = m.user_id
+	err := sqlx.SelectContext(ctx, r.exec(ctx), &rows, memberViewSelect+`
 WHERE m.organization_id = $1
 ORDER BY m.joined_at, m.user_id`, orgID)
 	if err != nil {
@@ -189,15 +220,24 @@ ORDER BY m.joined_at, m.user_id`, orgID)
 	}
 	out := make([]port.MemberView, 0, len(rows))
 	for _, row := range rows {
-		out = append(out, port.MemberView{
-			UserID:   row.UserID,
-			Name:     row.Name,
-			Email:    row.Email,
-			Role:     domain.Role(row.Role),
-			JoinedAt: row.JoinedAt.UTC(),
-		})
+		out = append(out, row.toView())
 	}
 	return out, nil
+}
+
+// GetMemberProfile returns the member view and the account timezone of one member. A missing membership
+// or a deleted organization returns domain.ErrMemberNotFound.
+func (r *Repository) GetMemberProfile(ctx context.Context, orgID, userID uuid.UUID) (*port.MemberProfile, error) {
+	var row memberViewRow
+	err := sqlx.GetContext(ctx, r.exec(ctx), &row, memberViewSelect+`
+WHERE m.organization_id = $1 AND m.user_id = $2`, orgID, userID)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, domain.ErrMemberNotFound
+	}
+	if err != nil {
+		return nil, fmt.Errorf("organization: get member profile: %w", err)
+	}
+	return &port.MemberProfile{MemberView: row.toView(), Timezone: row.Timezone}, nil
 }
 
 // FindMemberByEmail reports whether a member of the organization uses this email (case-insensitive).

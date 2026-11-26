@@ -5,6 +5,7 @@ import "github.com/jhonsferg/corelog/internal/platform/apperror"
 var (
 	ErrOrganizationRequired = apperror.WithCode(apperror.KindValidation, "team.organization_required", "organization_id es obligatorio")
 	ErrOrganizationNotFound = apperror.WithCode(apperror.KindNotFound, "team.organization_not_found", "organización no encontrada")
+	ErrMemberIDInvalid      = apperror.WithCode(apperror.KindValidation, "team.member_id_invalid", "member_id debe ser un UUID válido")
 	ErrInvalidName          = apperror.WithCode(apperror.KindValidation, "team.name_required", "el nombre es obligatorio y debe tener entre 1 y 120 caracteres")
 	ErrInvalidDescription   = apperror.WithCode(apperror.KindValidation, "team.description_too_long", "la descripción no puede superar 500 caracteres")
 	ErrInvalidAvatarColor   = apperror.WithCode(apperror.KindValidation, "team.avatar_color_invalid", "el color debe tener formato #RRGGBB")

@@ -38,6 +38,7 @@ type fakeService struct {
 	preview     *port.InvitationPreview
 	member      *domain.Member
 	views       []port.MemberView
+	profile     *port.MemberProfile
 
 	lastUpdate port.UpdateInput
 	lastInvite []port.InviteInput
@@ -81,6 +82,13 @@ func (f *fakeService) RequireRole(_ context.Context, _, _ uuid.UUID, _ domain.Ro
 
 func (f *fakeService) ListMembers(_ context.Context, _, _ uuid.UUID) ([]port.MemberView, error) {
 	return f.views, f.err
+}
+
+func (f *fakeService) GetMemberProfile(_ context.Context, _, _, _ uuid.UUID) (*port.MemberProfile, error) {
+	if f.err != nil {
+		return nil, f.err
+	}
+	return f.profile, nil
 }
 
 func (f *fakeService) ChangeMemberRole(_ context.Context, _, _, _ uuid.UUID, _ domain.Role) error {
@@ -516,6 +524,81 @@ func TestListMembersReturnsSnakeCaseViews(t *testing.T) {
 	}
 	if !strings.Contains(rec.Body.String(), `"joined_at"`) || !strings.Contains(rec.Body.String(), `"user_id"`) {
 		t.Fatalf("shape: %s", rec.Body.String())
+	}
+}
+
+func TestListMembersExposesProfileFieldsWithoutAvatarKey(t *testing.T) {
+	svc := &fakeService{views: []port.MemberView{{
+		UserID: uuid.New(), Name: "Ana", DisplayName: "Ana M", Email: "a@example.test",
+		JobTitle: "Ingeniera", Department: "Plataforma", HasAvatar: true, Role: domain.RoleMember, JoinedAt: httpNow,
+	}}}
+	router := newTestRouter(svc, fakeEmails{}, "")
+	rec := doRequest(t, router, http.MethodGet, "/api/v1/organizations/"+uuid.NewString()+"/members", tokenFor(t, uuid.New()), "")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status %d", rec.Code)
+	}
+	var body struct {
+		Data []map[string]any `json:"data"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil || len(body.Data) != 1 {
+		t.Fatalf("decode %q: %v", rec.Body.String(), err)
+	}
+	m := body.Data[0]
+	if m["display_name"] != "Ana M" || m["job_title"] != "Ingeniera" || m["department"] != "Plataforma" || m["has_avatar"] != true {
+		t.Fatalf("profile fields: %v", m)
+	}
+	if _, ok := m["avatar_key"]; ok {
+		t.Fatal("storage key must not be exposed")
+	}
+}
+
+func TestGetPersonReturnsProfile(t *testing.T) {
+	target := uuid.New()
+	svc := &fakeService{profile: &port.MemberProfile{
+		MemberView: port.MemberView{UserID: target, Name: "Ana", DisplayName: "Ana M", Email: "a@example.test",
+			Role: domain.RoleAdmin, JoinedAt: httpNow},
+		Timezone: "Europe/Madrid",
+	}}
+	router := newTestRouter(svc, fakeEmails{}, "")
+	rec := doRequest(t, router, http.MethodGet, "/api/v1/organizations/"+uuid.NewString()+"/people/"+target.String(), tokenFor(t, uuid.New()), "")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status %d: %s", rec.Code, rec.Body.String())
+	}
+	var body struct {
+		Data map[string]any `json:"data"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	want := []string{"user_id", "name", "display_name", "email", "job_title", "department", "timezone", "has_avatar", "org_role", "joined_at"}
+	for _, k := range want {
+		if _, ok := body.Data[k]; !ok {
+			t.Fatalf("missing %s in %v", k, body.Data)
+		}
+	}
+	if body.Data["org_role"] != "admin" || body.Data["timezone"] != "Europe/Madrid" {
+		t.Fatalf("values: %v", body.Data)
+	}
+}
+
+func TestGetPersonErrors(t *testing.T) {
+	router := newTestRouter(&fakeService{err: domain.ErrForbidden}, fakeEmails{}, "")
+	rec := doRequest(t, router, http.MethodGet, "/api/v1/organizations/"+uuid.NewString()+"/people/"+uuid.NewString(), tokenFor(t, uuid.New()), "")
+	if rec.Code != http.StatusForbidden || errorCode(t, rec) != "org.forbidden" {
+		t.Fatalf("guest: status %d", rec.Code)
+	}
+	router = newTestRouter(&fakeService{err: domain.ErrMemberNotFound}, fakeEmails{}, "")
+	rec = doRequest(t, router, http.MethodGet, "/api/v1/organizations/"+uuid.NewString()+"/people/"+uuid.NewString(), tokenFor(t, uuid.New()), "")
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("non-member target: status %d", rec.Code)
+	}
+	rec = doRequest(t, router, http.MethodGet, "/api/v1/organizations/"+uuid.NewString()+"/people/not-a-uuid", tokenFor(t, uuid.New()), "")
+	if rec.Code != http.StatusUnprocessableEntity {
+		t.Fatalf("invalid id: status %d", rec.Code)
+	}
+	rec = doRequest(t, router, http.MethodGet, "/api/v1/organizations/"+uuid.NewString()+"/people/"+uuid.NewString(), "", "")
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf("no token: status %d", rec.Code)
 	}
 }
 

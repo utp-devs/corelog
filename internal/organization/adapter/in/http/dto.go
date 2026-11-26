@@ -83,11 +83,29 @@ type organizationResponse struct {
 }
 
 type memberResponse struct {
-	UserID   string    `json:"user_id"`
-	Name     string    `json:"name"`
-	Email    string    `json:"email"`
-	Role     string    `json:"role"`
-	JoinedAt time.Time `json:"joined_at"`
+	UserID      string    `json:"user_id"`
+	Name        string    `json:"name"`
+	DisplayName string    `json:"display_name"`
+	Email       string    `json:"email"`
+	JobTitle    string    `json:"job_title"`
+	Department  string    `json:"department"`
+	HasAvatar   bool      `json:"has_avatar"`
+	Role        string    `json:"role"`
+	JoinedAt    time.Time `json:"joined_at"`
+}
+
+// memberProfileResponse is the person screen of one member: the member row plus the account timezone.
+type memberProfileResponse struct {
+	UserID      string    `json:"user_id"`
+	Name        string    `json:"name"`
+	DisplayName string    `json:"display_name"`
+	Email       string    `json:"email"`
+	JobTitle    string    `json:"job_title"`
+	Department  string    `json:"department"`
+	Timezone    string    `json:"timezone"`
+	HasAvatar   bool      `json:"has_avatar"`
+	OrgRole     string    `json:"org_role"`
+	JoinedAt    time.Time `json:"joined_at"`
 }
 
 type membershipResponse struct {
@@ -158,13 +176,7 @@ func toOrganizationResponse(o *domain.Organization, role domain.Role) organizati
 func toMemberResponses(views []port.MemberView) []memberResponse {
 	out := make([]memberResponse, 0, len(views))
 	for _, v := range views {
-		out = append(out, memberResponse{
-			UserID:   v.UserID.String(),
-			Name:     v.Name,
-			Email:    v.Email,
-			Role:     string(v.Role),
-			JoinedAt: v.JoinedAt,
-		})
+		out = append(out, toMemberResponse(v))
 	}
 	return out
 }
@@ -210,5 +222,34 @@ func (p *settingsPatch) toDomain() *domain.SettingsPatch {
 		HoursPerDay:              p.HoursPerDay,
 		DaysPerWeek:              p.DaysPerWeek,
 		Timezone:                 p.Timezone,
+	}
+}
+
+func toMemberResponse(v port.MemberView) memberResponse {
+	return memberResponse{
+		UserID:      v.UserID.String(),
+		Name:        v.Name,
+		DisplayName: v.DisplayName,
+		Email:       v.Email,
+		JobTitle:    v.JobTitle,
+		Department:  v.Department,
+		HasAvatar:   v.HasAvatar,
+		Role:        string(v.Role),
+		JoinedAt:    v.JoinedAt,
+	}
+}
+
+func toMemberProfileResponse(p *port.MemberProfile) memberProfileResponse {
+	return memberProfileResponse{
+		UserID:      p.UserID.String(),
+		Name:        p.Name,
+		DisplayName: p.DisplayName,
+		Email:       p.Email,
+		JobTitle:    p.JobTitle,
+		Department:  p.Department,
+		Timezone:    p.Timezone,
+		HasAvatar:   p.HasAvatar,
+		OrgRole:     string(p.Role),
+		JoinedAt:    p.JoinedAt,
 	}
 }

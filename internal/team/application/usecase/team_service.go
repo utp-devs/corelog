@@ -82,7 +82,7 @@ func (s *TeamService) Get(ctx context.Context, actorID, id uuid.UUID) (*domain.T
 	return team, nil
 }
 
-func (s *TeamService) List(ctx context.Context, actorID, organizationID uuid.UUID) ([]*domain.Team, error) {
+func (s *TeamService) List(ctx context.Context, actorID, organizationID, memberID uuid.UUID) ([]*domain.Team, error) {
 	if organizationID == uuid.Nil {
 		return nil, domain.ErrOrganizationRequired
 	}
@@ -93,7 +93,10 @@ func (s *TeamService) List(ctx context.Context, actorID, organizationID uuid.UUI
 	if !found {
 		return nil, domain.ErrOrganizationNotFound
 	}
-	return s.repo.FindByOrganization(ctx, organizationID)
+	if memberID == uuid.Nil {
+		return s.repo.FindByOrganization(ctx, organizationID)
+	}
+	return s.repo.FindByOrganizationAndMember(ctx, organizationID, memberID)
 }
 
 func (s *TeamService) Update(ctx context.Context, actorID, id uuid.UUID, patch domain.TeamPatch) (*domain.Team, error) {

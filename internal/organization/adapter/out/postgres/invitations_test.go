@@ -2,6 +2,7 @@ package postgres_test
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -228,4 +229,61 @@ func TestInviteAcceptThroughPostgres(t *testing.T) {
 
 	_, err = svc.AcceptInvitation(ctx, invitee, inviteeEmail, res[0].PlainToken)
 	requireAppErr(t, err, "conflict", "org.invitation_used")
+}
+
+// TestMemberProfileColumns checks the member read models: profile columns come from users, the avatar key
+// is reduced to has_avatar, a non-member has no profile, and a deleted organization hides everything.
+func TestMemberProfileColumns(t *testing.T) {
+	db := testdb.New(t)
+	repo := postgres.NewRepository(db)
+	ctx := context.Background()
+	owner := newUser(t, db)
+	org := newOrg(t, repo, owner, "Acme", "acme-profile")
+	if err := repo.AddMember(ctx, &domain.Member{OrganizationID: org.ID, UserID: owner, Role: domain.RoleOwner, JoinedAt: testNow}); err != nil {
+		t.Fatalf("add owner: %v", err)
+	}
+	member := newUser(t, db)
+	if err := repo.AddMember(ctx, &domain.Member{OrganizationID: org.ID, UserID: member, Role: domain.RoleMember, JoinedAt: testNow.Add(time.Hour)}); err != nil {
+		t.Fatalf("add member: %v", err)
+	}
+	if _, err := db.ExecContext(ctx, `UPDATE users SET display_name = 'Mario', job_title = 'Ingeniero',
+		department = 'Operaciones', avatar_key = 'avatars/x.png', timezone = 'Europe/Madrid' WHERE id = $1`, member); err != nil {
+		t.Fatalf("set profile: %v", err)
+	}
+
+	views, err := repo.ListMemberViews(ctx, org.ID)
+	if err != nil {
+		t.Fatalf("list views: %v", err)
+	}
+	var found port.MemberView
+	for _, v := range views {
+		if v.UserID == member {
+			found = v
+		}
+	}
+	if found.Name != "Mario" || found.DisplayName != "Mario" || found.JobTitle != "Ingeniero" ||
+		found.Department != "Operaciones" || !found.HasAvatar {
+		t.Fatalf("member view = %+v", found)
+	}
+	if views[0].JobTitle != "" || views[0].HasAvatar {
+		t.Fatalf("owner without profile data = %+v", views[0])
+	}
+
+	profile, err := repo.GetMemberProfile(ctx, org.ID, member)
+	if err != nil {
+		t.Fatalf("profile: %v", err)
+	}
+	if profile.Timezone != "Europe/Madrid" || profile.Role != domain.RoleMember || profile.Email != member.String()+"@example.test" {
+		t.Fatalf("profile = %+v", profile)
+	}
+
+	if _, err := repo.GetMemberProfile(ctx, org.ID, newUser(t, db)); !errors.Is(err, domain.ErrMemberNotFound) {
+		t.Fatalf("non-member: %v", err)
+	}
+	if err := repo.SoftDelete(ctx, org.ID, testNow.Add(time.Hour)); err != nil {
+		t.Fatalf("soft delete: %v", err)
+	}
+	if _, err := repo.GetMemberProfile(ctx, org.ID, member); !errors.Is(err, domain.ErrMemberNotFound) {
+		t.Fatalf("deleted org profile: %v", err)
+	}
 }

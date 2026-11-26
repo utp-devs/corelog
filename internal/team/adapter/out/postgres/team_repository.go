@@ -111,6 +111,24 @@ func (r *TeamRepository) FindByOrganization(ctx context.Context, organizationID 
 	return teams, nil
 }
 
+// FindByOrganizationAndMember returns the teams of the organization that userID belongs to, by name.
+func (r *TeamRepository) FindByOrganizationAndMember(ctx context.Context, organizationID, userID uuid.UUID) ([]*domain.Team, error) {
+	var rows []teamRow
+	const query = `SELECT ` + teamColumns + ` FROM teams t
+		WHERE t.organization_id = $1
+		  AND EXISTS (SELECT 1 FROM team_members tm WHERE tm.team_id = t.id AND tm.user_id = $2)
+		ORDER BY t.name ASC`
+
+	if err := sqlx.SelectContext(ctx, r.exec(ctx), &rows, query, organizationID, userID); err != nil {
+		return nil, apperror.Wrap(apperror.KindInternal, "failed to list teams of member", err)
+	}
+	teams := make([]*domain.Team, 0, len(rows))
+	for _, row := range rows {
+		teams = append(teams, row.toDomain())
+	}
+	return teams, nil
+}
+
 func (r *TeamRepository) Update(ctx context.Context, t *domain.Team) error {
 	const query = `
 		UPDATE teams

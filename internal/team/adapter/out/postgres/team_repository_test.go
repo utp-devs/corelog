@@ -196,3 +196,42 @@ func TestTeamRepository_MemberLifecycle(t *testing.T) {
 		t.Fatalf("delete: %v", err)
 	}
 }
+
+// TestTeamRepository_FindByOrganizationAndMember checks the member filter: only teams of the organization
+// that include the user, and never teams of another organization.
+func TestTeamRepository_FindByOrganizationAndMember(t *testing.T) {
+	db := testdb.New(t)
+	repo := NewTeamRepository(db)
+	ctx := context.Background()
+	user := insertUser(t, repo, "filter@example.test")
+	other := insertUser(t, repo, "filter-other@example.test")
+	orgA := insertOrg(t, repo, "org-filter-a")
+	orgB := insertOrg(t, repo, "org-filter-b")
+
+	inA := newTeam(t, orgA, other, "Filtro A")
+	notInA := newTeam(t, orgA, other, "Filtro A2")
+	inB := newTeam(t, orgB, user, "Filtro B")
+	for _, tm := range []*domain.Team{inA, notInA, inB} {
+		if err := repo.Save(ctx, tm); err != nil {
+			t.Fatalf("save: %v", err)
+		}
+	}
+	for _, tm := range []*domain.Team{inA, inB} {
+		m, _ := domain.NewMember(tm.ID, user, domain.RoleMaintainer)
+		if err := repo.AddMember(ctx, tm.OrganizationID, m); err != nil {
+			t.Fatalf("add member: %v", err)
+		}
+	}
+
+	list, err := repo.FindByOrganizationAndMember(ctx, orgA, user)
+	if err != nil {
+		t.Fatalf("filter: %v", err)
+	}
+	if len(list) != 1 || list[0].ID != inA.ID {
+		t.Fatalf("filter of org A = %d teams, want only the team of the user", len(list))
+	}
+	list, err = repo.FindByOrganizationAndMember(ctx, orgA, insertUser(t, repo, "nobody@example.test"))
+	if err != nil || len(list) != 0 {
+		t.Fatalf("user without teams: %v / %d", err, len(list))
+	}
+}
