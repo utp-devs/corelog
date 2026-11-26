@@ -20,4 +20,7 @@ var (
 	ErrNotOrganizationMember = apperror.WithCode(apperror.KindNotFound, "organization.not_found", "organizacion no encontrada")
 
 	ErrSessionNotFound = apperror.WithCode(apperror.KindNotFound, "auth.session_not_found", "session not found")
+
+	// ErrSoleOwner blocks closing an account that is the only owner of a live organization.
+	ErrSoleOwner = apperror.WithCode(apperror.KindConflict, "user.sole_owner", "Eres el único propietario de una organización: transfiere la propiedad o elimínala antes de cerrar tu cuenta")
 )

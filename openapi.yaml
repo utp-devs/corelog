@@ -172,7 +172,10 @@ paths:
       summary: Desactivar la cuenta propia (borrado logico)
       description: >-
         Requiere la contrasena actual. La cuenta deja de poder iniciar sesion y todas sus sesiones
-        quedan revocadas. Los datos se conservan para no romper el historial de incidencias.
+        quedan revocadas. Los datos se conservan para no romper el historial de incidencias. La cuenta
+        se retira de las organizaciones, equipos y proyectos, y deja de aparecer en directorios y selectores.
+        Si la cuenta es la unica propietaria de una organizacion (no eliminada), la operacion se rechaza
+        con 409 (user.sole_owner) hasta que transfiera la propiedad o elimine la organizacion.
       operationId: deactivateAccount
       security:
         - bearerAuth: []
@@ -191,6 +194,12 @@ paths:
           description: La cuenta quedo desactivada
         '401':
           description: No autenticado, o la contrasena no coincide
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Eres el unico propietario de una organizacion (user.sole_owner). Transfiere la propiedad o eliminala antes de cerrar la cuenta
           content:
             application/json:
               schema:

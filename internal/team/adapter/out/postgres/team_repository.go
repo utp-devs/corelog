@@ -194,6 +194,7 @@ func (r *TeamRepository) ListMembers(ctx context.Context, organizationID, teamID
 		SELECT tm.team_id, tm.user_id, tm.role, tm.created_at
 		FROM team_members tm
 		JOIN teams t ON t.id = tm.team_id
+		JOIN users u ON u.id = tm.user_id AND u.deactivated_at IS NULL
 		WHERE tm.team_id = $1 AND t.organization_id = $2
 		ORDER BY tm.created_at ASC, tm.user_id ASC`
 

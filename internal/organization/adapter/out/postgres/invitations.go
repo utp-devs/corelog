@@ -60,7 +60,7 @@ const memberViewSelect = `SELECT m.user_id,
     m.joined_at
 FROM organization_members m
 JOIN organizations o ON o.id = m.organization_id AND o.deleted_at IS NULL
-JOIN users u ON u.id = m.user_id`
+JOIN users u ON u.id = m.user_id AND u.deactivated_at IS NULL`
 
 func (row memberViewRow) toView() port.MemberView {
 	return port.MemberView{

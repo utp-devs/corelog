@@ -67,7 +67,7 @@ func buildRouter(cfg *config.Config, db *sqlx.DB, log *slog.Logger) (chi.Router,
 	projectCatalogRepo := projectpostgres.NewCatalogRepository(db)
 	sessionRepo := userpostgres.NewSessionRepository(db)
 
-	userModule := user.NewModule(userRepo, sessionRepo, cfg.Auth.JWTSecret, cfg.Auth.JWTExpiration)
+	userModule := user.NewModule(userRepo, sessionRepo, database.NewTxManager(db), userpostgres.NewMembershipDetacher(db), cfg.Auth.JWTSecret, cfg.Auth.JWTExpiration)
 	orgModule := organization.NewModule(
 		organizationpostgres.NewRepository(db),
 		database.NewTxManager(db),

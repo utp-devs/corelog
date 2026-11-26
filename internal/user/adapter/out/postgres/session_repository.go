@@ -10,6 +10,7 @@ import (
 	"github.com/jmoiron/sqlx"
 
 	"github.com/jhonsferg/corelog/internal/platform/apperror"
+	"github.com/jhonsferg/corelog/internal/platform/database"
 	"github.com/jhonsferg/corelog/internal/user/application/port"
 	"github.com/jhonsferg/corelog/internal/user/domain"
 )
@@ -99,7 +100,7 @@ func (r *SessionRepository) RevokeExcept(ctx context.Context, userID uuid.UUID, 
 	const query = `
 		UPDATE user_sessions SET revoked_at = $3
 		WHERE user_id = $1 AND revoked_at IS NULL AND ($2::uuid IS NULL OR id <> $2::uuid)`
-	if _, err := r.db.ExecContext(ctx, query, userID, keepID, now); err != nil {
+	if _, err := database.Executor(ctx, r.db).ExecContext(ctx, query, userID, keepID, now); err != nil {
 		return apperror.Wrap(apperror.KindInternal, "failed to revoke sessions", err)
 	}
 	return nil

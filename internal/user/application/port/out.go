@@ -42,3 +42,15 @@ type SessionRepository interface {
 	// Validate confirma que la sesion sigue activa y la cuenta no esta desactivada.
 	Validate(ctx context.Context, sessionID, userID uuid.UUID) error
 }
+
+// MembershipDetacher is the narrow out-port that account deactivation needs from the organization, team
+// and project tables. It is implemented by the user postgres adapter, so the user hexagon never imports
+// another hexagon. Both methods run inside the transaction opened by the use case.
+type MembershipDetacher interface {
+	// SoleOwnedOrganizations returns how many live organizations the user owns while being their only
+	// owner. The owned organizations are locked until the transaction ends, so two owners of the same
+	// organization cannot both leave it without an owner.
+	SoleOwnedOrganizations(ctx context.Context, userID uuid.UUID) (int, error)
+	// DetachMemberships removes the user from organization_members, team_members and project_members.
+	DetachMemberships(ctx context.Context, userID uuid.UUID) error
+}

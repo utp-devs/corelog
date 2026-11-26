@@ -9,6 +9,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 
 	"github.com/jhonsferg/corelog/internal/platform/apperror"
+	"github.com/jhonsferg/corelog/internal/platform/database"
 	"github.com/jhonsferg/corelog/internal/user/application/port"
 	"github.com/jhonsferg/corelog/internal/user/domain"
 )
@@ -16,10 +17,21 @@ import (
 type UserService struct {
 	repo     port.Repository
 	sessions port.SessionRepository
+	tx       database.TxManager
+	detacher port.MembershipDetacher
 }
 
 func NewUserService(repo port.Repository, sessions port.SessionRepository) *UserService {
 	return &UserService{repo: repo, sessions: sessions}
+}
+
+// WithAccountClosure enables the cascade of account deactivation: the sole-owner check, the removal of
+// organization, team and project memberships, and the session revocation run in one transaction. Without
+// it the use case only marks the account and revokes its sessions.
+func (s *UserService) WithAccountClosure(tx database.TxManager, detacher port.MembershipDetacher) *UserService {
+	s.tx = tx
+	s.detacher = detacher
+	return s
 }
 
 var _ port.Service = (*UserService)(nil)
@@ -270,10 +282,33 @@ func (s *UserService) DeactivateAccount(ctx context.Context, userID uuid.UUID, p
 		return domain.ErrIncorrectPassword
 	}
 
-	now := time.Now().UTC()
-	user.Deactivate(now)
-	if err := s.repo.Update(ctx, user); err != nil {
-		return err
+	run := func(ctx context.Context) error {
+		if s.detacher != nil {
+			sole, err := s.detacher.SoleOwnedOrganizations(ctx, userID)
+			if err != nil {
+				return err
+			}
+			if sole > 0 {
+				return domain.ErrSoleOwner
+			}
+		}
+
+		now := time.Now().UTC()
+		user.Deactivate(now)
+		// Update re-syncs team_members from user.TeamID, so the detach below must run after it.
+		if err := s.repo.Update(ctx, user); err != nil {
+			return err
+		}
+		if s.detacher != nil {
+			if err := s.detacher.DetachMemberships(ctx, userID); err != nil {
+				return err
+			}
+		}
+		return s.sessions.RevokeExcept(ctx, userID, nil, now)
 	}
-	return s.sessions.RevokeExcept(ctx, userID, nil, now)
+
+	if s.tx == nil {
+		return run(ctx)
+	}
+	return s.tx.InTx(ctx, run)
 }

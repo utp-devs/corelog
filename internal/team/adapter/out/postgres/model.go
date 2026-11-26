@@ -55,7 +55,7 @@ const teamColumns = `id, organization_id, name, description, avatar_color, creat
 // an argument at execution time.
 func teamViewColumns(viewerParam string) string {
 	return `t.id, t.organization_id, t.name, t.description, t.avatar_color, t.created_by, t.created_at, t.updated_at,
-	(SELECT COUNT(*) FROM team_members cm WHERE cm.team_id = t.id) AS member_count,
+	(SELECT COUNT(*) FROM team_members cm JOIN users cu ON cu.id = cm.user_id AND cu.deactivated_at IS NULL WHERE cm.team_id = t.id) AS member_count,
 	(SELECT vm.role FROM team_members vm WHERE vm.team_id = t.id AND vm.user_id = ` + viewerParam + `) AS my_role`
 }
 

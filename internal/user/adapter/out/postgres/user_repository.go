@@ -108,7 +108,7 @@ func (r *UserRepository) Update(ctx context.Context, u *domain.User) error {
 		    updated_at = :updated_at, deactivated_at = :deactivated_at
 		WHERE id = :id`
 
-	result, err := r.db.NamedExecContext(ctx, query, row)
+	result, err := sqlx.NamedExecContext(ctx, database.Executor(ctx, r.db), query, row)
 	if err != nil {
 		return apperror.Wrap(apperror.KindInternal, "failed to update user", err)
 	}
@@ -121,11 +121,12 @@ func (r *UserRepository) Update(ctx context.Context, u *domain.User) error {
 		return domain.ErrUserNotFound
 	}
 
-	if _, err := r.db.ExecContext(ctx, `DELETE FROM team_members WHERE user_id = $1`, u.ID); err != nil {
+	ex := database.Executor(ctx, r.db)
+	if _, err := ex.ExecContext(ctx, `DELETE FROM team_members WHERE user_id = $1`, u.ID); err != nil {
 		return apperror.Wrap(apperror.KindInternal, "failed to sync team membership", err)
 	}
 	if u.TeamID != nil {
-		if _, err := r.db.ExecContext(ctx, `
+		if _, err := ex.ExecContext(ctx, `
 			INSERT INTO team_members (team_id, user_id, role, created_at)
 			VALUES ($1, $2, 'member', $3)
 			ON CONFLICT (team_id, user_id) DO NOTHING`,
@@ -165,7 +166,7 @@ func (r *UserRepository) Count(ctx context.Context) (int, error) {
 }
 
 func (r *UserRepository) Search(ctx context.Context, filter port.SearchFilter) ([]*domain.User, error) {
-	query := fmt.Sprintf(`SELECT %s FROM users WHERE 1 = 1`, selectColumns)
+	query := fmt.Sprintf(`SELECT %s FROM users WHERE deactivated_at IS NULL`, selectColumns)
 	args := []any{}
 
 	if filter.Query != "" {

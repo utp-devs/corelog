@@ -26,6 +26,7 @@ func (d orgDirectory) MemberRole(ctx context.Context, orgID, userID uuid.UUID) (
 		SELECT m.role
 		FROM organization_members m
 		JOIN organizations o ON o.id = m.organization_id AND o.deleted_at IS NULL
+		JOIN users u ON u.id = m.user_id AND u.deactivated_at IS NULL
 		WHERE m.organization_id = $1 AND m.user_id = $2`, orgID, userID)
 	if errors.Is(err, sql.ErrNoRows) {
 		return "", false, nil
