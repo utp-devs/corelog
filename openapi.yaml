@@ -13,6 +13,10 @@ tags:
     description: User identity, profile, and directory search
   - name: teams
     description: Team management and membership
+  - name: organizations
+    description: Organizations, members, roles and ownership
+  - name: invitations
+    description: Invitations to join an organization
   - name: tickets
     description: Incident and ticket management
   - name: health
@@ -252,6 +256,106 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /users/me/avatar:
+    put:
+      tags: [users]
+      summary: Upload the caller's avatar
+      description: >-
+        Replaces the caller's avatar. The multipart field file must be a PNG, JPEG or WebP image of at most 2 MB. The
+        image is converted to a 256x256 PNG before it is stored. The previous avatar file is removed.
+      operationId: uploadAvatar
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: PNG, JPEG or WebP image, at most 2 MB and 4096 px per side.
+      responses:
+        '200':
+          description: Avatar stored
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      avatar_url:
+                        type: string
+                        description: Relative URL of the stored avatar (/users/{id}/avatar).
+                        example: /users/3f2a1c9e-8b4d-4e7a-9c1f-2d6b5a7e8f90/avatar
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '413':
+          description: The file exceeds 2 MB (code user.avatar_too_large).
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+        '422':
+          description: >-
+            The multipart body is malformed, the file part is missing, or the file is not a valid PNG, JPEG or WebP image
+            (code user.avatar_invalid).
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+    delete:
+      tags: [users]
+      summary: Delete the caller's avatar
+      description: Removes the caller's avatar. Idempotent, so it succeeds when the caller has no avatar.
+      operationId: deleteAvatar
+      responses:
+        '204':
+          description: Avatar removed
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /users/{id}/avatar:
+    parameters:
+      - $ref: '#/components/parameters/UserId'
+    get:
+      tags: [users]
+      summary: Get a user's avatar
+      description: >-
+        Returns the PNG avatar of any user. Any authenticated user may read it. The response carries an ETag and a private
+        cache lifetime of one hour; send If-None-Match to receive 304 when the avatar has not changed.
+      operationId: getUserAvatar
+      responses:
+        '200':
+          description: The avatar image
+          headers:
+            ETag:
+              description: Strong validator derived from the stored avatar version.
+              schema: {type: string}
+            Cache-Control:
+              description: Always private, max-age=3600.
+              schema: {type: string, example: 'private, max-age=3600'}
+            X-Content-Type-Options:
+              description: Always nosniff.
+              schema: {type: string, example: nosniff}
+          content:
+            image/png:
+              schema:
+                type: string
+                format: binary
+        '304':
+          description: The client already holds the current avatar (If-None-Match matched the ETag).
+          headers:
+            ETag:
+              schema: {type: string}
+            Cache-Control:
+              schema: {type: string, example: 'private, max-age=3600'}
+            X-Content-Type-Options:
+              schema: {type: string, example: nosniff}
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: The user does not have an avatar, or the stored image is missing (code user.avatar_not_found).
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+        '422':
+          description: The user id is not a UUID (code validation.failed).
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
   /users/search:
     get:
       tags: [users]
@@ -2540,6 +2644,583 @@ paths:
           description: Component deleted
         '404':
           $ref: '#/components/responses/NotFound'
+  /organizations:
+    get:
+      tags: [organizations]
+      summary: List my organizations
+      description: Returns the organizations the caller belongs to, each with the caller's role in it. Organizations the caller can no longer see are omitted.
+      operationId: listOrganizations
+      responses:
+        '200':
+          description: Organizations of the caller
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Organization'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      tags: [organizations]
+      summary: Create an organization
+      description: >-
+        The caller becomes the owner. A user may own at most 5 organizations (code org.limit_reached). When slug is
+        omitted it is derived from the name.
+      operationId: createOrganization
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateOrganizationRequest'
+      responses:
+        '201':
+          description: Organization created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Organization'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          description: The slug is already used (code org.slug_taken) or the caller already owns 5 organizations (code org.limit_reached).
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+        '422':
+          description: >-
+            The body failed validation (codes org.name_required, org.slug_invalid, org.slug_reserved, org.body_invalid
+            or validation.failed).
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+  /organizations/{org}:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationId'
+    get:
+      tags: [organizations]
+      summary: Get an organization
+      description: Returns the organization with the caller's role. Non-members get 404 so that existence is not revealed.
+      operationId: getOrganization
+      responses:
+        '200':
+          description: The organization
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Organization'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: The organization does not exist, is deleted, or the caller is not a member (code org.not_found).
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+        '422':
+          description: The organization id is not a UUID (code org.id_invalid).
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+    patch:
+      tags: [organizations]
+      summary: Update an organization
+      description: >-
+        Partial update of name, description and settings. Omitted fields keep their value; settings are merged field
+        by field. Owners and admins only.
+      operationId: updateOrganization
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateOrganizationRequest'
+      responses:
+        '200':
+          description: The updated organization
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Organization'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: The caller is a member below admin (code org.forbidden).
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+        '404':
+          description: The organization does not exist or the caller is not a member (code org.not_found).
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+        '422':
+          description: >-
+            The body failed validation (codes org.name_required, org.settings_invalid with one detail per field,
+            org.body_invalid, org.id_invalid or validation.failed).
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+    delete:
+      tags: [organizations]
+      summary: Delete an organization
+      description: >-
+        Soft-deletes the organization. Owners only. The body must repeat the organization slug in confirm_slug. The slug
+        stays reserved after deletion.
+      operationId: deleteOrganization
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeleteOrganizationRequest'
+      responses:
+        '204':
+          description: Organization deleted
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: The caller is not an owner (code org.forbidden).
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+        '404':
+          description: The organization does not exist or the caller is not a member (code org.not_found).
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+        '422':
+          description: confirm_slug does not match the slug (code org.confirmation_mismatch), or the body is invalid (org.body_invalid, validation.failed).
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+  /organizations/{org}/logo:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationId'
+    put:
+      tags: [organizations]
+      summary: Upload an organization logo
+      description: >-
+        Replaces the logo of the organization. The multipart field file must be a PNG, JPEG or WebP image of at most 2 MB.
+        The image is converted to a 256x256 PNG before it is stored. The previous logo file is removed. Owners and admins only.
+      operationId: uploadOrganizationLogo
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: PNG, JPEG or WebP image, at most 2 MB and 4096 px per side.
+      responses:
+        '200':
+          description: Logo stored
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      logo_url:
+                        type: string
+                        description: Relative URL of the stored logo (/organizations/{org}/logo).
+                        example: /organizations/3f2a1c9e-8b4d-4e7a-9c1f-2d6b5a7e8f90/logo
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: The caller is a member below admin (code org.forbidden).
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+        '404':
+          description: The organization does not exist or the caller is not a member (code org.not_found).
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+        '413':
+          description: The file exceeds 2 MB (code org.logo_too_large).
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+        '422':
+          description: >-
+            The multipart body is malformed, the file part is missing, or the file is not a valid PNG, JPEG or WebP image
+            (code org.logo_invalid).
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+    get:
+      tags: [organizations]
+      summary: Get an organization logo
+      description: >-
+        Returns the PNG logo of the organization. Any member may read it. The response carries an ETag and a private cache
+        lifetime of one hour; send If-None-Match to receive 304 when the logo has not changed.
+      operationId: getOrganizationLogo
+      responses:
+        '200':
+          description: The logo image
+          headers:
+            ETag:
+              description: Strong validator derived from the stored logo version.
+              schema: {type: string}
+            Cache-Control:
+              description: Always private, max-age=3600.
+              schema: {type: string, example: 'private, max-age=3600'}
+            X-Content-Type-Options:
+              description: Always nosniff.
+              schema: {type: string, example: nosniff}
+          content:
+            image/png:
+              schema:
+                type: string
+                format: binary
+        '304':
+          description: The client already holds the current logo (If-None-Match matched the ETag).
+          headers:
+            ETag:
+              schema: {type: string}
+            Cache-Control:
+              schema: {type: string, example: 'private, max-age=3600'}
+            X-Content-Type-Options:
+              schema: {type: string, example: nosniff}
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: >-
+            The organization does not exist or the caller is not a member (code org.not_found), or the organization has no
+            logo (code org.logo_not_found).
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+        '422':
+          description: The organization id is not a UUID (code org.id_invalid).
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+    delete:
+      tags: [organizations]
+      summary: Delete an organization logo
+      description: Removes the logo of the organization. Idempotent. Owners and admins only.
+      operationId: deleteOrganizationLogo
+      responses:
+        '204':
+          description: Logo removed
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: The caller is a member below admin (code org.forbidden).
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+        '404':
+          description: The organization does not exist or the caller is not a member (code org.not_found).
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+  /organizations/{org}/leave:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationId'
+    post:
+      tags: [organizations]
+      summary: Leave an organization
+      description: The caller removes their own membership. The last owner cannot leave (code org.last_owner).
+      operationId: leaveOrganization
+      responses:
+        '204':
+          description: Membership removed
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: The organization does not exist or the caller is not a member (code org.not_found).
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+        '409':
+          description: The caller is the last owner (code org.last_owner).
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+  /organizations/{org}/transfer-ownership:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationId'
+    post:
+      tags: [organizations]
+      summary: Transfer ownership
+      description: Makes an existing member the owner and demotes the caller to admin. Owners only.
+      operationId: transferOrganizationOwnership
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TransferOwnershipRequest'
+      responses:
+        '204':
+          description: Ownership transferred
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: The caller is not an owner (code org.forbidden).
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+        '404':
+          description: The organization does not exist, or the target is not a member (code org.not_found or org.member_not_found).
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+        '422':
+          description: The target is the caller (code org.transfer_self) or the body is invalid (org.body_invalid, org.id_invalid, validation.failed).
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+  /organizations/{org}/members:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationId'
+    get:
+      tags: [organizations]
+      summary: List the members of an organization
+      description: Returns the members with their name and email. Guests may not read the list.
+      operationId: listOrganizationMembers
+      responses:
+        '200':
+          description: Members of the organization
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/OrganizationMember'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: The caller is a guest (code org.forbidden).
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+        '404':
+          description: The organization does not exist or the caller is not a member (code org.not_found).
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+  /organizations/{org}/members/{user_id}:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationId'
+      - $ref: '#/components/parameters/OrganizationUserId'
+    patch:
+      tags: [organizations]
+      summary: Change the role of a member
+      description: >-
+        Owners may grant or revoke any role. Admins may only switch members and guests between member and guest. Changing
+        one's own role is not allowed (code org.self_role_change).
+      operationId: changeOrganizationMemberRole
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChangeMemberRoleRequest'
+      responses:
+        '204':
+          description: Role changed
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: The caller may not grant or revoke this role (code org.forbidden).
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+        '404':
+          description: The organization does not exist, or the target is not a member (code org.not_found or org.member_not_found).
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+        '422':
+          description: The caller changes their own role (code org.self_role_change) or the role is invalid (org.role_invalid, org.body_invalid, validation.failed).
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+    delete:
+      tags: [organizations]
+      summary: Remove a member
+      description: Owners and admins. Admins may remove members and guests. Removing an owner requires being an owner; the last owner cannot be removed.
+      operationId: removeOrganizationMember
+      responses:
+        '204':
+          description: Member removed
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: The caller may not remove this member (code org.forbidden or org.cannot_remove_owner).
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+        '404':
+          description: The organization does not exist, or the target is not a member (code org.not_found or org.member_not_found).
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+        '409':
+          description: The member is the last owner (code org.last_owner).
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+  /organizations/{org}/invitations:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationId'
+    get:
+      tags: [invitations]
+      summary: List invitations
+      description: >-
+        Owners and admins. status=pending (default) returns invitations still open at this instant; status=all also
+        returns accepted, revoked and expired ones.
+      operationId: listOrganizationInvitations
+      parameters:
+        - name: status
+          in: query
+          required: false
+          description: Which invitations to list.
+          schema:
+            type: string
+            enum: [pending, all]
+            default: pending
+      responses:
+        '200':
+          description: Invitations of the organization, newest first
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Invitation'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: The caller is a member below admin (code org.forbidden).
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+        '404':
+          description: The organization does not exist or the caller is not a member (code org.not_found).
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+        '422':
+          description: The status filter is not pending or all (code org.status_filter_invalid).
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+    post:
+      tags: [invitations]
+      summary: Invite people by email
+      description: >-
+        Owners and admins. Creates one invitation per entry, atomically. The response is the only time the plain token
+        and accept_url are returned; only a hash is stored. Tokens expire after 7 days. Creating a new invitation for an
+        email with a pending one retires the old one.
+      operationId: createOrganizationInvitations
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateInvitationsRequest'
+      responses:
+        '201':
+          description: Invitations created, in the order of the request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/CreateInvitationsResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: The caller is a member below admin, or admins invite a role they may not grant (code org.forbidden).
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+        '404':
+          description: The organization does not exist or the caller is not a member (code org.not_found).
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+        '409':
+          description: The email is already a member (code org.already_member) or a pending invitation already exists for it (code org.invitation_exists).
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+        '422':
+          description: >-
+            The body failed validation (codes org.invitation_batch_invalid, org.invitation_email_invalid, org.role_invalid,
+            org.body_invalid, org.id_invalid or validation.failed).
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+  /organizations/{org}/invitations/{id}:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationId'
+      - $ref: '#/components/parameters/InvitationId'
+    delete:
+      tags: [invitations]
+      summary: Revoke an invitation
+      description: Owners and admins. Revokes a pending invitation; its link stops working at once.
+      operationId: revokeOrganizationInvitation
+      responses:
+        '204':
+          description: Invitation revoked
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: The caller is a member below admin (code org.forbidden).
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+        '404':
+          description: The organization or the invitation does not exist (code org.not_found or org.invitation_not_found).
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+        '409':
+          description: The invitation was already accepted (code org.invitation_used) or revoked (code org.invitation_revoked).
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+  /organizations/{org}/invitations/{id}/resend:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationId'
+      - $ref: '#/components/parameters/InvitationId'
+    post:
+      tags: [invitations]
+      summary: Resend an invitation with a new token
+      description: >-
+        Owners and admins. Replaces the token of a pending invitation and restarts its 7-day expiry. The old link stops
+        working immediately. The new plain token and accept_url are returned once.
+      operationId: resendOrganizationInvitation
+      responses:
+        '200':
+          description: Invitation renewed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/InvitationCreated'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: The caller is a member below admin (code org.forbidden).
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+        '404':
+          description: The organization or the invitation does not exist (code org.not_found or org.invitation_not_found).
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+        '409':
+          description: The invitation was already accepted (code org.invitation_used) or revoked (code org.invitation_revoked).
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+        '422':
+          description: The id is not a UUID (code org.id_invalid).
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+  /invitations/{token}:
+    parameters:
+      - $ref: '#/components/parameters/InvitationToken'
+    get:
+      tags: [invitations]
+      summary: Preview an invitation
+      description: >-
+        Public. Describes the invitation behind the token so the invitee can decide to accept. It has no side effects.
+        Every unknown token gets the same 404, so the answer never reveals whether an account exists.
+      operationId: previewInvitation
+      security: []
+      responses:
+        '200':
+          description: Invitation preview
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/InvitationPreview'
+        '404':
+          description: Unknown token (code org.invitation_not_found).
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+  /invitations/{token}/accept:
+    parameters:
+      - $ref: '#/components/parameters/InvitationToken'
+    post:
+      tags: [invitations]
+      summary: Accept an invitation
+      description: >-
+        The caller's account email must match the invited email (case-insensitive). Adds the caller to the organization
+        with the invited role.
+      operationId: acceptInvitation
+      responses:
+        '201':
+          description: The caller is now a member
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/OrganizationMembership'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: The account email does not match the invitation (code org.email_mismatch).
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+        '404':
+          description: Unknown token (code org.invitation_not_found).
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+        '409':
+          description: >-
+            The invitation was used (org.invitation_used), revoked (org.invitation_revoked), expired (org.invitation_expired)
+            or the caller is already a member (org.already_member).
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
   /health:
     get:
       tags: [health]
@@ -2602,6 +3283,38 @@ components:
       schema:
         type: string
         format: uuid
+    OrganizationId:
+      name: org
+      in: path
+      required: true
+      description: The organization's unique identifier. Non-members get 404.
+      schema:
+        type: string
+        format: uuid
+    OrganizationUserId:
+      name: user_id
+      in: path
+      required: true
+      description: The user's unique identifier (a member of the organization)
+      schema:
+        type: string
+        format: uuid
+    InvitationId:
+      name: id
+      in: path
+      required: true
+      description: The invitation's unique identifier
+      schema:
+        type: string
+        format: uuid
+    InvitationToken:
+      name: token
+      in: path
+      required: true
+      description: The plain invitation token received in the invitation link
+      schema:
+        type: string
+        minLength: 1
   responses:
     Unauthorized:
       description: The request is missing a valid access token
@@ -3445,5 +4158,277 @@ components:
                   message:
                     type: string
                     example: un correo valido es obligatorio
+    Organization:
+      type: object
+      required: [id, slug, name, description, settings, created_at, updated_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        slug:
+          type: string
+          example: acme
+        name:
+          type: string
+          example: Acme
+        description:
+          type: string
+          description: Descripción de la organización (puede estar vacía).
+        settings:
+          $ref: '#/components/schemas/OrganizationSettings'
+        role:
+          type: string
+          enum: [owner, admin, member, guest]
+          description: Rol del usuario autenticado en la organización. Solo aparece en el listado y en los detalles.
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    OrganizationSettings:
+      type: object
+      required: [who_can_create_projects, who_can_create_teams, default_project_visibility, require_2fa, max_upload_bytes, hours_per_day, days_per_week, timezone]
+      properties:
+        who_can_create_projects:
+          type: string
+          enum: [members, admins]
+          description: Quién puede crear proyectos.
+        who_can_create_teams:
+          type: string
+          enum: [members, admins]
+          description: Quién puede crear equipos.
+        default_project_visibility:
+          type: string
+          enum: [open, private]
+          description: Visibilidad por defecto de los proyectos nuevos.
+        require_2fa:
+          type: boolean
+          description: Exigir segundo factor a los miembros.
+        max_upload_bytes:
+          type: integer
+          minimum: 1
+          maximum: 104857600
+          description: Tamaño máximo de adjuntos en bytes (100 MiB como máximo).
+        hours_per_day:
+          type: number
+          exclusiveMinimum: 0
+          maximum: 24
+        days_per_week:
+          type: number
+          exclusiveMinimum: 0
+          maximum: 7
+        timezone:
+          type: string
+          description: Zona horaria IANA, por ejemplo Europe/Madrid.
+    OrganizationMember:
+      type: object
+      required: [user_id, name, email, role, joined_at]
+      properties:
+        user_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        role:
+          type: string
+          enum: [owner, admin, member, guest]
+        joined_at:
+          type: string
+          format: date-time
+    OrganizationMembership:
+      type: object
+      required: [organization_id, user_id, role, joined_at]
+      properties:
+        organization_id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        role:
+          type: string
+          enum: [owner, admin, member, guest]
+          description: Rol con el que se entró (el de la invitación).
+        joined_at:
+          type: string
+          format: date-time
+    Invitation:
+      type: object
+      required: [id, email, role, status, invited_by, expires_at, accepted_at, revoked_at, created_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        role:
+          type: string
+          enum: [owner, admin, member, guest]
+        status:
+          type: string
+          enum: [pending, accepted, revoked, expired]
+          description: Estado calculado en el instante de la respuesta.
+        invited_by:
+          type: string
+          format: uuid
+          nullable: true
+        expires_at:
+          type: string
+          format: date-time
+        accepted_at:
+          type: string
+          format: date-time
+          nullable: true
+        revoked_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+    InvitationCreated:
+      description: Invitación con su token en claro. El token y accept_url solo se muestran en esta respuesta.
+      allOf:
+        - $ref: '#/components/schemas/Invitation'
+        - type: object
+          required: [token, accept_url]
+          properties:
+            token:
+              type: string
+              description: Token en claro (32 bytes aleatorios, codificados). Solo se almacena su hash.
+            accept_url:
+              type: string
+              format: uri
+              description: URL para aceptar la invitación, ${PUBLIC_URL o el origen de la petición}/invite/<token>.
+    InvitationPreview:
+      type: object
+      required: [organization_name, role, email, status, expires_at]
+      properties:
+        organization_name:
+          type: string
+        role:
+          type: string
+          enum: [owner, admin, member, guest]
+        email:
+          type: string
+          format: email
+        status:
+          type: string
+          enum: [pending, accepted, revoked, expired]
+        expires_at:
+          type: string
+          format: date-time
+    CreateOrganizationRequest:
+      type: object
+      required: [name]
+      additionalProperties: false
+      properties:
+        name:
+          type: string
+          maxLength: 120
+          example: Acme
+        slug:
+          type: string
+          description: Identificador en minúsculas, 3 a 40 caracteres. Si se omite se deriva del nombre.
+          example: acme
+        description:
+          type: string
+          maxLength: 500
+    UpdateOrganizationRequest:
+      type: object
+      additionalProperties: false
+      description: Actualización parcial. Los campos omitidos conservan su valor.
+      properties:
+        name:
+          type: string
+          maxLength: 120
+        description:
+          type: string
+          maxLength: 500
+        settings:
+          type: object
+          additionalProperties: false
+          description: Campos de OrganizationSettings a cambiar. Los omitidos conservan su valor.
+          properties:
+            who_can_create_projects:
+              type: string
+              enum: [members, admins]
+            who_can_create_teams:
+              type: string
+              enum: [members, admins]
+            default_project_visibility:
+              type: string
+              enum: [open, private]
+            require_2fa:
+              type: boolean
+            max_upload_bytes:
+              type: integer
+            hours_per_day:
+              type: number
+            days_per_week:
+              type: number
+            timezone:
+              type: string
+    DeleteOrganizationRequest:
+      type: object
+      required: [confirm_slug]
+      additionalProperties: false
+      properties:
+        confirm_slug:
+          type: string
+          description: Debe coincidir exactamente con el identificador de la organización.
+    TransferOwnershipRequest:
+      type: object
+      required: [user_id]
+      additionalProperties: false
+      properties:
+        user_id:
+          type: string
+          format: uuid
+          description: Miembro que pasa a ser propietario. La persona que transfiere pasa a admin.
+    ChangeMemberRoleRequest:
+      type: object
+      required: [role]
+      additionalProperties: false
+      properties:
+        role:
+          type: string
+          enum: [owner, admin, member, guest]
+    InviteItem:
+      type: object
+      required: [email, role]
+      additionalProperties: false
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 255
+        role:
+          type: string
+          enum: [owner, admin, member, guest]
+    CreateInvitationsRequest:
+      type: object
+      required: [invitations]
+      additionalProperties: false
+      properties:
+        invitations:
+          type: array
+          minItems: 1
+          maxItems: 50
+          items:
+            $ref: '#/components/schemas/InviteItem'
+    CreateInvitationsResponse:
+      type: object
+      required: [invitations]
+      properties:
+        invitations:
+          type: array
+          items:
+            $ref: '#/components/schemas/InvitationCreated'
 security:
   - bearerAuth: []

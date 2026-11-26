@@ -29,6 +29,8 @@ var (
 	ErrConfirmationMismatch = apperror.WithCode(apperror.KindValidation, "org.confirmation_mismatch", "El identificador escrito no coincide con el de la organización")
 	// ErrRoleInvalid is returned for unknown organization roles.
 	ErrRoleInvalid = apperror.WithCode(apperror.KindValidation, "org.role_invalid", "El rol indicado no es válido")
+	// ErrLimitReached is returned when the actor already owns MaxOwnedOrganizations organizations.
+	ErrLimitReached = apperror.WithCode(apperror.KindConflict, "org.limit_reached", "Has alcanzado el máximo de 5 organizaciones propias")
 	// ErrTransferSelf is returned when ownership is transferred to the actor.
 	ErrTransferSelf = apperror.WithCode(apperror.KindValidation, "org.transfer_self", "No puedes transferir la propiedad a ti mismo")
 

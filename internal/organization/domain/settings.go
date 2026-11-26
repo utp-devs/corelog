@@ -102,3 +102,46 @@ func validTimezone(name string) bool {
 	_, err := time.LoadLocation(name)
 	return err == nil
 }
+
+// SettingsPatch is a partial change of Settings. A nil field keeps the current value.
+type SettingsPatch struct {
+	WhoCanCreateProjects     *string
+	WhoCanCreateTeams        *string
+	DefaultProjectVisibility *string
+	Require2FA               *bool
+	MaxUploadBytes           *int64
+	HoursPerDay              *float64
+	DaysPerWeek              *float64
+	Timezone                 *string
+}
+
+// Apply returns current with the fields set in the patch replaced. It does not validate; callers pass
+// the result to ApplySettings, which does.
+func (p SettingsPatch) Apply(current Settings) Settings {
+	s := current
+	if p.WhoCanCreateProjects != nil {
+		s.WhoCanCreateProjects = *p.WhoCanCreateProjects
+	}
+	if p.WhoCanCreateTeams != nil {
+		s.WhoCanCreateTeams = *p.WhoCanCreateTeams
+	}
+	if p.DefaultProjectVisibility != nil {
+		s.DefaultProjectVisibility = *p.DefaultProjectVisibility
+	}
+	if p.Require2FA != nil {
+		s.Require2FA = *p.Require2FA
+	}
+	if p.MaxUploadBytes != nil {
+		s.MaxUploadBytes = *p.MaxUploadBytes
+	}
+	if p.HoursPerDay != nil {
+		s.HoursPerDay = *p.HoursPerDay
+	}
+	if p.DaysPerWeek != nil {
+		s.DaysPerWeek = *p.DaysPerWeek
+	}
+	if p.Timezone != nil {
+		s.Timezone = *p.Timezone
+	}
+	return s
+}

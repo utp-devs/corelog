@@ -173,6 +173,17 @@ func (r *fakeRepo) CountOwners(_ context.Context, orgID uuid.UUID) (int, error) 
 	return n, nil
 }
 
+// CountOwnedBy counts the live organizations in which userID has the owner role.
+func (r *fakeRepo) CountOwnedBy(_ context.Context, userID uuid.UUID) (int, error) {
+	n := 0
+	for k, m := range r.members {
+		if k.user == userID && m.Role == domain.RoleOwner && !r.orgs[k.org].IsDeleted() {
+			n++
+		}
+	}
+	return n, nil
+}
+
 // failingPublisher fails every publish, to check that errors inside the transaction surface.
 type failingPublisher struct{ err error }
 
@@ -246,3 +257,12 @@ func eventTypes(pub *events.MemoryPublisher) []string {
 	}
 	return out
 }
+
+// GetByIDForUpdate has no lock to take in memory; the fake runs single-threaded per test.
+func (r *fakeRepo) GetByIDForUpdate(ctx context.Context, id uuid.UUID) (*domain.Organization, error) {
+	return r.GetByID(ctx, id)
+}
+
+// LockOwnerCreation is a no-op: fake tests run sequentially. The real lock is covered by the
+// concurrency test in the postgres adapter.
+func (r *fakeRepo) LockOwnerCreation(context.Context, uuid.UUID) error { return nil }

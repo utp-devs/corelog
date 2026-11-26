@@ -364,6 +364,20 @@ WHERE m.organization_id = $1 AND m.role = $2 AND o.deleted_at IS NULL`, orgID, s
 	return n, nil
 }
 
+// CountOwnedBy counts the non-deleted organizations in which the user has the owner role.
+func (r *Repository) CountOwnedBy(ctx context.Context, userID uuid.UUID) (int, error) {
+	var n int
+	err := sqlx.GetContext(ctx, r.exec(ctx), &n, `
+SELECT COUNT(*)
+FROM organization_members m
+JOIN organizations o ON o.id = m.organization_id
+WHERE m.user_id = $1 AND m.role = $2 AND o.deleted_at IS NULL`, userID, string(domain.RoleOwner))
+	if err != nil {
+		return 0, fmt.Errorf("organization: count owned: %w", err)
+	}
+	return n, nil
+}
+
 // rowsOrNotFound turns a write error or an empty result into the typed error of the operation.
 func rowsOrNotFound(res sql.Result, err error, op string, notFound error) error {
 	if err != nil {
@@ -375,6 +389,31 @@ func rowsOrNotFound(res sql.Result, err error, op string, notFound error) error 
 	}
 	if n == 0 {
 		return notFound
+	}
+	return nil
+}
+
+// GetByIDForUpdate returns a non-deleted organization and locks its row until the enclosing transaction
+// ends. Callers must run it inside a transaction, otherwise the lock is released immediately.
+func (r *Repository) GetByIDForUpdate(ctx context.Context, id uuid.UUID) (*domain.Organization, error) {
+	var row orgRow
+	err := sqlx.GetContext(ctx, r.exec(ctx), &row,
+		`SELECT `+orgColumns+` FROM organizations o WHERE o.id = $1 AND o.deleted_at IS NULL FOR UPDATE`, id)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, domain.ErrNotFound
+	}
+	if err != nil {
+		return nil, fmt.Errorf("organization: get by id for update: %w", err)
+	}
+	return row.toDomain()
+}
+
+// LockOwnerCreation takes a transaction-scoped advisory lock keyed by the user. It is released when the
+// transaction commits or rolls back.
+func (r *Repository) LockOwnerCreation(ctx context.Context, userID uuid.UUID) error {
+	if _, err := r.exec(ctx).ExecContext(ctx,
+		`SELECT pg_advisory_xact_lock(hashtext($1))`, "org_create:"+userID.String()); err != nil {
+		return fmt.Errorf("organization: lock owner creation: %w", err)
 	}
 	return nil
 }

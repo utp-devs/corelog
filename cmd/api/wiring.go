@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -18,8 +19,14 @@ import (
 	dashboardpostgres "github.com/jhonsferg/corelog/internal/dashboard/adapter/out/postgres"
 	"github.com/jhonsferg/corelog/internal/notification"
 	notificationpostgres "github.com/jhonsferg/corelog/internal/notification/adapter/out/postgres"
+	"github.com/jhonsferg/corelog/internal/organization"
+	organizationhttp "github.com/jhonsferg/corelog/internal/organization/adapter/in/http"
+	organizationpostgres "github.com/jhonsferg/corelog/internal/organization/adapter/out/postgres"
+	"github.com/jhonsferg/corelog/internal/platform/clock"
 	"github.com/jhonsferg/corelog/internal/platform/config"
 	"github.com/jhonsferg/corelog/internal/platform/database"
+	"github.com/jhonsferg/corelog/internal/platform/events"
+	"github.com/jhonsferg/corelog/internal/platform/filestorage"
 	"github.com/jhonsferg/corelog/internal/platform/httpserver"
 	"github.com/jhonsferg/corelog/internal/project"
 	projectpostgres "github.com/jhonsferg/corelog/internal/project/adapter/out/postgres"
@@ -38,6 +45,7 @@ import (
 	ticketpostgres "github.com/jhonsferg/corelog/internal/ticket/adapter/out/postgres"
 	ticketport "github.com/jhonsferg/corelog/internal/ticket/application/port"
 	"github.com/jhonsferg/corelog/internal/user"
+	userhttp "github.com/jhonsferg/corelog/internal/user/adapter/in/http"
 	userpostgres "github.com/jhonsferg/corelog/internal/user/adapter/out/postgres"
 	userport "github.com/jhonsferg/corelog/internal/user/application/port"
 )
@@ -60,6 +68,15 @@ func buildRouter(cfg *config.Config, db *sqlx.DB, log *slog.Logger) (chi.Router,
 	sessionRepo := userpostgres.NewSessionRepository(db)
 
 	userModule := user.NewModule(userRepo, sessionRepo, cfg.Auth.JWTSecret, cfg.Auth.JWTExpiration)
+	orgModule := organization.NewModule(
+		organizationpostgres.NewRepository(db),
+		database.NewTxManager(db),
+		events.NewPostgresPublisher(func(ctx context.Context) sqlx.ExtContext { return database.Executor(ctx, db) }),
+		clock.RealClock{},
+		cfg.Auth.JWTSecret,
+		orgUserEmails{db: db},
+		os.Getenv("PUBLIC_URL"),
+	)
 	orgs := newOrgDirectory(db)
 	teamModule := team.NewModule(teamRepo, orgs, database.NewTxManager(db), cfg.Auth.JWTSecret)
 	projectAuthorizer := projectAuthorizerAdapter{authorizer: authusecase.NewAuthorizer(authpostgres.NewRoleLookup(db))}
@@ -91,9 +108,24 @@ func buildRouter(cfg *config.Config, db *sqlx.DB, log *slog.Logger) (chi.Router,
 	boardModule := board.NewModule(boardpostgres.NewBoardRepository(db), projectModule.Service, projectAuthorizer, boardIssueMover{issues: ticketModule.Service}, cfg.Auth.JWTSecret)
 	ticketModule.Handler.WithAttachments(attachmentRepo, fileStorage)
 
+	avatarStorage := filestorage.NewDiskStorage(dirFromEnv("AVATARS_DIR", filepath.Join("data", "avatars")))
+	logoStorage := filestorage.NewDiskStorage(dirFromEnv("LOGOS_DIR", filepath.Join("data", "logos")))
+	avatar := userhttp.NewAvatarHandler(userpostgres.NewAvatarRepository(db), avatarStorage, cfg.Auth.JWTSecret)
+	logo := organizationhttp.NewLogoHandler(organizationpostgres.NewLogoRepository(db), logoStorage, orgRoleChecker{svc: orgModule.Service}, cfg.Auth.JWTSecret)
+
 	router := httpserver.NewRouter(cfg.Server)
 	router.Route("/api/v1", func(r chi.Router) {
-		httpserver.Mount(r, userModule.Handler, teamModule.Handler, projectModule.Handler, boardModule.Handler, ticketModule.Handler, sprintModule.Handler, notificationModule.Handler, calendarModule.Handler, searchModule.Handler, dashboardModule.Handler)
+		avatar.RegisterRoutes(r)
+		logo.RegisterRoutes(r)
+		httpserver.Mount(r, userModule.Handler, teamModule.Handler, projectModule.Handler, boardModule.Handler, ticketModule.Handler, sprintModule.Handler, notificationModule.Handler, calendarModule.Handler, searchModule.Handler, dashboardModule.Handler, orgModule.Handler)
 	})
 	return router, nil
+}
+
+// dirFromEnv returns the directory configured in the environment variable or the fallback.
+func dirFromEnv(name, fallback string) string {
+	if v := os.Getenv(name); v != "" {
+		return v
+	}
+	return fallback
 }

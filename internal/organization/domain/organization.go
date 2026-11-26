@@ -9,6 +9,9 @@ import (
 	"github.com/google/uuid"
 )
 
+// MaxOwnedOrganizations is how many organizations one user may own at the same time (D-5).
+const MaxOwnedOrganizations = 5
+
 // Organization is the top-level tenant. ID stays uuid.Nil until the repository assigns it.
 type Organization struct {
 	ID          uuid.UUID
@@ -69,6 +72,23 @@ func (o *Organization) ApplySettings(s Settings, now time.Time) error {
 		return err
 	}
 	o.Settings = s
+	o.UpdatedAt = now.UTC()
+	return nil
+}
+
+// ApplyDetails changes the name and the description. A nil pointer keeps the current value. The name
+// must not be empty after trimming.
+func (o *Organization) ApplyDetails(name, description *string, now time.Time) error {
+	if name != nil {
+		trimmed := strings.TrimSpace(*name)
+		if trimmed == "" {
+			return ErrNameRequired
+		}
+		o.Name = trimmed
+	}
+	if description != nil {
+		o.Description = strings.TrimSpace(*description)
+	}
 	o.UpdatedAt = now.UTC()
 	return nil
 }

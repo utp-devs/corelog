@@ -120,7 +120,7 @@ func TestUpdateSettingsPermissions(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			_, err := f.svc.UpdateSettings(ctx, tc.actor, f.org, port.UpdateInput{Settings: settings})
+			_, err := f.svc.UpdateOrganization(ctx, tc.actor, f.org, port.UpdateInput{Settings: fullPatch(settings)})
 			if tc.kind == "" {
 				if err != nil {
 					t.Fatalf("unexpected error: %v", err)
@@ -138,7 +138,7 @@ func TestUpdateSettingsValidationAndEvent(t *testing.T) {
 
 	bad := domain.DefaultSettings()
 	bad.HoursPerDay = 30
-	_, err := f.svc.UpdateSettings(ctx, f.owner, f.org, port.UpdateInput{Settings: bad})
+	_, err := f.svc.UpdateOrganization(ctx, f.owner, f.org, port.UpdateInput{Settings: fullPatch(bad)})
 	requireErr(t, err, apperror.KindValidation, "org.settings_invalid")
 	if len(f.pub.Events()) != 0 {
 		t.Fatal("invalid settings must not publish")
@@ -146,7 +146,7 @@ func TestUpdateSettingsValidationAndEvent(t *testing.T) {
 
 	good := domain.DefaultSettings()
 	good.Timezone = "Europe/Madrid"
-	org, err := f.svc.UpdateSettings(ctx, f.admin, f.org, port.UpdateInput{Settings: good})
+	org, err := f.svc.UpdateOrganization(ctx, f.admin, f.org, port.UpdateInput{Settings: fullPatch(good)})
 	if err != nil {
 		t.Fatalf("admin update: %v", err)
 	}

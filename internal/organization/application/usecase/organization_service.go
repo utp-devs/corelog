@@ -45,18 +45,30 @@ func (s *OrganizationService) CreateOrganization(ctx context.Context, actorID uu
 	if err != nil {
 		return nil, err
 	}
-	taken, err := s.repo.GetBySlug(ctx, org.Slug)
-	switch {
-	case err == nil && taken != nil:
-		return nil, domain.ErrSlugTaken
-	case err != nil && apperror.KindOf(err) != apperror.KindNotFound:
-		return nil, err
-	}
 	owner, err := domain.NewMember(uuid.Nil, actorID, domain.RoleOwner, now)
 	if err != nil {
 		return nil, err
 	}
 	err = s.tx.InTx(ctx, func(ctx context.Context) error {
+		// The advisory lock serialises creations by this user until commit, so the count below cannot
+		// be raced past the limit by a concurrent request.
+		if err := s.repo.LockOwnerCreation(ctx, actorID); err != nil {
+			return err
+		}
+		owned, err := s.repo.CountOwnedBy(ctx, actorID)
+		if err != nil {
+			return err
+		}
+		if owned >= domain.MaxOwnedOrganizations {
+			return domain.ErrLimitReached
+		}
+		taken, err := s.repo.GetBySlug(ctx, org.Slug)
+		switch {
+		case err == nil && taken != nil:
+			return domain.ErrSlugTaken
+		case err != nil && apperror.KindOf(err) != apperror.KindNotFound:
+			return err
+		}
 		if err := s.repo.Create(ctx, org); err != nil {
 			return err
 		}
@@ -85,29 +97,42 @@ func (s *OrganizationService) GetOrganization(ctx context.Context, actorID, orgI
 	return s.repo.GetByID(ctx, orgID)
 }
 
-// UpdateSettings replaces the settings. Owners and admins only.
-func (s *OrganizationService) UpdateSettings(ctx context.Context, actorID, orgID uuid.UUID, in port.UpdateInput) (*domain.Organization, error) {
-	if _, err := s.RequireRole(ctx, actorID, orgID, domain.RoleAdmin); err != nil {
-		return nil, err
-	}
-	org, err := s.repo.GetByID(ctx, orgID)
-	if err != nil {
-		return nil, err
-	}
-	if err := org.ApplySettings(in.Settings, s.clock.Now()); err != nil {
-		return nil, err
-	}
-	err = s.tx.InTx(ctx, func(ctx context.Context) error {
+// UpdateOrganization changes name, description and/or settings. Owners and admins only. The role check,
+// the read of the row under lock, the merge and the write run in one transaction, so two concurrent
+// patches each see the other's committed result instead of overwriting it.
+func (s *OrganizationService) UpdateOrganization(ctx context.Context, actorID, orgID uuid.UUID, in port.UpdateInput) (*domain.Organization, error) {
+	var updated *domain.Organization
+	err := s.tx.InTx(ctx, func(ctx context.Context) error {
+		if _, err := s.RequireRole(ctx, actorID, orgID, domain.RoleAdmin); err != nil {
+			return err
+		}
+		org, err := s.repo.GetByIDForUpdate(ctx, orgID)
+		if err != nil {
+			return err
+		}
+		now := s.clock.Now()
+		if err := org.ApplyDetails(in.Name, in.Description, now); err != nil {
+			return err
+		}
+		if in.Settings != nil {
+			if err := org.ApplySettings(in.Settings.Apply(org.Settings), now); err != nil {
+				return err
+			}
+		}
 		if err := s.repo.Update(ctx, org); err != nil {
 			return err
 		}
-		return s.publish(ctx, org.ID, actorID, EventOrgUpdated, "organization", org.ID,
-			map[string]any{"slug": org.Slug})
+		if err := s.publish(ctx, org.ID, actorID, EventOrgUpdated, "organization", org.ID,
+			map[string]any{"slug": org.Slug}); err != nil {
+			return err
+		}
+		updated = org
+		return nil
 	})
 	if err != nil {
 		return nil, err
 	}
-	return org, nil
+	return updated, nil
 }
 
 // ListMine returns the organizations the actor belongs to.

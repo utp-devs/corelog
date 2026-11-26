@@ -16,9 +16,12 @@ type CreateInput struct {
 	Description string
 }
 
-// UpdateInput replaces the organization settings.
+// UpdateInput is a partial change of the organization. A nil field keeps the current value. Settings are
+// merged field by field over the stored settings inside the same transaction that reads them.
 type UpdateInput struct {
-	Settings domain.Settings
+	Name        *string
+	Description *string
+	Settings    *domain.SettingsPatch
 }
 
 // Service is the in-port of the organization hexagon. Every method takes the acting user and checks
@@ -27,7 +30,9 @@ type UpdateInput struct {
 type Service interface {
 	CreateOrganization(ctx context.Context, actorID uuid.UUID, in CreateInput) (*domain.Organization, error)
 	GetOrganization(ctx context.Context, actorID, orgID uuid.UUID) (*domain.Organization, error)
-	UpdateSettings(ctx context.Context, actorID, orgID uuid.UUID, in UpdateInput) (*domain.Organization, error)
+	// UpdateOrganization changes name, description and/or settings. Owners and admins only. The read,
+	// merge and write run in one transaction under a row lock, so concurrent patches never lose changes.
+	UpdateOrganization(ctx context.Context, actorID, orgID uuid.UUID, in UpdateInput) (*domain.Organization, error)
 	ListMine(ctx context.Context, actorID uuid.UUID) ([]Membership, error)
 	// DeleteOrganization soft-deletes the organization. Owner only; confirmSlug must equal the slug.
 	DeleteOrganization(ctx context.Context, actorID, orgID uuid.UUID, confirmSlug string) error

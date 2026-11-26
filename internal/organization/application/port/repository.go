@@ -22,6 +22,13 @@ type Repository interface {
 	Create(ctx context.Context, org *domain.Organization) error
 	// GetByID returns a non-deleted organization. Deleted or missing rows return domain.ErrNotFound.
 	GetByID(ctx context.Context, id uuid.UUID) (*domain.Organization, error)
+	// GetByIDForUpdate is GetByID that also locks the row (SELECT ... FOR UPDATE) until the transaction ends.
+	// It must run inside a transaction.
+	GetByIDForUpdate(ctx context.Context, id uuid.UUID) (*domain.Organization, error)
+	// LockOwnerCreation takes a transaction-scoped advisory lock for the user, so that concurrent organization
+	// creations by the same user are serialised and the owned-organization limit cannot be exceeded. It must
+	// run inside a transaction; the lock is released at commit or rollback.
+	LockOwnerCreation(ctx context.Context, userID uuid.UUID) error
 	// GetBySlug returns the organization with this slug, including soft-deleted ones (the slug stays reserved).
 	GetBySlug(ctx context.Context, slug string) (*domain.Organization, error)
 	// ListByUser returns the non-deleted organizations the user belongs to, with the user's role.
@@ -39,6 +46,9 @@ type Repository interface {
 	RemoveMember(ctx context.Context, orgID, userID uuid.UUID) error
 	// CountOwners returns how many members of the organization have the owner role.
 	CountOwners(ctx context.Context, orgID uuid.UUID) (int, error)
+	// CountOwnedBy returns how many non-deleted organizations the user owns (owner role). It enforces
+	// the per-user organization limit (domain.MaxOwnedOrganizations).
+	CountOwnedBy(ctx context.Context, userID uuid.UUID) (int, error)
 	// ListMemberViews returns the members of a non-deleted organization joined with their user's name
 	// and email, oldest first. It is the read model for the members screen.
 	ListMemberViews(ctx context.Context, orgID uuid.UUID) ([]MemberView, error)
