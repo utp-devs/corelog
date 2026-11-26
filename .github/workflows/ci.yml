@@ -19,6 +19,20 @@ jobs:
   backend:
     name: backend
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: corelog
+          POSTGRES_PASSWORD: corelog
+          POSTGRES_DB: corelog
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U corelog -d corelog"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     steps:
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -47,10 +61,12 @@ jobs:
         run: go vet ./...
 
       - name: Test
+        env:
+          CORELOG_TEST_DATABASE_URL: postgres://corelog:corelog@localhost:5432/corelog?sslmode=disable
         run: go test -coverprofile=coverage.out ./cmd/... ./internal/...
 
       - name: Verify coverage threshold
-        run: go run ./cmd/coverage-check -min 40
+        run: go run ./cmd/coverage-check -min 45
 
       - name: Coverage summary
         run: |
