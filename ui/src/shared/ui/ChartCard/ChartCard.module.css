@@ -1,0 +1,72 @@
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cl-space-3);
+  min-width: 0;
+  padding: var(--cl-space-4);
+  border: 1px solid var(--cl-border);
+  border-radius: var(--cl-radius-lg);
+  background: var(--cl-bg-surface);
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--cl-space-3);
+}
+
+.title {
+  margin: 0;
+  font-size: var(--cl-font-body-strong);
+  font-weight: 600;
+  color: var(--cl-text);
+}
+
+.description {
+  margin: var(--cl-space-1) 0 0;
+  font-size: var(--cl-font-small);
+  color: var(--cl-text-subtle);
+}
+
+.body {
+  height: 240px;
+  min-width: 0;
+}
+
+.empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 120px;
+  margin: 0;
+  font-size: var(--cl-font-body);
+  color: var(--cl-text-subtle);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--cl-font-small);
+}
+
+.table th,
+.table td {
+  padding: var(--cl-space-1) var(--cl-space-2);
+  border-bottom: 1px solid var(--cl-border);
+  text-align: left;
+}
+
+.table td {
+  text-align: right;
+}
+
+/* Last in the file so it wins over .table when the data is hidden. */
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}

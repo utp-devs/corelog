@@ -1,0 +1,39 @@
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--cl-space-2);
+  min-width: 0;
+  color: var(--cl-text);
+  text-decoration: none;
+}
+
+a.chip:hover .name {
+  text-decoration: underline;
+}
+
+a.chip:focus-visible {
+  outline: none;
+  border-radius: var(--cl-radius-sm);
+  box-shadow: var(--cl-shadow-focus);
+}
+
+.text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.name {
+  overflow: hidden;
+  font-size: var(--cl-font-body);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.role {
+  overflow: hidden;
+  font-size: var(--cl-font-small);
+  color: var(--cl-text-subtle);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

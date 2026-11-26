@@ -1,0 +1,14 @@
+.svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  color: var(--cl-text-subtle);
+}
+
+.accent {
+  color: var(--cl-brand);
+}
+
+.muted {
+  color: var(--cl-border-strong);
+}

@@ -1,0 +1,73 @@
+import type { ReactElement } from 'react'
+
+import styles from './EmptyIllustration.module.css'
+
+export type EmptyIllustrationKind = 'projects' | 'issues' | 'search' | 'notes' | 'generic'
+
+type EmptyIllustrationProps = {
+  kind: EmptyIllustrationKind
+  'data-testid'?: string
+}
+
+/* Inline SVG drawings. Colors come from currentColor, set by the class of each group (tokens). */
+const drawings: Record<EmptyIllustrationKind, ReactElement> = {
+  projects: (
+    <>
+      <path d="M18 26h30l6 8h48v44H18z" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" className={styles.accent} />
+      <path d="M18 38h84" stroke="currentColor" strokeWidth="2" className={styles.accent} />
+      <rect x="34" y="52" width="52" height="6" rx="3" fill="currentColor" className={styles.muted} />
+      <rect x="34" y="62" width="34" height="6" rx="3" fill="currentColor" className={styles.muted} />
+    </>
+  ),
+  issues: (
+    <>
+      <rect x="22" y="16" width="76" height="60" rx="6" fill="none" stroke="currentColor" strokeWidth="2" className={styles.accent} />
+      <rect x="32" y="28" width="10" height="10" rx="2" fill="none" stroke="currentColor" strokeWidth="2" className={styles.accent} />
+      <path d="M34 33l3 3 5-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={styles.accent} />
+      <rect x="50" y="31" width="38" height="4" rx="2" fill="currentColor" className={styles.muted} />
+      <rect x="32" y="48" width="56" height="4" rx="2" fill="currentColor" className={styles.muted} />
+      <rect x="32" y="60" width="44" height="4" rx="2" fill="currentColor" className={styles.muted} />
+    </>
+  ),
+  search: (
+    <>
+      <circle cx="52" cy="42" r="22" fill="currentColor" fillOpacity={0.1} stroke="currentColor" strokeWidth="2" className={styles.accent} />
+      <path d="M68 58l20 20" stroke="currentColor" strokeWidth="6" strokeLinecap="round" className={styles.accent} />
+      <rect x="40" y="36" width="24" height="4" rx="2" fill="currentColor" className={styles.muted} />
+      <rect x="40" y="44" width="16" height="4" rx="2" fill="currentColor" className={styles.muted} />
+    </>
+  ),
+  notes: (
+    <>
+      <rect x="30" y="18" width="60" height="68" rx="6" fill="none" stroke="currentColor" strokeWidth="2" className={styles.accent} />
+      <path d="M46 14v8M74 14v8" stroke="currentColor" strokeWidth="3" strokeLinecap="round" className={styles.accent} />
+      <rect x="40" y="36" width="40" height="4" rx="2" fill="currentColor" className={styles.muted} />
+      <rect x="40" y="46" width="40" height="4" rx="2" fill="currentColor" className={styles.muted} />
+      <rect x="40" y="56" width="26" height="4" rx="2" fill="currentColor" className={styles.muted} />
+    </>
+  ),
+  generic: (
+    <>
+      <circle cx="60" cy="48" r="30" fill="none" stroke="currentColor" strokeWidth="2" strokeDasharray="4 6" className={styles.muted} />
+      <path d="M60 30l4 14 14 4-14 4-4 14-4-14-14-4 14-4z" fill="currentColor" className={styles.accent} />
+    </>
+  ),
+}
+
+/** Ilustración pequeña para estados vacíos. Es decorativa: el texto del estado va al lado. */
+export function EmptyIllustration({ kind, 'data-testid': testId }: EmptyIllustrationProps) {
+  return (
+    <svg
+      viewBox="0 0 120 96"
+      width={120}
+      height={96}
+      aria-hidden="true"
+      focusable="false"
+      data-kind={kind}
+      data-testid={testId}
+      className={styles.svg}
+    >
+      {drawings[kind]}
+    </svg>
+  )
+}
