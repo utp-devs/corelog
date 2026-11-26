@@ -28,6 +28,16 @@
   gap: var(--cl-space-4);
 }
 
+/* fill: the content column stretches to the viewport height below the top bar. */
+.root[data-fill='true'] .content {
+  flex: 1 1 auto;
+  min-height: calc(100dvh - var(--cl-topbar-h) - 2 * var(--cl-gutter));
+}
+
+.root[data-fill='true'][data-has-sidebar='true'] {
+  align-items: stretch;
+}
+
 .sidebar {
   box-sizing: border-box;
   width: 320px;

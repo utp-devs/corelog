@@ -26,3 +26,11 @@ describe('UserChip', () => {
     expect(screen.getByText('<script>alert(1)</script>')).toBeInTheDocument()
   })
 })
+
+describe('UserChip text wrapping', () => {
+  it('exposes the full name and role as title so truncated text keeps a tooltip', () => {
+    render(<UserChip user={user} />)
+    expect(screen.getByText('Ana Pérez')).toHaveAttribute('title', 'Ana Pérez')
+    expect(screen.getByText('Administradora')).toHaveAttribute('title', 'Administradora')
+  })
+})

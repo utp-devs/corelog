@@ -152,6 +152,39 @@ describe('AppLayout', () => {
     expect(screen.getByRole('link', { name: 'Tablero' })).toBeInTheDocument()
   })
 
+  it('moves the primary menus into the drawer at 820 px and keeps the sidebar', () => {
+    setViewport(820)
+    renderShell('/projects/p1/board')
+    expect(screen.queryByRole('navigation', { name: 'Principal' })).not.toBeInTheDocument()
+    expect(screen.getByRole('complementary', { name: 'Proyecto' })).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Abrir menú de navegación' }))
+    const drawer = screen.getByRole('navigation', { name: 'Navegación móvil' })
+    expect(within(drawer).getByRole('link', { name: 'Proyectos' })).toBeInTheDocument()
+    expect(within(drawer).getByRole('link', { name: 'Equipos' })).toBeInTheDocument()
+    expect(within(drawer).queryByText('Organización')).not.toBeInTheDocument()
+  })
+
+  it('puts the organization switcher inside the drawer on phones, not in the top bar', () => {
+    setViewport(390)
+    render(
+      <ThemeContext.Provider value={themeValue()}>
+        <MemoryRouter initialEntries={['/issues']}>
+          <Routes>
+            <Route element={<AppLayout org={{ id: 'o1', name: 'Acme', slug: 'acme' }} orgSwitcherSlot={<span>Switcher real</span>} />}>
+              <Route path="/issues" element={<p>Lista</p>} />
+            </Route>
+          </Routes>
+        </MemoryRouter>
+      </ThemeContext.Provider>,
+    )
+    expect(screen.queryByText('Switcher real')).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Abrir menú de navegación' }))
+    const drawer = screen.getByRole('navigation', { name: 'Navegación móvil' })
+    expect(within(drawer).getByText('Switcher real')).toBeInTheDocument()
+    expect(within(drawer).getByRole('link', { name: 'Equipos' })).toBeInTheDocument()
+  })
+
   it('opens the shortcuts dialog from the help menu', () => {
     renderShell('/issues')
     fireEvent.click(screen.getByRole('button', { name: 'Ayuda' }))

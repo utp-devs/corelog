@@ -24,8 +24,14 @@ export function TeamChip({ id, name, memberCount, href, 'data-testid': testId }:
         {initialsOf(name)}
       </span>
       <span className={styles.text}>
-        <span className={styles.name}>{name}</span>
-        {memberCount !== undefined && <span className={styles.meta}>{memberText(memberCount)}</span>}
+        <span className={styles.name} title={name}>
+          {name}
+        </span>
+        {memberCount !== undefined && (
+          <span className={styles.meta} title={memberText(memberCount)}>
+            {memberText(memberCount)}
+          </span>
+        )}
       </span>
     </>
   )

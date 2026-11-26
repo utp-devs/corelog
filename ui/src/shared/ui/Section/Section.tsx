@@ -15,6 +15,8 @@ export type SectionProps = {
   padded?: boolean
   /** No body padding at all, for tables and lists that draw their own edges. */
   flush?: boolean
+  /** Grows to fill the remaining height of a flex column (PageContainer fill); the body stretches with it. Default false. */
+  fill?: boolean
   /** Heading level of the title (default 2). */
   headingLevel?: SectionHeadingLevel
   /** Accessible name when there is no visible title. */
@@ -30,6 +32,7 @@ export function Section({
   footer,
   padded = true,
   flush = false,
+  fill = false,
   headingLevel = 2,
   ariaLabel,
   children,
@@ -42,6 +45,7 @@ export function Section({
   return (
     <section
       className={styles.section}
+      data-fill={fill ? 'true' : 'false'}
       aria-labelledby={title !== undefined ? titleId : undefined}
       aria-label={title === undefined ? ariaLabel : undefined}
     >
@@ -58,7 +62,11 @@ export function Section({
           {actions !== undefined && <div className={styles.actions}>{actions}</div>}
         </header>
       )}
-      <div className={bodyPadded ? styles.body : styles.bodyFlush}>{children}</div>
+      <div
+        className={[bodyPadded ? styles.body : styles.bodyFlush, fill ? styles.grow : ''].filter(Boolean).join(' ')}
+      >
+        {children}
+      </div>
       {footer !== undefined && <footer className={styles.footer}>{footer}</footer>}
     </section>
   )

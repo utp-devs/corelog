@@ -49,6 +49,17 @@
   gap: var(--cl-space-3);
 }
 
+.drawerOrg {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cl-space-2);
+  min-width: 0;
+}
+
+.drawerOrg > * {
+  max-width: 100%;
+}
+
 .drawerList {
   display: grid;
   gap: var(--cl-space-1);

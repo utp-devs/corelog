@@ -12,7 +12,7 @@ export function ProtectedRoute() {
   if (!sessionChecked) {
     return (
       <div className={styles.loading} role="status" aria-live="polite">
-        <Spin size="large" tip="Comprobando tu sesión..." />
+        <Spin size="large" description="Comprobando tu sesión..." />
       </div>
     )
   }

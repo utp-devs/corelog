@@ -15,6 +15,12 @@ export type PageContainerProps = {
   ready?: boolean
   /** Sets data-page for layout audits and e2e selectors. */
   pageName?: string
+  /**
+   * Fill the viewport below the top bar: the content column grows to at least
+   * calc(100dvh - --cl-topbar-h - 2 * --cl-gutter), so a child with flex-grow (Section fill, DataTable fill)
+   * extends to the bottom instead of leaving an empty band. Default false.
+   */
+  fill?: boolean
   children: ReactNode
 }
 
@@ -22,7 +28,14 @@ export type PageContainerProps = {
  * Wraps the content of a page: max-width per template, gutters, bottom padding and an optional
  * right panel. The shell owns the <main> landmark, so this renders a div.
  */
-export function PageContainer({ variant, sidebar, ready, pageName, children }: PageContainerProps) {
+export function PageContainer({
+  variant,
+  sidebar,
+  ready,
+  pageName,
+  fill = false,
+  children,
+}: PageContainerProps) {
   const stacked = useMediaQuery('(max-width: 991.98px)')
   const hasSidebar = sidebar !== undefined && sidebar !== null && sidebar !== false
 
@@ -32,6 +45,7 @@ export function PageContainer({ variant, sidebar, ready, pageName, children }: P
       data-variant={variant}
       data-ready={ready ? 'true' : 'false'}
       data-page={pageName}
+      data-fill={fill ? 'true' : 'false'}
       data-has-sidebar={hasSidebar ? 'true' : 'false'}
       data-stacked={hasSidebar && stacked ? 'true' : 'false'}
     >

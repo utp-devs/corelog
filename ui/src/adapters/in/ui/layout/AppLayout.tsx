@@ -19,7 +19,7 @@ import { ShortcutsDialog } from '@/shared/ui/ShortcutsDialog'
 import { CommandPaletteHost } from './CommandPaletteHost'
 import { ContextSidebar, SidebarItemIcon } from './ContextSidebar'
 import styles from './AppLayout.module.css'
-import { MOBILE_QUERY, TopBar } from './TopBar'
+import { COLLAPSED_NAV_QUERY, MOBILE_QUERY, TopBar } from './TopBar'
 
 export type AppLayoutProps = {
   org?: OrgInfo | null
@@ -38,6 +38,8 @@ export function AppLayout({ org = null, orgSwitcherSlot }: AppLayoutProps) {
   const location = useLocation()
   const user = useAuthStore((s) => s.user)
   const isMobile = useMediaQuery(MOBILE_QUERY)
+  // Below 1024 px the primary menus live in the drawer; on phones the drawer also carries the organization switcher.
+  const isCollapsed = useMediaQuery(COLLAPSED_NAV_QUERY)
   const [helpOpen, setHelpOpen] = useState(false)
   const [drawerOpen, setDrawerOpen] = useState(false)
 
@@ -73,7 +75,7 @@ export function AppLayout({ org = null, orgSwitcherSlot }: AppLayoutProps) {
       <TopBar
         org={org}
         orgSwitcherSlot={orgSwitcherSlot}
-        onOpenMenu={isMobile ? () => setDrawerOpen(true) : undefined}
+        onOpenMenu={isCollapsed ? () => setDrawerOpen(true) : undefined}
         onOpenShortcuts={() => setHelpOpen(true)}
       />
 
@@ -91,7 +93,7 @@ export function AppLayout({ org = null, orgSwitcherSlot }: AppLayoutProps) {
         </main>
       </div>
 
-      {isMobile && (
+      {isCollapsed && (
         <Drawer
           open={drawerOpen}
           onClose={() => setDrawerOpen(false)}
@@ -100,6 +102,12 @@ export function AppLayout({ org = null, orgSwitcherSlot }: AppLayoutProps) {
           title="Navegación"
         >
           <nav aria-label="Navegación móvil" className={styles.drawerNav}>
+            {isMobile && orgSwitcherSlot && (
+              <section className={styles.drawerOrg} aria-label="Organización">
+                <p className={styles.drawerTitle}>Organización</p>
+                {orgSwitcherSlot}
+              </section>
+            )}
             <ul className={styles.drawerList}>
               {topMenus.map((menu) => (
                 <li key={menu.key}>

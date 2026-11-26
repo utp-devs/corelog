@@ -3,16 +3,10 @@
   max-width: 100%;
 }
 
-/* El buscador se compacta en pantallas medias y pequeñas para que la cabecera no desborde. */
-@media (max-width: 991px) {
+/* Wide desktops get the full field; 1280-1439 px uses a narrower one so the bar keeps its room. */
+@media (max-width: 1439.98px) {
   .field {
-    width: 170px;
-  }
-}
-
-@media (max-width: 640px) {
-  .field {
-    width: 120px;
+    width: 200px;
   }
 }
 

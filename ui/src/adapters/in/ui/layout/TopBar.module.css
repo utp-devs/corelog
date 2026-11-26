@@ -4,6 +4,7 @@
   gap: var(--cl-space-2);
   height: var(--cl-topbar-h);
   flex: none;
+  min-width: 0;
   padding: 0 var(--cl-space-4);
   border-bottom: 1px solid var(--cl-border);
   background: var(--cl-bg-surface);
@@ -29,11 +30,17 @@
   height: auto;
 }
 
+.brandIcon {
+  display: block;
+  width: 32px;
+  height: 32px;
+}
+
 .nav {
   display: flex;
   align-items: center;
   gap: var(--cl-space-1);
-  min-width: 0;
+  flex: none;
 }
 
 .navButton {
@@ -59,7 +66,7 @@
 .org {
   display: inline-flex;
   align-items: center;
-  max-width: 180px;
+  max-width: 220px;
   flex: none;
   overflow: hidden;
   color: var(--cl-text-subtle);
@@ -71,8 +78,22 @@
   white-space: nowrap;
 }
 
-@media (max-width: 991px) {
+/* 1024-1279 px: the full menu row needs the room, so the organization name is shorter. */
+@media (max-width: 1279.98px) {
   .org {
-    display: none;
+    max-width: 160px;
+  }
+}
+
+/* Phones: tap targets of 44 px, tighter gutters, every control inside the bar. */
+@media (max-width: 767.98px) {
+  .bar {
+    gap: var(--cl-space-1);
+    padding: 0 var(--cl-space-3);
+  }
+
+  .bar button {
+    min-width: 44px;
+    min-height: 44px;
   }
 }

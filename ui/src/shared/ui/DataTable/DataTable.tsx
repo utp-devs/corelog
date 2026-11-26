@@ -64,6 +64,11 @@ export type DataTableProps<T extends object> = {
   rowActions?: (row: T) => RowMenuItem[]
   /** Por debajo de 768 px sustituye la tabla por una lista de tarjetas. */
   mobileRender?: (row: T) => ReactNode
+  /**
+   * Ocupa la altura restante de su contenedor flex (Section fill). La tabla o el estado vacío
+   * quedan arriba y el resto de la tarjeta se mantiene como superficie, sin bandas vacías sueltas.
+   */
+  fill?: boolean
 }
 
 const PAGE_SIZE_OPTIONS = [20, 50, 100]
@@ -134,6 +139,7 @@ export function DataTable<T extends object>({
   onRowOpen,
   rowActions,
   mobileRender,
+  fill = false,
 }: DataTableProps<T>) {
   const keyOf = (row: T): string =>
     typeof rowKey === 'function' ? rowKey(row) : String((row as Record<string, unknown>)[rowKey])
@@ -153,12 +159,15 @@ export function DataTable<T extends object>({
   const showSkeleton = useDelayedFlag(loading, SKELETON_DELAY_MS)
   const skeletonRowCount = Math.min(pagination?.pageSize ?? SKELETON_DEFAULT_ROWS, SKELETON_MAX_ROWS)
 
-  const visibleColumns = columns.filter((column) => {
-    if (primaryOnly) {
-      return column.mobilePrimary === true
-    }
-    return !(column.hideable && hiddenKeys.includes(column.key))
-  })
+  const visibleColumns = columns
+    .filter((column) => {
+      if (primaryOnly) {
+        return column.mobilePrimary === true
+      }
+      return !(column.hideable && hiddenKeys.includes(column.key))
+    })
+    // Truncated cells always expose the full value as title (docs/09-design-system.md section 4, rule 8).
+    .map((column) => (column.ellipsis === true ? { ...column, ellipsis: { showTitle: true } } : column))
 
   const selectedKeys = selection?.selectedKeys ?? []
 
@@ -295,12 +304,13 @@ export function DataTable<T extends object>({
     styles.root,
     density === 'compact' ? styles.compact : styles.comfortable,
     onRowOpen ? styles.clickable : '',
+    fill ? styles.fill : '',
   ]
     .filter(Boolean)
     .join(' ')
 
   return (
-    <div className={rootClassName} aria-busy={loading || undefined}>
+    <div className={rootClassName} aria-busy={loading || undefined} data-fill={fill ? 'true' : 'false'}>
       <div className={styles.toolbar}>
         {selection && (
           <BulkBar
@@ -351,7 +361,7 @@ export function DataTable<T extends object>({
         )}
       </div>
 
-      {body}
+      {fill ? <div className={styles.area}>{body}</div> : body}
 
       {pagination && (
         <div className={styles.footer}>

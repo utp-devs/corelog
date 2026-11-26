@@ -15,9 +15,28 @@
   min-width: 0;
 }
 
+.label {
+  overflow-wrap: anywhere;
+}
+
 .row[data-variant='inline'] .labelColumn {
   flex: 0 0 120px;
+  max-width: 40%;
   padding-top: var(--cl-space-1);
+}
+
+/* Narrow screens: the label goes above the control instead of squeezing it. */
+@media (max-width: 767.98px) {
+  .row[data-variant='inline'] {
+    flex-direction: column;
+    gap: var(--cl-space-1);
+  }
+
+  .row[data-variant='inline'] .labelColumn {
+    flex: 0 0 auto;
+    max-width: 100%;
+    padding-top: 0;
+  }
 }
 
 .controlColumn {

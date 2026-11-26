@@ -9,6 +9,11 @@
   overflow: hidden;
 }
 
+/* fill: the card grows with its flex parent and the body takes the remaining height. */
+.section[data-fill='true'] {
+  flex: 1 1 auto;
+}
+
 .header {
   display: flex;
   flex-wrap: wrap;
@@ -65,4 +70,16 @@
   padding: var(--cl-space-3) var(--cl-space-4);
   border-top: 1px solid var(--cl-border);
   background: var(--cl-bg-sunken);
+}
+
+.grow {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* Children of a filled body may shrink instead of overflowing the card. */
+.grow > * {
+  min-width: 0;
 }

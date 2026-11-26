@@ -92,4 +92,19 @@ describe('PageContainer', () => {
     )
     expect(container.firstElementChild).toHaveAttribute('data-stacked', 'true')
   })
+
+  it('is not filled by default', () => {
+    const { container } = render(<PageContainer variant="wide">x</PageContainer>)
+    expect(container.firstElementChild).toHaveAttribute('data-fill', 'false')
+  })
+
+  it('marks the page as filled with fill, so the content column grows to the viewport', () => {
+    const { container } = render(
+      <PageContainer variant="wide" fill>
+        <section>x</section>
+      </PageContainer>,
+    )
+    expect(container.firstElementChild).toHaveAttribute('data-fill', 'true')
+    expect(container.querySelector('section')?.parentElement?.className).toContain('content')
+  })
 })

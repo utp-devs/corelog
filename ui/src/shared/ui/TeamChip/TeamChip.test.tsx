@@ -28,3 +28,11 @@ describe('TeamChip', () => {
     expect(container.querySelector('img')).toBeNull()
   })
 })
+
+describe('TeamChip text wrapping', () => {
+  it('exposes the full team name and member count as title so truncated text keeps a tooltip', () => {
+    render(<TeamChip id="t-1" name="Plataforma de datos internos" memberCount={3} />)
+    expect(screen.getByText('Plataforma de datos internos')).toHaveAttribute('title', 'Plataforma de datos internos')
+    expect(screen.getByText('3 miembros')).toHaveAttribute('title', '3 miembros')
+  })
+})

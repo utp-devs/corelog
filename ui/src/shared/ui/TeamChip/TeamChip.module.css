@@ -57,6 +57,9 @@ a.chip:focus-visible {
 }
 
 .meta {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-size: var(--cl-font-small);
   color: var(--cl-text-subtle);
 }

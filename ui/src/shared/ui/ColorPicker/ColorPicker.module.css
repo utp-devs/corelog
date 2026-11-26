@@ -19,6 +19,18 @@
   cursor: pointer;
 }
 
+/* Below 768 px the swatches grow to 32 px so they can be tapped (docs/11-testing-strategy.md check 6). */
+@media (max-width: 767.98px) {
+  .swatches {
+    grid-template-columns: repeat(6, 32px);
+  }
+
+  .swatch {
+    width: 32px;
+    height: 32px;
+  }
+}
+
 .swatch:focus-visible {
   outline: none;
   box-shadow: var(--cl-shadow-focus);

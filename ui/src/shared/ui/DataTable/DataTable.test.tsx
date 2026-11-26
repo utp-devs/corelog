@@ -208,4 +208,36 @@ describe('DataTable usage notes', () => {
     await waitFor(() => expect(screen.queryByRole('status', { name: 'Cargando' })).not.toBeInTheDocument())
     expect(screen.getByText('Fila 3')).toBeInTheDocument()
   })
+
+  it('is not filled by default and fills its card with fill', () => {
+    const { container, unmount } = renderTable()
+    expect(container.firstElementChild).toHaveAttribute('data-fill', 'false')
+    unmount()
+
+    const filled = renderTable({ fill: true, data: [] })
+    expect(filled.container.firstElementChild).toHaveAttribute('data-fill', 'true')
+    expect(filled.container.firstElementChild?.className).toContain('fill')
+    expect(filled.container.querySelector('[class*="area"]')).not.toBeNull()
+  })
+
+  it('keeps the empty state at the top of a filled table', () => {
+    const { container } = renderTable({ fill: true, data: [] })
+    const empty = container.querySelector('[class*="empty"]') as HTMLElement
+    expect(empty.className).toContain('empty')
+    expect(screen.getByText('Sin resultados')).toBeInTheDocument()
+  })
+
+  it('gives truncated string cells a title with the full value', () => {
+    const longColumns: DataTableColumn<Row>[] = [
+      { key: 'title', title: 'Título', dataIndex: 'title', ellipsis: true },
+    ]
+    renderTable({
+      columns: longColumns,
+      data: [{ id: '9', title: 'Un título muy largo que no cabe en la celda', createdAt: '2026-11-09' }],
+    })
+    expect(screen.getByText('Un título muy largo que no cabe en la celda').closest('td')).toHaveAttribute(
+      'title',
+      'Un título muy largo que no cabe en la celda',
+    )
+  })
 })

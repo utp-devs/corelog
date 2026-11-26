@@ -37,3 +37,53 @@ body {
   align-items: center;
   min-height: 50vh;
 }
+
+/*
+ * Hit areas (docs/11-testing-strategy.md section 5, check 6). Desktop keeps the dense visuals:
+ * icon-only controls are at least 24 px. Below 768 px every small control grows to 32 px so the
+ * tap target reaches the audit threshold without changing the desktop density.
+ */
+:root {
+  --cl-hit-min: 24px;
+  --cl-hit-min-mobile: 32px;
+}
+
+.cl-hit-area {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--cl-hit-min);
+  min-height: var(--cl-hit-min);
+}
+
+.ant-notification-notice-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--cl-hit-min);
+  min-height: var(--cl-hit-min);
+}
+
+@media (max-width: 767.98px) {
+  .cl-hit-area,
+  .ant-notification-notice-close {
+    min-width: var(--cl-hit-min-mobile);
+    min-height: var(--cl-hit-min-mobile);
+  }
+
+  .ant-btn-sm {
+    min-height: var(--cl-hit-min-mobile);
+  }
+
+  .ant-btn-sm.ant-btn-icon-only {
+    min-width: var(--cl-hit-min-mobile);
+  }
+}
+
+/* Long labels and chips wrap instead of being cut (docs/09-design-system.md section 4, rule 8). */
+.cl-wrap-text {
+  min-width: 0;
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}

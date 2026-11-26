@@ -13,11 +13,16 @@ import styles from './GlobalSearch.module.css'
 const DEBOUNCE_MS = 300
 const MIN_CHARS = 2
 
+export type GlobalSearchProps = {
+  /** Narrow layouts: the field becomes an icon button that opens the command palette. */
+  compact?: boolean
+}
+
 /**
  * Header search field. Typing shows grouped project and issue hits in a dropdown; Ctrl+K or '/'
  * (or the footer action) opens the full command palette with the same results.
  */
-export function GlobalSearch() {
+export function GlobalSearch({ compact = false }: GlobalSearchProps) {
   const navigate = useNavigate()
   const [repo] = useState(() => new SearchHttpRepository())
   const [query, setQuery] = useState('')
@@ -72,6 +77,18 @@ export function GlobalSearch() {
   const openFullPalette = () => {
     setOpen(false)
     openPalette(query.trim())
+  }
+
+  if (compact) {
+    return (
+      <Button
+        type="text"
+        icon={<SearchOutlined />}
+        aria-label="Buscar"
+        title="Buscar (Ctrl+K)"
+        onClick={() => openPalette()}
+      />
+    )
   }
 
   const sections = groupHits(hits)

@@ -16,13 +16,18 @@ import { NotificationsBell } from './NotificationsBell'
 import styles from './TopBar.module.css'
 import { UserMenu } from './UserMenu'
 
+/** Phones: icon-only Create, logo icon, organization switcher moves into the drawer. */
 export const MOBILE_QUERY = '(max-width: 767.98px)'
+/** Below 1024 px the primary menus collapse into the navigation drawer. */
+export const COLLAPSED_NAV_QUERY = '(max-width: 1023.98px)'
+/** Below 1280 px the search field becomes an icon that opens the command palette. */
+export const ICON_SEARCH_QUERY = '(max-width: 1279.98px)'
 
 export type TopBarProps = {
   org?: OrgInfo | null
   /** Real organization switcher (P2). Replaces the plain organization name when given. */
   orgSwitcherSlot?: ReactNode
-  /** Opens the navigation drawer. The button is shown only when provided (mobile). */
+  /** Opens the navigation drawer. The button is shown only when provided (below 1024 px). */
   onOpenMenu?: () => void
   onOpenShortcuts: () => void
 }
@@ -53,10 +58,12 @@ function NavMenuDropdown({ menu }: { menu: TopNavMenu }) {
   )
 }
 
-/** Global header: logo, primary navigation with dropdowns, Create, search, bell, notes, help and user menu. */
+/** Global header: logo, primary navigation with dropdowns, Create, search, bell, help and user menu. */
 export function TopBar({ org = null, orgSwitcherSlot, onOpenMenu, onOpenShortcuts }: TopBarProps) {
   const user = useAuthStore((s) => s.user)
   const isMobile = useMediaQuery(MOBILE_QUERY)
+  const collapsedNav = useMediaQuery(COLLAPSED_NAV_QUERY)
+  const iconSearch = useMediaQuery(ICON_SEARCH_QUERY)
   const [createOpen, setCreateOpen] = useState(false)
   const nav = buildTopNav(user, org)
 
@@ -65,21 +72,35 @@ export function TopBar({ org = null, orgSwitcherSlot, onOpenMenu, onOpenShortcut
   return (
     <header className={styles.bar}>
       {onOpenMenu && (
-        <Button type="text" icon={<MenuOutlined />} onClick={onOpenMenu} aria-label="Abrir menú de navegación" />
+        <Button type="text" icon={<MenuOutlined />} onClick={onOpenMenu} aria-label="Abrir menú de navegación">
+          {isMobile ? null : 'Menú'}
+        </Button>
       )}
 
       <Link to="/issues" className={styles.brand} aria-label="CoreLog, ir a incidencias">
-        <img
-          src="/brand/corelog-banner-480.png"
-          srcSet="/brand/corelog-banner-480.png 480w, /brand/corelog-banner-960.png 960w"
-          sizes="128px"
-          alt=""
-          width={128}
-          className={styles.brandBanner}
-        />
+        {isMobile ? (
+          <img
+            src="/brand/corelog-icon-64.png"
+            srcSet="/brand/corelog-icon-64.png 64w, /brand/corelog-icon-128.png 128w"
+            sizes="32px"
+            alt=""
+            width={32}
+            height={32}
+            className={styles.brandIcon}
+          />
+        ) : (
+          <img
+            src="/brand/corelog-banner-480.png"
+            srcSet="/brand/corelog-banner-480.png 480w, /brand/corelog-banner-960.png 960w"
+            sizes="128px"
+            alt=""
+            width={128}
+            className={styles.brandBanner}
+          />
+        )}
       </Link>
 
-      {!isMobile && (
+      {!collapsedNav && (
         <nav aria-label="Principal" className={styles.nav}>
           {nav.menus.map((menu) => (
             <NavMenuDropdown key={menu.key} menu={menu} />
@@ -88,18 +109,28 @@ export function TopBar({ org = null, orgSwitcherSlot, onOpenMenu, onOpenShortcut
       )}
 
       {nav.canCreate && (
-        <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreateOpen(true)} className={styles.create}>
-          Crear
-        </Button>
+        isMobile ? (
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={() => setCreateOpen(true)}
+            aria-label="Crear"
+            className={styles.create}
+          />
+        ) : (
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreateOpen(true)} className={styles.create}>
+            Crear
+          </Button>
+        )
       )}
 
       <div className={styles.spacer} />
 
-      {orgSlot && <div className={styles.org}>{orgSlot}</div>}
+      {orgSlot && !isMobile && <div className={styles.org}>{orgSlot}</div>}
 
-      <GlobalSearch />
+      <GlobalSearch compact={iconSearch} />
       <NotificationsBell />
-      <NotesButton />
+      {!isMobile && <NotesButton />}
       <HelpMenu onOpenShortcuts={onOpenShortcuts} />
       <UserMenu />
 

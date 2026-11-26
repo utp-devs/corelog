@@ -23,8 +23,14 @@ export function UserChip({ user, href, size = 24, 'data-testid': testId }: UserC
     <>
       <Avatar id={user.id} name={user.name} src={user.avatarUrl} size={size} />
       <span className={styles.text}>
-        <span className={styles.name}>{user.name}</span>
-        {user.role && <span className={styles.role}>{user.role}</span>}
+        <span className={styles.name} title={user.name}>
+          {user.name}
+        </span>
+        {user.role && (
+          <span className={styles.role} title={user.role}>
+            {user.role}
+          </span>
+        )}
       </span>
     </>
   )

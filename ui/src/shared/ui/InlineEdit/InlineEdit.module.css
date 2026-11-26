@@ -18,6 +18,15 @@
   cursor: pointer;
 }
 
+/* Below 768 px the trigger is at least 32 px tall; the text itself keeps its size. */
+@media (max-width: 767.98px) {
+  .trigger {
+    display: inline-flex;
+    align-items: center;
+    min-height: 32px;
+  }
+}
+
 .trigger:hover {
   background: var(--cl-bg-sunken);
   border-color: var(--cl-border);

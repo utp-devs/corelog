@@ -59,4 +59,22 @@ describe('Section', () => {
     rerender(<Section flush>x</Section>)
     expect(body().className).toContain('bodyFlush')
   })
+
+  it('is not filled by default', () => {
+    const { container } = render(<Section>x</Section>)
+    const section = container.querySelector('section') as HTMLElement
+    expect(section).toHaveAttribute('data-fill', 'false')
+    expect((section.firstElementChild as HTMLElement).className).not.toContain('grow')
+  })
+
+  it('grows with fill and stretches its body to the remaining height', () => {
+    const { container } = render(
+      <Section title="Miembros" fill>
+        x
+      </Section>,
+    )
+    const section = container.querySelector('section') as HTMLElement
+    expect(section).toHaveAttribute('data-fill', 'true')
+    expect((section.lastElementChild as HTMLElement).className).toContain('grow')
+  })
 })

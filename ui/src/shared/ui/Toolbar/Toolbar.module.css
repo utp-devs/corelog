@@ -33,6 +33,16 @@
   justify-content: flex-end;
 }
 
+/* Toolbar buttons wrap their label instead of being cut when the bar is narrow. */
+.toolbar :global(.ant-btn),
+.menu :global(.ant-btn) {
+  max-width: 100%;
+  height: auto;
+  min-height: 32px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
 .inlineSecondary {
   display: flex;
   flex-wrap: wrap;

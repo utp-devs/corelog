@@ -20,6 +20,7 @@ const OrgSettingsPage = lazy(() => import('@/adapters/in/ui/organizations/settin
 const OrgMembersPage = lazy(() => import('@/adapters/in/ui/organizations/members').then(m => ({ default: m.OrgMembersPage })))
 const OrgInvitationsPage = lazy(() => import('@/adapters/in/ui/organizations/invitations').then(m => ({ default: m.OrgInvitationsPage })))
 const TeamsPage = lazy(() => import('@/adapters/in/ui/teams/TeamsPage').then(m => ({ default: m.TeamsPage })))
+const TeamPage = lazy(() => import('@/adapters/in/ui/teams').then(m => ({ default: m.TeamPage })))
 const NewTicketPage = lazy(() => import('@/adapters/in/ui/tickets/NewTicketPage').then(m => ({ default: m.NewTicketPage })))
 const TicketDetailPage = lazy(() => import('@/adapters/in/ui/tickets/TicketDetailPage').then(m => ({ default: m.TicketDetailPage })))
 const TicketsListPage = lazy(() => import('@/adapters/in/ui/tickets/TicketsListPage').then(m => ({ default: m.TicketsListPage })))
@@ -86,6 +87,7 @@ export const router = createBrowserRouter([
               },
               { path: 'dashboard', element: <SuspenseWrapper><MyDashboardPage /></SuspenseWrapper> },
               { path: 'teams', element: <SuspenseWrapper><TeamsPage /></SuspenseWrapper> },
+              { path: 'teams/:id', element: <SuspenseWrapper><TeamPage /></SuspenseWrapper> },
               {
                 element: <RequireOrgAdmin />,
                 children: [
