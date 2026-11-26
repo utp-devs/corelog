@@ -27,12 +27,25 @@ type fakeRepo struct {
 	nextID  int
 	orgs    map[uuid.UUID]*domain.Organization
 	members map[memberKey]*domain.Member
+	users   map[uuid.UUID]fakeUser
+	invites map[uuid.UUID]*domain.Invitation
+}
+
+// fakeUser is the account data the member read model needs.
+type fakeUser struct {
+	name  string
+	email string
 }
 
 var _ port.Repository = (*fakeRepo)(nil)
 
 func newFakeRepo() *fakeRepo {
-	return &fakeRepo{orgs: map[uuid.UUID]*domain.Organization{}, members: map[memberKey]*domain.Member{}}
+	return &fakeRepo{
+		orgs:    map[uuid.UUID]*domain.Organization{},
+		members: map[memberKey]*domain.Member{},
+		users:   map[uuid.UUID]fakeUser{},
+		invites: map[uuid.UUID]*domain.Invitation{},
+	}
 }
 
 func (r *fakeRepo) Create(_ context.Context, org *domain.Organization) error {
@@ -171,6 +184,7 @@ type fixture struct {
 	repo  *fakeRepo
 	pub   *events.MemoryPublisher
 	tx    *database.FakeTxManager
+	clk   *clock.FakeClock
 	org   uuid.UUID
 	slug  string
 	owner uuid.UUID
@@ -179,6 +193,15 @@ type fixture struct {
 	guest uuid.UUID
 	out   uuid.UUID
 }
+
+// Account emails of the fixture users. Invitations for them are created with these addresses.
+const (
+	ownerEmail = "owner@acme.test"
+	adminEmail = "admin@acme.test"
+	membrEmail = "member@acme.test"
+	guestEmail = "guest@acme.test"
+	outEmail   = "outsider@other.test"
+)
 
 // newFixture creates the organization "acme" with one user per role and an outsider.
 func newFixture(t *testing.T) *fixture {
@@ -194,7 +217,13 @@ func newFixture(t *testing.T) *fixture {
 		out:   uuid.New(),
 		slug:  "acme",
 	}
-	f.svc = NewOrganizationService(f.repo, f.tx, f.pub, clock.NewFixed(fixedNow))
+	f.clk = &clock.FakeClock{T: fixedNow}
+	f.svc = NewOrganizationService(f.repo, f.tx, f.pub, f.clk)
+	f.repo.users[f.owner] = fakeUser{name: "Ana Owner", email: ownerEmail}
+	f.repo.users[f.admin] = fakeUser{name: "Ana Admin", email: adminEmail}
+	f.repo.users[f.membr] = fakeUser{name: "Mario Member", email: membrEmail}
+	f.repo.users[f.guest] = fakeUser{name: "Gina Guest", email: guestEmail}
+	f.repo.users[f.out] = fakeUser{name: "Olga Outsider", email: outEmail}
 	org, err := f.svc.CreateOrganization(context.Background(), f.owner, port.CreateInput{Name: "Acme", Slug: f.slug})
 	if err != nil {
 		t.Fatalf("setup create: %v", err)

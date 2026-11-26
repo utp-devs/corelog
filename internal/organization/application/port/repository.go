@@ -39,4 +39,32 @@ type Repository interface {
 	RemoveMember(ctx context.Context, orgID, userID uuid.UUID) error
 	// CountOwners returns how many members of the organization have the owner role.
 	CountOwners(ctx context.Context, orgID uuid.UUID) (int, error)
+	// ListMemberViews returns the members of a non-deleted organization joined with their user's name
+	// and email, oldest first. It is the read model for the members screen.
+	ListMemberViews(ctx context.Context, orgID uuid.UUID) ([]MemberView, error)
+	// FindMemberByEmail reports whether a member of the organization has this email (case-insensitive).
+	FindMemberByEmail(ctx context.Context, orgID uuid.UUID, email string) (bool, error)
+
+	// CreateInvitation inserts the invitation and assigns its ID. A live (not accepted, not revoked)
+	// invitation for the same organization and email returns domain.ErrInvitationExists, expired or not.
+	CreateInvitation(ctx context.Context, inv *domain.Invitation) error
+	// GetInvitationByID returns the invitation only when it belongs to orgID; otherwise
+	// domain.ErrInvitationNotFound.
+	GetInvitationByID(ctx context.Context, orgID, id uuid.UUID) (*domain.Invitation, error)
+	// GetInvitationByTokenHash returns the invitation with this token hash, or domain.ErrInvitationNotFound.
+	GetInvitationByTokenHash(ctx context.Context, tokenHash string) (*domain.Invitation, error)
+	// ListInvitations returns the invitations of an organization, newest first. With pendingOnly it
+	// excludes accepted and revoked ones; expiry is left to the caller, which knows the clock.
+	ListInvitations(ctx context.Context, orgID uuid.UUID, pendingOnly bool) ([]*domain.Invitation, error)
+	// UpdateInvitation persists token_hash, expires_at, accepted_at and revoked_at of an invitation.
+	UpdateInvitation(ctx context.Context, inv *domain.Invitation) error
+}
+
+// MemberView is a membership with the member's account data, as shown to other members.
+type MemberView struct {
+	UserID   uuid.UUID
+	Name     string
+	Email    string
+	Role     domain.Role
+	JoinedAt time.Time
 }
