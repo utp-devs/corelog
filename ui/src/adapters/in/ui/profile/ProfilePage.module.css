@@ -17,13 +17,6 @@
   margin-bottom: var(--cl-space-3);
 }
 
-.avatar {
-  flex: none;
-  background: var(--cl-brand);
-  font-size: var(--cl-font-h2);
-  font-weight: 600;
-}
-
 .identity {
   min-width: 0;
 }
@@ -32,50 +25,44 @@
   margin: 0 !important;
 }
 
-/* Layout de dos columnas: menu de secciones y contenido. */
+/* Navegación de secciones (240 px en escritorio) y contenido. */
 .layout {
   display: grid;
-  grid-template-columns: 220px minmax(0, 1fr);
-  gap: var(--cl-space-6);
+  grid-template-columns: 240px minmax(0, 1fr);
+  gap: var(--cl-space-5);
   align-items: start;
 }
 
 .sideNav {
   position: sticky;
-  top: 0;
+  top: var(--cl-space-4);
+  min-width: 0;
 }
 
 .menu {
-  border-inline-end: 0 !important;
-  background: transparent;
+  border-inline-end: none !important;
 }
 
 .sections {
   display: flex;
   flex-direction: column;
-  gap: var(--cl-space-6);
+  gap: var(--cl-space-5);
   min-width: 0;
 }
 
 .section {
   display: flex;
   flex-direction: column;
-  gap: var(--cl-space-3);
-  scroll-margin-top: var(--cl-space-4);
+  gap: var(--cl-space-4);
+  scroll-margin-top: var(--cl-space-5);
 }
 
 .sectionTitle {
   margin: 0 !important;
-  font-weight: 700;
 }
 
 .card {
-  box-shadow: var(--cl-shadow-1);
-}
-
-.dangerCard {
-  border-color: var(--cl-danger);
-  box-shadow: var(--cl-shadow-1);
+  min-width: 0;
 }
 
 .hint {
@@ -86,70 +73,46 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: var(--cl-space-4);
   flex-wrap: wrap;
-  gap: var(--cl-space-3);
 }
 
 .rowHint {
   margin: var(--cl-space-1) 0 0 !important;
 }
 
-.okIcon {
-  color: var(--cl-success);
-}
-
-.languageSelect {
-  width: 160px;
-}
-
 .fullWidth {
   width: 100%;
 }
 
-/* Responsive: en pantallas medias el menu pasa arriba y el contenido ocupa todo el ancho. */
-@media (max-width: 991px) {
-  .layout {
-    grid-template-columns: 1fr;
-    gap: var(--cl-space-4);
-  }
-
-  .sideNav {
-    position: static;
-    overflow-x: auto;
-  }
-
-  .menu {
-    white-space: nowrap;
-  }
+.dangerCard {
+  border-color: var(--cl-danger) !important;
 }
 
-/* Tarjetas emparejadas en escritorio: dos columnas que se apilan cuando no caben. */
-.pairs {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
-  gap: var(--cl-space-4);
-  align-items: start;
-}
-
-.pairs > * {
-  min-width: 0;
-}
-
-/* Sesiones: una fila por dispositivo, separadas por una linea. */
 .sessionList {
   display: flex;
   flex-direction: column;
+  gap: var(--cl-space-3);
 }
 
 .sessionItem {
-  padding: var(--cl-space-3) 0;
-  border-bottom: 1px solid var(--cl-border);
-}
-
-.sessionItem:last-child {
-  border-bottom: 0;
+  padding-block: var(--cl-space-2);
 }
 
 .currentTag {
   margin-inline-start: var(--cl-space-2);
+}
+
+.languageSelect {
+  min-width: 160px;
+}
+
+@media (max-width: 991.98px) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .sideNav {
+    position: static;
+  }
 }

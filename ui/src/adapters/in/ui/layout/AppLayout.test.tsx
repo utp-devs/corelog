@@ -20,6 +20,13 @@ const user: User = {
   email: 'ana@example.com',
   role: 'admin',
   teamId: null,
+  displayName: '',
+  jobTitle: '',
+  department: '',
+  avatarKey: null,
+  timezone: 'UTC',
+  lastLoginAt: null,
+  emailVerifiedAt: null,
   createdAt: '2026-01-01T00:00:00Z',
 }
 

@@ -21,7 +21,7 @@ export function TeamsPage() {
   const status = useTeamsStore((s) => s.status)
   const fetchTeams = useTeamsStore((s) => s.fetchTeams)
   const createTeam = useTeamsStore((s) => s.createTeam)
-  const renameTeam = useTeamsStore((s) => s.renameTeam)
+  const updateTeam = useTeamsStore((s) => s.updateTeam)
   const removeTeam = useTeamsStore((s) => s.removeTeam)
 
   const [selectedTeam, setSelectedTeam] = useState<Team | null>(null)
@@ -37,10 +37,10 @@ export function TeamsPage() {
     setIsSubmitting(true)
     try {
       if (modal.kind === 'create') {
-        await createTeam(name)
+        await createTeam({ name })
         message.success('Equipo creado')
       } else if (modal.kind === 'rename') {
-        await renameTeam(modal.team.id, name)
+        await updateTeam(modal.team.id, { name })
         message.success('Equipo renombrado')
       }
       setModal({ kind: 'closed' })

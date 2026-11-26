@@ -1,4 +1,5 @@
 import type { Role, User } from '@/core/auth/domain/user'
+import { canManageOrg, type OrgRole } from '@/core/organizations/domain/organization'
 
 /** Permissions that gate sidebar items. The server stays the authority; this only drives visibility. */
 export type Permission = 'org.admin' | 'project.permissions'
@@ -7,6 +8,8 @@ export type OrgInfo = {
   id: string
   name: string
   slug: string
+  /** Caller role in the organization; owners and admins get the organization administration items. */
+  role?: OrgRole | null
 }
 
 export type TopNavMenuKey = 'projects' | 'filters' | 'dashboards' | 'teams'
@@ -39,16 +42,14 @@ function menu(key: TopNavMenuKey, label: string, path: string): TopNavMenu {
   return { key, label, path, recent: [] }
 }
 
-/** Top bar model: dropdown menus, Create button and organization name. Teams is admin only. */
+/** Top bar model: dropdown menus, Create button and organization name. Teams is open to every organization member. */
 export function buildTopNav(user: Pick<User, 'role'> | null, org: OrgInfo | null): TopNav {
   const menus: TopNavMenu[] = [
     menu('projects', 'Proyectos', '/projects'),
     menu('filters', 'Filtros', '/issues'),
     menu('dashboards', 'Paneles', '/dashboard'),
+    menu('teams', 'Equipos', '/teams'),
   ]
-  if (user?.role === 'admin') {
-    menus.push(menu('teams', 'Equipos', '/teams'))
-  }
   return {
     menus,
     canCreate: user !== null,
@@ -56,13 +57,19 @@ export function buildTopNav(user: Pick<User, 'role'> | null, org: OrgInfo | null
   }
 }
 
-/** Permissions granted to a user. Platform admins get the organization and project administration. */
-export function permissionsFor(user: Pick<User, 'role'> | null): ReadonlySet<Permission> {
+/**
+ * Permissions granted to a user. Platform admins and owners/admins of the active organization get the
+ * organization administration; platform admins also get project permissions.
+ */
+export function permissionsFor(user: Pick<User, 'role'> | null, orgRole?: OrgRole | null): ReadonlySet<Permission> {
   const role: Role | null = user?.role ?? null
+  const granted = new Set<Permission>()
+  if (canManageOrg(orgRole)) granted.add('org.admin')
   if (role === 'admin') {
-    return new Set<Permission>(['org.admin', 'project.permissions'])
+    granted.add('org.admin')
+    granted.add('project.permissions')
   }
-  return new Set<Permission>()
+  return granted
 }
 
 export type SidebarContext =

@@ -7,6 +7,9 @@ export const SIDEBAR_STORAGE_KEY = 'corelog.sidebar'
 
 export type Density = 'comfortable' | 'compact'
 
+/** Window event dispatched on every density change so open tables follow the choice at once. */
+export const DENSITY_EVENT = 'corelog:density'
+
 function isDensity(value: unknown): value is Density {
   return value === 'comfortable' || value === 'compact'
 }
@@ -26,6 +29,7 @@ export function writeDensity(density: Density): void {
   } catch {
     // Storage can be unavailable (private mode); the choice then lasts for the session only.
   }
+  window.dispatchEvent(new CustomEvent<Density>(DENSITY_EVENT, { detail: density }))
 }
 
 /** Stored sidebar choice, or null when the user has not chosen yet. */
@@ -55,6 +59,15 @@ export function useDensity(): [Density, (density: Density) => void] {
   useEffect(() => {
     document.documentElement.dataset.density = density
   }, [density])
+
+  useEffect(() => {
+    const onChange = (event: Event) => {
+      const next = (event as CustomEvent<unknown>).detail
+      if (isDensity(next)) setDensityState(next)
+    }
+    window.addEventListener(DENSITY_EVENT, onChange)
+    return () => window.removeEventListener(DENSITY_EVENT, onChange)
+  }, [])
 
   const setDensity = (next: Density) => {
     writeDensity(next)

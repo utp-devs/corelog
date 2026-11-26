@@ -44,7 +44,7 @@ export function TeamMembersPanel({ team }: TeamMembersPanelProps) {
     setIsSearching(true)
     timeoutRef.current = setTimeout(() => {
       directoryService
-        .search({ query })
+        .searchTeammates(query)
         .then(setSearchResults)
         .finally(() => setIsSearching(false))
     }, 300)
@@ -85,10 +85,11 @@ export function TeamMembersPanel({ team }: TeamMembersPanelProps) {
         loading={membersStatus === 'loading'}
         dataSource={members}
         locale={{ emptyText: <EmptyState title="Aún no hay miembros" /> }}
+        rowKey="userId"
         renderItem={(member) => (
           <List.Item
             actions={[
-              <Button key="remove" icon={<UserDeleteOutlined />} onClick={() => handleRemove(member.id)}>
+              <Button key="remove" icon={<UserDeleteOutlined />} onClick={() => handleRemove(member.userId)}>
                 Eliminar
               </Button>,
             ]}

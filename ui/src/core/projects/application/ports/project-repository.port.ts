@@ -1,7 +1,16 @@
 import type { Project, ProjectMember, ProjectMemberRole, ProjectLabel, ProjectComponent, ProjectType, ProjectVisibility } from '@/core/projects/domain/project'
 
 export interface CreateProjectInput {
+  organizationId: string
   key: string
+  name: string
+  description: string
+  type: ProjectType
+  /** Optional. When omitted the organization default applies. The creator becomes the lead. */
+  visibility?: ProjectVisibility
+}
+
+export interface UpdateProjectInput {
   name: string
   description: string
   type: ProjectType
@@ -10,10 +19,11 @@ export interface CreateProjectInput {
 }
 
 export interface ProjectRepositoryPort {
+  /** Projects of the current organization (the organization comes from the session context). */
   list(): Promise<Project[]>
   get(id: string): Promise<Project>
   create(input: CreateProjectInput): Promise<Project>
-  update(id: string, input: Omit<CreateProjectInput, 'key'>): Promise<Project>
+  update(id: string, input: UpdateProjectInput): Promise<Project>
   remove(id: string): Promise<void>
   listMembers(projectId: string): Promise<ProjectMember[]>
   addMember(projectId: string, userId: string, role: ProjectMemberRole): Promise<ProjectMember>

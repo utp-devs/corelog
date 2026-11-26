@@ -16,9 +16,14 @@ export interface AuthSession {
   user: User
 }
 
+/** Partial update: omitted fields keep their current value. */
 export interface UpdateProfilePayload {
-  name: string
-  email: string
+  name?: string
+  email?: string
+  displayName?: string
+  jobTitle?: string
+  department?: string
+  timezone?: string
 }
 
 export interface ChangePasswordPayload {

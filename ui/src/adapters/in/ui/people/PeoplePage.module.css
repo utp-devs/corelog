@@ -1,0 +1,21 @@
+.person {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--cl-space-2);
+  min-width: 0;
+}
+
+.personName {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mobileCard {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--cl-space-1);
+  min-width: 0;
+}

@@ -1,13 +1,14 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { App, Button, Form, Input } from 'antd'
 import { Controller, useForm } from 'react-hook-form'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { z } from 'zod'
 
 import { useAuthStore } from '@/adapters/in/state/auth.store'
 import { fieldErrors } from '@/core/shared/app-error'
 import { AuthLayout } from './AuthLayout'
 import styles from './AuthPage.module.css'
+import { authPathWithRedirect, safeRedirect } from './safe-redirect'
 
 const schema = z.object({
   email: z.string().email('Introduce un correo electrónico válido'),
@@ -21,6 +22,8 @@ const SERVER_FIELDS = ['email', 'password'] as const
 export function LoginPage() {
   const login = useAuthStore((s) => s.login)
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const redirect = searchParams.get('redirect')
   const { message } = App.useApp()
 
   const {
@@ -36,7 +39,7 @@ export function LoginPage() {
   const onSubmit = handleSubmit(async (values) => {
     try {
       await login(values)
-      navigate('/issues')
+      navigate(safeRedirect(redirect))
     } catch (error) {
       const fields = fieldErrors(error)
       const invalid = SERVER_FIELDS.filter((name) => fields[name])
@@ -52,7 +55,7 @@ export function LoginPage() {
     <AuthLayout
       title="Iniciar sesión"
       subtitle="Accede con tu cuenta corporativa para continuar con tu trabajo."
-      footer={<>¿No tienes cuenta? <Link to="/register">Crear una</Link></>}
+      footer={<>¿No tienes cuenta? <Link to={authPathWithRedirect('/register', redirect)}>Crear una</Link></>}
     >
       <Form layout="vertical" onFinish={onSubmit} requiredMark={false} className={styles.form}>
         <Form.Item label="Correo electrónico" validateStatus={errors.email ? 'error' : ''} help={errors.email?.message}>

@@ -29,9 +29,9 @@ describe('matriz de permisos de proyecto', () => {
 
   it('calcula el rol efectivo desde el rol global y la membresia', () => {
     const members = [{ userId: 'u1', role: 'contributor' as const }]
-    expect(effectiveProjectRole('agent', 'u1', members)).toBe('contributor')
-    expect(effectiveProjectRole('agent', 'u2', members)).toBeNull()
+    expect(effectiveProjectRole('user', 'u1', members)).toBe('contributor')
+    expect(effectiveProjectRole('user', 'u2', members)).toBeNull()
     expect(effectiveProjectRole('admin', 'u2', members)).toBe('admin')
-    expect(effectiveProjectRole('agent', undefined, members)).toBeNull()
+    expect(effectiveProjectRole('user', undefined, members)).toBeNull()
   })
 })

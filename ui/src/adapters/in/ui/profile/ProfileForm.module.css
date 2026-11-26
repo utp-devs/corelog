@@ -1,10 +1,11 @@
 .form {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  column-gap: var(--cl-space-4);
+  gap: var(--cl-space-4);
 }
 
-.submit {
+.actions {
   grid-column: 1 / -1;
-  justify-self: end;
+  display: flex;
+  justify-content: flex-end;
 }

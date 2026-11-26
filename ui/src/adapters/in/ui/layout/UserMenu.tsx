@@ -19,8 +19,7 @@ import styles from './UserMenu.module.css'
 
 const ROLE_LABELS: Record<Role, string> = {
   admin: 'Administrador',
-  agent: 'Agente',
-  requester: 'Solicitante',
+  user: 'Usuario',
 }
 
 /** Avatar menu: profile, theme, density and sign out. */

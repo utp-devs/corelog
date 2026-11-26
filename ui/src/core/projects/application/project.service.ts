@@ -1,4 +1,4 @@
-import type { CreateProjectInput, ProjectRepositoryPort } from './ports/project-repository.port'
+import type { CreateProjectInput, ProjectRepositoryPort, UpdateProjectInput } from './ports/project-repository.port'
 
 export class ProjectService {
   private readonly repository: ProjectRepositoryPort
@@ -13,5 +13,9 @@ export class ProjectService {
 
   create(input: CreateProjectInput) {
     return this.repository.create(input)
+  }
+
+  update(id: string, input: UpdateProjectInput) {
+    return this.repository.update(id, input)
   }
 }

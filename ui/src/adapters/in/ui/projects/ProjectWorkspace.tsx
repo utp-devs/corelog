@@ -17,7 +17,7 @@ const sections = [
 ]
 
 const typeLabels: Record<ProjectType, string> = { kanban: 'Kanban', scrum: 'Scrum' }
-const visibilityLabels: Record<ProjectVisibility, string> = { private: 'Privado', team: 'Equipo' }
+const visibilityLabels: Record<ProjectVisibility, string> = { private: 'Privado', open: 'Abierto' }
 
 // Cabecera comun de los proyectos: nombre, clave, metadatos y pestañas de navegacion entre secciones.
 export function ProjectWorkspace() {

@@ -1,12 +1,13 @@
 import type { User } from '@/core/auth/domain/user'
 import type { AdminSearchQuery, UserDirectoryPort } from '@/core/users/application/ports/user-directory.port'
+import { withOrg } from '@/shared/lib/with-org'
 import { apiClient } from './api-client'
 import { toUser, toUsers, type UserDto } from './user-dto'
 
 export class UserDirectoryHttpRepository implements UserDirectoryPort {
   async searchTeammates(query: string): Promise<User[]> {
     const { data } = await apiClient.get<{ data: UserDto[] }>('/users/search', {
-      params: { q: query },
+      params: withOrg({ q: query }),
     })
     return toUsers(data.data)
   }

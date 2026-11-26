@@ -53,7 +53,6 @@ export function ProjectsPage() {
         name: values.name,
         description: values.description ?? '',
         type: values.type,
-        leadId: user?.id ?? '',
         visibility: values.visibility,
       })
       message.success('Proyecto creado')
@@ -110,7 +109,7 @@ export function ProjectsPage() {
               }}
             >
               <p className={styles.description}>{project.description || 'Sin descripcion'}</p>
-              <span className={styles.meta}>{project.type === 'scrum' ? 'Scrum' : 'Kanban'} · {project.visibility === 'private' ? 'Privado' : 'Equipo'}</span>
+              <span className={styles.meta}>{project.type === 'scrum' ? 'Scrum' : 'Kanban'} · {project.visibility === 'private' ? 'Privado' : 'Abierto'}</span>
             </Card>
           ))}
         </div>
@@ -274,7 +273,7 @@ export function ProjectsPage() {
         okText="Crear"
         cancelText="Cancelar"
       >
-        <Form form={form} layout="vertical" initialValues={{ type: 'kanban', visibility: 'team' }}>
+        <Form form={form} layout="vertical" initialValues={{ type: 'kanban', visibility: 'open' }}>
           <Form.Item name="key" label="Clave" rules={[{ required: true, min: 1, max: 20 }]}>
             <Input placeholder="CORE" />
           </Form.Item>
@@ -288,7 +287,7 @@ export function ProjectsPage() {
             <Select options={[{ value: 'kanban', label: 'Kanban' }, { value: 'scrum', label: 'Scrum' }]} />
           </Form.Item>
           <Form.Item name="visibility" label="Visibilidad" rules={[{ required: true }]}>
-            <Select options={[{ value: 'team', label: 'Equipo' }, { value: 'private', label: 'Privado' }]} />
+            <Select options={[{ value: 'open', label: 'Abierto' }, { value: 'private', label: 'Privado' }]} />
           </Form.Item>
         </Form>
       </Modal>

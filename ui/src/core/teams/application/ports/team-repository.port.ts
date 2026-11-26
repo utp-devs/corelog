@@ -1,8 +1,27 @@
-import type { Team } from '@/core/teams/domain/team'
+import type { Team, TeamMember, TeamMemberRole } from '@/core/teams/domain/team'
+
+export interface CreateTeamInput {
+  organizationId: string
+  name: string
+  description?: string
+  avatarColor?: string | null
+}
+
+export interface UpdateTeamInput {
+  name?: string
+  description?: string
+  avatarColor?: string | null
+}
 
 export interface TeamRepositoryPort {
+  /** Teams of the current organization (the organization comes from the session context). */
   list(): Promise<Team[]>
-  create(name: string): Promise<Team>
-  rename(id: string, name: string): Promise<Team>
+  get(id: string): Promise<Team>
+  create(input: CreateTeamInput): Promise<Team>
+  update(id: string, input: UpdateTeamInput): Promise<Team>
   remove(id: string): Promise<void>
+  listMembers(teamId: string): Promise<TeamMember[]>
+  addMember(teamId: string, userId: string, role?: TeamMemberRole): Promise<TeamMember>
+  updateMemberRole(teamId: string, userId: string, role: TeamMemberRole): Promise<TeamMember>
+  removeMember(teamId: string, userId: string): Promise<void>
 }

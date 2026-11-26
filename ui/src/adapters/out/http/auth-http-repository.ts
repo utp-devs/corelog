@@ -34,7 +34,14 @@ export class AuthHttpRepository implements AuthRepositoryPort {
   }
 
   async updateProfile(payload: UpdateProfilePayload): Promise<User> {
-    const { data } = await apiClient.patch<{ data: UserDto }>('/users/me', payload)
+    const body: Record<string, string> = {}
+    if (payload.name !== undefined) body.name = payload.name
+    if (payload.email !== undefined) body.email = payload.email
+    if (payload.displayName !== undefined) body.display_name = payload.displayName
+    if (payload.jobTitle !== undefined) body.job_title = payload.jobTitle
+    if (payload.department !== undefined) body.department = payload.department
+    if (payload.timezone !== undefined) body.timezone = payload.timezone
+    const { data } = await apiClient.patch<{ data: UserDto }>('/users/me', body)
     return toUser(data.data)
   }
 

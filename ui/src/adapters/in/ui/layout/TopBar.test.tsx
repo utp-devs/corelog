@@ -16,8 +16,15 @@ const base: User = {
   id: 'u1',
   name: 'Luis Ruiz',
   email: 'luis@example.com',
-  role: 'requester',
+  role: 'user',
   teamId: null,
+  displayName: '',
+  jobTitle: '',
+  department: '',
+  avatarKey: null,
+  timezone: 'UTC',
+  lastLoginAt: null,
+  emailVerifiedAt: null,
   createdAt: '2026-01-01T00:00:00Z',
 }
 
@@ -36,13 +43,13 @@ describe('TopBar', () => {
     useAuthStore.setState({ user: base, status: 'authenticated', sessionChecked: true })
   })
 
-  it('shows the primary menus and hides Equipos for a requester', () => {
+  it('shows the primary menus and Equipos to every user', () => {
     renderBar()
     const nav = screen.getByRole('navigation', { name: 'Principal' })
     expect(nav).toHaveTextContent('Proyectos')
     expect(nav).toHaveTextContent('Filtros')
     expect(nav).toHaveTextContent('Paneles')
-    expect(nav).not.toHaveTextContent('Equipos')
+    expect(nav).toHaveTextContent('Equipos')
   })
 
   it('shows Equipos for an admin', () => {

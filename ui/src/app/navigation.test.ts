@@ -11,20 +11,21 @@ import {
 
 const org: OrgInfo = { id: 'o1', name: 'Acme', slug: 'acme' }
 const adminPerms = permissionsFor({ role: 'admin' })
+const BASE_MENUS = ['projects', 'filters', 'dashboards', 'teams']
 
 describe('buildTopNav', () => {
-  it('shows the three base menus for a requester and hides Equipos', () => {
-    const nav = buildTopNav({ role: 'requester' }, null)
-    expect(nav.menus.map((m) => m.key)).toEqual(['projects', 'filters', 'dashboards'])
+  it('shows the base menus and Equipos to a regular user', () => {
+    const nav = buildTopNav({ role: 'user' }, null)
+    expect(nav.menus.map((m) => m.key)).toEqual(BASE_MENUS)
     expect(nav.canCreate).toBe(true)
     expect(nav.orgName).toBeNull()
   })
 
-  it('adds Equipos for admins only', () => {
+  it('offers Equipos to every role, not only admins', () => {
     const nav = buildTopNav({ role: 'admin' }, org)
-    expect(nav.menus.map((m) => m.key)).toContain('teams')
     expect(nav.menus.find((m) => m.key === 'teams')?.path).toBe('/teams')
     expect(nav.orgName).toBe('Acme')
+    expect(buildTopNav({ role: 'user' }, org).menus.map((m) => m.key)).toContain('teams')
   })
 
   it('keeps every existing route reachable from the menus', () => {
@@ -32,23 +33,34 @@ describe('buildTopNav', () => {
     expect(paths).toEqual(expect.arrayContaining(['/projects', '/issues', '/dashboard', '/teams']))
   })
 
-  it('has no create action and no menu for an anonymous user', () => {
+  it('has no create action for an anonymous user but keeps the menus', () => {
     const nav = buildTopNav(null, null)
     expect(nav.canCreate).toBe(false)
-    expect(nav.menus.map((m) => m.key)).toEqual(['projects', 'filters', 'dashboards'])
+    expect(nav.menus.map((m) => m.key)).toEqual(BASE_MENUS)
   })
 
   it('starts recent lists empty', () => {
-    expect(buildTopNav({ role: 'agent' }, null).menus.every((m) => m.recent.length === 0)).toBe(true)
+    expect(buildTopNav({ role: 'user' }, null).menus.every((m) => m.recent.length === 0)).toBe(true)
   })
 })
 
 describe('permissionsFor', () => {
-  it('grants org and project administration to platform admins only', () => {
+  it('grants org and project administration to platform admins', () => {
     expect(adminPerms.has('org.admin')).toBe(true)
     expect(adminPerms.has('project.permissions')).toBe(true)
-    expect(permissionsFor({ role: 'agent' }).size).toBe(0)
+    expect(permissionsFor({ role: 'user' }).size).toBe(0)
     expect(permissionsFor(null).size).toBe(0)
+  })
+
+  it('grants org administration to owners and admins of the active organization', () => {
+    expect(permissionsFor({ role: 'user' }, 'owner').has('org.admin')).toBe(true)
+    expect(permissionsFor({ role: 'user' }, 'admin').has('org.admin')).toBe(true)
+  })
+
+  it('withholds org administration from members and guests and never grants project permissions from the org role', () => {
+    expect(permissionsFor({ role: 'user' }, 'member').size).toBe(0)
+    expect(permissionsFor({ role: 'user' }, 'guest').size).toBe(0)
+    expect(permissionsFor({ role: 'user' }, 'owner').has('project.permissions')).toBe(false)
   })
 })
 
@@ -67,10 +79,11 @@ describe('resolveSidebarContext', () => {
     expect(resolveSidebarContext('/profile')).toEqual({ kind: 'profile' })
   })
 
-  it('uses global for work pages', () => {
+  it('uses global for work pages and onboarding', () => {
     expect(resolveSidebarContext('/issues/new')).toEqual({ kind: 'global' })
     expect(resolveSidebarContext('/dashboard')).toEqual({ kind: 'global' })
     expect(resolveSidebarContext('/')).toEqual({ kind: 'global' })
+    expect(resolveSidebarContext('/teams')).toEqual({ kind: 'global' })
   })
 })
 

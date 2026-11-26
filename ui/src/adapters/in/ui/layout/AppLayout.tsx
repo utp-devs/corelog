@@ -1,5 +1,5 @@
 import { Drawer } from 'antd'
-import { useState, type MouseEvent, type ReactNode } from 'react'
+import { useEffect, useState, type MouseEvent, type ReactNode } from 'react'
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 
 import { useAuthStore } from '@/adapters/in/state/auth.store'
@@ -43,7 +43,15 @@ export function AppLayout({ org = null, orgSwitcherSlot }: AppLayoutProps) {
   const context = resolveSidebarContext(location.pathname)
   const projectId = context.kind === 'project' ? context.projectId : null
   const project = useProjectsStore((s) => (projectId ? s.projects.find((p) => p.id === projectId) : undefined))
-  const items = buildSidebar(context, permissionsFor(user))
+  const hasProject = project !== undefined
+  const items = buildSidebar(context, permissionsFor(user, org?.role))
+
+  // The project header needs the projects list; load it when the URL points at a project we do not have yet.
+  useEffect(() => {
+    if (projectId && !hasProject) {
+      void useProjectsStore.getState().fetchProjects()
+    }
+  }, [projectId, hasProject])
   const topMenus = buildTopNav(user, org).menus
   const title = context.kind === 'global' ? '' : CONTEXT_TITLES[context.kind === 'project' ? 'project' : context.kind]
 

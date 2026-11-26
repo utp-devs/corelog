@@ -9,7 +9,7 @@ const store = vi.hoisted(() => ({
   membersStatus: 'idle',
   fetchTeams: vi.fn(),
   createTeam: vi.fn(),
-  renameTeam: vi.fn(),
+  updateTeam: vi.fn(),
   removeTeam: vi.fn(),
   fetchMembers: vi.fn(),
   addMember: vi.fn(),

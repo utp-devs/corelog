@@ -4,10 +4,12 @@ import type { ReactNode } from 'react'
 import { lazy, Suspense } from 'react'
 import { createBrowserRouter, Navigate } from 'react-router-dom'
 
-import { AdminRoute } from '@/adapters/in/ui/common/AdminRoute'
 import { ProtectedRoute } from '@/adapters/in/ui/common/ProtectedRoute'
-import { AppLayout } from '@/adapters/in/ui/layout/AppLayout'
+import { OrgShellLayout } from '@/adapters/in/ui/organizations/OrgShellLayout'
+import { RequireOrg } from '@/app/route-guards/RequireOrg'
 
+const InviteAcceptPage = lazy(() => import('@/adapters/in/ui/auth/InviteAcceptPage').then(m => ({ default: m.InviteAcceptPage })))
+const OnboardingPage = lazy(() => import('@/adapters/in/ui/auth/OnboardingPage').then(m => ({ default: m.OnboardingPage })))
 const LoginPage = lazy(() => import('@/adapters/in/ui/auth/LoginPage').then(m => ({ default: m.LoginPage })))
 const RegisterPage = lazy(() => import('@/adapters/in/ui/auth/RegisterPage').then(m => ({ default: m.RegisterPage })))
 const ProfilePage = lazy(() => import('@/adapters/in/ui/profile/ProfilePage').then(m => ({ default: m.ProfilePage })))
@@ -42,34 +44,40 @@ function SuspenseWrapper({ children }: { children: ReactNode }) {
 export const router = createBrowserRouter([
   { path: '/login', element: <SuspenseWrapper><LoginPage /></SuspenseWrapper> },
   { path: '/register', element: <SuspenseWrapper><RegisterPage /></SuspenseWrapper> },
+  // Public: the page previews the invitation and asks for login or register when there is no session.
+  { path: '/invite/:token', element: <SuspenseWrapper><InviteAcceptPage /></SuspenseWrapper> },
   {
     element: <ProtectedRoute />,
     children: [
+      // Authenticated, outside the app shell: the wizard creates or joins an organization.
+      { path: '/onboarding', element: <SuspenseWrapper><OnboardingPage /></SuspenseWrapper> },
       {
-        element: <AppLayout />,
+        element: <RequireOrg />,
         children: [
-          { index: true, element: <Navigate to="/issues" replace /> },
-          { path: 'issues', element: <SuspenseWrapper><TicketsListPage /></SuspenseWrapper> },
-          { path: 'issues/new', element: <SuspenseWrapper><NewTicketPage /></SuspenseWrapper> },
-          { path: 'issues/:id', element: <SuspenseWrapper><TicketDetailPage /></SuspenseWrapper> },
-          { path: 'profile', element: <SuspenseWrapper><ProfilePage /></SuspenseWrapper> },
-          { path: 'projects', element: <SuspenseWrapper><ProjectsPage /></SuspenseWrapper> },
           {
-            path: 'projects/:id',
-            element: <SuspenseWrapper><ProjectWorkspace /></SuspenseWrapper>,
+            element: <OrgShellLayout />,
             children: [
-              { index: true, element: <Navigate to="board" replace /> },
-              { path: 'board', element: <SuspenseWrapper><ProjectBoardPage /></SuspenseWrapper> },
-              { path: 'backlog', element: <SuspenseWrapper><ProjectBacklogPage /></SuspenseWrapper> },
-              { path: 'sprints', element: <SuspenseWrapper><ProjectSprintsPage /></SuspenseWrapper> },
-              { path: 'calendar', element: <SuspenseWrapper><ProjectCalendarPage /></SuspenseWrapper> },
-              { path: 'permisos', element: <SuspenseWrapper><ProjectPermissionsPage /></SuspenseWrapper> },
+              { index: true, element: <Navigate to="/issues" replace /> },
+              { path: 'issues', element: <SuspenseWrapper><TicketsListPage /></SuspenseWrapper> },
+              { path: 'issues/new', element: <SuspenseWrapper><NewTicketPage /></SuspenseWrapper> },
+              { path: 'issues/:id', element: <SuspenseWrapper><TicketDetailPage /></SuspenseWrapper> },
+              { path: 'profile', element: <SuspenseWrapper><ProfilePage /></SuspenseWrapper> },
+              { path: 'projects', element: <SuspenseWrapper><ProjectsPage /></SuspenseWrapper> },
+              {
+                path: 'projects/:id',
+                element: <SuspenseWrapper><ProjectWorkspace /></SuspenseWrapper>,
+                children: [
+                  { index: true, element: <Navigate to="board" replace /> },
+                  { path: 'board', element: <SuspenseWrapper><ProjectBoardPage /></SuspenseWrapper> },
+                  { path: 'backlog', element: <SuspenseWrapper><ProjectBacklogPage /></SuspenseWrapper> },
+                  { path: 'sprints', element: <SuspenseWrapper><ProjectSprintsPage /></SuspenseWrapper> },
+                  { path: 'calendar', element: <SuspenseWrapper><ProjectCalendarPage /></SuspenseWrapper> },
+                  { path: 'permisos', element: <SuspenseWrapper><ProjectPermissionsPage /></SuspenseWrapper> },
+                ],
+              },
+              { path: 'dashboard', element: <SuspenseWrapper><MyDashboardPage /></SuspenseWrapper> },
+              { path: 'teams', element: <SuspenseWrapper><TeamsPage /></SuspenseWrapper> },
             ],
-          },
-          { path: 'dashboard', element: <SuspenseWrapper><MyDashboardPage /></SuspenseWrapper> },
-          {
-            element: <AdminRoute />,
-            children: [{ path: 'teams', element: <SuspenseWrapper><TeamsPage /></SuspenseWrapper> }],
           },
         ],
       },

@@ -1,0 +1,80 @@
+/* Layout of the onboarding wizard (steps live in this folder, the page shell in ../../auth). */
+.header {
+  display: flex;
+  align-items: center;
+  gap: var(--cl-space-4);
+  margin-bottom: var(--cl-space-6);
+}
+
+.logo {
+  height: var(--cl-space-8);
+  width: auto;
+}
+
+.steps {
+  margin-bottom: var(--cl-space-8);
+}
+
+.choices {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--cl-space-4);
+}
+
+.choice {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cl-space-3);
+  padding: var(--cl-space-5);
+  border: 1px solid var(--cl-border);
+  border-radius: var(--cl-radius-lg);
+  background: var(--cl-bg-surface);
+}
+
+.choice h3 {
+  margin: 0;
+  font-size: var(--cl-font-h3);
+  color: var(--cl-text);
+}
+
+.choice p {
+  margin: 0;
+  color: var(--cl-text-subtle);
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--cl-space-3);
+  width: 100%;
+}
+
+.roleSelect {
+  min-width: 180px;
+}
+
+.actions {
+  margin-top: var(--cl-space-4);
+}
+
+.summary {
+  padding: var(--cl-space-5);
+  border: 1px solid var(--cl-border);
+  border-radius: var(--cl-radius-lg);
+  background: var(--cl-bg-surface);
+}
+
+.inviteList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cl-space-3);
+  padding: 0;
+  list-style: none;
+}
+
+@media (max-width: 767.98px) {
+  .choices {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

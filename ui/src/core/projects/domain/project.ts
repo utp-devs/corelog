@@ -1,8 +1,9 @@
 export type ProjectType = 'kanban' | 'scrum'
-export type ProjectVisibility = 'private' | 'team'
+export type ProjectVisibility = 'private' | 'open'
 
 export interface Project {
   id: string
+  organizationId: string
   key: string
   name: string
   description: string

@@ -1,0 +1,23 @@
+.header {
+  display: flex;
+  align-items: center;
+  gap: var(--cl-space-4);
+  margin-bottom: var(--cl-space-4);
+}
+
+.identity {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--cl-space-1);
+  min-width: 0;
+}
+
+.name {
+  margin: 0 !important;
+}
+
+.back {
+  display: inline-block;
+  margin-top: var(--cl-space-4);
+}

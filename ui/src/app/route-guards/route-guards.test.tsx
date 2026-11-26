@@ -11,8 +11,15 @@ const baseUser: User = {
   id: 'u1',
   name: 'Ana Pérez',
   email: 'ana@example.com',
-  role: 'agent',
+  role: 'user',
   teamId: null,
+  displayName: '',
+  jobTitle: '',
+  department: '',
+  avatarKey: null,
+  timezone: 'UTC',
+  lastLoginAt: null,
+  emailVerifiedAt: null,
   createdAt: '2026-01-01T00:00:00Z',
 }
 

@@ -1,9 +1,11 @@
-import type { CreateProjectInput, ProjectRepositoryPort } from '@/core/projects/application/ports/project-repository.port'
+import type { CreateProjectInput, ProjectRepositoryPort, UpdateProjectInput } from '@/core/projects/application/ports/project-repository.port'
 import type { Project, ProjectMember, ProjectMemberRole, ProjectLabel, ProjectComponent } from '@/core/projects/domain/project'
+import { withOrg } from '@/shared/lib/with-org'
 import { apiClient } from './api-client'
 
 interface ProjectDto {
   id: string
+  organization_id: string
   key: string
   name: string
   description: string
@@ -74,6 +76,7 @@ function toComponent(dto: ComponentDto): ProjectComponent {
 function toProject(dto: ProjectDto): Project {
   return {
     id: dto.id,
+    organizationId: dto.organization_id,
     key: dto.key,
     name: dto.name,
     description: dto.description,
@@ -88,7 +91,7 @@ function toProject(dto: ProjectDto): Project {
 
 export class ProjectHttpRepository implements ProjectRepositoryPort {
   async list(): Promise<Project[]> {
-    const { data } = await apiClient.get<{ data: ProjectDto[] }>('/projects')
+    const { data } = await apiClient.get<{ data: ProjectDto[] }>('/projects', { params: withOrg() })
     return data.data.map(toProject)
   }
 
@@ -98,18 +101,19 @@ export class ProjectHttpRepository implements ProjectRepositoryPort {
   }
 
   async create(input: CreateProjectInput): Promise<Project> {
-    const { data } = await apiClient.post<{ data: ProjectDto }>('/projects', {
+    const body: Record<string, unknown> = {
+      organization_id: input.organizationId,
       key: input.key,
       name: input.name,
       description: input.description,
       type: input.type,
-      lead_id: input.leadId,
-      visibility: input.visibility,
-    })
+    }
+    if (input.visibility !== undefined) body.visibility = input.visibility
+    const { data } = await apiClient.post<{ data: ProjectDto }>('/projects', body)
     return toProject(data.data)
   }
 
-  async update(id: string, input: Omit<CreateProjectInput, 'key'>): Promise<Project> {
+  async update(id: string, input: UpdateProjectInput): Promise<Project> {
     const { data } = await apiClient.patch<{ data: ProjectDto }>(`/projects/${id}`, {
       name: input.name,
       description: input.description,
