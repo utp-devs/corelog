@@ -1,0 +1,136 @@
+.root {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-size: var(--cl-font-body);
+  line-height: 1.5;
+  color: var(--cl-text);
+}
+
+.root p,
+.root ul,
+.root ol,
+.root blockquote,
+.root pre,
+.root table {
+  margin: 0 0 var(--cl-space-2);
+}
+
+.root h1,
+.root h2,
+.root h3,
+.root h4 {
+  margin: var(--cl-space-3) 0 var(--cl-space-2);
+  font-size: var(--cl-font-body-strong);
+  font-weight: 600;
+}
+
+.root ul,
+.root ol {
+  padding-left: var(--cl-space-6);
+}
+
+.root blockquote {
+  padding-left: var(--cl-space-3);
+  border-left: 3px solid var(--cl-border-strong);
+  color: var(--cl-text-subtle);
+}
+
+.root :global(li.task-list-item) {
+  list-style: none;
+  margin-left: calc(var(--cl-space-4) * -1);
+}
+
+.root code {
+  padding: 0 var(--cl-space-1);
+  border-radius: var(--cl-radius-sm);
+  background: var(--cl-bg-sunken);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: var(--cl-font-small);
+}
+
+.root pre {
+  overflow-x: auto;
+  padding: var(--cl-space-3);
+  border-radius: var(--cl-radius-md);
+  background: var(--cl-bg-sunken);
+}
+
+.root pre code {
+  padding: 0;
+  background: none;
+}
+
+.root table {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+  border-collapse: collapse;
+}
+
+.root th,
+.root td {
+  padding: var(--cl-space-1) var(--cl-space-2);
+  border: 1px solid var(--cl-border);
+  text-align: left;
+}
+
+.root th {
+  background: var(--cl-bg-sunken);
+  font-weight: 600;
+}
+
+.link {
+  color: var(--cl-brand);
+  text-decoration: underline;
+}
+
+.link:focus-visible,
+.mentionButton:focus-visible,
+.imageButton:focus-visible {
+  outline: none;
+  border-radius: var(--cl-radius-sm);
+  box-shadow: var(--cl-shadow-focus);
+}
+
+.unsafeLink {
+  color: var(--cl-text-subtle);
+  text-decoration: underline dotted;
+}
+
+.mention {
+  display: inline-flex;
+  vertical-align: middle;
+  padding: 0 var(--cl-space-1);
+  border-radius: var(--cl-radius-full);
+  background: var(--cl-brand-subtle);
+}
+
+.mentionButton {
+  display: inline-flex;
+  vertical-align: middle;
+  padding: 0 var(--cl-space-1);
+  border: none;
+  border-radius: var(--cl-radius-full);
+  background: var(--cl-brand-subtle);
+  cursor: pointer;
+}
+
+.imageButton {
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: zoom-in;
+}
+
+.image {
+  display: block;
+  max-width: 100%;
+  max-height: 320px;
+  border-radius: var(--cl-radius-md);
+}
+
+.lightboxImage {
+  display: block;
+  max-width: 100%;
+  margin: 0 auto;
+}
