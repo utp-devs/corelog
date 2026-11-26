@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 
 // jsdom does not apply stylesheets to layout, so these tests pin the mobile hit-area contract
-// (docs/11-testing-strategy.md section 5, check 6) by reading the source CSS.
+// (minimum tap target size on phones) by reading the source CSS.
 const here = dirname(fileURLToPath(import.meta.url))
 const css = readFileSync(resolve(here, 'global.css'), 'utf8')
 

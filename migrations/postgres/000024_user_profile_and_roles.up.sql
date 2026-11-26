@@ -1,4 +1,4 @@
--- P2: user profile columns and platform role migration.
+-- User profile columns and platform role migration.
 -- Also creates the default organization and its memberships. Memberships must be
 -- derived from the ORIGINAL users.role (requester -> guest), so they are inserted
 -- here, before the role values are rewritten. Teams and projects are scoped to the
@@ -23,7 +23,7 @@ VALUES (
     '00000000-0000-4000-8000-000000000002',
     'corelog',
     'CoreLog',
-    'Organizacion por defecto creada durante la migracion P2',
+    'Organizacion por defecto creada durante la migracion',
     (SELECT id FROM users WHERE role = 'admin' ORDER BY created_at ASC LIMIT 1)
 )
 ON CONFLICT (id) DO NOTHING;

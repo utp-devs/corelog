@@ -24,10 +24,10 @@ type Actor struct {
 	ProjectRole  string
 }
 
-// StandardActors covers the authorization model of docs/05-architecture.md section 3 (D-3, D-4).
+// StandardActors covers the platform roles and the project roles of the authorization model.
 // The actor names are the row keys of ProjectMatrix and must not change without updating it.
 //
-// It is a var so that later phases can extend it; the helper never mutates it.
+// It is a var so that new scenarios can be appended; the helper never mutates it.
 var StandardActors = []Actor{
 	{Name: "anonymous", PlatformRole: "", OrgRole: "", ProjectRole: ""},
 	{Name: "platform-admin", PlatformRole: "admin", OrgRole: "none", ProjectRole: ""},

@@ -27,7 +27,7 @@ const (
 	VisibilityTeam Visibility = "team"
 )
 
-// Organization roles that matter to project rules (D-4, D-5).
+// Organization roles that matter to project rules.
 const (
 	OrgRoleOwner  = "owner"
 	OrgRoleAdmin  = "admin"

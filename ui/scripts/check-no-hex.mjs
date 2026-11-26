@@ -12,7 +12,7 @@
 // to ui/, POSIX separators) to the number of violations it is allowed to keep.
 // The script fails when a file exceeds its baseline count; a file missing from
 // the baseline has a baseline of 0, so new violations always fail.
-// P1-S9 (redesign of the existing screens) empties the baseline.
+// The baseline is expected to shrink to empty as the existing screens are redesigned.
 //
 // Usage (from ui/):
 //   node scripts/check-no-hex.mjs                  check against the baseline
@@ -105,7 +105,7 @@ for (const file of files) {
 if (writeMode) {
   const counts = Object.fromEntries([...scanned].map(([file, v]) => [file, v.length]))
   const payload = {
-    note: 'Violations allowed per file while pages are migrated (P1-S9 empties this file). Regenerate only with: node scripts/check-no-hex.mjs --write-baseline',
+    note: 'Violations allowed per file while pages are migrated (the file is expected to shrink to empty as the screens are fixed). Regenerate only with: node scripts/check-no-hex.mjs --write-baseline',
     files: counts,
   }
   writeFileSync(baselinePath, `${JSON.stringify(payload, null, 2)}\n`)

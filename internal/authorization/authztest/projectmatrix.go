@@ -16,11 +16,11 @@ var ProjectPermissions = []string{
 
 // ProjectMatrix is the declarative permission table per project visibility. The rows are the
 // permissions and each value lists the actors (StandardActors names) that are allowed. Anyone not
-// listed is denied. Rules (docs/13-decisions.md D-3, D-4):
+// listed is denied. Rules:
 //   - platform admin: view and watch only (support access), no manage rights.
 //   - org owner/admin: lead everywhere, private projects included; delete_project is owner/admin only.
 //   - org member: viewer on open projects only; guests get nothing without an explicit role.
-//   - explicit project roles: lead, contributor, viewer as in the scheme of docs 05 section 3.
+//   - explicit project roles: lead, contributor, viewer.
 //   - outsider and anonymous: nothing.
 var ProjectMatrix = map[string]map[string][]string{
 	VisibilityOpen: {

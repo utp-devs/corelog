@@ -1,5 +1,5 @@
 // Package audit is the audit log hexagon. It consumes domain events and stores
-// immutable entries. HTTP endpoints are added in a later slice.
+// immutable entries. HTTP endpoints are not part of this module yet.
 package audit
 
 import (

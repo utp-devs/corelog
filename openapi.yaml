@@ -1626,7 +1626,7 @@ paths:
       tags: [tickets]
       operationId: listNotifications
       summary: Notificaciones del usuario, las mas recientes primero
-      description: Devuelve hasta 50 avisos in-app del usuario autenticado. La interfaz consulta el contador cada 30 segundos (sondeo, D-6).
+      description: Devuelve hasta 50 avisos in-app del usuario autenticado. La interfaz consulta el contador cada 30 segundos (sondeo).
       security:
         - bearerAuth: []
       responses:

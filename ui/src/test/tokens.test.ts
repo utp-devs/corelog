@@ -1,5 +1,5 @@
 /// <reference types="node" />
-// Design token guard (09-design-system.md sections 2 and 7).
+// Design token guard.
 // Parses tokens.css, compares it with the TS mirror in shared/theme/tokens.ts
 // and checks WCAG 2.1 contrast of the declared pairs in both themes.
 import { readFileSync } from 'node:fs'
@@ -66,7 +66,7 @@ const newThemeTokens = [
 const paletteNames = Array.from({ length: PALETTE_SIZE }, (_, i) => i + 1)
 const avatarNames = Array.from({ length: AVATAR_SIZE }, (_, i) => i + 1)
 
-// Existing tokens that fail the rules. Their values are not changed in P1-S1;
+// Existing tokens that fail the rules. Their values are kept as they are;
 // the test asserts they still fail so the entry is removed once they are fixed.
 const KNOWN_DEBT = new Set<string>([])
 

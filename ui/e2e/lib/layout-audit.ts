@@ -6,10 +6,10 @@ import type { Page } from '@playwright/test'
 
 import { waitForReady } from './wait.ts'
 
-/** Page template declared by the screen (docs/11-testing-strategy.md section 5). */
+/** Page template declared by the screen. */
 export type LayoutTemplate = 'wide' | 'reading' | 'fluid' | 'split' | 'centered'
 
-/** Every number the audit compares against. Tuned in P0; only tightened afterwards. */
+/** Every number the audit compares against. Tuned once against the reference screens; only tightened afterwards. */
 export const AUDIT_THRESHOLDS = {
   /** Grid cell size for the dead-space raster. */
   cellPx: 24,
@@ -91,7 +91,7 @@ export interface AuditResult {
 }
 
 // ---------------------------------------------------------------------------------------------
-// Hygiene tracking (check 9): console errors, uncaught exceptions and HTTP failures per page.
+// Hygiene tracking: console errors, uncaught exceptions and HTTP failures per page.
 // ---------------------------------------------------------------------------------------------
 
 export interface HttpFailure {

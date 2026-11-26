@@ -1,4 +1,4 @@
--- P2: organizations (top-level tenant), their members and invitations.
+-- Organizations (top-level tenant), their members and invitations.
 -- Slugs are unique case-insensitively among live (not soft-deleted) organizations.
 CREATE TABLE IF NOT EXISTS organizations (
     id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),

@@ -6,7 +6,7 @@ export type CreateIssueModalProps = {
   onClose: () => void
 }
 
-/** Placeholder until P4 ships the create-issue dialog: it points to the existing form. */
+/** Placeholder: the create-issue dialog is pending future work; it points to the existing form. */
 export function CreateIssueModal({ open, onClose }: CreateIssueModalProps) {
   const navigate = useNavigate()
 

@@ -7,7 +7,7 @@ import { NotificationHttpRepository } from '@/adapters/out/http/notification-htt
 import type { Notification } from '@/core/notifications/domain/notification'
 import styles from './NotificationsBell.module.css'
 
-// Sondeo del contador de no leidas (D-6: notificaciones in-app con sondeo).
+// Sondeo del contador de no leidas (notificaciones in-app con sondeo).
 const POLL_INTERVAL_MS = 30_000
 
 export function NotificationsBell() {

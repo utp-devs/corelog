@@ -1,4 +1,4 @@
-# QA Checklist - Fase F3, issues ricos
+# QA Checklist - issues ricos
 
 ## Entorno
 

@@ -1,7 +1,7 @@
 import { createElement } from 'react'
 import { Button, message, notification } from 'antd'
 
-/** Duraciones en segundos (09-design-system.md section 5). */
+/** Duraciones en segundos. */
 export const TOAST_DURATION = {
   success: 3,
   info: 3,

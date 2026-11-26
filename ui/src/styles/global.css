@@ -39,7 +39,7 @@ body {
 }
 
 /*
- * Hit areas (docs/11-testing-strategy.md section 5, check 6). Desktop keeps the dense visuals:
+ * Hit areas (minimum tap target size on phones). Desktop keeps the dense visuals:
  * icon-only controls are at least 24 px. Below 768 px every small control grows to 32 px so the
  * tap target reaches the audit threshold without changing the desktop density.
  */
@@ -80,7 +80,7 @@ body {
   }
 }
 
-/* Long labels and chips wrap instead of being cut (docs/09-design-system.md section 4, rule 8). */
+/* Long labels and chips wrap instead of being cut. */
 .cl-wrap-text {
   min-width: 0;
   max-width: 100%;

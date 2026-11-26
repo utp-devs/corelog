@@ -183,7 +183,7 @@ func TestDefaultSettings(t *testing.T) {
 		t.Errorf("visibility/2fa default: %+v", d)
 	}
 	if d.HoursPerDay != 8 || d.DaysPerWeek != 5 || d.Timezone != "UTC" {
-		t.Errorf("D-18 defaults: %+v", d)
+		t.Errorf("default settings: %+v", d)
 	}
 	if d.MaxUploadBytes != 10<<20 {
 		t.Errorf("max upload default = %d", d.MaxUploadBytes)

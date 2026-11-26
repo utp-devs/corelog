@@ -12,7 +12,7 @@ export interface RoleAccount {
 }
 
 /**
- * Role key -> seeded account (testing strategy 3.1, `cmd/seed --scenario e2e`).
+ * Role key -> seeded account (`cmd/seed --scenario e2e`).
  * The key names the storage state file (ui/playwright/.auth/<key>.json) and is what
  * specs pass to `as()` and `api()`. Acme roles (owner, orgadmin, lead, member, viewer, guest)
  * belong to "Acme" (slug acme); legacy accounts (admin, agent, requester, requesterAna) stay in

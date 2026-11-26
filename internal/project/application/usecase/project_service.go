@@ -129,7 +129,7 @@ func (s *ProjectService) Update(ctx context.Context, actorID uuid.UUID, globalRo
 	return project, nil
 }
 
-// Delete: lider del proyecto o owner/admin de la organizacion (D-20, mismo permiso de edicion).
+// Delete: lider del proyecto o owner/admin de la organizacion (mismo permiso de edicion).
 func (s *ProjectService) Delete(ctx context.Context, actorID uuid.UUID, globalRole string, id uuid.UUID) error {
 	project, orgRole, err := s.loadVisible(ctx, actorID, globalRole, id)
 	if err != nil {
@@ -329,7 +329,7 @@ func (s *ProjectService) loadVisible(ctx context.Context, actorID uuid.UUID, glo
 	return project, orgRole, nil
 }
 
-// canView: platform admin and org owner/admin see everything (D-4); members see open projects;
+// canView: platform admin and org owner/admin see everything; members see open projects;
 // everything else needs an explicit project membership, checked by the authorizer.
 func (s *ProjectService) canView(ctx context.Context, project *domain.Project, actorID uuid.UUID, globalRole, orgRole string) (bool, error) {
 	if globalRole == platformAdmin || isOrgManager(orgRole) {
@@ -344,7 +344,7 @@ func (s *ProjectService) canView(ctx context.Context, project *domain.Project, a
 	return s.allowed(ctx, port.ActionViewProject, project.ID, actorID, globalRole)
 }
 
-// requireManage: org owner/admin are implicit project leads (D-4); other actors need the project action.
+// requireManage: org owner/admin are implicit project leads; other actors need the project action.
 func (s *ProjectService) requireManage(ctx context.Context, action string, project *domain.Project, actorID uuid.UUID, globalRole, orgRole string) error {
 	if globalRole == platformAdmin || isOrgManager(orgRole) {
 		return nil

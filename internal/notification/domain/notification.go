@@ -16,7 +16,7 @@ var (
 )
 
 // Notification avisa a una persona de algo que le afecta. Es solo in-app; el correo queda como puerto
-// futuro (D-6).
+// futuro.
 type Notification struct {
 	ID        uuid.UUID
 	UserID    uuid.UUID

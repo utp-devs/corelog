@@ -9,7 +9,7 @@ import (
 	"github.com/google/uuid"
 )
 
-// MaxOwnedOrganizations is how many organizations one user may own at the same time (D-5).
+// MaxOwnedOrganizations is how many organizations one user may own at the same time.
 const MaxOwnedOrganizations = 5
 
 // Organization is the top-level tenant. ID stays uuid.Nil until the repository assigns it.

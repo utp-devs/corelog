@@ -9,7 +9,7 @@ const (
 	ProjectRoleViewer      ProjectRole = "viewer"
 )
 
-// PlatformRole is the global role of an account (users.role): admin or user (D-3).
+// PlatformRole is the global role of an account (users.role): admin or user.
 const (
 	PlatformRoleAdmin = "admin"
 	PlatformRoleUser  = "user"
@@ -44,13 +44,13 @@ type Access struct {
 	Visibility  Visibility
 }
 
-// EffectiveRole resolves the project role used by every permission check (D-4, docs 05 section 3).
+// EffectiveRole resolves the project role used by every permission check.
 // The first rule that applies wins:
 //  1. org owner/admin: lead on every project of the organization, private ones included.
 //  2. explicit project membership.
 //  3. org member (not guest) on an open project: viewer.
 //  4. platform admin: viewer (support access). It never grants manage rights. Support access is
-//     audited in a later slice (D-4).
+//     audited in a later change.
 //
 // Anything else is nil (no access).
 func EffectiveRole(a Access) *ProjectRole {

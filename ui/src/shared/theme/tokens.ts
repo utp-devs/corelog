@@ -30,7 +30,7 @@ export const coreLogTheme = {
 } as const
 
 /**
- * Mirror of the theme-dependent tokens added in P1-S1 (tokens.css, section 2.2).
+ * Mirror of the theme-dependent tokens defined in tokens.css.
  * Keys are the CSS custom property names. Values must equal tokens.css; the
  * Vitest suite (src/test/tokens.test.ts) enforces key and value parity.
  */

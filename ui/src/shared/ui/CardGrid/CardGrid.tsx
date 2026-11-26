@@ -16,7 +16,7 @@ export type CardGridProps = {
 }
 
 /**
- * Grid of equal-height cards (docs/11-testing-strategy.md section 5, check 5 and 7). Items stretch to
+ * Grid of equal-height cards. Items stretch to
  * the tallest card in their row and the last row keeps its cards on the left (no orphan gaps).
  */
 export function CardGrid({ minCardWidth = 280, ariaLabel, fill = false, children }: CardGridProps) {

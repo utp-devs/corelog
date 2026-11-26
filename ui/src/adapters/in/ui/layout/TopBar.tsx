@@ -25,7 +25,7 @@ export const ICON_SEARCH_QUERY = '(max-width: 1279.98px)'
 
 export type TopBarProps = {
   org?: OrgInfo | null
-  /** Real organization switcher (P2). Replaces the plain organization name when given. */
+  /** Organization switcher. Replaces the plain organization name when given. */
   orgSwitcherSlot?: ReactNode
   /** Opens the navigation drawer. The button is shown only when provided (below 1024 px). */
   onOpenMenu?: () => void

@@ -19,7 +19,7 @@ export type TopNavMenu = {
   label: string
   /** Target of the "Ver todos" entry and of the top level link. */
   path: string
-  /** Recent items. Placeholder until P3 provides the recent endpoint. */
+  /** Recent items. Placeholder until the recent-items endpoint exists. */
   recent: readonly TopNavLink[]
   /** Extra entries listed after "Ver todos" (for example "Ver personas" under Equipos). */
   extras?: readonly TopNavLink[]

@@ -23,7 +23,7 @@ import { COLLAPSED_NAV_QUERY, MOBILE_QUERY, TopBar } from './TopBar'
 
 export type AppLayoutProps = {
   org?: OrgInfo | null
-  /** Organization switcher of P2; until then the top bar shows the organization name. */
+  /** Organization switcher; when it is not given, the top bar shows the organization name. */
   orgSwitcherSlot?: ReactNode
 }
 

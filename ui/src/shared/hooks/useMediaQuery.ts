@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from 'react'
 
-// Breakpoints of 09-design-system.md section 4 (px, viewport width).
+// Breakpoints in px, compared against the viewport width.
 export const BREAKPOINTS = {
   xs: 576,
   md: 768,

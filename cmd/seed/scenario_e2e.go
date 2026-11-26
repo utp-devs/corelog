@@ -28,7 +28,7 @@ const (
 	e2eNewbie
 )
 
-// e2eScenario seeds the accounts of the Playwright suite (testing strategy 3.1)
+// e2eScenario seeds the accounts used by the Playwright suite
 // and a small, fixed dataset so every screen has content.
 type e2eScenario struct{}
 
@@ -43,7 +43,7 @@ func (e2eScenario) Run(ctx context.Context, db *sqlx.DB, opts Options) error {
 	return nil
 }
 
-// e2ePeople is the account map of testing strategy 3.1. The legacy accounts
+// e2ePeople is the account map used by the Playwright suite. The legacy accounts
 // (admin, agent, requester, ana) keep their emails for the existing specs.
 func e2ePeople() []person {
 	return []person{

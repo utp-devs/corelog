@@ -164,7 +164,7 @@ export function DataTable<T extends object>({
       }
       return !(column.hideable && hiddenKeys.includes(column.key))
     })
-    // Truncated cells always expose the full value as title (docs/09-design-system.md section 4, rule 8).
+    // Truncated cells always expose the full value as title.
     .map((column) => (column.ellipsis === true ? { ...column, ellipsis: { showTitle: true } } : column))
 
   const selectedKeys = selection?.selectedKeys ?? []

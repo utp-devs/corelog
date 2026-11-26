@@ -1,4 +1,4 @@
--- P2: scope teams and projects to an organization. Every existing row is attached to
+-- Scope teams and projects to an organization. Every existing row is attached to
 -- the default organization created in 000024 (fixed id 00000000-0000-4000-8000-000000000002).
 
 -- Teams: organization scope and profile columns.

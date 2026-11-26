@@ -12,11 +12,11 @@
  *  - a listed rule that no longer occurs is "fixed": reported, does NOT fail.
  *  - "page errors" (uncaught exceptions) and "server errors" (5xx) are never baselined: always fresh.
  *
- * P1-S9 empties this baseline: once the screens comply with section 5 of the testing strategy, the
- * file becomes `{}` and every violation fails the suite. Until then, regenerate it only after a
+ * This baseline is expected to shrink to empty as the screens are fixed: once every screen complies
+ * with the layout rules, the file becomes `{}` and every violation fails the suite. Until then, regenerate it only after a
  * deliberate review of the violations: `E2E_UPDATE_KNOWN=1 npx playwright test` (all projects)
  * merges what each role and viewport observed (see global-teardown.ts). Never regenerate it to hide
- * a regression introduced by a slice.
+ * a regression introduced by a change.
  */
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs'
 import path from 'node:path'

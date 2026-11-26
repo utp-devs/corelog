@@ -30,7 +30,7 @@ const (
 	defaultTimezone    = "UTC"
 )
 
-// Settings are the organization policies (D-5, D-18).
+// Settings are the organization policies.
 type Settings struct {
 	WhoCanCreateProjects     string
 	WhoCanCreateTeams        string

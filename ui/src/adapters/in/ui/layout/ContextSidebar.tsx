@@ -22,7 +22,7 @@ import { ProjectAvatar } from '@/shared/ui/ProjectAvatar'
 import { readSidebarCollapsed, writeSidebarCollapsed } from './preferences'
 import styles from './ContextSidebar.module.css'
 
-/** Below this width the sidebar starts collapsed (09-design-system.md section 4). */
+/** Below this width the sidebar starts collapsed. */
 export const NARROW_QUERY = '(max-width: 1279.98px)'
 
 export type SidebarProject = {

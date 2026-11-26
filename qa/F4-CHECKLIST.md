@@ -1,4 +1,4 @@
-# QA Checklist - Fase F4, tableros y backlog
+# QA Checklist - tableros y backlog
 
 ## Entorno
 

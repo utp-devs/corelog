@@ -38,7 +38,7 @@ export function settingsValuesOf(org: Organization): SettingsFormValues {
   }
 }
 
-/** Editable fields only: the 2FA flag is informational until P12 and is never sent. */
+/** Editable fields only: the 2FA flag is informational until two-factor authentication exists and is never sent. */
 export function settingsPatchOf(values: SettingsFormValues): OrganizationUpdate {
   return {
     name: values.name.trim(),

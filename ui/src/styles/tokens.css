@@ -1,5 +1,5 @@
 /*
- * Design tokens (09-design-system.md section 2).
+ * Design tokens.
  *
  * Theme-dependent tokens are declared in :root (light) and in
  * :root[data-theme='dark']. Theme-independent tokens (spacing, z-index,

@@ -1,4 +1,4 @@
-# QA Checklist - Fase F2, proyectos y permisos
+# QA Checklist - proyectos y permisos
 
 ## Entorno
 

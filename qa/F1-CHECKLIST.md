@@ -1,4 +1,4 @@
-# QA Checklist - Fase F1, interfaz corporativa
+# QA Checklist - interfaz corporativa
 
 ## Entorno
 

@@ -5,5 +5,5 @@ import { test } from '@playwright/test'
  * Call inside a describe block whose title contains `@visual`.
  */
 export function skipVisualOutsideLinux(): void {
-  test.skip(process.platform !== 'linux', 'visual baselines are Linux-only (docs/11-testing-strategy.md 3.2)')
+  test.skip(process.platform !== 'linux', 'visual baselines are Linux-only')
 }
