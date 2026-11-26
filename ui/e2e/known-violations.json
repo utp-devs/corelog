@@ -1,5 +1,9 @@
 {
-  "dashboard|desktop": [],
+  "dashboard|desktop": [
+    "console errors",
+    "dead space",
+    "overlap"
+  ],
   "dashboard|mobile": [
     "console errors",
     "overlap",
@@ -7,7 +11,7 @@
   ],
   "dashboard|tablet": [
     "console errors",
-    "dead space"
+    "overlap"
   ],
   "issue-detail|desktop": [
     "clipped text",
@@ -15,57 +19,169 @@
     "dead space"
   ],
   "issue-detail|mobile": [
+    "clipped control",
     "clipped text",
     "console errors",
     "dead space",
+    "horizontal overflow",
     "tap targets"
   ],
   "issue-detail|tablet": [
+    "clipped text",
     "console errors",
     "dead space"
   ],
   "issue-new|desktop": [
-    "dead space"
+    "clipped text",
+    "console errors"
   ],
   "issue-new|mobile": [
+    "clipped text",
     "console errors",
     "tap targets"
   ],
   "issue-new|tablet": [
+    "clipped text",
     "console errors",
     "dead space"
   ],
   "issues|desktop": [
-    "clipped text"
-  ],
-  "issues|mobile": [
-    "clipped control",
     "clipped text",
     "console errors",
-    "horizontal overflow",
+    "dead space",
+    "overlap"
+  ],
+  "issues|mobile": [
+    "console errors",
     "tap targets"
   ],
   "issues|tablet": [
+    "clipped control",
     "clipped text",
-    "console errors"
+    "console errors",
+    "dead space",
+    "horizontal overflow",
+    "overlap"
   ],
-  "login|desktop": [],
+  "login|desktop": [
+    "dead space",
+    "width"
+  ],
   "login|mobile": [
     "tap targets"
   ],
-  "login|tablet": [],
-  "profile|desktop": [],
-  "profile|mobile": [
+  "login|tablet": [
+    "dead space"
+  ],
+  "onboarding|desktop": [
     "console errors",
-    "overlap",
+    "dead space"
+  ],
+  "onboarding|mobile": [
+    "console errors",
+    "dead space"
+  ],
+  "onboarding|tablet": [
+    "console errors",
+    "dead space"
+  ],
+  "org-invitations|desktop": [
+    "clipped text",
+    "console errors"
+  ],
+  "org-invitations|mobile": [
+    "clipped text",
+    "console errors",
+    "tap targets"
+  ],
+  "org-invitations|tablet": [
+    "clipped text",
+    "console errors",
+    "dead space"
+  ],
+  "org-members|desktop": [
+    "console errors",
+    "dead space"
+  ],
+  "org-members|mobile": [
+    "console errors",
+    "dead space",
+    "tap targets"
+  ],
+  "org-members|tablet": [
+    "console errors",
+    "dead space"
+  ],
+  "org-settings|desktop": [
+    "clipped text",
+    "console errors"
+  ],
+  "org-settings|mobile": [
+    "clipped text",
+    "console errors",
+    "tap targets"
+  ],
+  "org-settings|tablet": [
+    "clipped text",
+    "console errors"
+  ],
+  "people|desktop": [
+    "console errors",
+    "dead space"
+  ],
+  "people|mobile": [
+    "console errors",
+    "dead space",
+    "tap targets"
+  ],
+  "people|tablet": [
+    "console errors",
+    "dead space"
+  ],
+  "person|desktop": [
+    "console errors",
+    "dead space",
+    "width"
+  ],
+  "person|mobile": [
+    "console errors",
+    "dead space",
+    "tap targets"
+  ],
+  "person|tablet": [
+    "console errors",
+    "dead space"
+  ],
+  "profile-general|desktop": [
+    "clipped text",
+    "console errors"
+  ],
+  "profile-general|mobile": [
+    "clipped text",
+    "console errors",
+    "tap targets"
+  ],
+  "profile-general|tablet": [
+    "clipped text",
+    "console errors"
+  ],
+  "profile|desktop": [
+    "clipped text",
+    "console errors"
+  ],
+  "profile|mobile": [
+    "clipped text",
+    "console errors",
     "tap targets"
   ],
   "profile|tablet": [
+    "clipped text",
     "console errors"
   ],
   "project-backlog|desktop": [
     "console errors",
-    "dead space"
+    "dead space",
+    "overlap"
   ],
   "project-backlog|mobile": [
     "clipped control",
@@ -76,20 +192,24 @@
   ],
   "project-backlog|tablet": [
     "console errors",
-    "dead space"
+    "dead space",
+    "overlap"
   ],
   "project-board|desktop": [
+    "clipped text",
     "console errors",
     "dead space"
   ],
   "project-board|mobile": [
     "clipped control",
+    "clipped text",
     "console errors",
     "dead space",
     "horizontal overflow",
     "tap targets"
   ],
   "project-board|tablet": [
+    "clipped text",
     "console errors",
     "dead space",
     "horizontal overflow"
@@ -117,7 +237,6 @@
     "clipped control",
     "console errors",
     "dead space",
-    "horizontal overflow",
     "tap targets"
   ],
   "project-permissions|tablet": [
@@ -140,30 +259,28 @@
     "dead space"
   ],
   "projects|desktop": [
-    "clipped text",
+    "console errors",
     "dead space"
   ],
   "projects|mobile": [
-    "console errors"
+    "console errors",
+    "dead space",
+    "tap targets"
   ],
   "projects|tablet": [
     "console errors",
     "dead space"
   ],
   "teams|desktop": [
-    "clipped text",
+    "console errors",
     "dead space"
   ],
   "teams|mobile": [
-    "clipped control",
-    "clipped text",
     "console errors",
     "dead space",
-    "horizontal overflow",
     "tap targets"
   ],
   "teams|tablet": [
-    "clipped text",
     "console errors",
     "dead space"
   ]

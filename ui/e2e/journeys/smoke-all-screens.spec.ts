@@ -11,30 +11,34 @@ import {
   type ExpectedFailure,
   type LayoutTemplate,
 } from '../lib/layout-audit.ts'
-import { classifyViolations, loadKnownViolations, writeObserved } from '../lib/known-violations.ts'
+import { classifyViolations, loadKnownViolations, ruleIdOf, writeObserved } from '../lib/known-violations.ts'
+import { orgIdBySlug } from '../lib/api.ts'
 import { waitForImages } from '../lib/wait.ts'
-import { expect, test, type DataHelpers } from '../fixtures/test.ts'
+import { expect, test } from '../fixtures/test.ts'
 import { ROLE_KEYS, roles, type RoleKey } from '../fixtures/roles.ts'
-import { ruleIdOf } from '../lib/known-violations.ts'
 
-// Smoke journey: every role visits every screen at each viewport project (desktop, tablet, mobile),
-// the layout audit runs on each screen, screenshots are kept and a JSON report is written to
-// test-results/journeys/<role>/<viewport>.json. Data (project, issue) is created through the API.
+// Smoke journey: every role visits the screens that exist for its organization context, at each
+// viewport project (desktop, tablet, mobile). The layout audit runs on each screen, screenshots are
+// kept and a JSON report is written to test-results/journeys/<role>/<viewport>.json.
+// Ids (project, issue, the caller's own user for /people/:id) are read through the API as the role.
 
 const REPORT_ROOT = fileURLToPath(new URL('../../test-results/journeys/', import.meta.url))
 
-/** Teams link is part of the navigation only for admins (asserted on the desktop project). */
-const canSeeTeams: Partial<Record<RoleKey, boolean>> = {
-  admin: true,
-  agent: false,
-  requester: false,
-  requesterAna: false,
+/** Roles that may open the organization administration screens (RequireOrgAdmin). */
+const ORG_ADMIN_ROLES: readonly RoleKey[] = ['owner', 'orgadmin', 'admin']
+
+interface Ids {
+  readonly projectId: string
+  readonly issueId: string
+  readonly userId: string
 }
 
 interface Screen {
   readonly name: string
-  readonly path: (ids: { projectId: string; issueId: string }) => string
+  readonly path: (ids: Ids) => string
   readonly template: LayoutTemplate
+  /** Only for these roles; undefined = every role with an organization. */
+  readonly onlyFor?: readonly RoleKey[]
 }
 
 const screens: readonly Screen[] = [
@@ -49,13 +53,21 @@ const screens: readonly Screen[] = [
   { name: 'project-calendar', path: (ids) => `/projects/${ids.projectId}/calendar`, template: 'wide' },
   { name: 'project-permissions', path: (ids) => `/projects/${ids.projectId}/permisos`, template: 'reading' },
   { name: 'teams', path: () => '/teams', template: 'wide' },
+  { name: 'people', path: () => '/people', template: 'wide' },
+  { name: 'person', path: (ids) => `/people/${ids.userId}`, template: 'split' },
   { name: 'profile', path: () => '/profile', template: 'reading' },
+  { name: 'profile-general', path: () => '/profile/general', template: 'reading' },
+  { name: 'org-settings', path: () => '/organization/settings', template: 'reading', onlyFor: ORG_ADMIN_ROLES },
+  { name: 'org-members', path: () => '/organization/members', template: 'wide', onlyFor: ORG_ADMIN_ROLES },
+  { name: 'org-invitations', path: () => '/organization/invitations', template: 'wide', onlyFor: ORG_ADMIN_ROLES },
 ]
+
+/** Onboarding is the only screen of an account without an organization (newbie). */
+const onboardingScreen: Screen = { name: 'onboarding', path: () => '/onboarding', template: 'reading' }
 
 /**
  * Non-admin roles may see forbidden (403) or missing (404) API responses on screens that belong to
- * projects or issues they cannot access: the forbidden state is the expected outcome for them.
- * Admin must reach every screen, so nothing is declared for admin.
+ * projects or issues they cannot access. Admin must reach every screen, so nothing is declared for admin.
  */
 function forbiddenFor(key: RoleKey): ExpectedFailure[] {
   if (roles[key].appRole === 'admin') return []
@@ -74,35 +86,12 @@ interface ScreenReport {
   readonly metrics: AuditResult['metrics']
 }
 
-/** Fixed smoke data: short names (the audit's clipping check depends on name length). */
-const SMOKE_PROJECT = { key: 'E2ESMOKE', name: 'E2E Smoke' } as const
-const SMOKE_ISSUE = { title: 'E2E smoke issue' } as const
-
-/** Reuses the first listed item matching `pick`, otherwise creates it. Keeps the data set stable across runs. */
-async function findOrCreate<T extends { id: string }>(
-  client: APIRequestContext,
-  data: DataHelpers,
-  pick: (list: T[]) => T | undefined,
-  body: unknown,
-  resource: 'projects' | 'issues',
-  projectId?: string,
-): Promise<T> {
-  const query = resource === 'issues' && projectId ? { project_id: projectId } : undefined
-  const response = await client.get(resource, query ? { params: query } : undefined)
-  expect(response.ok(), `GET ${resource} should succeed`).toBe(true)
-  const listed = ((await response.json()) as { data: T[] }).data
-  const found = pick(listed)
-  if (found) return found
-  return data.create<T>('admin', resource, body)
-}
-
 async function visitScreen(
   page: Page,
   screen: Screen,
-  ids: { projectId: string; issueId: string },
+  ids: Ids,
   shot: (page: Page, name: string) => Promise<string>,
   role: RoleKey,
-  viewport: string,
   expectedFailures: readonly ExpectedFailure[],
 ): Promise<ScreenReport> {
   const hygiene = trackHygiene(page)
@@ -116,6 +105,7 @@ async function visitScreen(
     name: `${role}-${screen.name}`,
     expectedFailures,
   })
+  const viewport = test.info().project.name
   const screenshot = await shot(page, `${role}-${viewport}-${screen.name}`)
   return {
     screen: screen.name,
@@ -127,46 +117,79 @@ async function visitScreen(
   }
 }
 
-// Only the legacy accounts are walked until P2-S5..S9 adapt the UI to organizations; new roles join then.
-for (const key of ROLE_KEYS.filter((k) => k in canSeeTeams)) {
-  test(`recorre todas las pantallas como ${key} @smoke`, async ({ as, api, data, shots }, testInfo) => {
-    test.setTimeout(300_000)
-    const viewport = testInfo.project.name
+/**
+ * First project and issue the role can see in its organization, and the role's own user id.
+ * When the role sees none and may create one, a smoke project or issue is created (and deleted at the end).
+ * Otherwise a missing id is used: the detail screens then show the not-found state, which the
+ * forbidden expectations of non-admin roles already cover.
+ */
+async function smokeIds(client: APIRequestContext, orgId: string): Promise<Ids> {
+  const missing = '00000000-0000-4000-8000-00000000dead'
+  const me = (await (await client.get('users/me')).json()) as { data: { id: string } }
 
-    // Fixed, short data reused across runs (projects cannot be deleted through the API).
-    const admin = await api('admin')
-    const me = await admin.get('users/me')
-    expect(me.ok(), 'GET users/me should succeed').toBe(true)
-    const leadId = ((await me.json()) as { data: { id: string } }).data.id
-    const project = await findOrCreate<{ id: string; key: string }>(admin, data, (list) => list.find((item) => item.key === SMOKE_PROJECT.key), {
-      key: SMOKE_PROJECT.key,
-      name: SMOKE_PROJECT.name,
-      type: 'scrum',
-      lead_id: leadId,
-      visibility: 'team',
-    }, 'projects')
-    const issue = await findOrCreate<{ id: string; title: string }>(admin, data, (list) => list.find((item) => item.title === SMOKE_ISSUE.title), {
-      title: SMOKE_ISSUE.title,
-      description: 'Incidencia creada por el smoke test de pantallas.',
-      priority: 'medium',
-      project_id: project.id,
-    }, 'issues', project.id)
-    const ids = { projectId: project.id, issueId: issue.id }
+  const listProjects = async () =>
+    ((await (await client.get('projects', { params: { organization_id: orgId } })).json()) as { data: Array<{ id: string }> }).data
+  let projects = await listProjects()
+  if (projects.length === 0) {
+    const created = await client.post('projects', {
+      data: { organization_id: orgId, key: 'E2ESMK', name: `e2e-smoke-${Math.random().toString(36).slice(2, 8)}`, type: 'scrum', visibility: 'open' },
+    })
+    if (created.ok()) {
+      const project = ((await created.json()) as { data: { id: string } }).data
+      projects = [project]
+    }
+  }
+  const projectId = projects[0]?.id ?? missing
+
+  const listIssues = async () =>
+    ((await (await client.get('issues', { params: { organization_id: orgId, project_id: projectId } })).json()) as {
+      data: Array<{ id: string }>
+    }).data
+  let issues = projectId === missing ? [] : await listIssues()
+  if (issues.length === 0 && projectId !== missing) {
+    const created = await client.post('issues', {
+      data: { title: 'e2e smoke issue', description: 'Incidencia del smoke test de pantallas.', priority: 'medium', project_id: projectId },
+    })
+    if (created.ok()) {
+      const issue = ((await created.json()) as { data: { id: string } }).data
+      issues = [issue]
+    }
+  }
+  return { projectId, issueId: issues[0]?.id ?? missing, userId: me.data.id }
+}
+
+for (const key of ROLE_KEYS) {
+  test(`recorre las pantallas de ${key} @smoke`, async ({ as, api, shots }, testInfo) => {
+    test.setTimeout(420_000)
+    const viewport = testInfo.project.name
+    const client = await api(key)
+    const isNewbie = roles[key].org === null
 
     const page = await as(key)
     const reports: ScreenReport[] = []
-    for (const screen of screens) {
-      reports.push(await visitScreen(page, screen, ids, shots, key, viewport, forbiddenFor(key)))
+    const applicable = isNewbie
+      ? [onboardingScreen]
+      : screens.filter((screen) => !screen.onlyFor || screen.onlyFor.includes(key))
+
+    const ids = isNewbie
+      ? { projectId: '00000000-0000-4000-8000-000000000000', issueId: '00000000-0000-4000-8000-000000000000', userId: '00000000-0000-4000-8000-000000000000' }
+      : await smokeIds(client, await orgIdBySlug(client, roles[key].org ?? 'corelog'))
+
+    for (const screen of applicable) {
+      reports.push(await visitScreen(page, screen, ids, shots, key, forbiddenFor(key)))
     }
 
     const dir = path.join(REPORT_ROOT, key)
     mkdirSync(dir, { recursive: true })
     writeFileSync(path.join(dir, `${viewport}.json`), JSON.stringify({ role: key, viewport, reports }, null, 2))
 
-    // Navigation check only where the sidebar is always expanded (desktop).
-    if (viewport === 'desktop') {
-      const hasTeamsLink = (await page.getByRole('navigation').getByRole('link', { name: 'Equipos' }).count()) > 0
-      expect(hasTeamsLink, `Equipos in navigation for ${key} (${roles[key].appRole})`).toBe(canSeeTeams[key])
+    // Navigation check where the top bar is visible on every viewport width (desktop project).
+    if (viewport === 'desktop' && !isNewbie) {
+      await page.goto('/issues')
+      await expect(
+        page.getByRole('navigation', { name: 'Principal' }).getByRole('button', { name: 'Equipos' }),
+        `Equipos in the top navigation for ${key}`,
+      ).toBeVisible()
     }
 
     // Compare against the known-violations baseline, per screen and viewport.
@@ -180,7 +203,7 @@ for (const key of ROLE_KEYS.filter((k) => k in canSeeTeams)) {
       observed[screenKey] = [...new Set(report.violations.map(ruleIdOf))].sort()
       for (const known of split.known) summary.push(`known  ${screenKey} ${known}`)
       for (const rule of split.fixed) summary.push(`fixed  ${screenKey} ${rule} (remove from baseline)`)
-      for (const violation of split.fresh) fresh.push(`${screenKey}: ${violation}`)
+      for (const violation of split.fresh) fresh.push(`${key} ${screenKey}: ${violation}`)
     }
     const summaryText = summary.length > 0 ? summary.join('\n') : 'none'
     console.log(`[smoke ${key} ${viewport}]\n${summaryText}`)

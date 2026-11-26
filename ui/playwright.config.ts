@@ -22,6 +22,8 @@ export default defineConfig({
   globalTeardown: './e2e/global-teardown.ts',
   timeout: 60_000,
   expect: {
+    // Dev server modules compile on first load: the default 5 s is too short for the first visit of a screen.
+    timeout: 15_000,
     toHaveScreenshot: {
       // Small tolerance for font antialiasing between runs of the same platform.
       maxDiffPixelRatio: 0.01,

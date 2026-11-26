@@ -6,13 +6,14 @@ import { waitForImages } from '../../lib/wait.ts'
 import { expect, test } from '../../fixtures/test.ts'
 
 test.describe('pantalla de login', () => {
-  test('muestra el banner de CoreLog centrado sobre el formulario', async ({ page }) => {
+  test('muestra el formulario de acceso y el panel de marca', async ({ page }) => {
     await page.goto('/login')
     await waitForImages(page)
 
-    const banner = page.getByRole('img', { name: 'CoreLog' })
-    await expect(banner).toBeVisible()
-    await expect(banner).toHaveAttribute('src', '/brand/corelog-banner-480.png')
+    await expect(page.getByRole('heading', { name: 'Iniciar sesión' })).toBeVisible()
+    await expect(page.getByLabel('Correo electrónico')).toBeVisible()
+    await expect(page.getByRole('textbox', { name: 'Contraseña' })).toBeVisible()
+    await expect(page.getByRole('link', { name: 'Crear una' })).toBeVisible()
   })
 
   test('inicia sesion con credenciales validas y llega a incidencias', async ({ page }) => {
@@ -20,8 +21,8 @@ test.describe('pantalla de login', () => {
     test.skip(!password, 'E2E_USER_PASSWORD is not set')
 
     await page.goto('/login')
-    await page.locator('input[type="email"]').fill('admin@corelog.local')
-    await page.locator('input[type="password"]').fill(password ?? '')
+    await page.getByLabel('Correo electrónico').fill('admin@corelog.local')
+    await page.getByRole('textbox', { name: 'Contraseña' }).fill(password ?? '')
     await page.getByRole('button', { name: 'Iniciar sesión' }).click()
 
     await expect(page).toHaveURL(/\/(issues|dashboard)/)
@@ -32,7 +33,7 @@ test.describe('pantalla de login', () => {
     await waitForImages(page)
 
     // Same known-violations baseline as the smoke journey, keyed "login|<viewport>".
-    const result = await collectLayoutAudit(page, { template: 'centered', name: 'login' })
+    const result = await collectLayoutAudit(page, { template: 'split', name: 'login' })
     const key = `login|${testInfo.project.name}`
     const split = classifyViolations(key, result.violations, loadKnownViolations())
     const summary = [
