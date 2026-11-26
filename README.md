@@ -231,6 +231,37 @@ Ejemplos:
 
 Ejecutar cualquiera de los scripts sin un comando o con uno no reconocido muestra la lista de comandos anterior.
 
+## Datos de prueba (seed)
+
+`cmd/seed` siembra la base de datos con datos deterministas: el mismo escenario produce siempre los mismos datos. La contraseña de todas las cuentas viene de la variable `SEED_PASSWORD`, que es obligatoria, no tiene valor por defecto y nunca se imprime.
+
+```sh
+SEED_PASSWORD='<contrasena>' go run ./cmd/seed --scenario demo
+SEED_PASSWORD='<contrasena>' go run ./cmd/seed --scenario e2e
+SEED_PASSWORD='<contrasena>' go run ./cmd/seed --scenario scale --issues 50000
+SEED_PASSWORD='<contrasena>' go run ./cmd/seed --scenario demo --force-reset
+```
+
+```powershell
+$env:SEED_PASSWORD = '<contrasena>'; .\scripts\seed.ps1 --scenario demo
+```
+
+`scripts/seed.sh` y `scripts/seed.ps1` son envoltorios que exigen `SEED_PASSWORD` y reenvían el resto de argumentos a `cmd/seed`.
+
+| Escenario | Contenido |
+| --- | --- |
+| `demo` | 21 cuentas (`admin@corelog.local`, `agent@corelog.local`, `requester@corelog.local` y personas `@corelog.test`), 5 equipos, 4 proyectos (CORE, OPS, SEC, WEB), 120 incidencias con comentarios, seguidores, enlaces, sprints, filtros guardados y notificaciones |
+| `e2e` | Cuentas de las pruebas de Playwright (`admin@corelog.local`, `agent@corelog.local`, `requester@corelog.local`, `ana.torres@corelog.test`), 1 equipo, 2 proyectos (SCRUM, KAN), 15 incidencias, 1 sprint activo con incidencias, comentarios y notificaciones |
+| `scale` | Organización de `demo` más una cuenta extra por cada 1000 incidencias, y `--issues N` incidencias (50 000 por defecto) con sus comentarios y etiquetas. Tarda unos 30 s con 50 000 |
+
+Opciones:
+
+- `--scenario`: `demo` (por defecto), `e2e` o `scale`.
+- `--issues N`: número de incidencias del escenario `scale`.
+- `--force-reset`: vacía las tablas de la aplicación (nunca `schema_migrations`) antes de sembrar. Sin esta opción, el comando se niega a sembrar una base de datos que ya tiene usuarios.
+
+Las pruebas de la siembra necesitan PostgreSQL: con `CORELOG_TEST_DATABASE_URL` definida, `go test ./cmd/seed/ -count=1` usa esquemas aislados. Sin esa variable, las pruebas de base de datos se omiten.
+
 ## Variables de entorno
 
 All variables live in `.env`, copied from `.env.example`. See [`ui/.env.example`](https://www.google.com/search?q=ui/.env.example&utm_source=gemini) para ver las variables del frontend.
