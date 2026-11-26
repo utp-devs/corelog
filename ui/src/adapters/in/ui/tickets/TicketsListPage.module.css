@@ -10,3 +10,32 @@
   width: 200px;
   max-width: 100%;
 }
+
+/* Filter row: wraps inside the toolbar; below 1024 px the search takes a full row and the selects share the next. */
+.filters {
+  min-width: 0;
+  width: 100%;
+}
+
+.filters :global(.ant-space) {
+  max-width: 100%;
+}
+
+@media (max-width: 1023.98px) {
+  .filters :global(.ant-space) {
+    width: 100%;
+  }
+
+  .filters :global(.ant-space-item) {
+    flex: 1 1 160px;
+    min-width: 0;
+  }
+
+  .filters :global(.ant-space-item:first-child) {
+    flex-basis: 100%;
+  }
+
+  .filters :global(.ant-select) {
+    width: 100%;
+  }
+}

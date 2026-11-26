@@ -8,6 +8,7 @@ import { useOrgStore } from '@/adapters/in/state/org.store'
 import { isValidOrgSlug, slugFromName } from '@/core/organizations/domain/organization'
 import { fieldErrors, isAppError } from '@/core/shared/app-error'
 import { orgCreateErrorMessage } from '../org-copy'
+import styles from './onboarding.module.css'
 
 const SLUG_RULE = 'Usa 3 a 40 caracteres: minúsculas, números y guiones, sin guion al principio ni al final.'
 
@@ -68,8 +69,8 @@ export function OrgFormStep({ onBack, onCreated }: OrgFormStepProps) {
   })
 
   return (
-    <Form layout="vertical" onFinish={onSubmit} requiredMark={false} aria-label="Datos de la organización">
-      <Form.Item label="Nombre de la organización" validateStatus={errors.name ? 'error' : ''} help={errors.name?.message}>
+    <Form layout="vertical" onFinish={onSubmit} requiredMark={false} aria-label="Datos de la organización" className={styles.formGrid}>
+      <Form.Item className={styles.half} label="Nombre de la organización" validateStatus={errors.name ? 'error' : ''} help={errors.name?.message}>
         <Controller
           name="name"
           control={control}
@@ -91,6 +92,7 @@ export function OrgFormStep({ onBack, onCreated }: OrgFormStepProps) {
       </Form.Item>
 
       <Form.Item
+        className={styles.half}
         label="Identificador (slug)"
         validateStatus={errors.slug ? 'error' : ''}
         help={errors.slug?.message ?? SLUG_RULE}
@@ -112,9 +114,9 @@ export function OrgFormStep({ onBack, onCreated }: OrgFormStepProps) {
         />
       </Form.Item>
 
-      {formError && <Alert type="error" showIcon message={formError} />}
+      {formError && <Alert type="error" showIcon message={formError} className={styles.full} />}
 
-      <Space>
+      <Space className={styles.full}>
         {onBack && (
           <Button size="large" onClick={onBack}>
             Atrás

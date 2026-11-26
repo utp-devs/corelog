@@ -102,7 +102,7 @@ describe('ProjectsPage', () => {
     vi.spyOn(ProjectHttpRepository.prototype, 'list').mockResolvedValue(projects)
     renderPage()
 
-    const grid = await screen.findByRole('list', { name: 'Proyectos' })
+    const grid = await screen.findByRole('group', { name: 'Proyectos' })
     expect(within(grid).getAllByRole('article')).toHaveLength(2)
     const core = screen.getByTestId('project-card-CORE')
     expect(within(core).getByRole('heading', { name: 'CoreLog' })).toBeInTheDocument()
@@ -186,7 +186,7 @@ describe('ProjectsPage', () => {
     vi.spyOn(OrganizationHttpRepository.prototype, 'listMembers').mockResolvedValue([memberDto('u1', 'Ana Pérez')])
     renderPage()
 
-    await screen.findByRole('list', { name: 'Proyectos' })
+    await screen.findByRole('group', { name: 'Proyectos' })
     await waitFor(() => expect(screen.getByTestId('project-lead-CORE')).toHaveTextContent('Ana Pérez'))
     expect(screen.getByTestId('project-card-SEC')).toHaveTextContent('Responsable: Ana Pérez')
     expect(OrganizationHttpRepository.prototype.listMembers).toHaveBeenCalledWith('o1')
@@ -209,19 +209,20 @@ describe('ProjectsPage', () => {
     expect(await screen.findByTestId('project-lead-CORE')).toHaveTextContent('Cargando responsable')
   })
 
-  it('renders one column of cards at 390px and the auto grid on desktop', async () => {
+  it('renders the cards in the shared CardGrid at 390px and on desktop, one card per direct child', async () => {
     vi.spyOn(ProjectHttpRepository.prototype, 'list').mockResolvedValue(projects)
     restoreViewport = installViewport(390)
     const mobile = renderPage()
 
-    expect(await screen.findByRole('list', { name: 'Proyectos' })).toHaveAttribute('data-layout', 'single-column')
-    expect(screen.getByTestId('project-card-CORE')).toBeInTheDocument()
+    const grid = await screen.findByRole('group', { name: 'Proyectos' })
+    expect(grid).toHaveAttribute('data-card-grid')
+    expect(within(grid).getByTestId('project-card-CORE').parentElement).toBe(grid)
     mobile.unmount()
 
     restoreViewport()
     restoreViewport = installViewport(1440)
     renderPage()
-    expect(await screen.findByRole('list', { name: 'Proyectos' })).toHaveAttribute('data-layout', 'auto-grid')
+    expect(await screen.findByRole('group', { name: 'Proyectos' })).toHaveAttribute('data-card-grid')
     consoleGuard.expectNoConsoleOutput()
   })
 })

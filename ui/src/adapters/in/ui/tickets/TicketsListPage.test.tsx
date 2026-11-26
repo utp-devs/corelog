@@ -160,6 +160,8 @@ describe('TicketsListPage states', () => {
 
   it('shows an empty state inside the table area when there are no issues', () => {
     renderPage()
+    // The list fills the remaining height of the page (PageContainer and Section fill, DataTable fill).
+    expect(document.querySelector('[data-fill="true"]')).not.toBeNull()
     expect(screen.getByText('Aún no hay incidencias')).toBeInTheDocument()
     expect(screen.getAllByRole('button', { name: /Nueva incidencia/ }).length).toBeGreaterThan(0)
   })

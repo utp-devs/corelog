@@ -32,14 +32,14 @@
   min-width: 0;
 }
 
+/* Titles wrap instead of being cut, so long project names stay readable at 390 px. */
 .title {
   margin: 0;
-  overflow: hidden;
+  min-width: 0;
+  overflow-wrap: anywhere;
   color: var(--cl-text);
   font-size: var(--cl-font-h3);
   font-weight: 600;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .meta {
@@ -58,15 +58,17 @@
 
 .description {
   margin: 0;
-  overflow: hidden;
+  min-width: 0;
+  overflow-wrap: anywhere;
   color: var(--cl-text-subtle);
   font-size: var(--cl-font-small);
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
+/* Section tabs scroll inside the nav on narrow widths (data-scroll-x), never past the viewport. */
 .nav {
   min-width: 0;
+  max-width: 100%;
+  overflow-x: auto;
   padding: 0 var(--cl-space-5);
   border: 1px solid var(--cl-border);
   border-radius: 0 0 var(--cl-radius-lg) var(--cl-radius-lg);
@@ -75,6 +77,7 @@
 
 .tabs {
   margin-bottom: 0;
+  min-width: 0;
 }
 
 .lead {

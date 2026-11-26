@@ -107,7 +107,7 @@ export function PeoplePage({ repository = defaultRepository }: PeoplePageProps) 
   )
 
   return (
-    <PageContainer variant="wide" pageName="people" ready={!loading && error === null}>
+    <PageContainer variant="wide" pageName="people" ready={!loading && error === null} fill>
       <PageHeader title="Personas" description={org ? `Miembros de ${org.name}` : undefined} />
       <Toolbar
         left={
@@ -121,6 +121,7 @@ export function PeoplePage({ repository = defaultRepository }: PeoplePageProps) 
       />
       <DataTable<OrganizationMember>
         tableKey="people-directory"
+        fill
         columns={columns}
         data={orgId ? visible : []}
         rowKey="userId"

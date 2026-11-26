@@ -44,6 +44,8 @@ describe('NewTicketPage', () => {
     expect(screen.getByRole('heading', { name: 'Descripción' })).toBeInTheDocument()
     expect(screen.getByLabelText(/Título/)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Crear incidencia' })).toBeInTheDocument()
+    // Two columns on desktop: the main fields and the classification side column.
+    expect(screen.getByRole('complementary', { name: 'Clasificación' })).toBeInTheDocument()
   })
 
   it('shows validation messages on submit without calling the server', async () => {

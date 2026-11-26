@@ -57,7 +57,6 @@ const AVATAR_SIZE = 10
 const newThemeTokens = [
   '--cl-shadow-3',
   '--cl-shadow-focus',
-  '--cl-on-brand',
   ...STATUS_CATEGORIES.flatMap((c) => [`--cl-cat-${c}`, `--cl-cat-${c}-bg`, `--cl-cat-${c}-text`]),
   ...ISSUE_TYPES.flatMap((t) => [`--cl-type-${t}`, `--cl-type-${t}-bg`, `--cl-type-${t}-text`]),
   ...PRIORITIES.map((p) => `--cl-prio-${p}`),
@@ -150,9 +149,6 @@ function buildContrastCases(): ContrastCase[] {
       cases.push({ theme, fg: `--cl-${kind}-text`, bg: `--cl-${kind}-bg`, min: 4.5 })
     }
     cases.push({ theme, fg: '--cl-brand', bg: '--cl-brand-subtle', min: 4.5 })
-    // Text on the brand gradient used by the auth panel.
-    cases.push({ theme, fg: '--cl-on-brand', bg: '--cl-brand', min: 4.5 })
-    cases.push({ theme, fg: '--cl-on-brand', bg: '--cl-brand-pressed', min: 4.5 })
     // UI components on surface (3:1).
     cases.push({ theme, fg: '--cl-brand', bg: '--cl-bg-surface', min: 3 })
     cases.push({ theme, fg: '--cl-border-strong', bg: '--cl-bg-surface', min: 3 })

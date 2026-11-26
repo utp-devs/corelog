@@ -107,6 +107,34 @@
   min-width: 160px;
 }
 
+/* Narrow screens: the section tabs form one row that scrolls sideways instead of wrapping or clipping. */
+.tabsScroll {
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: thin;
+  padding-block: var(--cl-space-1);
+}
+
+.tabsScroll :global(.ant-segmented) {
+  display: inline-flex;
+}
+
+.tabsScroll :global(.ant-segmented-item-label) {
+  white-space: nowrap;
+}
+
+.tabLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--cl-space-2);
+}
+
+.identity,
+.name {
+  overflow-wrap: anywhere;
+}
+
 @media (max-width: 991.98px) {
   .layout {
     grid-template-columns: minmax(0, 1fr);

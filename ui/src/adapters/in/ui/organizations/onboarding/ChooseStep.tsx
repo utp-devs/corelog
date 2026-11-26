@@ -43,8 +43,8 @@ export function ChooseStep({ onCreate }: ChooseStepProps) {
         <Typography.Paragraph>
           Pega el enlace que te han enviado para unirte a una organización existente.
         </Typography.Paragraph>
-        <Form layout="vertical" requiredMark={false} onFinish={join}>
-          <Form.Item validateStatus={error ? 'error' : ''} help={error}>
+        <Form layout="vertical" requiredMark={false} onFinish={join} className={styles.joinForm}>
+          <Form.Item className={styles.joinField} validateStatus={error ? 'error' : ''} help={error}>
             <Input
               size="large"
               value={link}
@@ -56,7 +56,7 @@ export function ChooseStep({ onCreate }: ChooseStepProps) {
               }}
             />
           </Form.Item>
-          <Button htmlType="submit" size="large">
+          <Button htmlType="submit" size="large" className={styles.joinButton}>
             Continuar
           </Button>
         </Form>

@@ -1,13 +1,6 @@
-import { CheckCircleFilled } from '@ant-design/icons'
 import { useId, type ReactNode } from 'react'
 
 import styles from './AuthLayout.module.css'
-
-const highlights = [
-  'Incidencias, proyectos y tableros en un solo lugar',
-  'Sprints, backlog y calendario por proyecto',
-  'Permisos por rol y trazabilidad de cada cambio',
-]
 
 type AuthLayoutProps = {
   title: string
@@ -21,8 +14,8 @@ type AuthLayoutProps = {
 export const AUTH_MAIN_ID = 'auth-main'
 
 /**
- * Shared template for the public and onboarding auth screens (S-01, S-02, S-04, S-05).
- * Desktop: brand panel on the left and a centered card. Mobile: the card alone with the banner on top.
+ * Shared template for the public and onboarding-invite auth screens (S-01, S-02, S-03, S-04).
+ * A single centered card (max 440 px) on the token gradient, with the brand banner at its top on every viewport.
  */
 export function AuthLayout({ title, subtitle, footer, children }: AuthLayoutProps) {
   const titleId = useId()
@@ -33,27 +26,7 @@ export function AuthLayout({ title, subtitle, footer, children }: AuthLayoutProp
         Saltar al formulario
       </a>
 
-      <aside className={styles.brandPanel} aria-label="CoreLog">
-        <div className={styles.brandContent}>
-          <div className={styles.logoTile}>
-            <img src="/brand/corelog-icon-128.png" alt="" width={64} height={64} className={styles.logo} />
-          </div>
-          <p className={styles.brandTitle}>Gestiona tu trabajo con claridad</p>
-          <p className={styles.brandText}>
-            CoreLog centraliza proyectos, incidencias y planificación para equipos que necesitan control y seguimiento.
-          </p>
-          <ul className={styles.highlights}>
-            {highlights.map((item) => (
-              <li key={item}>
-                <CheckCircleFilled className={styles.highlightIcon} aria-hidden="true" />
-                <span>{item}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </aside>
-
-      <main id={AUTH_MAIN_ID} tabIndex={-1} className={styles.formPanel}>
+      <main id={AUTH_MAIN_ID} tabIndex={-1} className={styles.main}>
         <section className={styles.card} aria-labelledby={titleId}>
           <img
             src="/brand/corelog-banner-480.png"
@@ -62,7 +35,7 @@ export function AuthLayout({ title, subtitle, footer, children }: AuthLayoutProp
             alt="CoreLog"
             width={180}
             height={48}
-            className={styles.mobileBanner}
+            className={styles.banner}
           />
           <h1 id={titleId} className={styles.title}>
             {title}
@@ -72,6 +45,8 @@ export function AuthLayout({ title, subtitle, footer, children }: AuthLayoutProp
           {footer !== undefined && footer !== null && <p className={styles.footer}>{footer}</p>}
         </section>
       </main>
+
+      <footer className={styles.pageFooter}>CoreLog</footer>
     </div>
   )
 }

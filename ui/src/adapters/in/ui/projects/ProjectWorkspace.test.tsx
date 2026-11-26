@@ -44,7 +44,7 @@ describe('ProjectWorkspace states', () => {
     renderWorkspace()
 
     expect(await screen.findByRole('heading', { name: 'Proyecto demo' })).toBeInTheDocument()
-    expect(screen.getByRole('navigation', { name: 'Secciones del proyecto' })).toBeInTheDocument()
+    expect(screen.getByRole('navigation', { name: 'Secciones del proyecto' })).toHaveAttribute('data-scroll-x')
     expect(screen.getByRole('navigation', { name: 'Ruta de navegación' })).toHaveTextContent('Proyectos')
     consoleGuard.expectNoConsoleOutput()
   })

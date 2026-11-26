@@ -1,19 +1,7 @@
-.grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: var(--cl-space-4);
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.grid > li {
-  display: flex;
-  min-width: 0;
-}
-
 .card {
   display: flex;
+  flex: 1 1 auto;
+  min-width: 0;
   flex-direction: column;
   gap: var(--cl-space-3);
   width: 100%;
@@ -74,10 +62,6 @@
   background: var(--cl-bg-surface);
   border: 1px solid var(--cl-border);
   border-radius: var(--cl-radius-lg);
-}
-
-.empty {
-  max-height: 280px;
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -192,7 +192,7 @@ export function TicketsListPage() {
   )
 
   return (
-    <PageContainer variant="wide" pageName="issues" ready={!isLoading}>
+    <PageContainer variant="wide" pageName="issues" ready={!isLoading} fill>
       {contextHolder}
       <PageHeader
         title="Incidencias"
@@ -201,6 +201,7 @@ export function TicketsListPage() {
 
       <Toolbar
         left={
+          <div className={styles.filters}>
           <FilterBar
             search={{ value: search, onChange: (value) => { setSearch(value); setPage(1) }, placeholder: 'Buscar incidencia por título o descripción' }}
             filters={[
@@ -210,6 +211,7 @@ export function TicketsListPage() {
             ]}
             onClear={hasActiveFilters ? clearFilters : undefined}
           />
+          </div>
         }
         right={
           <Button type="primary" icon={<PlusOutlined />} onClick={() => navigate('/issues/new')}>
@@ -250,8 +252,9 @@ export function TicketsListPage() {
 
       {savedFilterError && <Alert type="error" showIcon message={savedFilterError} closable onClose={() => setSavedFilterError(undefined)} />}
 
-      <Section flush ariaLabel="Lista de incidencias">
+      <Section flush fill ariaLabel="Lista de incidencias">
         <TicketList
+          fill
           tickets={orderedTickets}
           loading={isLoading}
           error={error}

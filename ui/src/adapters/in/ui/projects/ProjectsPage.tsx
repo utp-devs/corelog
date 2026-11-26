@@ -9,9 +9,9 @@ import type { Project } from '@/core/projects/domain/project'
 import { EmptyState } from '@/shared/ui/EmptyState'
 import { ErrorPage } from '@/shared/ui/ErrorPage'
 import { ErrorState } from '@/shared/ui/ErrorState'
-import { useMediaQuery } from '@/shared/hooks/useMediaQuery'
 import { useOrgMembersById } from '@/adapters/in/ui/organizations/useOrgMembersById'
 import { Lozenge } from '@/shared/ui/Lozenge'
+import { CardGrid } from '@/shared/ui/CardGrid'
 import { PageContainer } from '@/shared/ui/PageContainer'
 import { PageHeader } from '@/shared/ui/PageHeader'
 import { ProjectAvatar } from '@/shared/ui/ProjectAvatar'
@@ -20,7 +20,6 @@ import { SearchInput } from '@/shared/ui/SearchInput'
 import { Toolbar } from '@/shared/ui/Toolbar'
 import { leadNameOf } from './projectLead'
 import { accessVariantOf } from './projectLoadError'
-import { MOBILE_QUERY } from './layout'
 import styles from './ProjectsPage.module.css'
 
 type VisibilityFilter = 'all' | 'open' | 'private'
@@ -85,7 +84,6 @@ export function ProjectsPage() {
   const [form] = Form.useForm()
 
   const isAdmin = user?.role === 'admin'
-  const isMobile = useMediaQuery(MOBILE_QUERY)
   const selectedProject = projects.find((project) => project.id === selectedProjectId)
   const visible = useMemo(() => filterProjects(projects, query, visibility, archived), [projects, query, visibility, archived])
   // All projects of the list belong to the current organization: its members resolve the leads.
@@ -167,10 +165,9 @@ export function ProjectsPage() {
     )
   } else {
     body = (
-      <ul className={styles.grid} aria-label="Proyectos" data-layout={isMobile ? 'single-column' : 'auto-grid'}>
+      <CardGrid ariaLabel="Proyectos" minCardWidth={280}>
         {visible.map((project) => (
-          <li key={project.id} className={styles.cardItem}>
-            <article className={styles.card} data-testid={`project-card-${project.key}`}>
+          <article key={project.id} className={styles.card} data-testid={`project-card-${project.key}`}>
               <header className={styles.cardHeader}>
                 <ProjectAvatar name={project.name} projectKey={project.key} size={40} />
                 <div className={styles.cardTitle}>
@@ -197,15 +194,14 @@ export function ProjectsPage() {
                   Miembros y etiquetas
                 </Button>
               </footer>
-            </article>
-          </li>
+          </article>
         ))}
-      </ul>
+      </CardGrid>
     )
   }
 
   return (
-    <PageContainer variant="wide" pageName="projects" ready={!loading && status !== 'loading'}>
+    <PageContainer variant="wide" pageName="projects" ready={!loading && status !== 'loading'} fill>
       <PageHeader
         title="Proyectos"
         description="Organiza el trabajo en espacios independientes."

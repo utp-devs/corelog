@@ -75,6 +75,7 @@ describe('OrgMembersPage', () => {
     expect(screen.queryByRole('combobox', { name: 'Rol de Yo Mismo' })).not.toBeInTheDocument()
     expect(screen.getByText('(tú)')).toBeInTheDocument()
     expect(screen.queryByText('Solo lectura')).not.toBeInTheDocument()
+    expect(document.querySelector('[data-page="org-members"]')).toHaveAttribute('data-fill', 'true')
   })
 
   it('limits an admin to changing members and guests', async () => {

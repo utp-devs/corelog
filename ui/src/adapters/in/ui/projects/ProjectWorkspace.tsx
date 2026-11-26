@@ -116,7 +116,7 @@ export function ProjectWorkspace() {
 
       {state.status !== 'error' && (
         <>
-          <nav aria-label="Secciones del proyecto" className={styles.nav}>
+          <nav aria-label="Secciones del proyecto" className={styles.nav} data-scroll-x="">
             <Tabs
               activeKey={activeKey}
               onChange={(key) => navigate(`/projects/${id}/${key}`)}

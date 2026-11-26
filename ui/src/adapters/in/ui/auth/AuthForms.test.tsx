@@ -29,12 +29,19 @@ describe('auth screens: landmarks and labels', () => {
     register.mockReset().mockResolvedValue(undefined)
   })
 
-  it('exposes a skip link to the main landmark, a level-1 heading and a labelled brand aside', () => {
+  it('exposes a skip link to the main landmark and a level-1 heading, with no brand aside', () => {
     const { container } = renderIn(<LoginPage />)
     expect(screen.getByRole('link', { name: 'Saltar al formulario' })).toHaveAttribute('href', '#auth-main')
     expect(container.querySelector('main#auth-main')).not.toBeNull()
     expect(screen.getByRole('heading', { level: 1, name: 'Iniciar sesión' })).toBeInTheDocument()
-    expect(screen.getByRole('complementary', { name: 'CoreLog' })).toBeInTheDocument()
+    expect(screen.queryByRole('complementary')).not.toBeInTheDocument()
+  })
+
+  it('renders the brand banner inside the single centered card', () => {
+    const { container } = renderIn(<LoginPage />)
+    const card = container.querySelector('main#auth-main section')
+    expect(card).not.toBeNull()
+    expect(card?.querySelector('img[alt="CoreLog"]')).not.toBeNull()
   })
 
   it('associates each input with its visible label and marks it required', () => {

@@ -38,3 +38,11 @@
   align-items: center;
   gap: var(--cl-space-2);
 }
+
+@media (max-width: 767px) {
+  /* Touch: the move buttons on the mobile cards reach 32 px. */
+  .moveButtons :global(.ant-btn) {
+    min-width: 32px;
+    min-height: 32px;
+  }
+}

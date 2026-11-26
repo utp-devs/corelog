@@ -326,6 +326,7 @@ export function ProjectBoardPage() {
               role="region"
               aria-label={`Tablero ${board.name}`}
               data-scroll="inside-board"
+              data-scroll-x=""
               data-layout={isMobile ? 'mobile-columns' : 'desktop-columns'}
             >
               {visibleColumns.map((column) => (

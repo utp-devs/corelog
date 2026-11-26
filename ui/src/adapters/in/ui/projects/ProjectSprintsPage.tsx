@@ -199,7 +199,7 @@ export function ProjectSprintsPage() {
                         aria-pressed={sprint.id === selectedId}
                         onClick={() => setSelectedId(sprint.id)}
                       >
-                        <span className={styles.sprintName}>{sprint.name}</span>
+                        <span className={styles.sprintName} title={sprint.name}>{sprint.name}</span>
                         <Lozenge tone={statusTones[sprint.status]}>{statusLabels[sprint.status]}</Lozenge>
                       </button>
                     </li>

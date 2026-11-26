@@ -7,8 +7,10 @@ import { useTeamsStore } from '@/adapters/in/state/teams.store'
 import { canCreateTeam, filterTeams } from '@/core/teams/domain/team-policy'
 import { EmptyState } from '@/shared/ui/EmptyState'
 import { ErrorState } from '@/shared/ui/ErrorState'
+import { CardGrid } from '@/shared/ui/CardGrid'
 import { PageContainer } from '@/shared/ui/PageContainer'
 import { PageHeader } from '@/shared/ui/PageHeader'
+import { Section } from '@/shared/ui/Section'
 import { SearchInput } from '@/shared/ui/SearchInput'
 import { toast } from '@/shared/ui/Toaster/toast'
 import { Toolbar } from '@/shared/ui/Toolbar'
@@ -54,24 +56,28 @@ export function TeamsPage() {
   let body: ReactNode
   if (loading) {
     body = (
-      <div role="status" aria-busy="true" aria-label="Cargando equipos" className={styles.grid}>
-        {Array.from({ length: SKELETON_CARDS }, (_, index) => (
-          <div key={index} className={styles.skeleton} aria-hidden="true">
-            <Skeleton active avatar={{ shape: 'square' }} paragraph={{ rows: 2 }} title={{ width: '60%' }} />
-          </div>
-        ))}
+      <div role="status" aria-busy="true" aria-label="Cargando equipos">
+        <CardGrid>
+          {Array.from({ length: SKELETON_CARDS }, (_, index) => (
+            <div key={index} className={styles.skeleton} aria-hidden="true">
+              <Skeleton active avatar={{ shape: 'square' }} paragraph={{ rows: 2 }} title={{ width: '60%' }} />
+            </div>
+          ))}
+        </CardGrid>
       </div>
     )
   } else if (failed) {
     body = (
-      <ErrorState
-        message={error?.message ?? 'No se pudieron cargar los equipos.'}
-        onRetry={() => void fetchTeams()}
-      />
+      <Section fill ariaLabel="Equipos">
+        <ErrorState
+          message={error?.message ?? 'No se pudieron cargar los equipos.'}
+          onRetry={() => void fetchTeams()}
+        />
+      </Section>
     )
   } else if (teams.length === 0) {
     body = (
-      <div className={styles.empty}>
+      <Section fill ariaLabel="Equipos">
         <EmptyState
           title="Aún no hay equipos"
           description={
@@ -81,28 +87,26 @@ export function TeamsPage() {
           }
           action={canCreate ? createButton : undefined}
         />
-      </div>
+      </Section>
     )
   } else if (visible.length === 0) {
     body = (
-      <div className={styles.empty}>
+      <Section fill ariaLabel="Equipos">
         <EmptyState title="Ningún equipo coincide con la búsqueda" description="Prueba con otro nombre o descripción." />
-      </div>
+      </Section>
     )
   } else {
     body = (
-      <ul className={styles.grid} aria-label="Equipos">
+      <CardGrid ariaLabel="Equipos">
         {visible.map((team) => (
-          <li key={team.id}>
-            <TeamCard team={team} />
-          </li>
+          <TeamCard key={team.id} team={team} />
         ))}
-      </ul>
+      </CardGrid>
     )
   }
 
   return (
-    <PageContainer variant="wide" ready={!loading} pageName="teams">
+    <PageContainer variant="wide" ready={!loading} pageName="teams" fill>
       <PageHeader title="Equipos" description="Agrupa a las personas de la organización y administra sus equipos." />
       <Toolbar
         left={<SearchInput value={query} onChange={setQuery} placeholder="Buscar equipos" ariaLabel="Buscar equipos" />}

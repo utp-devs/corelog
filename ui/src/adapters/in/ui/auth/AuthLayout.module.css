@@ -1,9 +1,10 @@
-/* Page template of the auth screens. Colors come only from --cl-* tokens (both themes). */
+/* Centered auth template (S-01..S-04). Colors come only from --cl-* tokens (both themes). */
 .page {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
+  display: flex;
+  flex-direction: column;
   min-height: 100vh;
-  background: linear-gradient(180deg, var(--cl-brand-subtle) 0%, var(--cl-bg-page) 40%);
+  min-height: 100dvh;
+  background: linear-gradient(160deg, var(--cl-brand-subtle) 0%, var(--cl-bg-page) 60%);
 }
 
 .skipLink {
@@ -25,105 +26,17 @@
   box-shadow: var(--cl-shadow-focus);
 }
 
-/* Brand panel: desktop only. */
-.brandPanel {
-  display: none;
-  position: relative;
-  overflow: hidden;
-  padding: var(--cl-space-8);
-  background: linear-gradient(135deg, var(--cl-brand) 0%, var(--cl-brand-pressed) 100%);
-  color: var(--cl-on-brand);
-}
-
-.brandPanel::after {
-  content: '';
-  position: absolute;
-  inset: auto -20% -30% auto;
-  width: 420px;
-  height: 420px;
-  border-radius: 50%;
-  background: var(--cl-bg-surface);
-  opacity: 0.08;
-  pointer-events: none;
-}
-
-.brandContent {
-  position: relative;
-  z-index: 1;
+/* The card is centered vertically and horizontally in the space above the footer. */
+.main {
   display: flex;
-  flex-direction: column;
-  justify-content: center;
-  height: 100%;
-  max-width: 480px;
-  margin: 0 auto;
-}
-
-.logoTile {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 88px;
-  height: 88px;
-  margin-bottom: var(--cl-space-6);
-  border-radius: var(--cl-radius-lg);
-  background: var(--cl-bg-surface);
-  box-shadow: var(--cl-shadow-2);
-}
-
-.logo {
-  display: block;
-  width: 64px;
-  height: 64px;
-  object-fit: contain;
-}
-
-.brandTitle {
-  margin: 0 0 var(--cl-space-3);
-  font-size: var(--cl-font-display);
-  font-weight: 700;
-  line-height: 1.2;
-  color: var(--cl-on-brand);
-}
-
-.brandText {
-  margin: 0 0 var(--cl-space-6);
-  font-size: var(--cl-font-body-strong);
-  color: var(--cl-on-brand);
-}
-
-.highlights {
-  display: grid;
-  gap: var(--cl-space-3);
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.highlights li {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--cl-space-3);
-  font-size: var(--cl-font-body);
-  color: var(--cl-on-brand);
-}
-
-.highlightIcon {
-  flex: none;
-  margin-top: 2px;
-  color: var(--cl-on-brand);
-}
-
-/* Form panel: the card is centered both ways. */
-.formPanel {
-  display: flex;
+  flex: 1 0 auto;
   align-items: center;
   justify-content: center;
   min-width: 0;
-  min-height: 100vh;
   padding: var(--cl-space-6) var(--cl-gutter);
 }
 
-.formPanel:focus {
+.main:focus {
   outline: none;
 }
 
@@ -137,7 +50,7 @@
   box-shadow: var(--cl-shadow-2);
 }
 
-.mobileBanner {
+.banner {
   display: block;
   width: 180px;
   max-width: 100%;
@@ -151,6 +64,7 @@
   font-weight: 700;
   line-height: 1.25;
   color: var(--cl-text);
+  overflow-wrap: anywhere;
 }
 
 .subtitle {
@@ -161,6 +75,7 @@
 .footer {
   margin: var(--cl-space-5) 0 0;
   text-align: center;
+  font-size: var(--cl-font-small);
   color: var(--cl-text-subtle);
 }
 
@@ -180,23 +95,15 @@
   box-shadow: var(--cl-shadow-focus);
 }
 
+.pageFooter {
+  padding: var(--cl-space-3) var(--cl-gutter) var(--cl-space-4);
+  text-align: center;
+  font-size: var(--cl-font-small);
+  color: var(--cl-text-subtle);
+}
+
 @media (min-width: 768px) {
   .card {
     padding: var(--cl-space-8);
-  }
-}
-
-@media (min-width: 992px) {
-  .page {
-    grid-template-columns: minmax(440px, 5fr) 6fr;
-  }
-
-  .brandPanel {
-    display: flex;
-    flex-direction: column;
-  }
-
-  .mobileBanner {
-    display: none;
   }
 }

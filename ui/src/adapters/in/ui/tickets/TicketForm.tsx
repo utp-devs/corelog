@@ -44,7 +44,10 @@ interface TicketFormProps {
   searchUsers?: (query: string) => Promise<UserLite[]>
 }
 
-/** Formulario de alta de incidencia: datos principales y descripción en Markdown. */
+/**
+ * Formulario de alta de incidencia. En escritorio (desde 992 px) dos columnas: a la izquierda los datos
+ * principales y la descripción; a la derecha la clasificación (tipo y prioridad). Por debajo, una columna.
+ */
 export function TicketForm({ onSubmit, onCreated, onCancel, isSubmitting, searchUsers }: TicketFormProps) {
   const {
     control,
@@ -73,9 +76,9 @@ export function TicketForm({ onSubmit, onCreated, onCancel, isSubmitting, search
     <>
       {unsavedGuard}
       <form className={styles.form} onSubmit={(event) => void submit(event)} noValidate aria-label="Nueva incidencia">
-        <Section title="Datos principales">
-          <div className={styles.grid}>
-            <div className={styles.wide}>
+        <div className={styles.layout}>
+          <div className={styles.main}>
+            <Section title="Datos principales">
               <Controller
                 name="title"
                 control={control}
@@ -96,70 +99,77 @@ export function TicketForm({ onSubmit, onCreated, onCancel, isSubmitting, search
                   </FieldRow>
                 )}
               />
-            </div>
-            <Controller
-              name="issueType"
-              control={control}
-              render={({ field }) => (
-                <FieldRow label="Tipo" required error={errors.issueType?.message}>
-                  {(props) => (
-                    <Select<IssueType>
-                      {...props}
+            </Section>
+
+            <Section title="Descripción">
+              <Controller
+                name="description"
+                control={control}
+                render={({ field }) => (
+                  <div className={styles.editor}>
+                    <RichTextEditor
+                      ariaLabel="Descripción"
                       value={field.value}
                       onChange={field.onChange}
-                      onBlur={field.onBlur}
-                      options={issueTypeOptions}
-                      status={errors.issueType ? 'error' : undefined}
+                      onSubmit={() => void submit()}
+                      placeholder="Describe el problema, los pasos para reproducirlo y el resultado esperado. Usa @ para mencionar."
+                      minRows={8}
+                      searchUsers={searchUsers}
+                      disabled={isSubmitting}
                     />
-                  )}
-                </FieldRow>
-              )}
-            />
-            <Controller
-              name="priority"
-              control={control}
-              render={({ field }) => (
-                <FieldRow label="Prioridad" required error={errors.priority?.message}>
-                  {(props) => (
-                    <Select<TicketPriority>
-                      {...props}
-                      value={field.value}
-                      onChange={field.onChange}
-                      onBlur={field.onBlur}
-                      options={priorityOptions}
-                      status={errors.priority ? 'error' : undefined}
-                    />
-                  )}
-                </FieldRow>
-              )}
-            />
-          </div>
-        </Section>
-  
-        <Section title="Descripción">
-          <Controller
-            name="description"
-            control={control}
-            render={({ field }) => (
-              <div className={styles.editor}>
-                <RichTextEditor
-                  ariaLabel="Descripción"
-                  value={field.value}
-                  onChange={field.onChange}
-                  onSubmit={() => void submit()}
-                  placeholder="Describe el problema, los pasos para reproducirlo y el resultado esperado. Usa @ para mencionar."
-                  minRows={8}
-                  searchUsers={searchUsers}
-                  disabled={isSubmitting}
-                />
-                {errors.description && (
-                  <p className={styles.error} role="alert">{errors.description.message}</p>
+                    {errors.description && (
+                      <p className={styles.error} role="alert">{errors.description.message}</p>
+                    )}
+                  </div>
                 )}
+              />
+            </Section>
+          </div>
+
+          <aside className={styles.side} aria-label="Clasificación">
+            <Section title="Clasificación">
+              <div className={styles.stack}>
+                <Controller
+                  name="issueType"
+                  control={control}
+                  render={({ field }) => (
+                    <FieldRow label="Tipo" required error={errors.issueType?.message}>
+                      {(props) => (
+                        <Select<IssueType>
+                          {...props}
+                          value={field.value}
+                          onChange={field.onChange}
+                          onBlur={field.onBlur}
+                          options={issueTypeOptions}
+                          status={errors.issueType ? 'error' : undefined}
+                        />
+                      )}
+                    </FieldRow>
+                  )}
+                />
+                <Controller
+                  name="priority"
+                  control={control}
+                  render={({ field }) => (
+                    <FieldRow label="Prioridad" required error={errors.priority?.message}>
+                      {(props) => (
+                        <Select<TicketPriority>
+                          {...props}
+                          value={field.value}
+                          onChange={field.onChange}
+                          onBlur={field.onBlur}
+                          options={priorityOptions}
+                          status={errors.priority ? 'error' : undefined}
+                        />
+                      )}
+                    </FieldRow>
+                  )}
+                />
               </div>
-            )}
-          />
-        </Section>
-  
+            </Section>
+          </aside>
+        </div>
+
         <div className={styles.actions}>
           <Button onClick={onCancel}>Cancelar</Button>
           <Button type="primary" htmlType="submit" loading={isSubmitting}>

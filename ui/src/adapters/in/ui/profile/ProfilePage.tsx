@@ -1,5 +1,5 @@
 import { BellOutlined, BgColorsOutlined, KeyOutlined, LockOutlined, UserOutlined } from '@ant-design/icons'
-import { Card, Grid, Menu, Space, Tag, Typography } from 'antd'
+import { Card, Grid, Menu, Segmented, Space, Tag, Typography } from 'antd'
 import type { MenuProps } from 'antd'
 import dayjs from 'dayjs'
 import { useCallback, type ReactNode } from 'react'
@@ -7,6 +7,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 
 import { useAuthStore } from '@/adapters/in/state/auth.store'
 import type { User } from '@/core/auth/domain/user'
+import { PageContainer } from '@/shared/ui/PageContainer'
 import { UserAvatar } from '../people/UserAvatar'
 import { AppearanceSection } from './AppearanceSection'
 import { GeneralSection } from './GeneralSection'
@@ -59,7 +60,8 @@ export function ProfilePage() {
   const shownName = user.displayName || user.name
 
   return (
-    <div className={styles.page}>
+    <PageContainer variant="reading" pageName="profile" ready>
+      <div className={styles.page}>
       <Card className={styles.summary} aria-label="Resumen de la cuenta">
         <div className={styles.summaryMain}>
           <UserAvatar id={user.id} name={shownName} avatarKey={user.avatarKey} size={64} />
@@ -76,13 +78,32 @@ export function ProfilePage() {
 
       <div className={styles.layout}>
         <nav className={styles.sideNav} aria-label="Secciones de la cuenta">
-          <Menu
-            mode={isDesktop ? 'inline' : 'horizontal'}
-            selectedKeys={[active]}
-            items={navItems}
-            onClick={({ key }) => goTo(key as SectionKey)}
-            className={styles.menu}
-          />
+          {isDesktop ? (
+            <Menu
+              mode="inline"
+              selectedKeys={[active]}
+              items={navItems}
+              onClick={({ key }) => goTo(key as SectionKey)}
+              className={styles.menu}
+            />
+          ) : (
+            <div className={styles.tabsScroll}>
+              <Segmented
+                aria-label="Secciones de la cuenta"
+                value={active}
+                onChange={(value) => goTo(value as SectionKey)}
+                options={SECTIONS.map((item) => ({
+                  value: item.key,
+                  label: (
+                    <span className={styles.tabLabel}>
+                      {item.icon}
+                      {item.label}
+                    </span>
+                  ),
+                }))}
+              />
+            </div>
+          )}
         </nav>
 
         <div className={styles.sections}>
@@ -95,6 +116,7 @@ export function ProfilePage() {
           {active === 'appearance' && <AppearanceSection />}
         </div>
       </div>
-    </div>
+      </div>
+    </PageContainer>
   )
 }

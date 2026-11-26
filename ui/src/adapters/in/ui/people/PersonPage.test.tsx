@@ -81,6 +81,9 @@ describe('PersonPage', () => {
     expect(screen.getByText('Analista')).toBeInTheDocument()
     expect(screen.getByText('Operaciones')).toBeInTheDocument()
     expect(screen.getByText('America/Bogota')).toBeInTheDocument()
+    // Wide page with the teams in the side panel (no dead space beside the details).
+    expect(document.querySelector('[data-page="person"]')).toHaveAttribute('data-variant', 'wide')
+    expect(screen.getByRole('complementary', { name: 'Equipos de la persona' })).toBeInTheDocument()
   })
 
   it('renders team chips that link to the team page', async () => {

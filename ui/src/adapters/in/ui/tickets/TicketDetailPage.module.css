@@ -129,6 +129,8 @@
 }
 
 .author {
+  min-width: 0;
+  overflow-wrap: anywhere;
   font-weight: 600;
 }
 
@@ -149,4 +151,14 @@
   overflow: hidden;
   clip: rect(0 0 0 0);
   white-space: nowrap;
+}
+
+/* Touch: small buttons in the detail actions, link and inline forms reach 32 px on mobile. */
+@media (max-width: 767px) {
+  .actions :global(.ant-btn-sm),
+  .linkForm :global(.ant-btn-sm),
+  .inlineRow :global(.ant-btn-sm) {
+    min-height: 32px;
+    min-width: 32px;
+  }
 }

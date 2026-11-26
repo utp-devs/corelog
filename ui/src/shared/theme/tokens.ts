@@ -38,7 +38,6 @@ export const themeTokens = {
   light: {
     '--cl-shadow-3': '0 8px 16px rgba(9,30,66,.25), 0 0 1px rgba(9,30,66,.31)',
     '--cl-shadow-focus': '0 0 0 2px var(--cl-bg-surface), 0 0 0 4px var(--cl-brand)',
-    '--cl-on-brand': '#FFFFFF',
     '--cl-cat-todo': '#5E6C84',
     '--cl-cat-todo-bg': '#F1F2F4',
     '--cl-cat-todo-text': '#3B4A63',
@@ -72,7 +71,6 @@ export const themeTokens = {
   dark: {
     '--cl-shadow-3': '0 8px 16px rgba(0,0,0,.5), 0 0 1px rgba(0,0,0,.6)',
     '--cl-shadow-focus': '0 0 0 2px var(--cl-bg-surface), 0 0 0 4px var(--cl-brand)',
-    '--cl-on-brand': '#0C1B33',
     '--cl-cat-todo': '#9FADBC',
     '--cl-cat-todo-bg': '#2C333A',
     '--cl-cat-todo-text': '#C7D1DB',

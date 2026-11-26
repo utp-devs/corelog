@@ -90,17 +90,17 @@ export function MyDashboardPage() {
         <div className={styles.panels} data-layout={isMobile ? 'stacked' : 'grid'}>
           {!hasWork && (
             <Section title="Primeros pasos" description="Lo que puedes hacer para empezar a trabajar.">
-              <ol className={styles.steps}>
-                <li>
+              <ol className={styles.steps} data-empty-state>
+                <li className={styles.step}>
                   <Link to="/projects">Crea tu primer proyecto</Link>
                   <Typography.Text type="secondary"> para organizar el trabajo en un espacio propio.</Typography.Text>
                 </li>
-                <li>
+                <li className={styles.step}>
                   <Typography.Text>Crea una incidencia con el botón </Typography.Text>
                   <Typography.Text strong>Crear</Typography.Text>
                   <Typography.Text> de la barra superior.</Typography.Text>
                 </li>
-                <li>
+                <li className={styles.step}>
                   <Typography.Text>Abre el tablero de un proyecto para ver y mover tus incidencias.</Typography.Text>
                 </li>
               </ol>

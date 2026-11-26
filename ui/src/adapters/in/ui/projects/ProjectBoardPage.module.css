@@ -236,6 +236,19 @@
   .searchField {
     width: 100%;
   }
+
+  /* Tap targets: drag handle and the "Mover a..." selector reach 32 px on touch screens. */
+  .handle {
+    width: 32px;
+  }
+
+  .moveSelect :global(.ant-select-selector) {
+    min-height: 32px;
+  }
+
+  .mineToggle {
+    min-height: 32px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

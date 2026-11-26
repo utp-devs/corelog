@@ -212,7 +212,7 @@ export function OrgInvitationsPage({ store = useOrgAdminStore }: OrgInvitationsP
   const error = orgId && status === 'error' ? (loadError?.message ?? 'No se pudieron cargar las invitaciones.') : null
 
   return (
-    <PageContainer variant="wide" pageName="org-invitations" ready={!loading}>
+    <PageContainer variant="wide" pageName="org-invitations" ready={!loading} fill>
       <PageHeader title="Invitaciones" description={org ? `Personas invitadas a ${org.name}` : undefined} />
 
       <Section title="Invitar personas" description={`Puedes escribir hasta ${MAX_INVITATIONS_PER_REQUEST} correos separados por comas o saltos de línea.`}>
@@ -280,6 +280,7 @@ export function OrgInvitationsPage({ store = useOrgAdminStore }: OrgInvitationsP
 
       <DataTable<Invitation>
         tableKey="org-invitations"
+        fill
         columns={columns}
         data={orgId ? invitations : []}
         rowKey="id"

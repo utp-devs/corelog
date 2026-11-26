@@ -64,6 +64,9 @@ describe('PeoplePage', () => {
     expect(await screen.findByText('Ana Torres')).toBeInTheDocument()
     expect(screen.getByText('Propietario')).toBeInTheDocument()
     expect(screen.getByText('marta@corelog.test')).toBeInTheDocument()
+    // The directory fills the content column: the table takes the remaining height of the page.
+    expect(document.querySelector('[data-page="people"]')).toHaveAttribute('data-fill', 'true')
+    expect(document.querySelector('[data-page="people"] [data-fill="true"]')).not.toBeNull()
   })
 
   it('shows the job title of each member in the directory', async () => {

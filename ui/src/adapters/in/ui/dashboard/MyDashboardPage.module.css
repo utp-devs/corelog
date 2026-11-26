@@ -7,9 +7,10 @@
 /* Equal-height panels: each grid item stretches to the row height, so no card has dead space under it. */
 .panels {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr));
   gap: var(--cl-space-4);
   align-items: stretch;
+  width: 100%;
 }
 
 .panels > * {
@@ -22,11 +23,20 @@
   gap: var(--cl-space-3);
 }
 
+/* Empty-state copy: one block per step with its own vertical rhythm, so the lines never share a box. */
 .steps {
-  display: grid;
-  gap: var(--cl-space-2);
+  display: flex;
+  flex-direction: column;
+  gap: var(--cl-space-3);
   margin: 0;
   padding-inline-start: var(--cl-space-5);
+}
+
+.step {
+  display: block;
+  line-height: 1.5;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .list {

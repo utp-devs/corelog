@@ -18,6 +18,7 @@ import { ErrorState } from '@/shared/ui/ErrorState'
 import { Lozenge } from '@/shared/ui/Lozenge'
 import { PageContainer } from '@/shared/ui/PageContainer'
 import { Section } from '@/shared/ui/Section'
+import { SplitLayout } from '@/shared/ui/SplitLayout'
 import { TeamChip } from '@/shared/ui/TeamChip'
 import { ORG_ROLE_LABELS, ORG_ROLE_TONES } from './roles'
 import { UserAvatar } from './UserAvatar'
@@ -109,7 +110,7 @@ export function PersonPage({ repository = defaultRepository, teamRepository = de
 
   if (state.status === 'loading') {
     return (
-      <PageContainer variant="reading" pageName="person" ready={false}>
+      <PageContainer variant="wide" pageName="person" ready={false}>
         <Section ariaLabel="Cargando persona">
           <Skeleton active avatar paragraph={{ rows: 4 }} />
         </Section>
@@ -119,7 +120,7 @@ export function PersonPage({ repository = defaultRepository, teamRepository = de
 
   if (state.status === 'error') {
     return (
-      <PageContainer variant="reading" pageName="person" ready>
+      <PageContainer variant="wide" pageName="person" ready>
         <ErrorState message={state.message} onRetry={retry} />
       </PageContainer>
     )
@@ -130,43 +131,49 @@ export function PersonPage({ repository = defaultRepository, teamRepository = de
   const joined = dayjs(person.joinedAt).format('DD/MM/YYYY')
 
   return (
-    <PageContainer variant="reading" pageName="person" ready>
+    <PageContainer variant="wide" pageName="person" ready>
       <Breadcrumbs items={[{ label: 'Personas', to: '/people' }, { label: displayName }]} />
-      <Section ariaLabel={`Ficha de ${displayName}`}>
-        <div className={styles.header}>
-          <UserAvatar id={person.userId} name={displayName} hasAvatar={person.hasAvatar} size={64} data-testid="person-avatar" />
-          <div className={styles.identity}>
-            <Typography.Title level={3} className={styles.name}>{displayName}</Typography.Title>
-            <Lozenge tone={ORG_ROLE_TONES[person.orgRole]}>{ORG_ROLE_LABELS[person.orgRole]}</Lozenge>
+      <SplitLayout
+        sideLabel="Equipos de la persona"
+        main={
+          <Section ariaLabel={`Ficha de ${displayName}`}>
+          <div className={styles.header}>
+            <UserAvatar id={person.userId} name={displayName} hasAvatar={person.hasAvatar} size={64} data-testid="person-avatar" />
+            <div className={styles.identity}>
+              <Typography.Title level={3} className={styles.name}>{displayName}</Typography.Title>
+              <Lozenge tone={ORG_ROLE_TONES[person.orgRole]}>{ORG_ROLE_LABELS[person.orgRole]}</Lozenge>
+            </div>
           </div>
-        </div>
-        <Descriptions
-          column={1}
-          size="small"
-          items={[
-            { key: 'title', label: 'Cargo', children: person.jobTitle || '—' },
-            { key: 'department', label: 'Departamento', children: person.department || '—' },
-            { key: 'email', label: 'Correo', children: person.email },
-            { key: 'timezone', label: 'Zona horaria', children: person.timezone || '—' },
-            { key: 'joined', label: 'Se unió', children: joined },
-          ]}
-        />
-        <div className={styles.teams} aria-label="Equipos de la persona">
-          <Typography.Title level={5}>Equipos</Typography.Title>
-          {teams === null && <Typography.Text type="secondary">No se pudieron cargar los equipos.</Typography.Text>}
-          {teams !== null && teams.length === 0 && <Typography.Text type="secondary">Sin equipos.</Typography.Text>}
-          {teams !== null && teams.length > 0 && (
-            <ul className={styles.teamList}>
-              {teams.map((team) => (
-                <li key={team.id}>
-                  <TeamChip id={team.id} name={team.name} memberCount={team.memberCount} href={`/teams/${team.id}`} />
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-        <Link to="/people" className={styles.back}>Volver al directorio</Link>
-      </Section>
+          <Descriptions
+            column={1}
+            size="small"
+            items={[
+              { key: 'title', label: 'Cargo', children: person.jobTitle || '—' },
+              { key: 'department', label: 'Departamento', children: person.department || '—' },
+              { key: 'email', label: 'Correo', children: person.email },
+              { key: 'timezone', label: 'Zona horaria', children: person.timezone || '—' },
+              { key: 'joined', label: 'Se unió', children: joined },
+            ]}
+          />
+          <Link to="/people" className={styles.back}>Volver al directorio</Link>
+          </Section>
+        }
+        side={
+          <Section title="Equipos">
+            {teams === null && <Typography.Text type="secondary">No se pudieron cargar los equipos.</Typography.Text>}
+            {teams !== null && teams.length === 0 && <Typography.Text type="secondary">Sin equipos.</Typography.Text>}
+            {teams !== null && teams.length > 0 && (
+              <ul className={styles.teamList}>
+                {teams.map((team) => (
+                  <li key={team.id}>
+                    <TeamChip id={team.id} name={team.name} memberCount={team.memberCount} href={`/teams/${team.id}`} />
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Section>
+        }
+      />
     </PageContainer>
   )
 }

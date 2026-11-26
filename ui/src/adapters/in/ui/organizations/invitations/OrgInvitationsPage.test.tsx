@@ -81,6 +81,7 @@ describe('OrgInvitationsPage', () => {
     renderPage()
     expect(await screen.findByText('No hay invitaciones pendientes')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Invitar personas' })).toBeInTheDocument()
+    expect(document.querySelector('[data-page="org-invitations"]')).toHaveAttribute('data-fill', 'true')
   })
 
   it('rejects an invalid email before calling the API', async () => {

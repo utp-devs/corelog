@@ -129,3 +129,11 @@
     min-height: 0;
   }
 }
+
+@media (max-width: 767px) {
+  /* Touch: view switch segments reach 32 px. */
+  .toolbar :global(.ant-segmented-item-label) {
+    min-height: 32px;
+    line-height: 32px;
+  }
+}

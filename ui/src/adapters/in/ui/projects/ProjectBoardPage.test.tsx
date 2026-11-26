@@ -196,6 +196,7 @@ describe('ProjectBoardPage', () => {
     const mobileBoard = await screen.findByRole('region', { name: 'Tablero Default' })
     expect(mobileBoard).toHaveAttribute('data-scroll', 'inside-board')
     expect(mobileBoard).toHaveAttribute('data-layout', 'mobile-columns')
+    expect(mobileBoard).toHaveAttribute('data-scroll-x')
     mobile.unmount()
 
     restoreViewport()

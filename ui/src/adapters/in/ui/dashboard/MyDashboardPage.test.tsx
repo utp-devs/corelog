@@ -83,6 +83,9 @@ describe('MyDashboardPage', () => {
     expect(await screen.findByRole('heading', { name: 'Primeros pasos' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Crea tu primer proyecto' })).toHaveAttribute('href', '/projects')
     expect(screen.getByText('Sin trabajo asignado.')).toBeInTheDocument()
+    // The three steps are separate list items inside the empty-state block, so their copy does not share a box.
+    const steps = screen.getByRole('heading', { name: 'Primeros pasos' }).closest('section')?.querySelector('[data-empty-state]')
+    expect(steps?.querySelectorAll('li')).toHaveLength(3)
     consoleGuard.expectNoConsoleOutput()
   })
 

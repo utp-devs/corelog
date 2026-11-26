@@ -21,6 +21,8 @@ interface TicketListProps {
   onMoveDown?: (ticket: Ticket) => void
   emptyState: ReactNode
   pagination?: DataTablePagination
+  /** Table grows to the remaining height of its Section (PageContainer fill). */
+  fill?: boolean
 }
 
 function Assignee({ ticket }: { ticket: Ticket }) {
@@ -36,7 +38,7 @@ function StatusLozenge({ ticket }: { ticket: Ticket }) {
 }
 
 /** Lista de incidencias sobre DataTable: en escritorio tabla, por debajo de 768 px tarjetas. */
-export function TicketList({ tickets, loading, error, onRetry, onSelect, onMoveUp, onMoveDown, emptyState, pagination }: TicketListProps) {
+export function TicketList({ tickets, loading, error, onRetry, onSelect, onMoveUp, onMoveDown, emptyState, pagination, fill = false }: TicketListProps) {
   const columns: DataTableColumn<Ticket>[] = [
     {
       key: 'key',
@@ -108,6 +110,7 @@ export function TicketList({ tickets, loading, error, onRetry, onSelect, onMoveU
       onRetry={onRetry}
       emptyState={emptyState}
       pagination={pagination}
+      fill={fill}
       onRowOpen={onSelect}
       rowActions={rowActions}
       mobileRender={(ticket) => (

@@ -5,6 +5,11 @@
   min-width: 0;
 }
 
+/* Sections take the whole column; their children may shrink so long labels wrap instead of clipping. */
+.form > * {
+  min-width: 0;
+}
+
 .banner {
   margin-bottom: var(--cl-space-4);
 }
@@ -18,6 +23,8 @@
 }
 
 .sectionLink {
+  min-width: 0;
+  overflow-wrap: anywhere;
   color: var(--cl-text-subtle);
   padding: var(--cl-space-1) var(--cl-space-2);
   border-radius: var(--cl-radius-sm);
@@ -85,11 +92,14 @@
 }
 
 .infoLabel {
+  min-width: 0;
   font-weight: 600;
+  overflow-wrap: anywhere;
 }
 
 .numberInput {
   width: var(--cl-space-16);
+  max-width: 100%;
 }
 
 .actions {
@@ -119,7 +129,7 @@
 
 .transferSelect {
   width: 100%;
-  max-width: var(--cl-content-max);
+  max-width: min(100%, var(--cl-content-max));
   margin-top: var(--cl-space-2);
 }
 
@@ -127,8 +137,19 @@
   margin: var(--cl-space-1) 0 0;
 }
 
+.dangerRow > * {
+  min-width: 0;
+}
+
 @media (max-width: 767px) {
   .dangerRow {
     flex-direction: column;
+  }
+
+  /* Save and discard buttons share the row on phones and keep their labels visible. */
+  .actions > * {
+    flex: 1 1 auto;
+    min-width: 0;
+    white-space: normal;
   }
 }

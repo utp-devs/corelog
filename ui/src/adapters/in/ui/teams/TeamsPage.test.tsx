@@ -102,6 +102,7 @@ describe('TeamsPage', () => {
     renderPage()
 
     expect(screen.getByRole('status', { name: 'Cargando equipos' })).toHaveAttribute('aria-busy', 'true')
+    expect(document.querySelector('[data-card-grid]')).not.toBeNull()
   })
 
   it('shows an error with retry that refetches the teams', () => {
@@ -141,6 +142,7 @@ describe('TeamsPage', () => {
     expect(cards[0]).toHaveAttribute('href', '/teams/t1')
     expect(within(cards[0]).getByText('Infraestructura')).toBeInTheDocument()
     expect(within(cards[1]).getByText('Sin descripción')).toBeInTheDocument()
+    expect(document.querySelector('[data-card-grid]')).not.toBeNull()
   })
 
   it('filters the cards with the search box', async () => {

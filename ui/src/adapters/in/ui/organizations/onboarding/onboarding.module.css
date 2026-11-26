@@ -78,3 +78,50 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* Org form (S-05 reading template): name and slug share a two-column grid on wide viewports. */
+.formGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: var(--cl-space-4);
+}
+
+.half {
+  grid-column: span 1;
+  min-width: 0;
+}
+
+.full {
+  grid-column: 1 / -1;
+}
+
+/* Join row (step 1): the link input and its button sit on one line, aligned to the input. */
+.joinForm {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--cl-space-3);
+}
+
+.joinField {
+  flex: 1 1 260px;
+  min-width: 0;
+}
+
+.joinButton {
+  flex: none;
+}
+
+@media (max-width: 767.98px) {
+  .formGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .half {
+    grid-column: 1 / -1;
+  }
+
+  .joinButton {
+    width: 100%;
+  }
+}

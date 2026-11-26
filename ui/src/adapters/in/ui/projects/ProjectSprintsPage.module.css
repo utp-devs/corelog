@@ -108,3 +108,12 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+@media (max-width: 767px) {
+  /* Touch: small action buttons in the sprint panels reach 32 px. */
+  .side :global(.ant-btn-sm),
+  .main :global(.ant-btn-sm) {
+    min-width: 32px;
+    min-height: 32px;
+  }
+}

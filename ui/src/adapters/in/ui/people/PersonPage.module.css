@@ -15,14 +15,11 @@
 
 .name {
   margin: 0 !important;
+  overflow-wrap: anywhere;
 }
 
 .back {
   display: inline-block;
-  margin-top: var(--cl-space-4);
-}
-
-.teams {
   margin-top: var(--cl-space-4);
 }
 

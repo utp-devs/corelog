@@ -243,7 +243,7 @@ export function OrgMembersPage({ store = useOrgAdminStore }: OrgMembersPageProps
   const error = orgId && status === 'error' ? (loadError?.message ?? 'No se pudo cargar el directorio.') : null
 
   return (
-    <PageContainer variant="wide" pageName="org-members" ready={!loading}>
+    <PageContainer variant="wide" pageName="org-members" ready={!loading} fill>
       <PageHeader
         title="Miembros"
         description={org ? `Personas de ${org.name}` : undefined}
@@ -292,6 +292,7 @@ export function OrgMembersPage({ store = useOrgAdminStore }: OrgMembersPageProps
 
       <DataTable<OrganizationMember>
         tableKey="org-members"
+        fill
         columns={columns}
         data={orgId ? visible : []}
         rowKey="userId"
