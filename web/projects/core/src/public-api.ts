@@ -10,6 +10,7 @@ export * from './lib/interceptors/auth.interceptor';
 export * from './lib/interceptors/error.interceptor';
 export * from './lib/interceptors/loading.interceptor';
 export * from './lib/models';
+export * from './lib/services/api';
 export * from './lib/services/loading.service';
 export * from './lib/services/notification.service';
 export * from './lib/services/session.service';
