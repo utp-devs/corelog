@@ -76,6 +76,7 @@ type Service interface {
 	UserNames(ctx context.Context, userIDs []uuid.UUID) (map[uuid.UUID]string, error)
 	UpdateStatus(ctx context.Context, id, actorID uuid.UUID, globalRole string, status domain.Status) (*domain.Ticket, error)
 	Assign(ctx context.Context, id, assignerID, assigneeID uuid.UUID, globalRole string) (*domain.Ticket, error)
+	Unassign(ctx context.Context, id, actorID uuid.UUID, globalRole string) (*domain.Ticket, error)
 	UpdateMetadata(ctx context.Context, id, actorID uuid.UUID, globalRole string, input UpdateMetadataInput) (*domain.Ticket, error)
 	UpdateDetails(ctx context.Context, id, actorID uuid.UUID, globalRole string, input UpdateDetailsInput) (*domain.Ticket, error)
 	ListComments(ctx context.Context, issueID, actorID uuid.UUID, globalRole string) ([]*domain.Comment, error)

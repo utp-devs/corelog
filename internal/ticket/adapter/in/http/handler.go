@@ -266,6 +266,7 @@ func (h *Handler) UpdateStatus(w http.ResponseWriter, r *http.Request) {
 	h.writeTicket(w, r, http.StatusOK, ticket)
 }
 
+// Assign asigna la incidencia a assignee_id, o la desasigna cuando assignee_id es null.
 func (h *Handler) Assign(w http.ResponseWriter, r *http.Request) {
 	assignerID, ok := appmw.UserIDFromContext(r.Context())
 	if !ok {
@@ -284,19 +285,24 @@ func (h *Handler) Assign(w http.ResponseWriter, r *http.Request) {
 		httpresponse.Error(w, apperror.New(apperror.KindValidation, "invalid request body"))
 		return
 	}
-	if err := validation.Struct(req); err != nil {
-		httpresponse.Error(w, validation.Failed(req, err))
-		return
-	}
-
-	assigneeID, err := uuid.Parse(req.AssigneeID)
-	if err != nil {
-		httpresponse.Error(w, apperror.New(apperror.KindValidation, "invalid assignee id"))
+	if !req.AssigneeID.Present {
+		httpresponse.Error(w, apperror.WithCode(apperror.KindValidation, validation.CodeFailed, "invalid request body").
+			WithDetails(apperror.FieldError{Field: "assignee_id", Message: "es obligatorio"}))
 		return
 	}
 
 	globalRole, _ := appmw.RoleFromContext(r.Context())
-	ticket, err := h.service.Assign(r.Context(), id, assignerID, assigneeID, globalRole)
+	var ticket *domain.Ticket
+	if req.AssigneeID.Value == nil {
+		ticket, err = h.service.Unassign(r.Context(), id, assignerID, globalRole)
+	} else {
+		if err := validation.Struct(assignedUserValidation{AssigneeID: *req.AssigneeID.Value}); err != nil {
+			httpresponse.Error(w, validation.Failed(assignedUserValidation{}, err))
+			return
+		}
+		assigneeID := uuid.MustParse(*req.AssigneeID.Value)
+		ticket, err = h.service.Assign(r.Context(), id, assignerID, assigneeID, globalRole)
+	}
 	if err != nil {
 		httpresponse.Error(w, err)
 		return

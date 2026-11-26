@@ -9,11 +9,21 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/jhonsferg/corelog/internal/platform/apperror"
+	"github.com/jhonsferg/corelog/internal/platform/database"
 	"github.com/jhonsferg/corelog/internal/ticket/application/port"
 	"github.com/jhonsferg/corelog/internal/ticket/domain"
 )
 
+// noTxManager ejecuta fn sin transaccion. Es el valor por defecto del servicio; el composition root
+// inyecta el TxManager real con WithTxManager.
+type noTxManager struct{}
+
+func (noTxManager) InTx(ctx context.Context, fn func(ctx context.Context) error) error {
+	return fn(ctx)
+}
+
 type TicketService struct {
+	tx            database.TxManager
 	backlog       port.BacklogRepository
 	notifier      port.Notifier
 	repo          port.Repository
@@ -63,10 +73,20 @@ func NewTicketService(repo port.Repository, directory port.UserDirectory, reposi
 			savedFilters = typed
 		}
 	}
-	return &TicketService{repo: repo, directory: directory, collaboration: collaboration, issueLinks: issueLinks, workflows: workflows, projectRoles: projectRoles, authorizer: authorizer, watchers: watchers, assigneeWatch: assigneeWatch, savedFilters: savedFilters, backlog: backlog}
+	return &TicketService{tx: noTxManager{}, repo: repo, directory: directory, collaboration: collaboration, issueLinks: issueLinks, workflows: workflows, projectRoles: projectRoles, authorizer: authorizer, watchers: watchers, assigneeWatch: assigneeWatch, savedFilters: savedFilters, backlog: backlog}
 }
 
 var _ port.Service = (*TicketService)(nil)
+
+// WithTxManager fija el gestor de transacciones de las escrituras multiples (asignar y desasignar).
+// Sin el, las escrituras se ejecutan sin transaccion.
+func (s *TicketService) WithTxManager(tx database.TxManager) *TicketService {
+	if tx == nil {
+		tx = noTxManager{}
+	}
+	s.tx = tx
+	return s
+}
 
 func (s *TicketService) Create(ctx context.Context, in port.CreateInput) (*domain.Ticket, error) {
 	ticket, err := domain.NewTicket(in.Title, in.Description, in.Priority, in.RequesterID)
@@ -279,27 +299,80 @@ func (s *TicketService) Assign(ctx context.Context, id, assignerID, assigneeID u
 		return nil, domain.ErrCrossTeamAssignment
 	}
 
+	previous := ticket.AssigneeID
 	if err := ticket.AssignTo(assigneeID); err != nil {
 		return nil, err
 	}
 
-	if s.assigneeWatch != nil {
-		if err := s.assigneeWatch.UpdateAndWatchAssignee(ctx, ticket, assigneeID); err != nil {
-			return nil, err
-		}
-	} else {
-		if err := s.repo.Update(ctx, ticket); err != nil {
-			return nil, err
-		}
-		if s.watchers != nil {
-			if err := s.watchers.Add(ctx, id, assigneeID); err != nil {
-				return nil, err
+	// La asignacion, el seguimiento y el historial son una sola unidad: si el historial falla, la asignacion se deshace.
+	err = s.tx.InTx(ctx, func(ctx context.Context) error {
+		if s.assigneeWatch != nil {
+			if err := s.assigneeWatch.UpdateAndWatchAssignee(ctx, ticket, assigneeID); err != nil {
+				return err
+			}
+		} else {
+			if err := s.repo.Update(ctx, ticket); err != nil {
+				return err
+			}
+			if s.watchers != nil {
+				if err := s.watchers.Add(ctx, id, assigneeID); err != nil {
+					return err
+				}
 			}
 		}
+		return s.recordAssigneeChange(ctx, id, assignerID, previous, &assigneeID)
+	})
+	if err != nil {
+		return nil, err
 	}
 
 	s.notifyAssignment(ctx, ticket, assignerID, assigneeID)
 	return ticket, nil
+}
+
+// Unassign quita la persona asignada con el mismo permiso que asignar (edit_issue). Si la incidencia ya
+// no tiene asignada, devuelve el estado actual sin escribir nada: la operacion es idempotente.
+// La desasignacion y su entrada de historial se escriben en una sola transaccion.
+func (s *TicketService) Unassign(ctx context.Context, id, actorID uuid.UUID, globalRole string) (*domain.Ticket, error) {
+	ticket, err := s.repo.FindByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.requireIssueEdit(ctx, ticket.ProjectID, actorID, globalRole); err != nil {
+		return nil, err
+	}
+	if ticket.AssigneeID == nil {
+		return ticket, nil
+	}
+
+	previous := *ticket.AssigneeID
+	ticket.ClearAssignee()
+	err = s.tx.InTx(ctx, func(ctx context.Context) error {
+		if err := s.repo.Update(ctx, ticket); err != nil {
+			return err
+		}
+		return s.recordAssigneeChange(ctx, id, actorID, &previous, nil)
+	})
+	if err != nil {
+		return nil, err
+	}
+	return ticket, nil
+}
+
+// recordAssigneeChange guarda la entrada de historial de un cambio de persona asignada. No escribe nada si
+// la persona no cambia o si no hay repositorio de colaboracion.
+func (s *TicketService) recordAssigneeChange(ctx context.Context, issueID, actorID uuid.UUID, previous, next *uuid.UUID) error {
+	if s.collaboration == nil || sameAssignee(previous, next) {
+		return nil
+	}
+	return s.collaboration.SaveActivity(ctx, domain.NewAssigneeActivity(issueID, actorID, previous, next))
+}
+
+func sameAssignee(a, b *uuid.UUID) bool {
+	if a == nil || b == nil {
+		return a == b
+	}
+	return *a == *b
 }
 
 func (s *TicketService) UpdateMetadata(ctx context.Context, id, actorID uuid.UUID, globalRole string, input port.UpdateMetadataInput) (*domain.Ticket, error) {

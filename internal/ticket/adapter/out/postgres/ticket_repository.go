@@ -193,7 +193,7 @@ func (r *TicketRepository) Update(ctx context.Context, t *domain.Ticket) error {
 		    assignee_id = :assignee_id, updated_at = :updated_at
 		WHERE id = :id`
 
-	result, err := r.db.NamedExecContext(ctx, query, row)
+	result, err := sqlx.NamedExecContext(ctx, database.Executor(ctx, r.db), query, row)
 	if err != nil {
 		if isForeignKeyViolation(err) {
 			return domain.ErrAssigneeNotFound
@@ -212,12 +212,16 @@ func (r *TicketRepository) Update(ctx context.Context, t *domain.Ticket) error {
 	return nil
 }
 
+// UpdateAndWatchAssignee guarda la asignacion y deja a la persona asignada siguiendo la incidencia. Usa la
+// transaccion de ctx si existe; si no, abre una propia para que las dos escrituras no queden a medias.
 func (r *TicketRepository) UpdateAndWatchAssignee(ctx context.Context, t *domain.Ticket, assigneeID uuid.UUID) error {
-	tx, err := r.db.BeginTxx(ctx, nil)
-	if err != nil {
-		return apperror.Wrap(apperror.KindInternal, "failed to begin assignment transaction", err)
-	}
-	defer func() { _ = tx.Rollback() }()
+	return database.NewTxManager(r.db).InTx(ctx, func(ctx context.Context) error {
+		return r.updateAndWatchAssignee(ctx, t, assigneeID)
+	})
+}
+
+func (r *TicketRepository) updateAndWatchAssignee(ctx context.Context, t *domain.Ticket, assigneeID uuid.UUID) error {
+	exec := database.Executor(ctx, r.db)
 	row := fromDomain(t)
 	const query = `
 		UPDATE issues
@@ -226,7 +230,7 @@ func (r *TicketRepository) UpdateAndWatchAssignee(ctx context.Context, t *domain
 		    story_points = :story_points, rank = :rank, closed_at = :closed_at,
 		    assignee_id = :assignee_id, updated_at = :updated_at
 		WHERE id = :id`
-	result, err := sqlx.NamedExecContext(ctx, tx, query, row)
+	result, err := sqlx.NamedExecContext(ctx, exec, query, row)
 	if err != nil {
 		if isForeignKeyViolation(err) {
 			return domain.ErrAssigneeNotFound
@@ -240,16 +244,13 @@ func (r *TicketRepository) UpdateAndWatchAssignee(ctx context.Context, t *domain
 	if affected == 0 {
 		return domain.ErrTicketNotFound
 	}
-	if _, err := tx.ExecContext(ctx, `
+	if _, err := exec.ExecContext(ctx, `
 		INSERT INTO watchers(issue_id, user_id) VALUES($1, $2)
 		ON CONFLICT(issue_id, user_id) DO NOTHING`, t.ID, assigneeID); err != nil {
 		if isForeignKeyViolation(err) {
 			return domain.ErrAssigneeNotFound
 		}
 		return apperror.Wrap(apperror.KindInternal, "failed to follow issue after assignment", err)
-	}
-	if err := tx.Commit(); err != nil {
-		return apperror.Wrap(apperror.KindInternal, "failed to commit assignment", err)
 	}
 	return nil
 }

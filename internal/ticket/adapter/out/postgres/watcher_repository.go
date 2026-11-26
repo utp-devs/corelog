@@ -5,6 +5,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jhonsferg/corelog/internal/platform/apperror"
+	"github.com/jhonsferg/corelog/internal/platform/database"
 	"github.com/jhonsferg/corelog/internal/ticket/application/port"
 	"github.com/jmoiron/sqlx"
 )
@@ -27,7 +28,7 @@ func (r *WatcherRepository) State(ctx context.Context, issueID, userID uuid.UUID
 }
 
 func (r *WatcherRepository) Add(ctx context.Context, issueID, userID uuid.UUID) error {
-	if _, err := r.db.ExecContext(ctx, `
+	if _, err := database.Executor(ctx, r.db).ExecContext(ctx, `
 		INSERT INTO watchers(issue_id, user_id) VALUES($1, $2)
 		ON CONFLICT(issue_id, user_id) DO NOTHING`, issueID, userID); err != nil {
 		return apperror.Wrap(apperror.KindInternal, "failed to follow issue", err)
@@ -36,7 +37,7 @@ func (r *WatcherRepository) Add(ctx context.Context, issueID, userID uuid.UUID) 
 }
 
 func (r *WatcherRepository) Remove(ctx context.Context, issueID, userID uuid.UUID) error {
-	if _, err := r.db.ExecContext(ctx, `DELETE FROM watchers WHERE issue_id=$1 AND user_id=$2`, issueID, userID); err != nil {
+	if _, err := database.Executor(ctx, r.db).ExecContext(ctx, `DELETE FROM watchers WHERE issue_id=$1 AND user_id=$2`, issueID, userID); err != nil {
 		return apperror.Wrap(apperror.KindInternal, "failed to unfollow issue", err)
 	}
 	return nil

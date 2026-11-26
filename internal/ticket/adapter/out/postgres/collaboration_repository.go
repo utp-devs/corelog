@@ -11,6 +11,7 @@ import (
 	"github.com/jmoiron/sqlx"
 
 	"github.com/jhonsferg/corelog/internal/platform/apperror"
+	"github.com/jhonsferg/corelog/internal/platform/database"
 	"github.com/jhonsferg/corelog/internal/ticket/application/port"
 	"github.com/jhonsferg/corelog/internal/ticket/domain"
 )
@@ -162,7 +163,7 @@ func (r *CollaborationRepository) DeleteComment(ctx context.Context, comment *do
 }
 
 func (r *CollaborationRepository) SaveActivity(ctx context.Context, activity *domain.Activity) error {
-	err := r.db.QueryRowContext(ctx, `
+	err := database.Executor(ctx, r.db).QueryRowxContext(ctx, `
 		INSERT INTO activities (issue_id, actor_id, action, field_name, old_value, new_value, created_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7)
 		RETURNING id`,

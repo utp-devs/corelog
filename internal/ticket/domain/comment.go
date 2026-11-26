@@ -50,6 +50,28 @@ func (c *Comment) Delete() {
 	c.UpdatedAt = now
 }
 
+// NewAssigneeActivity registra un cambio de persona asignada. previous y next son nil cuando no hay persona
+// asignada antes o despues (asignar desde vacio, desasignar).
+func NewAssigneeActivity(issueID, actorID uuid.UUID, previous, next *uuid.UUID) *Activity {
+	field := "assignee_id"
+	activity := &Activity{
+		IssueID:   issueID,
+		ActorID:   actorID,
+		Action:    "assignee_changed",
+		FieldName: &field,
+		CreatedAt: time.Now().UTC(),
+	}
+	if previous != nil {
+		old := previous.String()
+		activity.OldValue = &old
+	}
+	if next != nil {
+		value := next.String()
+		activity.NewValue = &value
+	}
+	return activity
+}
+
 type Activity struct {
 	ID        uuid.UUID
 	IssueID   uuid.UUID

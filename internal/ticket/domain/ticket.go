@@ -138,6 +138,12 @@ func (t *Ticket) AssignTo(assigneeID uuid.UUID) error {
 	return nil
 }
 
+// ClearAssignee quita la persona asignada. El estado no cambia: desasignar no reabre ni mueve la incidencia.
+func (t *Ticket) ClearAssignee() {
+	t.AssigneeID = nil
+	t.UpdatedAt = time.Now().UTC()
+}
+
 func (t *Ticket) IsClosed() bool {
 	return t.Status == StatusClosed
 }

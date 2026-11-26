@@ -1,6 +1,8 @@
 package http
 
 import (
+	"bytes"
+	"encoding/json"
 	"time"
 
 	"github.com/google/uuid"
@@ -108,7 +110,35 @@ type updateStatusRequest struct {
 	Status string `json:"status" validate:"required,oneof=open in_progress resolved closed"`
 }
 
+// assignRequest acepta assignee_id como uuid o como null (desasignar). Se distingue la ausencia del campo
+// del null: un campo omitido se rechaza.
 type assignRequest struct {
+	AssigneeID nullableUUID `json:"assignee_id"`
+}
+
+// nullableUUID recuerda si el campo llego en el JSON y guarda su valor textual, o nil si llego null.
+type nullableUUID struct {
+	Present bool
+	Value   *string
+}
+
+func (n *nullableUUID) UnmarshalJSON(data []byte) error {
+	n.Present = true
+	if string(bytes.TrimSpace(data)) == "null" {
+		n.Value = nil
+		return nil
+	}
+	// Un valor que no es texto JSON llega tal cual y falla la validacion de uuid (validation.failed).
+	value := string(data)
+	if err := json.Unmarshal(data, &value); err != nil {
+		value = string(data)
+	}
+	n.Value = &value
+	return nil
+}
+
+// assignedUserValidation valida el uuid de una asignacion no nula.
+type assignedUserValidation struct {
 	AssigneeID string `json:"assignee_id" validate:"required,uuid4"`
 }
 

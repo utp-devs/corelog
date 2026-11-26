@@ -2038,12 +2038,14 @@ paths:
       - $ref: '#/components/parameters/TicketId'
     patch:
       tags: [tickets]
-      summary: Assign a ticket to a user
+      summary: Asignar o desasignar una incidencia
       description: >-
-        Assigning an open ticket also transitions its status to in_progress. Assigning a
-        ticket in any other status only changes the assignee. The assignee must belong to
-        the same team as the authenticated user making the request, otherwise this returns
-        403. The assignee is added to the issue watchers in the same database transaction.
+        Asigna la incidencia a un usuario, o la desasigna si assignee_id es null. Asignar una
+        incidencia abierta tambien la pasa a in_progress; en otro estado solo cambia la persona
+        asignada. La persona asignada debe pertenecer al mismo equipo que quien hace la peticion,
+        si no responde 403, y se añade a los seguidores de la incidencia en la misma transaccion.
+        Desasignar requiere el mismo permiso que asignar, no cambia el estado, no avisa a nadie y
+        es idempotente: si la incidencia ya no tiene persona asignada responde 200 sin cambios.
       operationId: assignTicket
       requestBody:
         required: true
@@ -3909,8 +3911,10 @@ components:
       required: [assignee_id]
       properties:
         assignee_id:
+          description: UUID de la persona asignada, o null para desasignar. El campo es obligatorio; omitirlo responde 422.
           type: string
           format: uuid
+          nullable: true
     UpdateIssueDetailsRequest:
       type: object
       required: [title, description, priority, issue_type]
