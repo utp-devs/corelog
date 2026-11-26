@@ -1,6 +1,4 @@
 {
   "note": "Violations allowed per file while pages are migrated (P1-S9 empties this file). Regenerate only with: node scripts/check-no-hex.mjs --write-baseline",
-  "files": {
-    "src/adapters/in/ui/auth/AuthLayout.module.css": 7
-  }
+  "files": {}
 }

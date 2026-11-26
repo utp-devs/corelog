@@ -1,9 +1,96 @@
-/* Estilos de los formularios de acceso (la plantilla visual esta en AuthLayout). */
+/* Form, status and step styles shared by the auth screens (the page template is in AuthLayout). */
 .form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cl-space-4);
+  width: 100%;
+  min-width: 0;
+}
+
+.fieldset {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cl-space-4);
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.fieldset:disabled {
+  opacity: 0.8;
+}
+
+/* Touch targets: inputs and buttons are at least 44 px high on every screen. */
+.form :global(.ant-input),
+.form :global(.ant-input-affix-wrapper),
+.form :global(.ant-btn) {
+  min-height: 44px;
+}
+
+.submit {
   width: 100%;
 }
 
-.form :global(.ant-form-item-label > label) {
-  font-weight: 600;
-  color: var(--cl-text);
+.toggle {
+  width: 44px;
+  height: 44px;
+  margin-right: calc(var(--cl-space-3) * -1);
+}
+
+.alert {
+  width: 100%;
+}
+
+.meter {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--cl-space-1);
+  margin-top: var(--cl-space-1);
+}
+
+.segment {
+  height: 4px;
+  border-radius: var(--cl-radius-full);
+  background: var(--cl-border);
+}
+
+.meter[data-level='1'] .segment[data-on='true'] {
+  background: var(--cl-danger);
+}
+
+.meter[data-level='2'] .segment[data-on='true'] {
+  background: var(--cl-warning);
+}
+
+.meter[data-level='3'] .segment[data-on='true'] {
+  background: var(--cl-brand);
+}
+
+.meter[data-level='4'] .segment[data-on='true'] {
+  background: var(--cl-success);
+}
+
+.terms {
+  margin: 0;
+  font-size: var(--cl-font-small);
+  color: var(--cl-text-subtle);
+}
+
+.center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 160px;
+}
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cl-space-2);
+}
+
+.summaryText {
+  margin: 0;
+  color: var(--cl-text-subtle);
 }

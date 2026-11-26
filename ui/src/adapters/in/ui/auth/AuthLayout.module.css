@@ -1,18 +1,38 @@
+/* Page template of the auth screens. Colors come only from --cl-* tokens (both themes). */
 .page {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: minmax(0, 1fr);
   min-height: 100vh;
-  background: var(--cl-bg-page);
+  background: linear-gradient(180deg, var(--cl-brand-subtle) 0%, var(--cl-bg-page) 40%);
 }
 
-/* Panel de marca: solo en escritorio. */
+.skipLink {
+  position: absolute;
+  top: var(--cl-space-2);
+  left: var(--cl-space-2);
+  z-index: var(--cl-z-modal);
+  padding: var(--cl-space-2) var(--cl-space-4);
+  border-radius: var(--cl-radius-md);
+  background: var(--cl-bg-surface);
+  color: var(--cl-text);
+  box-shadow: var(--cl-shadow-2);
+  transform: translateY(-200%);
+}
+
+.skipLink:focus {
+  transform: none;
+  outline: none;
+  box-shadow: var(--cl-shadow-focus);
+}
+
+/* Brand panel: desktop only. */
 .brandPanel {
   display: none;
   position: relative;
   overflow: hidden;
   padding: var(--cl-space-8);
   background: linear-gradient(135deg, var(--cl-brand) 0%, var(--cl-brand-pressed) 100%);
-  color: #ffffff;
+  color: var(--cl-on-brand);
 }
 
 .brandPanel::after {
@@ -22,7 +42,8 @@
   width: 420px;
   height: 420px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--cl-bg-surface);
+  opacity: 0.08;
   pointer-events: none;
 }
 
@@ -45,7 +66,7 @@
   height: 88px;
   margin-bottom: var(--cl-space-6);
   border-radius: var(--cl-radius-lg);
-  background: #ffffff;
+  background: var(--cl-bg-surface);
   box-shadow: var(--cl-shadow-2);
 }
 
@@ -57,16 +78,17 @@
 }
 
 .brandTitle {
-  margin: 0 0 var(--cl-space-3) !important;
-  color: #ffffff !important;
+  margin: 0 0 var(--cl-space-3);
+  font-size: var(--cl-font-display);
   font-weight: 700;
   line-height: 1.2;
+  color: var(--cl-on-brand);
 }
 
 .brandText {
-  margin-bottom: var(--cl-space-6) !important;
-  color: rgba(255, 255, 255, 0.86) !important;
+  margin: 0 0 var(--cl-space-6);
   font-size: var(--cl-font-body-strong);
+  color: var(--cl-on-brand);
 }
 
 .highlights {
@@ -82,48 +104,86 @@
   align-items: flex-start;
   gap: var(--cl-space-3);
   font-size: var(--cl-font-body);
-  color: rgba(255, 255, 255, 0.94);
+  color: var(--cl-on-brand);
 }
 
 .highlightIcon {
   flex: none;
-  margin-top: 3px;
-  color: #ffffff;
+  margin-top: 2px;
+  color: var(--cl-on-brand);
 }
 
-/* Formulario: centrado y con ancho controlado. */
+/* Form panel: the card is centered both ways. */
 .formPanel {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: var(--cl-space-8) var(--cl-space-5);
   min-width: 0;
+  min-height: 100vh;
+  padding: var(--cl-space-6) var(--cl-gutter);
 }
 
-.formBox {
-  width: min(420px, 100%);
+.formPanel:focus {
+  outline: none;
+}
+
+.card {
+  width: min(440px, 100%);
+  min-width: 0;
+  padding: var(--cl-space-6);
+  border: 1px solid var(--cl-border);
+  border-radius: var(--cl-radius-lg);
+  background: var(--cl-bg-surface);
+  box-shadow: var(--cl-shadow-2);
 }
 
 .mobileBanner {
   display: block;
-  height: auto;
+  width: 180px;
   max-width: 100%;
-  margin: 0 0 var(--cl-space-6);
+  height: auto;
+  margin: 0 0 var(--cl-space-5);
 }
 
 .title {
-  margin: 0 !important;
+  margin: 0;
+  font-size: var(--cl-font-h2);
   font-weight: 700;
+  line-height: 1.25;
+  color: var(--cl-text);
 }
 
 .subtitle {
-  margin: var(--cl-space-1) 0 var(--cl-space-6) !important;
+  margin: var(--cl-space-1) 0 var(--cl-space-6);
+  color: var(--cl-text-subtle);
 }
 
 .footer {
-  margin: var(--cl-space-5) 0 0 !important;
+  margin: var(--cl-space-5) 0 0;
   text-align: center;
   color: var(--cl-text-subtle);
+}
+
+.footer a {
+  color: var(--cl-brand);
+  font-weight: 600;
+  text-decoration: none;
+  border-radius: var(--cl-radius-sm);
+}
+
+.footer a:hover {
+  text-decoration: underline;
+}
+
+.footer a:focus-visible {
+  outline: none;
+  box-shadow: var(--cl-shadow-focus);
+}
+
+@media (min-width: 768px) {
+  .card {
+    padding: var(--cl-space-8);
+  }
 }
 
 @media (min-width: 992px) {
@@ -136,7 +196,7 @@
     flex-direction: column;
   }
 
-  .formPanel {
-    padding: var(--cl-space-8);
+  .mobileBanner {
+    display: none;
   }
 }

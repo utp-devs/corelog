@@ -26,6 +26,7 @@ function org(id: string, name: string): Organization {
       timezone: 'UTC',
     },
     role: 'owner',
+    hasLogo: false,
     createdAt: '2026-01-01T00:00:00Z',
     updatedAt: '2026-01-01T00:00:00Z',
   }

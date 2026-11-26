@@ -1,6 +1,5 @@
 import { CheckCircleFilled } from '@ant-design/icons'
-import { Typography } from 'antd'
-import type { ReactNode } from 'react'
+import { useId, type ReactNode } from 'react'
 
 import styles from './AuthLayout.module.css'
 
@@ -12,30 +11,41 @@ const highlights = [
 
 type AuthLayoutProps = {
   title: string
-  subtitle: string
-  footer: ReactNode
+  subtitle?: string
+  /** Helper links under the form (create account, sign in...). Omit or pass null for none. */
+  footer?: ReactNode
   children: ReactNode
 }
 
-// Plantilla comun de acceso: panel de marca (solo en escritorio) y formulario centrado.
+/** Id of the main landmark; the skip link points here. */
+export const AUTH_MAIN_ID = 'auth-main'
+
+/**
+ * Shared template for the public and onboarding auth screens (S-01, S-02, S-04, S-05).
+ * Desktop: brand panel on the left and a centered card. Mobile: the card alone with the banner on top.
+ */
 export function AuthLayout({ title, subtitle, footer, children }: AuthLayoutProps) {
+  const titleId = useId()
+
   return (
     <div className={styles.page}>
-      <aside className={styles.brandPanel} aria-hidden="true">
+      <a href={`#${AUTH_MAIN_ID}`} className={styles.skipLink}>
+        Saltar al formulario
+      </a>
+
+      <aside className={styles.brandPanel} aria-label="CoreLog">
         <div className={styles.brandContent}>
           <div className={styles.logoTile}>
             <img src="/brand/corelog-icon-128.png" alt="" width={64} height={64} className={styles.logo} />
           </div>
-          <Typography.Title level={2} className={styles.brandTitle}>
-            Gestiona tu trabajo con claridad
-          </Typography.Title>
-          <Typography.Paragraph className={styles.brandText}>
+          <p className={styles.brandTitle}>Gestiona tu trabajo con claridad</p>
+          <p className={styles.brandText}>
             CoreLog centraliza proyectos, incidencias y planificación para equipos que necesitan control y seguimiento.
-          </Typography.Paragraph>
+          </p>
           <ul className={styles.highlights}>
             {highlights.map((item) => (
               <li key={item}>
-                <CheckCircleFilled className={styles.highlightIcon} />
+                <CheckCircleFilled className={styles.highlightIcon} aria-hidden="true" />
                 <span>{item}</span>
               </li>
             ))}
@@ -43,25 +53,24 @@ export function AuthLayout({ title, subtitle, footer, children }: AuthLayoutProp
         </div>
       </aside>
 
-      <main className={styles.formPanel}>
-        <div className={styles.formBox}>
+      <main id={AUTH_MAIN_ID} tabIndex={-1} className={styles.formPanel}>
+        <section className={styles.card} aria-labelledby={titleId}>
           <img
             src="/brand/corelog-banner-480.png"
             srcSet="/brand/corelog-banner-480.png 480w, /brand/corelog-banner-960.png 960w"
             sizes="180px"
             alt="CoreLog"
             width={180}
+            height={48}
             className={styles.mobileBanner}
           />
-          <Typography.Title level={3} className={styles.title}>
+          <h1 id={titleId} className={styles.title}>
             {title}
-          </Typography.Title>
-          <Typography.Paragraph type="secondary" className={styles.subtitle}>
-            {subtitle}
-          </Typography.Paragraph>
+          </h1>
+          {subtitle && <p className={styles.subtitle}>{subtitle}</p>}
           {children}
-          <Typography.Paragraph className={styles.footer}>{footer}</Typography.Paragraph>
-        </div>
+          {footer !== undefined && footer !== null && <p className={styles.footer}>{footer}</p>}
+        </section>
       </main>
     </div>
   )

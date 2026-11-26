@@ -57,6 +57,7 @@ const AVATAR_SIZE = 10
 const newThemeTokens = [
   '--cl-shadow-3',
   '--cl-shadow-focus',
+  '--cl-on-brand',
   ...STATUS_CATEGORIES.flatMap((c) => [`--cl-cat-${c}`, `--cl-cat-${c}-bg`, `--cl-cat-${c}-text`]),
   ...ISSUE_TYPES.flatMap((t) => [`--cl-type-${t}`, `--cl-type-${t}-bg`, `--cl-type-${t}-text`]),
   ...PRIORITIES.map((p) => `--cl-prio-${p}`),
@@ -68,10 +69,7 @@ const avatarNames = Array.from({ length: AVATAR_SIZE }, (_, i) => i + 1)
 
 // Existing tokens that fail the rules. Their values are not changed in P1-S1;
 // the test asserts they still fail so the entry is removed once they are fixed.
-const KNOWN_DEBT = new Set<string>([
-  // light border-strong #B7BDC8 on bg-surface is about 1.9:1 (UI needs 3:1).
-  'light:--cl-border-strong/--cl-bg-surface',
-])
+const KNOWN_DEBT = new Set<string>([])
 
 type Theme = 'light' | 'dark'
 
@@ -152,6 +150,9 @@ function buildContrastCases(): ContrastCase[] {
       cases.push({ theme, fg: `--cl-${kind}-text`, bg: `--cl-${kind}-bg`, min: 4.5 })
     }
     cases.push({ theme, fg: '--cl-brand', bg: '--cl-brand-subtle', min: 4.5 })
+    // Text on the brand gradient used by the auth panel.
+    cases.push({ theme, fg: '--cl-on-brand', bg: '--cl-brand', min: 4.5 })
+    cases.push({ theme, fg: '--cl-on-brand', bg: '--cl-brand-pressed', min: 4.5 })
     // UI components on surface (3:1).
     cases.push({ theme, fg: '--cl-brand', bg: '--cl-bg-surface', min: 3 })
     cases.push({ theme, fg: '--cl-border-strong', bg: '--cl-bg-surface', min: 3 })

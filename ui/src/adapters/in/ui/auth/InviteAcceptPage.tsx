@@ -1,4 +1,4 @@
-import { Alert, App, Button, Spin, Typography } from 'antd'
+import { Alert, App, Button, Spin } from 'antd'
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 
@@ -84,7 +84,7 @@ export function InviteAcceptPage() {
   if (!sessionChecked || state.kind === 'loading') {
     return (
       <AuthLayout title="Invitación" subtitle="Comprobando la invitación..." footer={null}>
-        <div className="route-loading">
+        <div className={styles.center} role="status" aria-live="polite">
           <Spin size="large" />
         </div>
       </AuthLayout>
@@ -122,61 +122,56 @@ export function InviteAcceptPage() {
       subtitle={`Te invitan a unirte como ${ROLE_LABELS[preview.role]}.`}
       footer={null}
     >
-      <Typography.Paragraph className={styles.form}>
-        <strong>Organización:</strong> {preview.organizationName}
-        <br />
-        <strong>Rol:</strong> {ROLE_LABELS[preview.role]}
-        <br />
-        <strong>Correo invitado:</strong> {preview.email}
-      </Typography.Paragraph>
+      <div className={styles.form}>
+        <p className={styles.summaryText}>
+          <strong>Organización:</strong> {preview.organizationName}
+          <br />
+          <strong>Rol:</strong> {ROLE_LABELS[preview.role]}
+          <br />
+          <strong>Correo invitado:</strong> {preview.email}
+        </p>
 
-      {!signedIn && (
-        <>
-          <Typography.Paragraph type="secondary">
-            Inicia sesión o crea una cuenta con {preview.email} para aceptar la invitación.
-          </Typography.Paragraph>
-          <div className={styles.form}>
-            <Button type="primary" block size="large" onClick={() => navigate(authPathWithRedirect('/login', returnPath))}>
-              Iniciar sesión
-            </Button>
-            <Button block size="large" onClick={() => navigate(authPathWithRedirect('/register', returnPath))}>
-              Crear cuenta
-            </Button>
-          </div>
-        </>
-      )}
-
-      {signedIn && !sameAccount && (
-        <Alert
-          type="warning"
-          showIcon
-          className={styles.form}
-          message={`Esta invitación es para ${preview.email}, pero has iniciado sesión como ${user.email}.`}
-          description="Cambia de cuenta para aceptarla."
-        />
-      )}
-
-      {signedIn && (
-        <>
-          {acceptError && <Alert type="error" showIcon className={styles.form} message={acceptError} />}
-          <div className={styles.form}>
-            <Button
-              type="primary"
-              block
-              size="large"
-              loading={accepting}
-              onClick={() => void onAccept(preview)}
-            >
-              Aceptar invitación
-            </Button>
-            {(!sameAccount || acceptError) && (
-              <Button block size="large" onClick={switchAccount}>
-                Cambiar de cuenta
+        {!signedIn && (
+          <>
+            <p className={styles.summaryText}>
+              Inicia sesión o crea una cuenta con {preview.email} para aceptar la invitación.
+            </p>
+            <div className={styles.actions}>
+              <Button type="primary" block size="large" onClick={() => navigate(authPathWithRedirect('/login', returnPath))}>
+                Iniciar sesión
               </Button>
-            )}
-          </div>
-        </>
-      )}
+              <Button block size="large" onClick={() => navigate(authPathWithRedirect('/register', returnPath))}>
+                Crear cuenta
+              </Button>
+            </div>
+          </>
+        )}
+
+        {signedIn && !sameAccount && (
+          <Alert
+            type="warning"
+            showIcon
+            message={`Esta invitación es para ${preview.email}, pero has iniciado sesión como ${user.email}.`}
+            description="Cambia de cuenta para aceptarla."
+          />
+        )}
+
+        {signedIn && (
+          <>
+            {acceptError && <Alert type="error" showIcon role="alert" message={acceptError} />}
+            <div className={styles.actions}>
+              <Button type="primary" block size="large" loading={accepting} onClick={() => void onAccept(preview)}>
+                Aceptar invitación
+              </Button>
+              {(!sameAccount || acceptError) && (
+                <Button block size="large" onClick={switchAccount}>
+                  Cambiar de cuenta
+                </Button>
+              )}
+            </div>
+          </>
+        )}
+      </div>
     </AuthLayout>
   )
 }

@@ -13,7 +13,7 @@
   --cl-bg-surface: #FFFFFF;
   --cl-bg-sunken: #F1F2F4;
   --cl-border: #DFE1E6;
-  --cl-border-strong: #B7BDC8;
+  --cl-border-strong: #7A869A;
   --cl-text: #172B4D;
   --cl-text-subtle: #5E6C84;
   --cl-text-disabled: #A5ADBA;
@@ -36,6 +36,7 @@
   --cl-shadow-2: 0 0 1px rgba(9,30,66,.31), 0 8px 12px rgba(9,30,66,.15);
   --cl-shadow-3: 0 8px 16px rgba(9,30,66,.25), 0 0 1px rgba(9,30,66,.31);
   --cl-shadow-focus: 0 0 0 2px var(--cl-bg-surface), 0 0 0 4px var(--cl-brand);
+  --cl-on-brand: #FFFFFF;
   --cl-radius-sm: 3px;
   --cl-radius-md: 6px;
   --cl-radius-lg: 8px;
@@ -191,6 +192,7 @@
   --cl-shadow-2: 0 0 1px rgba(9,30,66,.31), 0 8px 12px rgba(9,30,66,.15);
   --cl-shadow-3: 0 8px 16px rgba(0,0,0,.5), 0 0 1px rgba(0,0,0,.6);
   --cl-shadow-focus: 0 0 0 2px var(--cl-bg-surface), 0 0 0 4px var(--cl-brand);
+  --cl-on-brand: #0C1B33;
 
   --cl-cat-todo: #9FADBC;
   --cl-cat-todo-bg: #2C333A;

@@ -5,15 +5,15 @@ import { describe, expect, it } from 'vitest'
 import { NotFoundPage } from './NotFoundPage'
 
 describe('NotFoundPage', () => {
-  it('renders 404 message and return button', () => {
+  it('renders the 404 message with a link back home', () => {
     render(
       <MemoryRouter>
         <NotFoundPage />
-      </MemoryRouter>
+      </MemoryRouter>,
     )
 
+    expect(screen.getByRole('heading', { name: 'No encontramos esta página' })).toBeInTheDocument()
     expect(screen.getByText('404')).toBeInTheDocument()
-    expect(screen.getByText('Lo sentimos, la página que buscas no existe.')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /Volver a incidencias/i })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Volver al inicio' })).toHaveAttribute('href', '/')
   })
 })

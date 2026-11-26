@@ -1,23 +1,6 @@
-import { Button, Result } from 'antd'
-import { useNavigate } from 'react-router-dom'
+import { ErrorPage } from '@/shared/ui/ErrorPage'
 
-import styles from './NotFoundPage.module.css'
-
+/** Unknown route (S-06): the shared 404 page with a link back home. */
 export function NotFoundPage() {
-  const navigate = useNavigate()
-
-  return (
-    <div className={styles.wrapper}>
-      <Result
-        status="404"
-        title="404"
-        subTitle="Lo sentimos, la página que buscas no existe."
-        extra={
-            <Button type="primary" onClick={() => navigate('/issues')}>
-            Volver a incidencias
-          </Button>
-        }
-      />
-    </div>
-  )
+  return <ErrorPage variant={404} />
 }
