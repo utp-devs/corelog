@@ -461,11 +461,12 @@ func TestTicketService_UpdateDetailsAuthorization(t *testing.T) {
 		}
 	})
 
-	t.Run("admin can edit without project membership", func(t *testing.T) {
+	t.Run("platform admin has read-only support access without project membership", func(t *testing.T) {
+		// D-4: platform admins get viewer access for support; editing needs a project or org role.
 		svc := NewTicketService(repo, dir, fakeProjectRoleResolver{})
 		_, err := svc.UpdateDetails(ctx, ticket.ID, uuid.New(), "admin", input)
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
+		if err == nil {
+			t.Fatal("expected forbidden error for a platform admin without a project role")
 		}
 	})
 }

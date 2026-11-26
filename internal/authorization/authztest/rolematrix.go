@@ -12,29 +12,33 @@ import (
 
 // Actor is a subject that authorization rules are evaluated for.
 //
-// PlatformRole is the global role: "" (anonymous), "admin", "agent" or "requester".
-// ProjectRole is the project role: "lead", "contributor", "viewer", or "" when the actor has no
-// membership in the project (outsider).
+// PlatformRole is the global role: "" (anonymous), "admin" or "user".
+// OrgRole is the role in the organization that owns the project: "owner", "admin", "member",
+// "guest", "none" (not a member) or "" (anonymous).
+// ProjectRole is the explicit project membership: "lead", "contributor", "viewer", or "" when the
+// actor has no project membership.
 type Actor struct {
 	Name         string
 	PlatformRole string
+	OrgRole      string
 	ProjectRole  string
 }
 
-// StandardActors covers the role model of the current code (docs/05-architecture.md section 3).
-// The platform role of a project actor is "requester", the normal non-admin user. Agent and
-// requester without a project role are denied everywhere; that is the point of those rows.
+// StandardActors covers the authorization model of docs/05-architecture.md section 3 (D-3, D-4).
+// The actor names are the row keys of ProjectMatrix and must not change without updating it.
 //
 // It is a var so that later phases can extend it; the helper never mutates it.
 var StandardActors = []Actor{
-	{Name: "anonymous", PlatformRole: "", ProjectRole: ""},
-	{Name: "admin", PlatformRole: "admin", ProjectRole: ""},
-	{Name: "agent", PlatformRole: "agent", ProjectRole: ""},
-	{Name: "requester", PlatformRole: "requester", ProjectRole: ""},
-	{Name: "lead", PlatformRole: "requester", ProjectRole: "lead"},
-	{Name: "contributor", PlatformRole: "requester", ProjectRole: "contributor"},
-	{Name: "viewer", PlatformRole: "requester", ProjectRole: "viewer"},
-	{Name: "outsider", PlatformRole: "requester", ProjectRole: ""},
+	{Name: "anonymous", PlatformRole: "", OrgRole: "", ProjectRole: ""},
+	{Name: "platform-admin", PlatformRole: "admin", OrgRole: "none", ProjectRole: ""},
+	{Name: "org-owner", PlatformRole: "user", OrgRole: "owner", ProjectRole: ""},
+	{Name: "org-admin", PlatformRole: "user", OrgRole: "admin", ProjectRole: ""},
+	{Name: "org-member", PlatformRole: "user", OrgRole: "member", ProjectRole: ""},
+	{Name: "org-guest", PlatformRole: "user", OrgRole: "guest", ProjectRole: ""},
+	{Name: "lead", PlatformRole: "user", OrgRole: "member", ProjectRole: "lead"},
+	{Name: "contributor", PlatformRole: "user", OrgRole: "member", ProjectRole: "contributor"},
+	{Name: "viewer", PlatformRole: "user", OrgRole: "member", ProjectRole: "viewer"},
+	{Name: "outsider", PlatformRole: "user", OrgRole: "none", ProjectRole: ""},
 }
 
 // RunMatrix runs one subtest per permission x actor, named "permission/actor". Each subtest
@@ -109,12 +113,6 @@ func validateMatrix(actors []Actor, permissions []string, allowed map[string][]s
 	return problems
 }
 
-// Adding a role (for example the organization roles of P2) is done in three steps, without
-// changing RunMatrix:
-//  1. Add the role as a field of Actor (for example OrgRole) and resolve it in the check func of
-//     each test, the same way ProjectRole is resolved today.
-//  2. Add one actor per new role to StandardActors (for example "org-owner", "org-member",
-//     "org-guest"), so every permission row is checked against them.
-//  3. Add the new actor's name to each permission row in the test tables where it is allowed.
-//     Actors not listed are denied, so a new actor silently denied everywhere is the most likely
-//     mistake: review every row when adding an actor.
+// Adding an actor is done in two steps, without changing RunMatrix: add it to StandardActors, then
+// add its name to every row of ProjectMatrix where it is allowed. Actors not listed are denied, so a
+// new actor silently denied everywhere is the most likely mistake: review every row.

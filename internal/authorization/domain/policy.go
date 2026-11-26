@@ -1,98 +1,74 @@
 package domain
 
-type ProjectRole string
-
-const (
-	ProjectRoleLead        ProjectRole = "lead"
-	ProjectRoleContributor ProjectRole = "contributor"
-	ProjectRoleViewer      ProjectRole = "viewer"
-)
-
+// Policy maps the effective project role of a caller to the project permissions. Every check is
+// made on the effective role from EffectiveRole, so org owner/admin are lead everywhere and
+// platform admin only reads.
 type Policy struct{}
 
-func (Policy) CanViewProject(globalRole string, projectRole *ProjectRole) bool {
-	if globalRole == "admin" {
-		return true
+// hasAny reports whether the effective role is one of the allowed roles.
+func hasAny(role *ProjectRole, allowed ...ProjectRole) bool {
+	if role == nil {
+		return false
 	}
-	return projectRole != nil
+	for _, r := range allowed {
+		if *role == r {
+			return true
+		}
+	}
+	return false
 }
 
-func (Policy) CanEditProject(globalRole string, projectRole *ProjectRole) bool {
-	if globalRole == "admin" {
-		return true
-	}
-	return projectRole != nil && *projectRole == ProjectRoleLead
+func (Policy) CanViewProject(a Access) bool {
+	return hasAny(EffectiveRole(a), ProjectRoleLead, ProjectRoleContributor, ProjectRoleViewer)
 }
 
-func (Policy) CanManageProjectMembers(globalRole string, projectRole *ProjectRole) bool {
-	if globalRole == "admin" {
-		return true
-	}
-	return projectRole != nil && *projectRole == ProjectRoleLead
+func (Policy) CanEditProject(a Access) bool {
+	return hasAny(EffectiveRole(a), ProjectRoleLead)
 }
 
-func (Policy) CanCreateIssue(globalRole string, projectRole *ProjectRole) bool {
-	if globalRole == "admin" {
-		return true
-	}
-	return projectRole != nil && (*projectRole == ProjectRoleLead || *projectRole == ProjectRoleContributor)
+// CanDeleteProject: only organization owners and admins. Lead rights and platform admin support
+// access are not enough.
+func (Policy) CanDeleteProject(a Access) bool {
+	return a.OrgRole == OrgRoleOwner || a.OrgRole == OrgRoleAdmin
 }
 
-func (Policy) CanEditIssue(globalRole string, projectRole *ProjectRole) bool {
-	if globalRole == "admin" {
-		return true
-	}
-	return projectRole != nil && (*projectRole == ProjectRoleLead || *projectRole == ProjectRoleContributor)
+func (Policy) CanManageProjectMembers(a Access) bool {
+	return hasAny(EffectiveRole(a), ProjectRoleLead)
 }
 
-func (Policy) CanComment(globalRole string, projectRole *ProjectRole) bool {
-	if globalRole == "admin" {
-		return true
-	}
-	return projectRole != nil && (*projectRole == ProjectRoleLead || *projectRole == ProjectRoleContributor)
+func (Policy) CanCreateIssue(a Access) bool {
+	return hasAny(EffectiveRole(a), ProjectRoleLead, ProjectRoleContributor)
 }
 
-// CanDeleteProject: solo el administrador global puede eliminar un proyecto.
-func (Policy) CanDeleteProject(globalRole string, _ *ProjectRole) bool {
-	return globalRole == "admin"
+func (Policy) CanEditIssue(a Access) bool {
+	return hasAny(EffectiveRole(a), ProjectRoleLead, ProjectRoleContributor)
 }
 
-// CanWatchIssue: cualquier miembro del proyecto puede seguir una incidencia.
-func (Policy) CanWatchIssue(globalRole string, projectRole *ProjectRole) bool {
-	if globalRole == "admin" {
-		return true
-	}
-	return projectRole != nil
+func (Policy) CanComment(a Access) bool {
+	return hasAny(EffectiveRole(a), ProjectRoleLead, ProjectRoleContributor)
 }
 
-// CanMoveCards: reordenar tarjetas y backlog exige poder editar incidencias.
-func (Policy) CanMoveCards(globalRole string, projectRole *ProjectRole) bool {
-	if globalRole == "admin" {
-		return true
-	}
-	return projectRole != nil && (*projectRole == ProjectRoleLead || *projectRole == ProjectRoleContributor)
+// CanWatchIssue: any project reader may follow an issue.
+func (Policy) CanWatchIssue(a Access) bool {
+	return hasAny(EffectiveRole(a), ProjectRoleLead, ProjectRoleContributor, ProjectRoleViewer)
 }
 
-// CanManageBoard: gestionar tableros y columnas es exclusivo del lider del proyecto.
-func (Policy) CanManageBoard(globalRole string, projectRole *ProjectRole) bool {
-	if globalRole == "admin" {
-		return true
-	}
-	return projectRole != nil && *projectRole == ProjectRoleLead
+// CanMoveCards: reordering cards and the backlog requires being able to edit issues.
+func (Policy) CanMoveCards(a Access) bool {
+	return hasAny(EffectiveRole(a), ProjectRoleLead, ProjectRoleContributor)
 }
 
-// CanManageWorkflow: gestionar el flujo de estados del proyecto es exclusivo del lider del proyecto.
-func (Policy) CanManageWorkflow(globalRole string, projectRole *ProjectRole) bool {
-	if globalRole == "admin" {
-		return true
-	}
-	return projectRole != nil && *projectRole == ProjectRoleLead
+// CanManageBoard: managing boards and columns is lead-only.
+func (Policy) CanManageBoard(a Access) bool {
+	return hasAny(EffectiveRole(a), ProjectRoleLead)
 }
 
-// CanManageSprints: planificar, iniciar y cerrar sprints es exclusivo del lider del proyecto.
-func (Policy) CanManageSprints(globalRole string, projectRole *ProjectRole) bool {
-	if globalRole == "admin" {
-		return true
-	}
-	return projectRole != nil && *projectRole == ProjectRoleLead
+// CanManageWorkflow: managing the project status flow is lead-only.
+func (Policy) CanManageWorkflow(a Access) bool {
+	return hasAny(EffectiveRole(a), ProjectRoleLead)
+}
+
+// CanManageSprints: planning, starting and closing sprints is lead-only.
+func (Policy) CanManageSprints(a Access) bool {
+	return hasAny(EffectiveRole(a), ProjectRoleLead)
 }

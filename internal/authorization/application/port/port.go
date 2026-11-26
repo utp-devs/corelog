@@ -42,8 +42,16 @@ var Actions = []Action{
 	ActionManageSprints,
 }
 
-// RoleLookup es el puerto de salida que devuelve el rol de un usuario en un proyecto.
-// Devuelve nil si el usuario no es miembro del proyecto.
+// RoleLookup es el puerto de salida que devuelve el rol de proyecto explicito de un usuario.
+// Devuelve nil si el usuario no es miembro del proyecto. Se conserva para los adaptadores que
+// solo conocen la membresia de proyecto; el caso de uso prefiere AccessLookup cuando existe.
 type RoleLookup interface {
 	FindRole(ctx context.Context, projectID, userID uuid.UUID) (*domain.ProjectRole, error)
+}
+
+// AccessLookup devuelve el contexto efectivo del usuario sobre un proyecto: membresia de proyecto,
+// rol en la organizacion propietaria (organizacion eliminada = sin rol) y visibilidad del proyecto.
+// Un proyecto inexistente devuelve un Access vacio sin error.
+type AccessLookup interface {
+	FindAccess(ctx context.Context, projectID, userID uuid.UUID) (domain.Access, error)
 }
