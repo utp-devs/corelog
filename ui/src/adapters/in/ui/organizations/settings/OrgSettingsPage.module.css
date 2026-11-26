@@ -1,0 +1,134 @@
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cl-space-6);
+  min-width: 0;
+}
+
+.banner {
+  margin-bottom: var(--cl-space-4);
+}
+
+.sectionNav {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cl-space-1);
+  position: sticky;
+  top: var(--cl-space-6);
+}
+
+.sectionLink {
+  color: var(--cl-text-subtle);
+  padding: var(--cl-space-1) var(--cl-space-2);
+  border-radius: var(--cl-radius-sm);
+}
+
+.sectionLink:hover {
+  color: var(--cl-text);
+  background: var(--cl-bg-sunken);
+}
+
+.sectionLink:focus-visible {
+  outline: none;
+  box-shadow: var(--cl-shadow-focus);
+}
+
+.logoField {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--cl-space-4);
+  flex-wrap: wrap;
+}
+
+.logoPreview {
+  width: var(--cl-space-16);
+  height: var(--cl-space-16);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--cl-border);
+  border-radius: var(--cl-radius-md);
+  background: var(--cl-bg-sunken);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.logoImage {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.logoActions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cl-space-2);
+  min-width: 0;
+}
+
+.buttonRow {
+  display: flex;
+  gap: var(--cl-space-2);
+  flex-wrap: wrap;
+}
+
+.hiddenInput {
+  display: none;
+}
+
+.infoRow {
+  display: flex;
+  align-items: center;
+  gap: var(--cl-space-3);
+  flex-wrap: wrap;
+  padding: var(--cl-space-2) 0;
+}
+
+.infoLabel {
+  font-weight: 600;
+}
+
+.numberInput {
+  width: var(--cl-space-16);
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--cl-space-2);
+  flex-wrap: wrap;
+}
+
+.danger {
+  margin-top: var(--cl-space-6);
+}
+
+.dangerRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--cl-space-4);
+  flex-wrap: wrap;
+  padding: var(--cl-space-3) 0;
+  border-bottom: 1px solid var(--cl-border);
+}
+
+.dangerRow:last-child {
+  border-bottom: none;
+}
+
+.transferSelect {
+  width: 100%;
+  max-width: var(--cl-content-max);
+  margin-top: var(--cl-space-2);
+}
+
+.hint {
+  margin: var(--cl-space-1) 0 0;
+}
+
+@media (max-width: 767px) {
+  .dangerRow {
+    flex-direction: column;
+  }
+}

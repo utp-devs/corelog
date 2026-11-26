@@ -3,14 +3,11 @@ import { create } from 'zustand'
 import { AppError, isAppError } from '@/core/shared/app-error'
 import { TeamService } from '@/core/teams/application/team.service'
 import type { CreateTeamInput, UpdateTeamInput } from '@/core/teams/application/ports/team-repository.port'
-import type { Team, TeamMember, TeamMemberRole } from '@/core/teams/domain/team'
-import { UserDirectoryService } from '@/core/users/application/user-directory.service'
+import type { OrganizationPerson, Team, TeamMember, TeamMemberRole } from '@/core/teams/domain/team'
 import { TeamHttpRepository } from '@/adapters/out/http/team-http-repository'
-import { UserDirectoryHttpRepository } from '@/adapters/out/http/user-directory-http-repository'
 import { getCurrentOrgId } from '@/adapters/in/state/org.store'
 
 const teamService = new TeamService(new TeamHttpRepository())
-const directoryService = new UserDirectoryService(new UserDirectoryHttpRepository())
 
 type Status = 'idle' | 'loading' | 'error'
 
@@ -22,11 +19,13 @@ export interface TeamMemberView extends TeamMember {
 
 interface TeamsState {
   teams: Team[]
-  currentTeam: Team | null
   status: Status
   error: AppError | null
+  currentTeam: Team | null
+  currentTeamStatus: Status
   members: TeamMemberView[]
   membersStatus: Status
+  membersError: AppError | null
   fetchTeams: () => Promise<void>
   fetchTeam: (id: string) => Promise<void>
   createTeam: (input: Omit<CreateTeamInput, 'organizationId'>) => Promise<Team>
@@ -47,11 +46,23 @@ function toAppError(error: unknown, fallback: string): AppError {
 
 const initialState = {
   teams: [] as Team[],
-  currentTeam: null as Team | null,
   status: 'idle' as Status,
   error: null as AppError | null,
+  currentTeam: null as Team | null,
+  currentTeamStatus: 'idle' as Status,
   members: [] as TeamMemberView[],
   membersStatus: 'idle' as Status,
+  membersError: null as AppError | null,
+}
+
+/** Names come from the organization directory. When it is not readable (guests), members show without a name. */
+function joinPeople(memberships: TeamMember[], people: OrganizationPerson[] | null): TeamMemberView[] {
+  const byId = new Map((people ?? []).map((person) => [person.userId, person]))
+  return memberships.map((membership) => ({
+    ...membership,
+    name: byId.get(membership.userId)?.name ?? 'Miembro de la organización',
+    email: byId.get(membership.userId)?.email ?? '',
+  }))
 }
 
 export const useTeamsStore = create<TeamsState>((set, get) => ({
@@ -68,10 +79,11 @@ export const useTeamsStore = create<TeamsState>((set, get) => ({
   },
 
   fetchTeam: async (id) => {
+    set({ currentTeamStatus: 'loading' })
     try {
-      set({ currentTeam: await teamService.get(id), error: null })
+      set({ currentTeam: await teamService.get(id), currentTeamStatus: 'idle' })
     } catch (error) {
-      set({ error: toAppError(error, 'No se pudo cargar el equipo') })
+      set({ currentTeamStatus: 'error', error: toAppError(error, 'No se pudo cargar el equipo') })
     }
   },
 
@@ -129,18 +141,16 @@ export const useTeamsStore = create<TeamsState>((set, get) => ({
   },
 
   fetchMembers: async (teamId) => {
-    set({ membersStatus: 'loading' })
+    set({ membersStatus: 'loading', membersError: null })
+    const organizationId = getCurrentOrgId()
     try {
-      const [memberships, users] = await Promise.all([teamService.listMembers(teamId), directoryService.search({ query: '' })])
-      const byId = new Map(users.map((u) => [u.id, u]))
-      const members: TeamMemberView[] = memberships.map((m) => ({
-        ...m,
-        name: byId.get(m.userId)?.name ?? m.userId,
-        email: byId.get(m.userId)?.email ?? '',
-      }))
-      set({ members, membersStatus: 'idle' })
+      const memberships = await teamService.listMembers(teamId)
+      const people = organizationId
+        ? await teamService.listOrganizationPeople(organizationId).catch(() => null)
+        : null
+      set({ members: joinPeople(memberships, people), membersStatus: 'idle' })
     } catch (error) {
-      set({ membersStatus: 'error', error: toAppError(error, 'No se pudieron cargar los miembros') })
+      set({ membersStatus: 'error', membersError: toAppError(error, 'No se pudieron cargar los miembros') })
     }
   },
 

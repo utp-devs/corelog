@@ -207,4 +207,21 @@ describe('UserMenu inside AppLayout', () => {
     )
     expect(screen.getByText('Acme')).toBeInTheDocument()
   })
+
+  it('mounts the command palette once and opens it with Ctrl+K and with "/"', () => {
+    renderShell('/issues')
+    expect(screen.queryByRole('dialog', { name: 'Paleta de comandos' })).not.toBeInTheDocument()
+    fireEvent.keyDown(window, { key: 'k', ctrlKey: true })
+    expect(screen.getAllByRole('dialog', { name: 'Paleta de comandos' })).toHaveLength(1)
+    fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' })
+    fireEvent.keyDown(window, { key: '/' })
+    expect(screen.getAllByRole('dialog', { name: 'Paleta de comandos' })).toHaveLength(1)
+  })
+
+  it('leaves "/" to the palette only: the header search field does not take focus', () => {
+    renderShell('/issues')
+    const search = screen.getByLabelText('Buscar proyectos e incidencias')
+    fireEvent.keyDown(window, { key: '/' })
+    expect(search).not.toHaveFocus()
+  })
 })

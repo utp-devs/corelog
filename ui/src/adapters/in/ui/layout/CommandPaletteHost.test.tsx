@@ -2,10 +2,10 @@ import { act, fireEvent, render, screen } from '@testing-library/react'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { clearCommandRegistry } from './commandRegistry'
+import { clearCommandRegistry } from '@/shared/ui/CommandPalette/commandRegistry'
 import { CommandPaletteHost } from './CommandPaletteHost'
-import { PALETTE_DEBOUNCE_MS } from './CommandPalette'
-import { closePalette } from './paletteState'
+import { PALETTE_DEBOUNCE_MS } from '@/shared/ui/CommandPalette/CommandPalette'
+import { closePalette } from '@/shared/ui/CommandPalette/paletteState'
 
 const repositories = vi.hoisted(() => ({ search: vi.fn() }))
 

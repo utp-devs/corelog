@@ -1,0 +1,30 @@
+.addForm {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--cl-space-3);
+  margin-bottom: var(--cl-space-4);
+}
+
+.picker {
+  flex: 1 1 280px;
+  min-width: 0;
+}
+
+.roleSelect {
+  min-width: 160px;
+}
+
+.mobileCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cl-space-3);
+  min-width: 0;
+}
+
+.mobileActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--cl-space-2);
+}

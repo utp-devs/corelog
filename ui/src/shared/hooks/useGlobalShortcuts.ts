@@ -9,16 +9,10 @@ export type GlobalShortcutOptions = {
   projectId?: string | null
 }
 
-// Focus the header search field, the same field the old hook targeted.
-function focusSearch(event: KeyboardEvent) {
-  const search = document.querySelector<HTMLInputElement>('input[aria-label="Buscar proyectos e incidencias"]')
-  if (search) {
-    event.preventDefault()
-    search.focus()
-  }
-}
-
-/** Global shortcuts of the shell: c, /, ?, g i, g d, g p, g b and n (coming soon). */
+/**
+ * Global shortcuts of the shell: c, ?, g i, g d, g p, g b and n (coming soon).
+ * The '/' key is not bound here: the command palette host owns it (it opens the palette).
+ */
 export function useGlobalShortcuts(options: GlobalShortcutOptions = {}) {
   const navigate = useNavigate()
   const { onHelp, projectId } = options
@@ -26,7 +20,6 @@ export function useGlobalShortcuts(options: GlobalShortcutOptions = {}) {
 
   useHotkeys([
     { keys: 'c', group: 'General', description: 'Crear incidencia', run: () => navigate('/issues/new') },
-    { keys: '/', group: 'General', description: 'Buscar proyectos e incidencias', run: focusSearch },
     { keys: '?', group: 'General', description: 'Mostrar atajos de teclado', run: () => onHelp?.() },
     { keys: 'n', group: 'General', description: 'Notas rápidas', comingSoon: true },
     { keys: 'g i', group: 'Navegación', description: 'Ir a Incidencias', run: () => navigate('/issues') },

@@ -15,9 +15,8 @@ const repo = vi.hoisted(() => ({
   addMember: vi.fn(),
   updateMemberRole: vi.fn(),
   removeMember: vi.fn(),
+  listOrganizationPeople: vi.fn(),
 }))
-
-const directory = vi.hoisted(() => ({ search: vi.fn() }))
 
 vi.mock('@/adapters/out/http/team-http-repository', () => ({
   TeamHttpRepository: class {
@@ -30,12 +29,7 @@ vi.mock('@/adapters/out/http/team-http-repository', () => ({
     addMember = repo.addMember
     updateMemberRole = repo.updateMemberRole
     removeMember = repo.removeMember
-  },
-}))
-
-vi.mock('@/adapters/out/http/user-directory-http-repository', () => ({
-  UserDirectoryHttpRepository: class {
-    search = directory.search
+    listOrganizationPeople = repo.listOrganizationPeople
   },
 }))
 
@@ -117,25 +111,47 @@ describe('teams.store', () => {
     expect(useTeamsStore.getState().teams[0].name).toBe('Alfa renombrado')
   })
 
-  it('joins memberships with user names and emails', async () => {
+  it('joins memberships with names from the organization directory', async () => {
     repo.listMembers.mockResolvedValueOnce([
       { teamId: 't1', userId: 'u1', role: 'maintainer', createdAt: '2026-11-01T10:00:00Z' },
       { teamId: 't1', userId: 'u2', role: 'member', createdAt: '2026-11-01T10:00:00Z' },
     ])
-    directory.search.mockResolvedValueOnce([{ id: 'u1', name: 'Ana', email: 'ana@example.com' }])
+    repo.listOrganizationPeople.mockResolvedValueOnce([{ userId: 'u1', name: 'Ana', email: 'ana@example.com' }])
 
     await useTeamsStore.getState().fetchMembers('t1')
 
+    expect(repo.listOrganizationPeople).toHaveBeenCalledWith(ORG_ID)
     const members = useTeamsStore.getState().members
     expect(members[0]).toMatchObject({ userId: 'u1', role: 'maintainer', name: 'Ana', email: 'ana@example.com' })
-    expect(members[1]).toMatchObject({ userId: 'u2', name: 'u2', email: '' })
+    expect(members[1]).toMatchObject({ userId: 'u2', name: 'Miembro de la organización', email: '' })
     expect(useTeamsStore.getState().membersStatus).toBe('idle')
+  })
+
+  it('still lists members when the organization directory is not readable (guests)', async () => {
+    repo.listMembers.mockResolvedValueOnce([{ teamId: 't1', userId: 'u1', role: 'member', createdAt: '' }])
+    repo.listOrganizationPeople.mockRejectedValueOnce(new AppError({ status: 403, code: 'org.forbidden', message: 'no' }))
+
+    await useTeamsStore.getState().fetchMembers('t1')
+
+    expect(useTeamsStore.getState().members).toHaveLength(1)
+    expect(useTeamsStore.getState().membersStatus).toBe('idle')
+  })
+
+  it('keeps the membership error apart from the general error', async () => {
+    repo.listMembers.mockRejectedValueOnce(new AppError({ status: 403, code: 'team.forbidden', message: 'no' }))
+
+    await useTeamsStore.getState().fetchMembers('t1')
+
+    const state = useTeamsStore.getState()
+    expect(state.membersStatus).toBe('error')
+    expect(state.membersError?.code).toBe('team.forbidden')
+    expect(state.error).toBeNull()
   })
 
   it('adds a member with a role and refreshes the list', async () => {
     repo.addMember.mockResolvedValueOnce({ teamId: 't1', userId: 'u3', role: 'maintainer', createdAt: '' })
     repo.listMembers.mockResolvedValueOnce([])
-    directory.search.mockResolvedValueOnce([])
+    repo.listOrganizationPeople.mockResolvedValueOnce([])
 
     await useTeamsStore.getState().addMember('t1', 'u3', 'maintainer')
 

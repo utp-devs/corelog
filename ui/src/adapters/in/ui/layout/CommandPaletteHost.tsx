@@ -4,9 +4,9 @@ import { useNavigate } from 'react-router-dom'
 import { ThemeContext } from '@/app/theme-context'
 import { SearchHttpRepository } from '@/adapters/out/http/search-http-repository'
 import { useHotkeys } from '@/shared/hooks/useHotkeys'
-import { CommandPalette, type SearchResult } from './CommandPalette'
-import { registerCommand } from './commandRegistry'
-import { closePalette, openPalette, togglePalette, usePaletteState } from './paletteState'
+import { CommandPalette, type SearchResult } from '@/shared/ui/CommandPalette/CommandPalette'
+import { registerCommand } from '@/shared/ui/CommandPalette/commandRegistry'
+import { closePalette, openPalette, togglePalette, usePaletteState } from '@/shared/ui/CommandPalette/paletteState'
 
 /** Opens the palette on '/' (registered in the shortcuts dialog) and toggles it on Ctrl+K / Cmd+K. */
 function usePaletteHotkeys(): void {

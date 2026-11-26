@@ -5,6 +5,7 @@ import { Outlet, useLocation, useNavigate, useParams } from 'react-router-dom'
 
 import { ProjectHttpRepository } from '@/adapters/out/http/project-http-repository'
 import type { Project, ProjectType, ProjectVisibility } from '@/core/projects/domain/project'
+import { useTrackRecent } from '@/shared/ui/CommandPalette/recent'
 import styles from './ProjectWorkspace.module.css'
 
 // Secciones del proyecto. Cada una es una ruta hija del espacio de trabajo.
@@ -37,6 +38,10 @@ export function ProjectWorkspace() {
   }, [id])
 
   const current = loaded?.id === id ? loaded : null
+  // Recents: the project once its header has loaded.
+  useTrackRecent(current?.project
+    ? { kind: 'project', id: current.project.id, title: current.project.name, subtitle: current.project.key, link: `/projects/${id}` }
+    : null)
   const activeKey = sections.find((section) => location.pathname.startsWith(`/projects/${id}/${section.key}`))?.key ?? 'board'
 
   return (

@@ -1,6 +1,9 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 
 import { useAuthStore } from './auth.store'
+import { useOrgStore } from './org.store'
+import { useProjectsStore } from './projects.store'
+import { useTeamsStore } from './teams.store'
 import { tokenStorage } from '@/adapters/out/storage/token-storage'
 
 describe('auth.store', () => {
@@ -51,5 +54,22 @@ describe('auth.store', () => {
     expect(state.status).toBe('idle')
     expect(state.sessionChecked).toBe(true)
     expect(tokenStorage.get()).toBeNull()
+  })
+
+  it('clears organization, projects and teams on logout', () => {
+    localStorage.setItem('corelog.currentOrg', 'o1')
+    useAuthStore.setState({ user: null, status: 'authenticated', sessionChecked: true })
+    useOrgStore.setState({ orgs: [{ id: 'o1' } as never], currentOrgId: 'o1', loaded: true })
+    useProjectsStore.setState({ projects: [{ id: 'p1' } as never] })
+    useTeamsStore.setState({ teams: [{ id: 't1' } as never], currentTeam: null })
+
+    useAuthStore.getState().logout()
+
+    expect(useOrgStore.getState().orgs).toEqual([])
+    expect(useOrgStore.getState().currentOrgId).toBeNull()
+    expect(useOrgStore.getState().loaded).toBe(false)
+    expect(localStorage.getItem('corelog.currentOrg')).toBeNull()
+    expect(useProjectsStore.getState().projects).toEqual([])
+    expect(useTeamsStore.getState().teams).toEqual([])
   })
 })

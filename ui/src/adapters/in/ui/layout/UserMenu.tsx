@@ -12,7 +12,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '@/adapters/in/state/auth.store'
 import { useThemeMode } from '@/app/theme-context'
 import type { Role } from '@/core/auth/domain/user'
-import { Avatar } from '@/shared/ui/Avatar'
+import { UserAvatar } from '@/adapters/in/ui/people/UserAvatar'
 
 import { useDensity } from './preferences'
 import styles from './UserMenu.module.css'
@@ -73,7 +73,7 @@ export function UserMenu() {
   return (
     <Dropdown menu={{ items }} trigger={['click']} placement="bottomRight">
       <button type="button" className={styles.trigger} aria-label={`Menú de ${user.name}`} aria-haspopup="menu">
-        <Avatar id={user.id} name={user.name} size={32} />
+        <UserAvatar id={user.id} name={user.name} avatarKey={user.avatarKey} size={32} data-testid="user-menu-avatar" />
       </button>
     </Dropdown>
   )

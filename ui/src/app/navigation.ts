@@ -21,6 +21,8 @@ export type TopNavMenu = {
   path: string
   /** Recent items. Placeholder until P3 provides the recent endpoint. */
   recent: readonly TopNavLink[]
+  /** Extra entries listed after "Ver todos" (for example "Ver personas" under Equipos). */
+  extras?: readonly TopNavLink[]
 }
 
 export type TopNavLink = {
@@ -38,8 +40,8 @@ export type TopNav = {
 
 export const VIEW_ALL_LABEL = 'Ver todos'
 
-function menu(key: TopNavMenuKey, label: string, path: string): TopNavMenu {
-  return { key, label, path, recent: [] }
+function menu(key: TopNavMenuKey, label: string, path: string, extras?: readonly TopNavLink[]): TopNavMenu {
+  return extras ? { key, label, path, recent: [], extras } : { key, label, path, recent: [] }
 }
 
 /** Top bar model: dropdown menus, Create button and organization name. Teams is open to every organization member. */
@@ -48,7 +50,7 @@ export function buildTopNav(user: Pick<User, 'role'> | null, org: OrgInfo | null
     menu('projects', 'Proyectos', '/projects'),
     menu('filters', 'Filtros', '/issues'),
     menu('dashboards', 'Paneles', '/dashboard'),
-    menu('teams', 'Equipos', '/teams'),
+    menu('teams', 'Equipos', '/teams', [{ key: 'people', label: 'Ver personas', path: '/people' }]),
   ]
   return {
     menus,

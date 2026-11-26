@@ -6,6 +6,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 
 import { canTransitionTo, type IssueType, type Ticket, type TicketPriority, type TicketStatus } from '@/core/tickets/domain/ticket'
 import { useTicketsStore } from '@/adapters/in/state/tickets.store'
+import { useTrackRecent } from '@/shared/ui/CommandPalette/recent'
 import { useTeammateSearch } from './hooks/useTeammateSearch'
 import { PriorityTag } from '@/shared/ui/PriorityTag'
 import { StatusTag } from '@/shared/ui/StatusTag'
@@ -127,6 +128,10 @@ export function TicketDetailPage() {
   const fetchLinks = useTicketsStore((s) => s.fetchLinks)
   const createLink = useTicketsStore((s) => s.createLink)
   const deleteLink = useTicketsStore((s) => s.deleteLink)
+  // Recents: the issue shown here, once its ticket for this id has loaded.
+  useTrackRecent(selected && selected.id === id
+    ? { kind: 'issue', id: selected.id, title: selected.title, subtitle: 'Incidencia', link: `/issues/${selected.id}` }
+    : null)
 
   const [assigneeId, setAssigneeId] = useState('')
   const [commentBody, setCommentBody] = useState('')

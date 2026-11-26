@@ -12,6 +12,9 @@ import { AccountSecurityHttpRepository } from '@/adapters/out/http/account-secur
 import { AuthHttpRepository } from '@/adapters/out/http/auth-http-repository'
 import { extractErrorMessage } from '@/adapters/out/http/api-client'
 import { tokenStorage } from '@/adapters/out/storage/token-storage'
+import { useOrgStore } from '@/adapters/in/state/org.store'
+import { useProjectsStore } from '@/adapters/in/state/projects.store'
+import { useTeamsStore } from '@/adapters/in/state/teams.store'
 
 const authService = new AuthService(new AuthHttpRepository())
 
@@ -92,6 +95,10 @@ export const useAuthStore = create<AuthState>((set) => ({
       void new AccountSecurityHttpRepository().logout(token).catch(() => undefined)
     }
     tokenStorage.clear()
+    // Data of the closed session must not leak into the next one: organization, projects and teams.
+    useOrgStore.getState().reset()
+    useProjectsStore.getState().reset()
+    useTeamsStore.getState().reset()
     set({ user: null, status: 'idle', error: null, sessionChecked: true })
   },
 }))

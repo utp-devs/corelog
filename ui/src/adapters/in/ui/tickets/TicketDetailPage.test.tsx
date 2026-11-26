@@ -80,6 +80,22 @@ describe('TicketDetailPage tabs', () => {
     expect(await screen.findByText('Aún no hay archivos')).toBeInTheDocument()
   })
 
+  it('records the issue in the recent items once it is shown', async () => {
+    window.localStorage.clear()
+    render(
+      <App>
+        <MemoryRouter initialEntries={['/issues/issue-1']}>
+          <Routes>
+            <Route path="/issues/:id" element={<TicketDetailPage />} />
+          </Routes>
+        </MemoryRouter>
+      </App>,
+    )
+    expect(await screen.findByText('Metadatos')).toBeInTheDocument()
+    const recent = JSON.parse(window.localStorage.getItem('corelog.recent') ?? '[]') as { kind: string; id: string; link: string }[]
+    expect(recent[0]).toMatchObject({ kind: 'issue', id: 'issue-1', link: '/issues/issue-1' })
+  })
+
   it('shows an error state when the attachment list cannot be loaded', async () => {
     attachmentList.mockRejectedValueOnce(new Error('network failure'))
     render(

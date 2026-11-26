@@ -1,0 +1,80 @@
+.banner {
+  margin-bottom: var(--cl-space-4);
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cl-space-4);
+  min-width: 0;
+}
+
+.roleSelect {
+  width: var(--cl-space-16);
+  max-width: 100%;
+}
+
+.formActions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.toolbar {
+  display: flex;
+  justify-content: flex-start;
+  margin-bottom: var(--cl-space-3);
+}
+
+.email {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.linkList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cl-space-3);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.linkItem {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--cl-space-2);
+  align-items: center;
+  padding-bottom: var(--cl-space-3);
+  border-bottom: 1px solid var(--cl-border);
+}
+
+.linkItem:last-child {
+  border-bottom: none;
+}
+
+.linkMeta {
+  display: flex;
+  gap: var(--cl-space-2);
+  align-items: baseline;
+  flex-wrap: wrap;
+  grid-column: 1 / -1;
+}
+
+.linkUrl {
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+
+.mobileCard {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--cl-space-1);
+  min-width: 0;
+}
+
+@media (max-width: 767px) {
+  .linkItem {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

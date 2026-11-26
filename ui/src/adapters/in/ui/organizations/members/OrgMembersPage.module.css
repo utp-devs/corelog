@@ -1,0 +1,43 @@
+.banner {
+  margin-bottom: var(--cl-space-4);
+}
+
+.person {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--cl-space-2);
+  min-width: 0;
+}
+
+.personName {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.youTag {
+  font-weight: 400;
+  color: var(--cl-text-subtle);
+}
+
+.roleSelect {
+  min-width: var(--cl-space-16);
+}
+
+.roleStatic {
+  display: inline-flex;
+  cursor: help;
+}
+
+.filterSelect {
+  min-width: var(--cl-space-16);
+}
+
+.mobileCard {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--cl-space-1);
+  min-width: 0;
+}

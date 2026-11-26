@@ -16,6 +16,7 @@ import { useGlobalShortcuts } from '@/shared/hooks/useGlobalShortcuts'
 import { useMediaQuery } from '@/shared/hooks/useMediaQuery'
 import { ShortcutsDialog } from '@/shared/ui/ShortcutsDialog'
 
+import { CommandPaletteHost } from './CommandPaletteHost'
 import { ContextSidebar, SidebarItemIcon } from './ContextSidebar'
 import styles from './AppLayout.module.css'
 import { MOBILE_QUERY, TopBar } from './TopBar'
@@ -131,6 +132,7 @@ export function AppLayout({ org = null, orgSwitcherSlot }: AppLayoutProps) {
         </Drawer>
       )}
 
+      <CommandPaletteHost />
       <ShortcutsDialog open={helpOpen} onClose={() => setHelpOpen(false)} />
     </div>
   )

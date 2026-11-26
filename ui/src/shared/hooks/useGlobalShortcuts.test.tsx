@@ -34,15 +34,16 @@ describe('useGlobalShortcuts', () => {
     input.remove()
   })
 
-  it('enfoca el buscador de cabecera con la barra diagonal', () => {
+  it('no longer binds the slash key, which the command palette host owns', () => {
     const search = document.createElement('input')
     search.setAttribute('aria-label', 'Buscar proyectos e incidencias')
     document.body.appendChild(search)
-    renderHook(() => useGlobalShortcuts(), { wrapper })
+    const { result } = renderHook(() => useShortcutsAndLocation(), { wrapper })
     act(() => {
       window.dispatchEvent(new KeyboardEvent('keydown', { key: '/' }))
     })
-    expect(document.activeElement).toBe(search)
+    expect(document.activeElement).not.toBe(search)
+    expect(result.current).toBe('/issues')
     search.remove()
   })
 })

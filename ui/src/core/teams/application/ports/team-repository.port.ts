@@ -1,4 +1,4 @@
-import type { Team, TeamMember, TeamMemberRole } from '@/core/teams/domain/team'
+import type { OrganizationPerson, Team, TeamMember, TeamMemberRole } from '@/core/teams/domain/team'
 
 export interface CreateTeamInput {
   organizationId: string
@@ -24,4 +24,6 @@ export interface TeamRepositoryPort {
   addMember(teamId: string, userId: string, role?: TeamMemberRole): Promise<TeamMember>
   updateMemberRole(teamId: string, userId: string, role: TeamMemberRole): Promise<TeamMember>
   removeMember(teamId: string, userId: string): Promise<void>
+  /** People of an organization with their names. Guests may not read it (the server answers 403). */
+  listOrganizationPeople(organizationId: string): Promise<OrganizationPerson[]>
 }

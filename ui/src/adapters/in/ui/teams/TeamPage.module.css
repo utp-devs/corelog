@@ -1,0 +1,58 @@
+.header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--cl-space-4);
+}
+
+.identity {
+  display: flex;
+  align-items: center;
+  gap: var(--cl-space-4);
+  min-width: 0;
+}
+
+.titleBlock {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cl-space-1);
+  min-width: 0;
+}
+
+.title {
+  margin: 0;
+  font-size: var(--cl-font-h2);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.description {
+  margin: 0;
+  color: var(--cl-text-subtle);
+  overflow-wrap: anywhere;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--cl-space-2);
+}
+
+.details {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--cl-space-2) var(--cl-space-3);
+  margin: 0;
+}
+
+.details dt {
+  color: var(--cl-text-subtle);
+  font-size: var(--cl-font-small);
+}
+
+.details dd {
+  margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}

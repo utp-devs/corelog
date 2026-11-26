@@ -75,6 +75,17 @@ describe('TeamHttpRepository', () => {
     expect(member).toEqual({ teamId: 'team-1', userId: 'user-2', role: 'maintainer', createdAt: '2026-11-03T10:00:00Z' })
   })
 
+  it('reads the organization people with names for the members view', async () => {
+    const get = vi.spyOn(apiClient, 'get').mockResolvedValue({
+      data: { data: [{ user_id: 'user-2', name: 'Luis Soto', email: 'luis@example.com', role: 'member', joined_at: '' }] },
+    })
+
+    const people = await new TeamHttpRepository().listOrganizationPeople(ORG_ID)
+
+    expect(get).toHaveBeenCalledWith(`/organizations/${ORG_ID}/members`)
+    expect(people).toEqual([{ userId: 'user-2', name: 'Luis Soto', email: 'luis@example.com' }])
+  })
+
   it('omits role when adding a member so the server default applies', async () => {
     const post = vi.spyOn(apiClient, 'post').mockResolvedValue({ data: { data: { ...memberDto, role: 'member' } } })
 

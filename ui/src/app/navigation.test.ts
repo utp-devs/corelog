@@ -39,6 +39,12 @@ describe('buildTopNav', () => {
     expect(nav.menus.map((m) => m.key)).toEqual(BASE_MENUS)
   })
 
+  it('lists Ver personas under Equipos, pointing at /people', () => {
+    const teams = buildTopNav({ role: 'user' }, org).menus.find((m) => m.key === 'teams')
+    expect(teams?.extras).toEqual([{ key: 'people', label: 'Ver personas', path: '/people' }])
+    expect(buildTopNav({ role: 'user' }, org).menus.find((m) => m.key === 'projects')?.extras).toBeUndefined()
+  })
+
   it('starts recent lists empty', () => {
     expect(buildTopNav({ role: 'user' }, null).menus.every((m) => m.recent.length === 0)).toBe(true)
   })
@@ -77,6 +83,16 @@ describe('resolveSidebarContext', () => {
   it('maps organization and profile paths', () => {
     expect(resolveSidebarContext('/organization/members')).toEqual({ kind: 'org-admin' })
     expect(resolveSidebarContext('/profile')).toEqual({ kind: 'profile' })
+  })
+
+  it('keeps every /profile/:section in the profile context', () => {
+    expect(resolveSidebarContext('/profile/security')).toEqual({ kind: 'profile' })
+    expect(resolveSidebarContext('/profile/appearance')).toEqual({ kind: 'profile' })
+  })
+
+  it('keeps the people pages in the global context (no sidebar)', () => {
+    expect(resolveSidebarContext('/people')).toEqual({ kind: 'global' })
+    expect(resolveSidebarContext('/people/u1')).toEqual({ kind: 'global' })
   })
 
   it('uses global for work pages and onboarding', () => {

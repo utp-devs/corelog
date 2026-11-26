@@ -1,119 +1,121 @@
 import { PlusOutlined } from '@ant-design/icons'
-import { App, Button } from 'antd'
-import { useEffect, useState } from 'react'
+import { Button, Skeleton } from 'antd'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 
-import type { Team } from '@/core/teams/domain/team'
+import { useCurrentOrg } from '@/adapters/in/state/org.store'
 import { useTeamsStore } from '@/adapters/in/state/teams.store'
-import { extractErrorMessage } from '@/adapters/out/http/api-client'
-import { TeamFormModal } from './TeamFormModal'
-import { TeamList } from './TeamList'
-import { TeamMembersPanel } from './TeamMembersPanel'
-import styles from './TeamsPage.module.css'
-import { ConfirmModal } from '@/shared/ui/ConfirmModal'
+import { canCreateTeam, filterTeams } from '@/core/teams/domain/team-policy'
 import { EmptyState } from '@/shared/ui/EmptyState'
+import { ErrorState } from '@/shared/ui/ErrorState'
+import { PageContainer } from '@/shared/ui/PageContainer'
 import { PageHeader } from '@/shared/ui/PageHeader'
+import { SearchInput } from '@/shared/ui/SearchInput'
+import { toast } from '@/shared/ui/Toaster/toast'
+import { Toolbar } from '@/shared/ui/Toolbar'
+import { TeamCard } from './TeamCard'
+import { TeamFormModal, type TeamFormValues } from './TeamFormModal'
+import styles from './TeamsPage.module.css'
 
-type ModalState = { kind: 'create' } | { kind: 'rename'; team: Team } | { kind: 'closed' }
+const SKELETON_CARDS = 6
 
+/** Teams of the active organization. Anyone the org policy allows can create one; guests only browse. */
 export function TeamsPage() {
-  const { message } = App.useApp()
   const teams = useTeamsStore((s) => s.teams)
   const status = useTeamsStore((s) => s.status)
+  const error = useTeamsStore((s) => s.error)
   const fetchTeams = useTeamsStore((s) => s.fetchTeams)
   const createTeam = useTeamsStore((s) => s.createTeam)
-  const updateTeam = useTeamsStore((s) => s.updateTeam)
-  const removeTeam = useTeamsStore((s) => s.removeTeam)
+  const { org, role } = useCurrentOrg()
+  const canCreate = canCreateTeam(role, org?.settings.whoCanCreateTeams)
 
-  const [selectedTeam, setSelectedTeam] = useState<Team | null>(null)
-  const [modal, setModal] = useState<ModalState>({ kind: 'closed' })
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [pendingDelete, setPendingDelete] = useState<Team | null>(null)
+  const [query, setQuery] = useState('')
+  const [createOpen, setCreateOpen] = useState(false)
 
   useEffect(() => {
-    fetchTeams()
+    void fetchTeams()
   }, [fetchTeams])
 
-  const handleSubmitModal = async (name: string) => {
-    setIsSubmitting(true)
-    try {
-      if (modal.kind === 'create') {
-        await createTeam({ name })
-        message.success('Equipo creado')
-      } else if (modal.kind === 'rename') {
-        await updateTeam(modal.team.id, { name })
-        message.success('Equipo renombrado')
-      }
-      setModal({ kind: 'closed' })
-    } catch (error) {
-      message.error(extractErrorMessage(error, 'No se pudo guardar el equipo'))
-      throw error
-    } finally {
-      setIsSubmitting(false)
-    }
+  const visible = useMemo(() => filterTeams(teams, query), [teams, query])
+  const loading = status === 'loading' && teams.length === 0
+  const failed = status === 'error' && teams.length === 0
+
+  const createButton = canCreate ? (
+    <Button type="primary" icon={<PlusOutlined aria-hidden="true" />} onClick={() => setCreateOpen(true)}>
+      Crear equipo
+    </Button>
+  ) : undefined
+
+  const handleCreate = async (values: TeamFormValues) => {
+    await createTeam(values)
+    toast.success('Equipo creado')
+    setCreateOpen(false)
   }
 
-  const handleDelete = async () => {
-    if (!pendingDelete) return
-    const team = pendingDelete
-    setPendingDelete(null)
-    try {
-      await removeTeam(team.id)
-      message.success('Equipo eliminado')
-      if (selectedTeam?.id === team.id) {
-        setSelectedTeam(null)
-      }
-    } catch (error) {
-      message.error(extractErrorMessage(error, 'No se pudo eliminar el equipo'))
-    }
+  let body: ReactNode
+  if (loading) {
+    body = (
+      <div role="status" aria-busy="true" aria-label="Cargando equipos" className={styles.grid}>
+        {Array.from({ length: SKELETON_CARDS }, (_, index) => (
+          <div key={index} className={styles.skeleton} aria-hidden="true">
+            <Skeleton active avatar={{ shape: 'square' }} paragraph={{ rows: 2 }} title={{ width: '60%' }} />
+          </div>
+        ))}
+      </div>
+    )
+  } else if (failed) {
+    body = (
+      <ErrorState
+        message={error?.message ?? 'No se pudieron cargar los equipos.'}
+        onRetry={() => void fetchTeams()}
+      />
+    )
+  } else if (teams.length === 0) {
+    body = (
+      <div className={styles.empty}>
+        <EmptyState
+          title="Aún no hay equipos"
+          description={
+            canCreate
+              ? 'Crea el primer equipo para agrupar a las personas de la organización.'
+              : 'Pide a un administrador de la organización que cree un equipo.'
+          }
+          action={canCreate ? createButton : undefined}
+        />
+      </div>
+    )
+  } else if (visible.length === 0) {
+    body = (
+      <div className={styles.empty}>
+        <EmptyState title="Ningún equipo coincide con la búsqueda" description="Prueba con otro nombre o descripción." />
+      </div>
+    )
+  } else {
+    body = (
+      <ul className={styles.grid} aria-label="Equipos">
+        {visible.map((team) => (
+          <li key={team.id}>
+            <TeamCard team={team} />
+          </li>
+        ))}
+      </ul>
+    )
   }
 
   return (
-    <div>
-      <PageHeader
-        title="Equipos"
-        description="Organiza los miembros y administra los equipos."
-        actions={
-          <Button type="primary" icon={<PlusOutlined />} onClick={() => setModal({ kind: 'create' })}>
-            Nuevo equipo
-          </Button>
-        }
+    <PageContainer variant="wide" ready={!loading} pageName="teams">
+      <PageHeader title="Equipos" description="Agrupa a las personas de la organización y administra sus equipos." />
+      <Toolbar
+        left={<SearchInput value={query} onChange={setQuery} placeholder="Buscar equipos" ariaLabel="Buscar equipos" />}
+        right={teams.length > 0 ? createButton : undefined}
       />
-
-      <TeamList
-        teams={teams}
-        isLoading={status === 'loading'}
-        selectedTeamId={selectedTeam?.id ?? null}
-        onSelect={setSelectedTeam}
-        onRename={(team) => setModal({ kind: 'rename', team })}
-        onDelete={setPendingDelete}
-      />
-
-      <div className={styles.membersSection}>
-        {selectedTeam ? (
-          <TeamMembersPanel key={selectedTeam.id} team={selectedTeam} />
-        ) : (
-          <EmptyState title="Selecciona un equipo" description="Elige un equipo de la lista para administrar sus miembros." />
-        )}
-      </div>
-
-      <ConfirmModal
-        open={pendingDelete !== null}
-        title={pendingDelete ? `Eliminar el equipo ${pendingDelete.name}` : ''}
-        description="Sus miembros dejarán de pertenecer a este equipo. Esta acción no se puede deshacer."
-        confirmText="Eliminar equipo"
-        danger
-        onConfirm={() => void handleDelete()}
-        onCancel={() => setPendingDelete(null)}
-      />
-
+      {body}
       <TeamFormModal
-        open={modal.kind !== 'closed'}
-        title={modal.kind === 'rename' ? 'Renombrar equipo' : 'Nuevo equipo'}
-        initialName={modal.kind === 'rename' ? modal.team.name : ''}
-        isSubmitting={isSubmitting}
-        onSubmit={handleSubmitModal}
-        onCancel={() => setModal({ kind: 'closed' })}
+        open={createOpen}
+        title="Nuevo equipo"
+        initial={{ name: '', description: '', avatarColor: null }}
+        onSubmit={handleCreate}
+        onCancel={() => setCreateOpen(false)}
       />
-    </div>
+    </PageContainer>
   )
 }

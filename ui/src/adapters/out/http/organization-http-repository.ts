@@ -1,7 +1,11 @@
 import type {
+  InvitationScope,
+  OrganizationAdminRepositoryPort,
+  OrganizationUpdate,
+} from '@/core/organizations/application/ports/organization-admin-repository.port'
+import type {
   CreateOrganizationInput,
   InvitationItemInput,
-  OrganizationRepositoryPort,
 } from '@/core/organizations/application/ports/organization-repository.port'
 import type {
   Invitation,
@@ -9,6 +13,7 @@ import type {
   InvitationPreview,
   InvitationStatus,
   Organization,
+  OrganizationMember,
   OrganizationMembership,
   OrganizationSettings,
   OrgRole,
@@ -60,6 +65,14 @@ interface InvitationPreviewDto {
   email: string
   status: InvitationStatus
   expires_at: string
+}
+
+interface OrganizationMemberDto {
+  user_id: string
+  name: string
+  email: string
+  role: OrgRole
+  joined_at: string
 }
 
 interface MembershipDto {
@@ -120,6 +133,30 @@ function toPreview(dto: InvitationPreviewDto): InvitationPreview {
   }
 }
 
+function toMember(dto: OrganizationMemberDto): OrganizationMember {
+  return { userId: dto.user_id, name: dto.name, email: dto.email, role: dto.role, joinedAt: dto.joined_at }
+}
+
+/** Sends only the fields present in the update, in snake_case (PATCH is a partial update). */
+function toUpdateBody(update: OrganizationUpdate): Record<string, unknown> {
+  const body: Record<string, unknown> = {}
+  if (update.name !== undefined) body.name = update.name
+  if (update.description !== undefined) body.description = update.description
+  if (update.settings) {
+    const s = update.settings
+    const settings: Record<string, unknown> = {}
+    if (s.whoCanCreateProjects !== undefined) settings.who_can_create_projects = s.whoCanCreateProjects
+    if (s.whoCanCreateTeams !== undefined) settings.who_can_create_teams = s.whoCanCreateTeams
+    if (s.defaultProjectVisibility !== undefined) settings.default_project_visibility = s.defaultProjectVisibility
+    if (s.require2fa !== undefined) settings.require_2fa = s.require2fa
+    if (s.hoursPerDay !== undefined) settings.hours_per_day = s.hoursPerDay
+    if (s.daysPerWeek !== undefined) settings.days_per_week = s.daysPerWeek
+    if (s.timezone !== undefined) settings.timezone = s.timezone
+    body.settings = settings
+  }
+  return body
+}
+
 function toMembership(dto: MembershipDto): OrganizationMembership {
   return {
     organizationId: dto.organization_id,
@@ -129,7 +166,7 @@ function toMembership(dto: MembershipDto): OrganizationMembership {
   }
 }
 
-export class OrganizationHttpRepository implements OrganizationRepositoryPort {
+export class OrganizationHttpRepository implements OrganizationAdminRepositoryPort {
   async list(): Promise<Organization[]> {
     const { data } = await apiClient.get<{ data: OrganizationDto[] }>('/organizations')
     return data.data.map(toOrganization)
@@ -163,5 +200,94 @@ export class OrganizationHttpRepository implements OrganizationRepositoryPort {
   async acceptInvitation(token: string): Promise<OrganizationMembership> {
     const { data } = await apiClient.post<{ data: MembershipDto }>(`/invitations/${encodeURIComponent(token)}/accept`)
     return toMembership(data.data)
+  }
+
+  async updateOrganization(organizationId: string, update: OrganizationUpdate): Promise<Organization> {
+    const { data } = await apiClient.patch<{ data: OrganizationDto }>(
+      `/organizations/${encodeURIComponent(organizationId)}`,
+      toUpdateBody(update),
+    )
+    return toOrganization(data.data)
+  }
+
+  async uploadLogo(organizationId: string, file: File): Promise<string> {
+    const form = new FormData()
+    form.append('file', file)
+    const { data } = await apiClient.put<{ data: { logo_url: string } }>(
+      `/organizations/${encodeURIComponent(organizationId)}/logo`,
+      form,
+      { headers: { 'Content-Type': 'multipart/form-data' } },
+    )
+    return data.data.logo_url
+  }
+
+  async getLogo(organizationId: string): Promise<Blob | null> {
+    try {
+      // responseType blob: <img> cannot send the Authorization header, so the caller builds an object URL.
+      const { data } = await apiClient.get<Blob>(`/organizations/${encodeURIComponent(organizationId)}/logo`, {
+        responseType: 'blob',
+      })
+      return data
+    } catch (error) {
+      if ((error as { status?: number }).status === 404) return null
+      throw error
+    }
+  }
+
+  async deleteLogo(organizationId: string): Promise<void> {
+    await apiClient.delete(`/organizations/${encodeURIComponent(organizationId)}/logo`)
+  }
+
+  async listMembers(organizationId: string): Promise<OrganizationMember[]> {
+    const { data } = await apiClient.get<{ data: OrganizationMemberDto[] }>(
+      `/organizations/${encodeURIComponent(organizationId)}/members`,
+    )
+    return data.data.map(toMember)
+  }
+
+  async changeMemberRole(organizationId: string, userId: string, role: OrgRole): Promise<void> {
+    await apiClient.patch(
+      `/organizations/${encodeURIComponent(organizationId)}/members/${encodeURIComponent(userId)}`,
+      { role },
+    )
+  }
+
+  async removeMember(organizationId: string, userId: string): Promise<void> {
+    await apiClient.delete(
+      `/organizations/${encodeURIComponent(organizationId)}/members/${encodeURIComponent(userId)}`,
+    )
+  }
+
+  async transferOwnership(organizationId: string, userId: string): Promise<void> {
+    await apiClient.post(`/organizations/${encodeURIComponent(organizationId)}/transfer-ownership`, {
+      user_id: userId,
+    })
+  }
+
+  async deleteOrganization(organizationId: string, confirmSlug: string): Promise<void> {
+    await apiClient.delete(`/organizations/${encodeURIComponent(organizationId)}`, {
+      data: { confirm_slug: confirmSlug },
+    })
+  }
+
+  async listInvitations(organizationId: string, scope: InvitationScope): Promise<Invitation[]> {
+    const { data } = await apiClient.get<{ data: InvitationDto[] }>(
+      `/organizations/${encodeURIComponent(organizationId)}/invitations`,
+      { params: { status: scope } },
+    )
+    return data.data.map(toInvitation)
+  }
+
+  async revokeInvitation(organizationId: string, invitationId: string): Promise<void> {
+    await apiClient.delete(
+      `/organizations/${encodeURIComponent(organizationId)}/invitations/${encodeURIComponent(invitationId)}`,
+    )
+  }
+
+  async resendInvitation(organizationId: string, invitationId: string): Promise<InvitationCreated> {
+    const { data } = await apiClient.post<{ data: InvitationCreatedDto }>(
+      `/organizations/${encodeURIComponent(organizationId)}/invitations/${encodeURIComponent(invitationId)}/resend`,
+    )
+    return toInvitationCreated(data.data)
   }
 }

@@ -19,3 +19,10 @@ export interface TeamMember {
   role: TeamMemberRole
   createdAt: string
 }
+
+/** Person of the organization directory, used to show names next to team memberships. */
+export interface OrganizationPerson {
+  userId: string
+  name: string
+  email: string
+}

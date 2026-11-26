@@ -7,12 +7,18 @@ import { createBrowserRouter, Navigate } from 'react-router-dom'
 import { ProtectedRoute } from '@/adapters/in/ui/common/ProtectedRoute'
 import { OrgShellLayout } from '@/adapters/in/ui/organizations/OrgShellLayout'
 import { RequireOrg } from '@/app/route-guards/RequireOrg'
+import { RequireOrgAdmin } from '@/app/route-guards/RequireOrgAdmin'
 
 const InviteAcceptPage = lazy(() => import('@/adapters/in/ui/auth/InviteAcceptPage').then(m => ({ default: m.InviteAcceptPage })))
 const OnboardingPage = lazy(() => import('@/adapters/in/ui/auth/OnboardingPage').then(m => ({ default: m.OnboardingPage })))
 const LoginPage = lazy(() => import('@/adapters/in/ui/auth/LoginPage').then(m => ({ default: m.LoginPage })))
 const RegisterPage = lazy(() => import('@/adapters/in/ui/auth/RegisterPage').then(m => ({ default: m.RegisterPage })))
 const ProfilePage = lazy(() => import('@/adapters/in/ui/profile/ProfilePage').then(m => ({ default: m.ProfilePage })))
+const PeoplePage = lazy(() => import('@/adapters/in/ui/people/PeoplePage').then(m => ({ default: m.PeoplePage })))
+const PersonPage = lazy(() => import('@/adapters/in/ui/people/PersonPage').then(m => ({ default: m.PersonPage })))
+const OrgSettingsPage = lazy(() => import('@/adapters/in/ui/organizations/settings').then(m => ({ default: m.OrgSettingsPage })))
+const OrgMembersPage = lazy(() => import('@/adapters/in/ui/organizations/members').then(m => ({ default: m.OrgMembersPage })))
+const OrgInvitationsPage = lazy(() => import('@/adapters/in/ui/organizations/invitations').then(m => ({ default: m.OrgInvitationsPage })))
 const TeamsPage = lazy(() => import('@/adapters/in/ui/teams/TeamsPage').then(m => ({ default: m.TeamsPage })))
 const NewTicketPage = lazy(() => import('@/adapters/in/ui/tickets/NewTicketPage').then(m => ({ default: m.NewTicketPage })))
 const TicketDetailPage = lazy(() => import('@/adapters/in/ui/tickets/TicketDetailPage').then(m => ({ default: m.TicketDetailPage })))
@@ -62,6 +68,9 @@ export const router = createBrowserRouter([
               { path: 'issues/new', element: <SuspenseWrapper><NewTicketPage /></SuspenseWrapper> },
               { path: 'issues/:id', element: <SuspenseWrapper><TicketDetailPage /></SuspenseWrapper> },
               { path: 'profile', element: <SuspenseWrapper><ProfilePage /></SuspenseWrapper> },
+              { path: 'profile/:section', element: <SuspenseWrapper><ProfilePage /></SuspenseWrapper> },
+              { path: 'people', element: <SuspenseWrapper><PeoplePage /></SuspenseWrapper> },
+              { path: 'people/:id', element: <SuspenseWrapper><PersonPage /></SuspenseWrapper> },
               { path: 'projects', element: <SuspenseWrapper><ProjectsPage /></SuspenseWrapper> },
               {
                 path: 'projects/:id',
@@ -77,6 +86,14 @@ export const router = createBrowserRouter([
               },
               { path: 'dashboard', element: <SuspenseWrapper><MyDashboardPage /></SuspenseWrapper> },
               { path: 'teams', element: <SuspenseWrapper><TeamsPage /></SuspenseWrapper> },
+              {
+                element: <RequireOrgAdmin />,
+                children: [
+                  { path: 'organization/settings', element: <SuspenseWrapper><OrgSettingsPage /></SuspenseWrapper> },
+                  { path: 'organization/members', element: <SuspenseWrapper><OrgMembersPage /></SuspenseWrapper> },
+                  { path: 'organization/invitations', element: <SuspenseWrapper><OrgInvitationsPage /></SuspenseWrapper> },
+                ],
+              },
             ],
           },
         ],

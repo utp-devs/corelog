@@ -3,7 +3,7 @@ import type {
   TeamRepositoryPort,
   UpdateTeamInput,
 } from '@/core/teams/application/ports/team-repository.port'
-import type { Team, TeamMember, TeamMemberRole } from '@/core/teams/domain/team'
+import type { OrganizationPerson, Team, TeamMember, TeamMemberRole } from '@/core/teams/domain/team'
 import { withOrg } from '@/shared/lib/with-org'
 import { apiClient } from './api-client'
 
@@ -23,6 +23,12 @@ interface TeamMemberDto {
   user_id: string
   role: TeamMemberRole
   created_at: string
+}
+
+interface OrganizationMemberDto {
+  user_id: string
+  name: string
+  email: string
 }
 
 function toTeam(dto: TeamDto): Team {
@@ -98,5 +104,10 @@ export class TeamHttpRepository implements TeamRepositoryPort {
 
   async removeMember(teamId: string, userId: string): Promise<void> {
     await apiClient.delete(`/teams/${teamId}/members/${userId}`)
+  }
+
+  async listOrganizationPeople(organizationId: string): Promise<OrganizationPerson[]> {
+    const { data } = await apiClient.get<{ data: OrganizationMemberDto[] }>(`/organizations/${organizationId}/members`)
+    return data.data.map((m) => ({ userId: m.user_id, name: m.name, email: m.email }))
   }
 }

@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom'
 import { useCurrentOrg, useOrgStore } from '@/adapters/in/state/org.store'
 import { canManageOrg } from '@/core/organizations/domain/organization'
 
+import { OrgLogo } from './OrgLogo'
 import styles from './OrgSwitcher.module.css'
 
 /** Top bar dropdown: the caller's organizations (current one checked), create, and organization settings. */
@@ -56,6 +57,7 @@ export function OrgSwitcher() {
   return (
     <Dropdown menu={{ items }} trigger={['click']}>
       <Button type="text" className={styles.trigger} aria-label={`Organización actual: ${org.name}`} aria-haspopup="menu">
+        <OrgLogo orgId={org.id} name={org.name} />
         <span className={styles.name}>{org.name}</span>
         <DownOutlined className={styles.caret} aria-hidden="true" />
       </Button>

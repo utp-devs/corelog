@@ -1,8 +1,0 @@
-.row {
-  cursor: pointer;
-}
-
-.selectedRow {
-  cursor: pointer;
-  background: var(--cl-brand-subtle);
-}

@@ -1,4 +1,4 @@
-import type { Team, TeamMember, TeamMemberRole } from '../domain/team'
+import type { OrganizationPerson, Team, TeamMember, TeamMemberRole } from '../domain/team'
 import type { CreateTeamInput, TeamRepositoryPort, UpdateTeamInput } from './ports/team-repository.port'
 
 export class TeamService {
@@ -42,5 +42,9 @@ export class TeamService {
 
   removeMember(teamId: string, userId: string): Promise<void> {
     return this.repository.removeMember(teamId, userId)
+  }
+
+  listOrganizationPeople(organizationId: string): Promise<OrganizationPerson[]> {
+    return this.repository.listOrganizationPeople(organizationId)
   }
 }

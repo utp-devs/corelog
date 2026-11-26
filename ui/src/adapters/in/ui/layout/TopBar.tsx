@@ -40,6 +40,7 @@ function NavMenuDropdown({ menu }: { menu: TopNavMenu }) {
     },
     { type: 'divider', key: 'divider' },
     { key: 'all', label: VIEW_ALL_LABEL, onClick: () => navigate(menu.path) },
+    ...(menu.extras ?? []).map((link) => ({ key: link.key, label: link.label, onClick: () => navigate(link.path) })),
   ]
 
   return (
