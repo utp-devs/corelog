@@ -1,0 +1,63 @@
+@if (editing()) {
+  <div class="editor" (keydown)="onEditorKeyDown($event)" (focusout)="onEditorFocusOut($event)">
+    @if (isSelectType()) {
+      <p-select
+        class="control"
+        [autofocus]="true"
+        [options]="options()"
+        optionLabel="label"
+        optionValue="value"
+        [showClear]="true"
+        [ariaLabel]="label()"
+        [ngModel]="draft() || null"
+        (ngModelChange)="onSelectChange($event)"
+      />
+    } @else if (type() === 'date') {
+      <input
+        #editorInput
+        type="date"
+        class="control native"
+        [attr.aria-label]="label()"
+        [value]="draft()"
+        (input)="onDraftInput($event)"
+      />
+    } @else {
+      <input
+        #editorInput
+        pInputText
+        type="text"
+        class="control"
+        [attr.aria-label]="label()"
+        [placeholder]="placeholder()"
+        [value]="draft()"
+        (input)="onDraftInput($event)"
+      />
+    }
+  </div>
+} @else {
+  <div class="root" [attr.aria-busy]="pending() ? 'true' : 'false'">
+    <button
+      type="button"
+      class="trigger"
+      [attr.aria-label]="'Editar ' + label() + ': ' + shownText()"
+      [disabled]="pending() || disabled()"
+      (click)="startEdit()"
+    >
+      <span
+        [class.empty]="isEmpty()"
+        [class.text]="!isEmpty()"
+        [attr.title]="isEmpty() || shownText() === '' ? null : shownText()"
+        >{{ shownText() }}</span
+      >
+    </button>
+    @if (pending()) {
+      <span role="status" class="saving">
+        <span class="spinner" aria-hidden="true"></span>
+        <span class="sr-only">Guardando</span>
+      </span>
+    }
+    @if (error(); as message) {
+      <span role="alert" class="error">{{ message }}</span>
+    }
+  </div>
+}

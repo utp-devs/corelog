@@ -1,0 +1,28 @@
+<div class="bar">
+  <div class="controls">
+    <div class="search">
+      <app-search-input [(value)]="searchValue" [placeholder]="searchPlaceholder()" />
+    </div>
+    @for (filter of filters(); track filter.key) {
+      <p-select
+        class="select"
+        [options]="filter.options"
+        optionLabel="label"
+        optionValue="value"
+        [placeholder]="filter.label"
+        [ariaLabel]="filter.label"
+        [showClear]="true"
+        [ngModel]="filter.value ?? null"
+        (ngModelChange)="onFilterChange(filter, $event)"
+      />
+    }
+    @if (hasActive()) {
+      <p-button [link]="true" label="Limpiar filtros" (onClick)="clear.emit()" />
+    }
+  </div>
+  @if (actions(); as template) {
+    <div class="actions">
+      <ng-container *ngTemplateOutlet="template" />
+    </div>
+  }
+</div>

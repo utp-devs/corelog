@@ -1,0 +1,124 @@
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cl-space-3);
+}
+
+.swatches {
+  display: grid;
+  grid-template-columns: repeat(6, 24px);
+  gap: var(--cl-space-2);
+}
+
+.swatch {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 1px solid var(--cl-border);
+  border-radius: var(--cl-radius-full);
+  cursor: pointer;
+}
+
+.swatch:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+.swatch:focus-visible {
+  outline: none;
+  box-shadow: var(--cl-shadow-focus);
+}
+
+.checked {
+  outline: 2px solid var(--cl-text);
+  outline-offset: 2px;
+}
+
+.swatch[data-palette='1'] {
+  background: var(--cl-palette-1-bg);
+}
+.swatch[data-palette='2'] {
+  background: var(--cl-palette-2-bg);
+}
+.swatch[data-palette='3'] {
+  background: var(--cl-palette-3-bg);
+}
+.swatch[data-palette='4'] {
+  background: var(--cl-palette-4-bg);
+}
+.swatch[data-palette='5'] {
+  background: var(--cl-palette-5-bg);
+}
+.swatch[data-palette='6'] {
+  background: var(--cl-palette-6-bg);
+}
+.swatch[data-palette='7'] {
+  background: var(--cl-palette-7-bg);
+}
+.swatch[data-palette='8'] {
+  background: var(--cl-palette-8-bg);
+}
+.swatch[data-palette='9'] {
+  background: var(--cl-palette-9-bg);
+}
+.swatch[data-palette='10'] {
+  background: var(--cl-palette-10-bg);
+}
+.swatch[data-palette='11'] {
+  background: var(--cl-palette-11-bg);
+}
+.swatch[data-palette='12'] {
+  background: var(--cl-palette-12-bg);
+}
+
+.preview {
+  display: inline-block;
+  width: 24px;
+  height: 24px;
+  border: 1px solid var(--cl-border);
+  border-radius: var(--cl-radius-full);
+  background: var(--cl-custom-color);
+}
+
+.custom {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cl-space-1);
+  max-width: 240px;
+}
+
+.custom-label {
+  font-size: var(--cl-font-small);
+  color: var(--cl-text-subtle);
+}
+
+.error {
+  font-size: var(--cl-font-small);
+  color: var(--cl-danger-text);
+}
+
+.invalid {
+  border-color: var(--cl-danger);
+}
+
+/* Below 768 px the swatches grow to 44 px so they can be tapped. */
+@media (max-width: 767.98px) {
+  .swatches {
+    grid-template-columns: repeat(6, 44px);
+  }
+
+  .swatch {
+    width: 44px;
+    height: 44px;
+  }
+
+  .preview {
+    width: 44px;
+    height: 44px;
+  }
+}

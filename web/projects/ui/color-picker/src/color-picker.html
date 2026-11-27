@@ -1,0 +1,49 @@
+<div class="wrapper">
+  <div role="radiogroup" class="swatches" [attr.aria-label]="label()">
+    @for (n of paletteIndexes; track n) {
+      <button
+        #swatch
+        type="button"
+        role="radio"
+        class="swatch"
+        [class.checked]="selected() === n"
+        [attr.aria-checked]="selected() === n ? 'true' : 'false'"
+        [attr.aria-label]="'Color ' + n"
+        [attr.tabindex]="focusable() === n ? 0 : -1"
+        [attr.data-palette]="n"
+        [disabled]="disabled()"
+        (click)="select(n)"
+        (keydown)="onSwatchKeyDown($event, n)"
+        (blur)="onBlur()"
+      ></button>
+    }
+  </div>
+
+  @if (customValue(); as custom) {
+    <span aria-hidden="true" class="preview" [style.--cl-custom-color]="custom"></span>
+  }
+
+  @if (allowCustom()) {
+    <div class="custom">
+      <label class="custom-label" [attr.for]="inputId">Color personalizado (hex)</label>
+      <input
+        pInputText
+        type="text"
+        class="hex-input"
+        [attr.id]="inputId"
+        [class.invalid]="invalid()"
+        [value]="draft()"
+        placeholder="#RRGGBB"
+        maxlength="7"
+        [disabled]="disabled()"
+        [attr.aria-invalid]="invalid() ? 'true' : 'false'"
+        [attr.aria-describedby]="invalid() ? errorId : null"
+        (input)="onDraftInput($event)"
+        (blur)="onBlur()"
+      />
+      @if (invalid()) {
+        <span [attr.id]="errorId" role="alert" class="error">{{ helpError }}</span>
+      }
+    </div>
+  }
+</div>

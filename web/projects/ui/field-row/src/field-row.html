@@ -1,0 +1,19 @@
+<div class="row" [attr.data-variant]="variant()">
+  <div class="label-column">
+    <label class="label" [attr.for]="controlId">
+      {{ label() }}
+      @if (required()) {
+        <span class="required-mark" aria-hidden="true">*</span>
+        <span class="sr-only"> (obligatorio)</span>
+      }
+    </label>
+  </div>
+  <div class="control-column">
+    <ng-content />
+    @if (error(); as message) {
+      <p [attr.id]="errorId" class="error">{{ message }}</p>
+    } @else if (helper() !== undefined) {
+      <p [attr.id]="helperId" class="helper">{{ helper() }}</p>
+    }
+  </div>
+</div>

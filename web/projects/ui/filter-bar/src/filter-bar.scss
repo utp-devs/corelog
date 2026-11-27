@@ -1,0 +1,47 @@
+:host {
+  display: block;
+  min-width: 0;
+  margin-bottom: var(--cl-space-4);
+}
+
+.bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--cl-space-3);
+}
+
+.controls {
+  display: flex;
+  flex: 1 1 auto;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--cl-space-2);
+  min-width: 0;
+}
+
+.search {
+  min-width: 240px;
+  flex: 1 1 240px;
+}
+
+.select {
+  min-width: 160px;
+}
+
+.actions {
+  display: flex;
+  gap: var(--cl-space-2);
+}
+
+@media (max-width: 767.98px) {
+  .search {
+    min-width: 0;
+    flex-basis: 100%;
+  }
+
+  .select {
+    flex: 1 1 160px;
+  }
+}

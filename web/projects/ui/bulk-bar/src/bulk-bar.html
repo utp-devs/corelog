@@ -1,0 +1,17 @@
+@if (count() > 0) {
+  <div role="region" aria-label="Acciones masivas" class="bar">
+    <span class="count" aria-live="polite">{{ countText() }}</span>
+    <div class="actions">
+      @for (action of actions(); track action.key) {
+        <p-button
+          size="small"
+          [label]="action.label"
+          [icon]="action.icon"
+          [severity]="action.danger ? 'danger' : 'secondary'"
+          (onClick)="action.onClick()"
+        />
+      }
+      <p-button size="small" [text]="true" label="Limpiar selección" (onClick)="clear.emit()" />
+    </div>
+  </div>
+}

@@ -1,0 +1,25 @@
+<div class="search">
+  <i class="pi pi-search icon" aria-hidden="true"></i>
+  <input
+    pInputText
+    type="text"
+    class="field"
+    [placeholder]="placeholder()"
+    [attr.aria-label]="ariaLabel()"
+    [value]="draft()"
+    [disabled]="disabled()"
+    (input)="onInput($event)"
+    (blur)="onBlur()"
+  />
+  @if (draft() !== '') {
+    <button
+      type="button"
+      class="clear"
+      aria-label="Limpiar búsqueda"
+      [disabled]="disabled()"
+      (click)="clear()"
+    >
+      <i class="pi pi-times" aria-hidden="true"></i>
+    </button>
+  }
+</div>
