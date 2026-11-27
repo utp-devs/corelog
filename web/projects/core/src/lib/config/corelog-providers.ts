@@ -32,6 +32,7 @@ import { errorInterceptor } from '../interceptors/error.interceptor';
 import { loadingInterceptor } from '../interceptors/loading.interceptor';
 import { API_URL, CORELOG_APP } from './api.config';
 import { AppTitleStrategy } from './app-title.strategy';
+import { normalizePrimeAutofocus } from './primeng-autofocus';
 import { PRIMENG_TRANSLATION_ES, CL_Z_INDEX, CorelogPreset } from './theme';
 
 export interface CorelogOptions {
@@ -69,6 +70,7 @@ export function provideCorelogDomain(): Provider[] {
 /** Application-wide providers shared by portal, workspace and admin. */
 export function provideCorelog(options: CorelogOptions): EnvironmentProviders {
   registerLocaleData(localeEsPe);
+  normalizePrimeAutofocus();
   const providers: (Provider | EnvironmentProviders)[] = [
     provideBrowserGlobalErrorListeners(),
     // Validates a stored token before the first navigation, so guards and shells see the account.

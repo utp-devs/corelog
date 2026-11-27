@@ -15,6 +15,7 @@ import {
   UpdateProjectInput,
 } from '../../models';
 import { ORGANIZATION_ID_PROVIDER, noCurrentOrganizationError } from '../../utils/org-id-provider';
+import { silentRequest } from '../../utils/silent-request';
 
 interface ProjectDto {
   id: string;
@@ -155,9 +156,15 @@ export class ProjectApiService {
     return this.http.delete(`${this.baseUrl}/projects/${id}`).pipe(map(() => undefined));
   }
 
-  listMembers(projectId: string): Observable<ProjectMember[]> {
+  /** With `silent`, a failure is left to the caller (a page that renders its own error state), not a toast. */
+  listMembers(
+    projectId: string,
+    options: { readonly silent?: boolean } = {},
+  ): Observable<ProjectMember[]> {
     return this.http
-      .get<{ data: ProjectMemberDto[] }>(`${this.baseUrl}/projects/${projectId}/members`)
+      .get<{ data: ProjectMemberDto[] }>(`${this.baseUrl}/projects/${projectId}/members`, {
+        context: options.silent ? silentRequest() : undefined,
+      })
       .pipe(map((response) => response.data.map(toProjectMember)));
   }
 

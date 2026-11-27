@@ -4,6 +4,7 @@ import { Observable, map } from 'rxjs';
 
 import { API_URL } from '../../config/api.config';
 import { IssueAttachment } from '../../models/ticket.model';
+import { silentRequest } from '../../utils/silent-request';
 
 interface AttachmentDto {
   id: string;
@@ -39,7 +40,9 @@ export class AttachmentApiService {
 
   list(issueId: string): Observable<IssueAttachment[]> {
     return this.http
-      .get<Envelope<AttachmentDto[]>>(`${this.baseUrl}/${issueId}/attachments`)
+      .get<Envelope<AttachmentDto[]>>(`${this.baseUrl}/${issueId}/attachments`, {
+        context: silentRequest(),
+      })
       .pipe(map((body) => body.data.map(toAttachment)));
   }
 

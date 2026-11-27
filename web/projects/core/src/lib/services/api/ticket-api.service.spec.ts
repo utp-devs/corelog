@@ -1,7 +1,9 @@
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
+import { Observable } from 'rxjs';
 import { provideHttpClient } from '@angular/common/http';
 
+import { SKIP_ERROR_NOTIFICATION } from '../../config/http-context';
 import { provideCorelogTesting } from '../../../testing';
 import { TicketPage } from '../../models/ticket.model';
 import { asApiError } from '../../utils/api-error';
@@ -194,7 +196,7 @@ describe('TicketApiService', () => {
   });
 
   describe('comments, activities, links', () => {
-    it('lists, creates and deletes comments', () => {
+    it('lists, creates, edits and deletes comments', () => {
       let comments: { body: string; deletedAt: string | null }[] = [];
       service.listComments(ISSUE_ID).subscribe((items) => (comments = items));
       httpMock.expectOne(`/api/v1/issues/${ISSUE_ID}/comments`).flush({
@@ -226,6 +228,24 @@ describe('TicketApiService', () => {
           deleted_at: null,
         },
       });
+
+      let edited: { body: string; updatedAt: string } | undefined;
+      service.updateComment(ISSUE_ID, 'c-2', 'Corregido').subscribe((c) => (edited = c));
+      const patch = httpMock.expectOne(`/api/v1/issues/${ISSUE_ID}/comments/c-2`);
+      expect(patch.request.method).toBe('PATCH');
+      expect(patch.request.body).toEqual({ body: 'Corregido' });
+      patch.flush({
+        data: {
+          id: 'c-2',
+          issue_id: ISSUE_ID,
+          author_id: 'u-1',
+          body: 'Corregido',
+          created_at: 'a',
+          updated_at: 'c',
+          deleted_at: null,
+        },
+      });
+      expect(edited).toEqual(expect.objectContaining({ body: 'Corregido', updatedAt: 'c' }));
 
       service.deleteComment(ISSUE_ID, 'c-2').subscribe();
       httpMock.expectOne(`/api/v1/issues/${ISSUE_ID}/comments/c-2`).flush(null);
@@ -292,5 +312,20 @@ describe('TicketApiService', () => {
 
       expect(code).toBe('issue.invalid_transition');
     });
+  });
+
+  it('reads the issue and its collaboration lists silently, so a forbidden page shows no toast', () => {
+    const urls: [string, () => Observable<unknown>][] = [
+      [`/api/v1/issues/${ISSUE_ID}`, () => service.getById(ISSUE_ID)],
+      [`/api/v1/issues/${ISSUE_ID}/comments`, () => service.listComments(ISSUE_ID)],
+      [`/api/v1/issues/${ISSUE_ID}/activities`, () => service.listActivities(ISSUE_ID)],
+      [`/api/v1/issues/${ISSUE_ID}/links`, () => service.listLinks(ISSUE_ID)],
+    ];
+    for (const [url, call] of urls) {
+      call().subscribe({ error: () => undefined });
+      const request = httpMock.expectOne(url);
+      expect(request.request.context.get(SKIP_ERROR_NOTIFICATION), url).toBe(true);
+      request.flush({}, { status: 403, statusText: 'Forbidden' });
+    }
   });
 });

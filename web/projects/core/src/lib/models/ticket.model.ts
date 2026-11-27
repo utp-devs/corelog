@@ -106,12 +106,16 @@ export interface SavedFilter {
 }
 
 /** Filter and pagination of the issue list. Undefined fields are not sent. */
+/** Value of the assignee filter that selects the issues nobody is assigned to. */
+export const UNASSIGNED_FILTER = 'none';
+
 export interface ListTicketsFilter {
   readonly status?: IssueStatus;
   readonly priority?: IssuePriority;
   readonly query?: string;
   readonly issueType?: IssueType;
   readonly labelId?: string;
+  /** A user id, or `UNASSIGNED_FILTER` for the issues with no assignee. */
   readonly assigneeId?: string;
   readonly dueFrom?: string;
   readonly dueTo?: string;

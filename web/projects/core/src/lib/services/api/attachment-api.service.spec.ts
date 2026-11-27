@@ -1,4 +1,5 @@
 import { provideHttpClient } from '@angular/common/http';
+import { SKIP_ERROR_NOTIFICATION } from '../../config/http-context';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 
@@ -99,5 +100,12 @@ describe('AttachmentApiService', () => {
       view.URL.createObjectURL = originalCreate;
       view.URL.revokeObjectURL = originalRevoke;
     }
+  });
+
+  it('lists silently: a failed read is shown by the page, not as a toast', () => {
+    service.list('issue-1').subscribe({ error: () => undefined });
+    const request = httpMock.expectOne('/api/v1/issues/issue-1/attachments');
+    expect(request.request.context.get(SKIP_ERROR_NOTIFICATION)).toBe(true);
+    request.flush({}, { status: 403, statusText: 'Forbidden' });
   });
 });

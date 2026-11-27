@@ -1,4 +1,5 @@
 import { provideHttpClient } from '@angular/common/http';
+import { SKIP_ERROR_NOTIFICATION } from '../../config/http-context';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 
@@ -45,5 +46,12 @@ describe('IssueWatcherApiService', () => {
     expect(del.request.method).toBe('DELETE');
     del.flush({ data: { is_watching: false, count: 4 } });
     expect(count).toBe(4);
+  });
+
+  it('reads the watcher state silently', () => {
+    service.getState('issue-1').subscribe({ error: () => undefined });
+    const request = httpMock.expectOne('/api/v1/issues/issue-1/watchers');
+    expect(request.request.context.get(SKIP_ERROR_NOTIFICATION)).toBe(true);
+    request.flush({}, { status: 403, statusText: 'Forbidden' });
   });
 });

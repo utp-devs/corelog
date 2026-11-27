@@ -169,6 +169,22 @@ export class TicketStore {
     );
   }
 
+  updateComment(issueId: string, commentId: string, body: string): Observable<IssueComment> {
+    return this.api.updateComment(issueId, commentId, body).pipe(
+      tap((updated) => {
+        if (this.commentsIssue() === issueId) {
+          this.comments.update((items) =>
+            items?.map((comment) =>
+              comment.id === commentId
+                ? { ...comment, body: updated.body, updatedAt: updated.updatedAt }
+                : comment,
+            ),
+          );
+        }
+      }),
+    );
+  }
+
   deleteComment(issueId: string, commentId: string): Observable<void> {
     return this.api.deleteComment(issueId, commentId).pipe(
       tap(() => {

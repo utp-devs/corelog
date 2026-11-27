@@ -37,9 +37,27 @@ function setup(): { store: BacklogStore; backend: HttpTestingController; session
   };
 }
 
-function loadBacklog(store: BacklogStore, backend: HttpTestingController, items = BACKLOG): void {
+function sprint(id: string, status: string) {
+  return { id, project_id: 'project-1', name: id, goal: '', status };
+}
+
+/** Loads the backlog and flushes the sprint reads: the sprints given and one issue list per open sprint. */
+function loadBacklog(
+  store: BacklogStore,
+  backend: HttpTestingController,
+  items = BACKLOG,
+  sprints: { id: string; status: string; issues: string[] }[] = [],
+): void {
   store.load('project-1');
   backend.expectOne(LIST_URL).flush({ data: items });
+  backend
+    .expectOne('/api/v1/sprints?project_id=project-1')
+    .flush({ data: sprints.map((entry) => sprint(entry.id, entry.status)) });
+  for (const entry of sprints.filter((candidate) => candidate.status !== 'closed')) {
+    backend.expectOne(`/api/v1/sprints/${entry.id}/issues?project_id=project-1`).flush({
+      data: entry.issues.map((id) => ({ id, title: id, status: 'open', priority: 'medium' })),
+    });
+  }
 }
 
 describe('BacklogStore', () => {
@@ -53,6 +71,7 @@ describe('BacklogStore', () => {
 
     store.load('project-2');
     backend.expectOne('/api/v1/backlog?project_id=project-2').flush({ data: [] });
+    backend.expectOne('/api/v1/sprints?project_id=project-2').flush({ data: [] });
     expect(store.isEmpty()).toBe(true);
     backend.verify();
   });
@@ -83,6 +102,24 @@ describe('BacklogStore', () => {
 
     expect(store.ordered().map((entry) => entry.id)).toEqual(['issue-1', 'issue-3', 'issue-2']);
     expect(store.moveError()).toBeNull();
+    backend.verify();
+  });
+
+  it('moves among the unplanned items using their position in the whole backlog', () => {
+    const { store, backend } = setup();
+    loadBacklog(store, backend, BACKLOG, [
+      { id: 'sprint-1', status: 'active', issues: ['issue-2'] },
+    ]);
+
+    expect(store.canMoveDown(0)).toBe(true);
+    expect(store.canMoveDown(1)).toBe(false);
+    store.move(1, 0);
+    const request = backend.expectOne('/api/v1/backlog/issue-3?project_id=project-1');
+    expect(request.request.body).toEqual({ position: 0 });
+    request.flush({
+      data: [item('issue-3', 'Tercera'), item('issue-1', 'Primera'), item('issue-2', 'Segunda')],
+    });
+    expect(store.unplanned().map((entry) => entry.id)).toEqual(['issue-3', 'issue-1']);
     backend.verify();
   });
 
@@ -119,6 +156,36 @@ describe('BacklogStore', () => {
       .flush({}, { status: 500, statusText: 'Server Error' });
     expect(store.moveError()).toBe('No se pudo reordenar el backlog. Intenta de nuevo.');
     expect(store.ordered()).toHaveLength(3);
+    backend.verify();
+  });
+
+  it('loads the open sprints, active first, and leaves out of the backlog what they already hold', () => {
+    const { store, backend } = setup();
+    loadBacklog(store, backend, BACKLOG, [
+      { id: 'sprint-planned', status: 'planned', issues: ['issue-3'] },
+      { id: 'sprint-old', status: 'closed', issues: ['issue-1'] },
+      { id: 'sprint-active', status: 'active', issues: ['issue-2'] },
+    ]);
+
+    expect(store.sprints.value()?.map((entry) => entry.sprint.id)).toEqual([
+      'sprint-active',
+      'sprint-planned',
+    ]);
+    expect(store.unplanned().map((entry) => entry.id)).toEqual(['issue-1']);
+    expect(store.ordered()).toHaveLength(3);
+    backend.verify();
+  });
+
+  it('keeps the backlog usable when the sprints cannot be read', () => {
+    const { store, backend } = setup();
+    store.load('project-1');
+    backend.expectOne(LIST_URL).flush({ data: BACKLOG });
+    backend
+      .expectOne('/api/v1/sprints?project_id=project-1')
+      .flush({}, { status: 500, statusText: 'Server Error' });
+
+    expect(store.sprints.value()).toEqual([]);
+    expect(store.unplanned()).toHaveLength(3);
     backend.verify();
   });
 

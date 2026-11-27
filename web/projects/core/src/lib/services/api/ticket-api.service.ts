@@ -18,6 +18,7 @@ import {
   UpdateIssueDetailsInput,
   UpdateIssueMetadataInput,
 } from '../../models/ticket.model';
+import { silentRequest } from '../../utils/silent-request';
 
 interface TicketDto {
   id: string;
@@ -181,7 +182,7 @@ export class TicketApiService {
 
   getById(id: string): Observable<Ticket> {
     return this.http
-      .get<Envelope<TicketDto>>(`${this.baseUrl}/${id}`)
+      .get<Envelope<TicketDto>>(`${this.baseUrl}/${id}`, { context: silentRequest() })
       .pipe(map((body) => toTicket(body.data)));
   }
 
@@ -240,7 +241,7 @@ export class TicketApiService {
 
   listComments(id: string): Observable<IssueComment[]> {
     return this.http
-      .get<Envelope<CommentDto[]>>(`${this.baseUrl}/${id}/comments`)
+      .get<Envelope<CommentDto[]>>(`${this.baseUrl}/${id}/comments`, { context: silentRequest() })
       .pipe(map((body) => body.data.map(toComment)));
   }
 
@@ -250,19 +251,28 @@ export class TicketApiService {
       .pipe(map((response) => toComment(response.data)));
   }
 
+  /** Edits the body of a comment of the caller and returns the stored comment. */
+  updateComment(issueId: string, commentId: string, body: string): Observable<IssueComment> {
+    return this.http
+      .patch<Envelope<CommentDto>>(`${this.baseUrl}/${issueId}/comments/${commentId}`, { body })
+      .pipe(map((response) => toComment(response.data)));
+  }
+
   deleteComment(issueId: string, commentId: string): Observable<void> {
     return this.http.delete<void>(`${this.baseUrl}/${issueId}/comments/${commentId}`);
   }
 
   listActivities(id: string): Observable<IssueActivity[]> {
     return this.http
-      .get<Envelope<ActivityDto[]>>(`${this.baseUrl}/${id}/activities`)
+      .get<Envelope<ActivityDto[]>>(`${this.baseUrl}/${id}/activities`, {
+        context: silentRequest(),
+      })
       .pipe(map((body) => body.data.map(toActivity)));
   }
 
   listLinks(id: string): Observable<IssueLink[]> {
     return this.http
-      .get<Envelope<LinkDto[]>>(`${this.baseUrl}/${id}/links`)
+      .get<Envelope<LinkDto[]>>(`${this.baseUrl}/${id}/links`, { context: silentRequest() })
       .pipe(map((body) => body.data.map(toLink)));
   }
 

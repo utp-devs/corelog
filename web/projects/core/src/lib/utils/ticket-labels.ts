@@ -34,3 +34,8 @@ export const ISSUE_TYPE_LABELS: Readonly<Record<IssueType, string>> = {
 export function issueKeyOf(id: string): string {
   return `INC-${id.slice(0, 8).toUpperCase()}`;
 }
+
+/** Readable short key of an issue: the prefix and the first six characters of its identifier. */
+export function shortIssueKeyOf(id: string): string {
+  return `INC-${id.slice(0, 6).toUpperCase()}`;
+}

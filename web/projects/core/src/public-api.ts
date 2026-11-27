@@ -4,6 +4,7 @@ export * from './lib/config/corelog-providers';
 export * from './lib/config/http-context';
 export * from './lib/config/issue-paths';
 export * from './lib/config/navigation';
+export * from './lib/config/primeng-autofocus';
 export * from './lib/config/theme';
 export * from './lib/guards/auth.guard';
 export * from './lib/guards/guest.guard';

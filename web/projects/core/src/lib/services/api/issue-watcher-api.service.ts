@@ -4,6 +4,7 @@ import { Observable, map } from 'rxjs';
 
 import { API_URL } from '../../config/api.config';
 import { IssueWatcherState } from '../../models/ticket.model';
+import { silentRequest } from '../../utils/silent-request';
 
 interface WatcherStateDto {
   is_watching: boolean;
@@ -25,7 +26,9 @@ export class IssueWatcherApiService {
 
   getState(issueId: string): Observable<IssueWatcherState> {
     return this.http
-      .get<Envelope<WatcherStateDto>>(`${this.baseUrl}/${issueId}/watchers`)
+      .get<Envelope<WatcherStateDto>>(`${this.baseUrl}/${issueId}/watchers`, {
+        context: silentRequest(),
+      })
       .pipe(map((body) => toWatcherState(body.data)));
   }
 

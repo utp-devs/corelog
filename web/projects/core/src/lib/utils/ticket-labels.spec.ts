@@ -3,6 +3,7 @@ import {
   ISSUE_STATUS_META,
   ISSUE_TYPE_LABELS,
   issueKeyOf,
+  shortIssueKeyOf,
 } from './ticket-labels';
 
 describe('ticket labels', () => {
@@ -22,5 +23,10 @@ describe('ticket labels', () => {
   it('derives the visible key from the first eight characters of the id', () => {
     expect(issueKeyOf('11111111-1111-4111-8111-111111111111')).toBe('INC-11111111');
     expect(issueKeyOf('ab12')).toBe('INC-AB12');
+  });
+
+  it('shortens the key to the prefix and six characters of the identifier', () => {
+    expect(shortIssueKeyOf('11111111-1111-4111-8111-111111111111')).toBe('INC-111111');
+    expect(shortIssueKeyOf('ab12')).toBe('INC-AB12');
   });
 });

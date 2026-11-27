@@ -3,6 +3,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { TestBed } from '@angular/core/testing';
 import { firstValueFrom } from 'rxjs';
 
+import { SKIP_ERROR_NOTIFICATION } from '../../config/http-context';
 import { ORGANIZATION_ID_PROVIDER } from '../../utils/org-id-provider';
 import { ProjectApiService } from './project-api.service';
 
@@ -264,5 +265,17 @@ describe('ProjectApiService', () => {
     expect(deleteRequest.request.method).toBe('DELETE');
     deleteRequest.flush(null);
     expect(await deleted).toBeUndefined();
+  });
+
+  it('lists members with a toast by default and silently when the caller asks', () => {
+    api.listMembers('project-1').subscribe();
+    const loud = backend.expectOne(`${BASE}/projects/project-1/members`);
+    expect(loud.request.context.get(SKIP_ERROR_NOTIFICATION)).toBe(false);
+    loud.flush({ data: [] });
+
+    api.listMembers('project-1', { silent: true }).subscribe();
+    const quiet = backend.expectOne(`${BASE}/projects/project-1/members`);
+    expect(quiet.request.context.get(SKIP_ERROR_NOTIFICATION)).toBe(true);
+    quiet.flush({ data: [] });
   });
 });
