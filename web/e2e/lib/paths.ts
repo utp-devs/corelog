@@ -14,6 +14,7 @@ const WORKSPACE_PATHS = [
   '/projects',
   '/dashboard',
   '/teams',
+  '/notes',
   '/people',
   '/profile',
 ] as const;
