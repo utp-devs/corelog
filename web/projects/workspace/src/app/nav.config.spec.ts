@@ -97,23 +97,10 @@ describe('workspace navigation', () => {
       expect(buildSidebar({ kind: 'global' }, new Set(), WORKSPACE_NAV)).toEqual([]);
     });
 
-    it('lists the project items under the encoded project base path', () => {
-      const items = buildSidebar({ kind: 'project', projectId: 'p 1' }, new Set(), WORKSPACE_NAV);
-      expect(items.map((item) => item.label)).toEqual([
-        'Tablero',
-        'Backlog',
-        'Sprints',
-        'Calendario',
-      ]);
-      expect(items[0]?.path).toBe('/projects/p%201/board');
-    });
-
-    it('shows project permissions only to platform admins', () => {
+    it('lists no sidebar items on project pages, which have their own tabs', () => {
       const context = { kind: 'project' as const, projectId: 'p1' };
-      const withoutPermission = buildSidebar(context, permissionsFor(member), WORKSPACE_NAV);
-      const withPermission = buildSidebar(context, permissionsFor(platformAdmin), WORKSPACE_NAV);
-      expect(withoutPermission.map((item) => item.key)).not.toContain('permissions');
-      expect(withPermission.at(-1)?.path).toBe('/projects/p1/permisos');
+      expect(buildSidebar(context, new Set(), WORKSPACE_NAV)).toEqual([]);
+      expect(buildSidebar(context, permissionsFor(platformAdmin), WORKSPACE_NAV)).toEqual([]);
     });
 
     it('hides organization administration from users without org.admin', () => {
@@ -136,7 +123,6 @@ describe('workspace navigation', () => {
         ['General', '/profile'],
         ['Seguridad', '/profile/security'],
         ['Notificaciones', '/profile/notifications'],
-        ['Tokens', '/profile/tokens'],
         ['Apariencia', '/profile/appearance'],
       ]);
       expect(items[0].exact).toBe(true);

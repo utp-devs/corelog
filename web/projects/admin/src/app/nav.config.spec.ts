@@ -94,24 +94,10 @@ describe('admin navigation', () => {
       ).toEqual([]);
     });
 
-    it('lists the project items under the workspace project path', () => {
-      const items = buildSidebar({ kind: 'project', projectId: 'p1' }, new Set(), ADMIN_NAV);
-      expect(items.map((item) => item.path)).toEqual([
-        '/workspace/projects/p1/board',
-        '/workspace/projects/p1/backlog',
-        '/workspace/projects/p1/sprints',
-        '/workspace/projects/p1/calendar',
-      ]);
-    });
-
-    it('shows project permissions only with the permission', () => {
+    it('lists no sidebar items on project pages, which have their own tabs', () => {
       const context = { kind: 'project' as const, projectId: 'p1' };
-      expect(
-        buildSidebar(context, permissionsFor(member), ADMIN_NAV).map((item) => item.key),
-      ).not.toContain('permissions');
-      expect(buildSidebar(context, permissionsFor(platformAdmin), ADMIN_NAV).at(-1)?.path).toBe(
-        '/workspace/projects/p1/permisos',
-      );
+      expect(buildSidebar(context, new Set(), ADMIN_NAV)).toEqual([]);
+      expect(buildSidebar(context, permissionsFor(platformAdmin), ADMIN_NAV)).toEqual([]);
     });
 
     it('lists every profile section under the workspace for everyone', () => {
@@ -120,7 +106,6 @@ describe('admin navigation', () => {
         '/workspace/profile',
         '/workspace/profile/security',
         '/workspace/profile/notifications',
-        '/workspace/profile/tokens',
         '/workspace/profile/appearance',
       ]);
       expect(items.every((item) => item.external)).toBe(true);

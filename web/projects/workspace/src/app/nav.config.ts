@@ -17,24 +17,8 @@ export const WORKSPACE_NAV: ShellNavConfig = {
     },
   ],
   sidebars: {
-    project: [
-      { key: 'board', label: 'Tablero', path: '/projects/:projectId/board', icon: 'board' },
-      { key: 'backlog', label: 'Backlog', path: '/projects/:projectId/backlog', icon: 'backlog' },
-      { key: 'sprints', label: 'Sprints', path: '/projects/:projectId/sprints', icon: 'sprints' },
-      {
-        key: 'calendar',
-        label: 'Calendario',
-        path: '/projects/:projectId/calendar',
-        icon: 'calendar',
-      },
-      {
-        key: 'permissions',
-        label: 'Permisos',
-        path: '/projects/:projectId/permisos',
-        icon: 'permissions',
-        permission: 'project.permissions',
-      },
-    ],
+    // The project pages carry their own tabs under the project header, so the shell lists nothing here.
+    project: [],
     'org-admin': [
       {
         key: 'org-settings',
@@ -70,7 +54,6 @@ export const WORKSPACE_NAV: ShellNavConfig = {
         path: '/profile/notifications',
         icon: 'bell',
       },
-      { key: 'tokens', label: 'Tokens', path: '/profile/tokens', icon: 'tokens' },
       { key: 'appearance', label: 'Apariencia', path: '/profile/appearance', icon: 'appearance' },
     ],
   },

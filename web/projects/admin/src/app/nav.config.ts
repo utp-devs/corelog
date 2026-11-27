@@ -38,44 +38,8 @@ export const ADMIN_NAV: ShellNavConfig = {
     },
   ],
   sidebars: {
-    project: [
-      {
-        key: 'board',
-        label: 'Tablero',
-        path: '/workspace/projects/:projectId/board',
-        external: true,
-        icon: 'board',
-      },
-      {
-        key: 'backlog',
-        label: 'Backlog',
-        path: '/workspace/projects/:projectId/backlog',
-        external: true,
-        icon: 'backlog',
-      },
-      {
-        key: 'sprints',
-        label: 'Sprints',
-        path: '/workspace/projects/:projectId/sprints',
-        external: true,
-        icon: 'sprints',
-      },
-      {
-        key: 'calendar',
-        label: 'Calendario',
-        path: '/workspace/projects/:projectId/calendar',
-        external: true,
-        icon: 'calendar',
-      },
-      {
-        key: 'permissions',
-        label: 'Permisos',
-        path: '/workspace/projects/:projectId/permisos',
-        external: true,
-        icon: 'permissions',
-        permission: 'project.permissions',
-      },
-    ],
+    // The project pages carry their own tabs under the project header, so the shell lists nothing here.
+    project: [],
     'org-admin': [
       {
         key: 'org-settings',
@@ -121,13 +85,6 @@ export const ADMIN_NAV: ShellNavConfig = {
         path: '/workspace/profile/notifications',
         external: true,
         icon: 'bell',
-      },
-      {
-        key: 'tokens',
-        label: 'Tokens',
-        path: '/workspace/profile/tokens',
-        external: true,
-        icon: 'tokens',
       },
       {
         key: 'appearance',
