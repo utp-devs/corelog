@@ -45,6 +45,10 @@ func run() error {
 	defer func() { _ = db.Close() }()
 	log.Info("connected to database", "driver", "postgresql")
 
+	if err := ensureLegalDocuments(context.Background(), db, log); err != nil {
+		return err
+	}
+
 	// Cada peticion autenticada confirma que su sesion sigue activa (revocacion y cuentas desactivadas).
 	appmw.SetSessionValidator(userpostgres.NewSessionRepository(db).Validate)
 
