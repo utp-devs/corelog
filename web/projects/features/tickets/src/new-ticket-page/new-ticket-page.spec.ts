@@ -17,9 +17,9 @@ class ListStub {}
 class DetailStub {}
 
 const ROUTES: Routes = [
-  { path: 'workspace/issues/new', component: NewTicketPage, canDeactivate: [unsavedChangesGuard] },
-  { path: 'workspace/issues/:id', component: DetailStub },
-  { path: 'workspace/issues', component: ListStub },
+  { path: 'issues/new', component: NewTicketPage, canDeactivate: [unsavedChangesGuard] },
+  { path: 'issues/:id', component: DetailStub },
+  { path: 'issues', component: ListStub },
 ];
 
 function setField(selector: string, value: string): void {
@@ -57,7 +57,7 @@ function headingNamed(text: string): HTMLElement | undefined {
 }
 
 async function renderPage(): Promise<RouterTestingHarness> {
-  const harness = await RouterTestingHarness.create('/workspace/issues/new');
+  const harness = await RouterTestingHarness.create('/issues/new');
   harness.fixture.detectChanges();
   await harness.fixture.whenStable();
   harness.fixture.detectChanges();
@@ -119,7 +119,7 @@ describe('NewTicketPage', () => {
     clickButton('Cancelar');
     await harness.fixture.whenStable();
 
-    expect(TestBed.inject(Router).url).toBe('/workspace/issues');
+    expect(TestBed.inject(Router).url).toBe('/issues');
     expect(prompt).not.toHaveBeenCalled();
   });
 
@@ -135,7 +135,7 @@ describe('NewTicketPage', () => {
     expect(prompt).toHaveBeenCalledWith(
       expect.objectContaining({ title: 'Tienes cambios sin guardar' }),
     );
-    expect(TestBed.inject(Router).url).toBe('/workspace/issues/new');
+    expect(TestBed.inject(Router).url).toBe('/issues/new');
     expect(document.querySelector<HTMLInputElement>('input[formcontrolname="title"]')?.value).toBe(
       'Pantalla en blanco',
     );
@@ -151,7 +151,7 @@ describe('NewTicketPage', () => {
     clickButton('Cancelar');
     await harness.fixture.whenStable();
 
-    expect(TestBed.inject(Router).url).toBe('/workspace/issues');
+    expect(TestBed.inject(Router).url).toBe('/issues');
   });
 
   it('redirects to the new issue after a successful create without showing the prompt', async () => {
@@ -164,7 +164,7 @@ describe('NewTicketPage', () => {
     clickButton('Crear incidencia');
     await harness.fixture.whenStable();
 
-    expect(TestBed.inject(Router).url).toBe('/workspace/issues/issue-9');
+    expect(TestBed.inject(Router).url).toBe('/issues/issue-9');
     expect(prompt).not.toHaveBeenCalled();
     expect(setupResult.ticketApi.create).toHaveBeenCalledWith(
       expect.objectContaining({ title: 'Pantalla en blanco' }),
@@ -183,7 +183,7 @@ describe('NewTicketPage', () => {
     await harness.fixture.whenStable();
 
     expect(notify).toHaveBeenCalledWith('El proyecto está archivado');
-    expect(TestBed.inject(Router).url).toBe('/workspace/issues/new');
+    expect(TestBed.inject(Router).url).toBe('/issues/new');
     expect(document.querySelector<HTMLInputElement>('input[formcontrolname="title"]')?.value).toBe(
       'Pantalla en blanco',
     );

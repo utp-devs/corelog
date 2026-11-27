@@ -41,7 +41,7 @@ import {
   effectiveProjectRole,
   hasProjectPermission,
   issueKeyOf,
-  ISSUES_BASE_PATH,
+  ISSUES_PATH,
   issuePath,
 } from '@corelog/core';
 import { trackRecent } from '@corelog/ui/command-palette';
@@ -523,7 +523,7 @@ export class TicketDetailPage {
   }
 
   protected back(): void {
-    void this.router.navigateByUrl(ISSUES_BASE_PATH);
+    void this.router.navigateByUrl(ISSUES_PATH);
   }
 
   protected pathOf(ticket: Ticket): string {

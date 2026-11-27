@@ -82,6 +82,8 @@ export class AppShell {
   readonly brand = input<ShellBrand>(DEFAULT_SHELL_BRAND);
   /** Shows the Crear button. Set it for signed-in users. */
   readonly canCreate = input(false);
+  /** The app mounts the work pages (issues, projects, dashboard). Set it false in other applications. */
+  readonly workPages = input(true);
   readonly org = input<ShellOrg | null>(null);
   /** Documentation address. The help menu lists the entry only when it is set. */
   readonly docsUrl = input<string | null>(null);
@@ -156,6 +158,7 @@ export class AppShell {
       const projectId = this.projectId();
       const unregister = this.hotkeys.registerGlobalShortcuts({
         projectId,
+        workPages: this.workPages(),
         onHelp: () => this.helpOpen.update((open) => !open),
       });
       onCleanup(unregister);

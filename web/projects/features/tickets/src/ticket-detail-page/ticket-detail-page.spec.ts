@@ -14,8 +14,8 @@ import { TicketDetailPage } from './ticket-detail-page';
 class ListStub {}
 
 const ROUTES: Routes = [
-  { path: 'workspace/issues/:id', component: TicketDetailPage },
-  { path: 'workspace/issues', component: ListStub },
+  { path: 'issues/:id', component: TicketDetailPage },
+  { path: 'issues', component: ListStub },
 ];
 
 const AT = '2026-01-02T10:00:00Z';
@@ -44,7 +44,7 @@ function clickIn(root: ParentNode, text: string): void {
 
 async function renderDetail(): Promise<RouterTestingHarness> {
   TestBed.inject(Router).resetConfig(ROUTES);
-  const harness = await RouterTestingHarness.create(`/workspace/issues/${ISSUE_ID}`);
+  const harness = await RouterTestingHarness.create(`/issues/${ISSUE_ID}`);
   harness.fixture.detectChanges();
   await harness.fixture.whenStable();
   harness.fixture.detectChanges();
@@ -54,7 +54,7 @@ async function renderDetail(): Promise<RouterTestingHarness> {
 /** Renders without waiting for pending timers, for tests that drive the timers themselves. */
 async function renderDetailWithoutWaiting(): Promise<RouterTestingHarness> {
   TestBed.inject(Router).resetConfig(ROUTES);
-  const harness = await RouterTestingHarness.create(`/workspace/issues/${ISSUE_ID}`);
+  const harness = await RouterTestingHarness.create(`/issues/${ISSUE_ID}`);
   harness.fixture.detectChanges();
   return harness;
 }
@@ -311,7 +311,7 @@ describe('TicketDetailPage', () => {
     expect(recent[0]).toMatchObject({
       kind: 'issue',
       id: ISSUE_ID,
-      link: `/workspace/issues/${ISSUE_ID}`,
+      link: `/issues/${ISSUE_ID}`,
     });
   });
 

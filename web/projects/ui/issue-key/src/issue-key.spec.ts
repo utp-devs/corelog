@@ -1,3 +1,4 @@
+import { APP_BASE_HREF } from '@angular/common';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { RouterLink, provideRouter } from '@angular/router';
@@ -100,5 +101,28 @@ describe('IssueKey', () => {
       const tooltip = document.querySelector('[role="tooltip"]');
       expect(tooltip?.textContent).toContain('Error al guardar el perfil');
     });
+  });
+});
+
+describe('IssueKey under the workspace base href', () => {
+  afterEach(() => {
+    TestBed.resetTestingModule();
+  });
+
+  it('prefixes the router path with the base once, not twice', () => {
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter([]),
+        { provide: APP_BASE_HREF, useValue: '/workspace/' },
+        { provide: NotificationService, useValue: notifications },
+      ],
+    });
+    const fixture = TestBed.createComponent(IssueKey);
+    fixture.componentRef.setInput('issueKey', 'CL-120');
+    fixture.componentRef.setInput('href', '/issues/CL-120');
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('a')?.getAttribute('href')).toBe(
+      '/workspace/issues/CL-120',
+    );
   });
 });

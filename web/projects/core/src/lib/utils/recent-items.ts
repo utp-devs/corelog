@@ -20,11 +20,26 @@ function isRecentItem(value: unknown): value is RecentItem {
   );
 }
 
+/**
+ * Entries saved before router paths were used carry the workspace base ("/workspace/issues/x");
+ * the router adds the base itself, so that prefix is dropped when the list is read.
+ */
+function toRouterPath(link: string): string {
+  return link === '/workspace' || link.startsWith('/workspace/')
+    ? link.slice('/workspace'.length) || '/'
+    : link;
+}
+
 /** Recent items, newest first. Invalid or unavailable storage yields an empty list. */
 export function getRecent(): RecentItem[] {
   try {
     const parsed: unknown = JSON.parse(localStorage.getItem(RECENT_STORAGE_KEY) ?? '[]');
-    return Array.isArray(parsed) ? parsed.filter(isRecentItem).slice(0, RECENT_LIMIT) : [];
+    return Array.isArray(parsed)
+      ? parsed
+          .filter(isRecentItem)
+          .map((item) => ({ ...item, link: toRouterPath(item.link) }))
+          .slice(0, RECENT_LIMIT)
+      : [];
   } catch {
     return [];
   }

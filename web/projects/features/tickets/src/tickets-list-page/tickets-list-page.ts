@@ -32,7 +32,7 @@ import {
   SavedFilterCriteria,
   Ticket,
   TicketStore,
-  ISSUES_BASE_PATH,
+  ISSUES_PATH,
   issuePath,
 } from '@corelog/core';
 import { DataTablePageChange, DataTablePagination, RowMenuItem } from '@corelog/ui/data-table';
@@ -47,7 +47,7 @@ import { TicketList } from '../ticket-list/ticket-list';
 
 const DEFAULT_PAGE_SIZE = 20;
 const SAVED_FILTER_NAME_MAX = 80;
-const NEW_ISSUE_PATH = `${ISSUES_BASE_PATH}/new`;
+const NEW_ISSUE_PATH = `${ISSUES_PATH}/new`;
 
 const STATUS_OPTIONS = (Object.keys(ISSUE_STATUS_META) as IssueStatus[]).map((value) => ({
   value,

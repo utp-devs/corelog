@@ -34,7 +34,7 @@ describe('admin navigation', () => {
     it('lists Ver personas under Equipos, pointing at the workspace people page', () => {
       const teams = buildTopNav(null, ADMIN_NAV).menus.find((menu) => menu.key === 'teams');
       expect(teams?.extras).toEqual([
-        { key: 'people', label: 'Ver personas', path: '/workspace/people' },
+        { key: 'people', label: 'Ver personas', path: '/workspace/people', external: true },
       ]);
     });
 

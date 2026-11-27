@@ -62,4 +62,15 @@ describe('recent items', () => {
     const [stored] = getRecent();
     expect(stored).toEqual(item('3'));
   });
+
+  it('drops the workspace base from links saved before router paths were used', () => {
+    localStorage.setItem(
+      RECENT_STORAGE_KEY,
+      JSON.stringify([
+        { kind: 'issue', id: 'a', title: 'A', subtitle: 'CORE', link: '/workspace/issues/a' },
+        { kind: 'project', id: 'p', title: 'P', subtitle: 'CORE', link: '/projects/p/board' },
+      ]),
+    );
+    expect(getRecent().map((entry) => entry.link)).toEqual(['/issues/a', '/projects/p/board']);
+  });
 });

@@ -93,6 +93,17 @@ describe('HotkeysService', () => {
     );
   });
 
+  it('leaves the work-page shortcuts out in an app that does not mount them', () => {
+    const hotkeys = setup();
+    const unregister = hotkeys.registerGlobalShortcuts({ workPages: false });
+    const keys = hotkeys.registered().map((binding) => binding.keys);
+    expect(keys).toEqual(expect.arrayContaining(['?', 'n']));
+    expect(keys).not.toContain('c');
+    expect(keys).not.toContain('g i');
+    expect(keys).not.toContain('g b');
+    unregister();
+  });
+
   it('removes its bindings from the registry when unregistered', () => {
     const hotkeys = setup();
     const bindings: HotkeyBinding[] = [

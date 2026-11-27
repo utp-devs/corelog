@@ -8,10 +8,16 @@
   </span>
 </ng-template>
 
-@if (href()) {
-  <a class="chip" [attr.href]="href()" [attr.data-testid]="dataTestId()">
-    <ng-container *ngTemplateOutlet="content" />
-  </a>
+@if (href(); as link) {
+  @if (isAppPath()) {
+    <a class="chip" [routerLink]="link" [attr.data-testid]="dataTestId()">
+      <ng-container *ngTemplateOutlet="content" />
+    </a>
+  } @else {
+    <a class="chip" [attr.href]="link" [attr.data-testid]="dataTestId()">
+      <ng-container *ngTemplateOutlet="content" />
+    </a>
+  }
 } @else {
   <span class="chip" [attr.data-testid]="dataTestId()">
     <ng-container *ngTemplateOutlet="content" />

@@ -1,3 +1,4 @@
+import { APP_BASE_HREF } from '@angular/common';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import {
   DashboardApiService,
@@ -208,6 +209,46 @@ describe('MyDashboardPage', () => {
     expect(linkNamed(fixture, 'Incidencia vista')?.getAttribute('href')).toBe('/issues/i-9');
     expect(textOf(fixture)).toContain('Incidencia');
     expectNoConsoleOutput();
+  });
+
+  it('opens recent issues under the workspace base without repeating it', () => {
+    window.localStorage.setItem(
+      RECENT_STORAGE_KEY,
+      JSON.stringify([
+        {
+          kind: 'issue',
+          id: 'i-9',
+          title: 'Incidencia vista',
+          subtitle: 'CORE-9',
+          link: '/issues/i-9',
+        },
+        {
+          kind: 'issue',
+          id: 'i-10',
+          title: 'Incidencia antigua',
+          subtitle: 'CORE-10',
+          link: '/workspace/issues/i-10',
+        },
+      ]),
+    );
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      imports: [MyDashboardPage],
+      providers: [
+        provideCorelogTesting(),
+        { provide: APP_BASE_HREF, useValue: '/workspace/' },
+        { provide: DashboardApiService, useValue: dashboardApi },
+        { provide: ProjectApiService, useValue: projectApi },
+      ],
+    });
+    const fixture = create();
+
+    expect(linkNamed(fixture, 'Incidencia vista')?.getAttribute('href')).toBe(
+      '/workspace/issues/i-9',
+    );
+    expect(linkNamed(fixture, 'Incidencia antigua')?.getAttribute('href')).toBe(
+      '/workspace/issues/i-10',
+    );
   });
 
   it('shows an error message when the summary cannot be loaded', () => {

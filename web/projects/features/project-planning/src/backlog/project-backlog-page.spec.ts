@@ -1,4 +1,6 @@
+import { APP_BASE_HREF } from '@angular/common';
 import { TestBed } from '@angular/core/testing';
+import { Provider } from '@angular/core';
 import { provideRouter } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { BacklogApiService, BacklogItem, ProjectApiService, SessionService } from '@corelog/core';
@@ -47,7 +49,10 @@ async function settle(harness: RouterTestingHarness): Promise<void> {
   harness.fixture.detectChanges();
 }
 
-async function renderPage(list: Observable<BacklogItem[]> = of(items)) {
+async function renderPage(
+  list: Observable<BacklogItem[]> = of(items),
+  extraProviders: Provider[] = [],
+) {
   TestBed.resetTestingModule();
   const backlogApi = {
     list: vi.fn(() => list),
@@ -63,6 +68,7 @@ async function renderPage(list: Observable<BacklogItem[]> = of(items)) {
       { provide: SessionService, useValue: signedInSession() },
       { provide: BacklogApiService, useValue: backlogApi },
       { provide: ProjectApiService, useValue: projectApi },
+      ...extraProviders,
     ],
   });
   const harness = await RouterTestingHarness.create(backlogPath);
@@ -191,5 +197,17 @@ describe('ProjectBacklogPage', () => {
     expect(cards[0]?.contains(buttonNamed('Bajar Primera'))).toBe(true);
     consoleGuard.expectNoConsoleOutput();
     mobile.harness.fixture.destroy();
+  });
+
+  it('links each row summary to the issue under the workspace base without repeating it', async () => {
+    const { harness } = await renderPage(of(items), [
+      { provide: APP_BASE_HREF, useValue: '/workspace/' },
+    ]);
+    const hrefs = Array.from(document.querySelectorAll<HTMLAnchorElement>('a.summary')).map(
+      (link) => link.getAttribute('href'),
+    );
+    expect(hrefs).toContain('/workspace/issues/issue-1');
+    expect(hrefs.some((href) => href?.includes('/workspace/workspace/'))).toBe(false);
+    harness.fixture.destroy();
   });
 });

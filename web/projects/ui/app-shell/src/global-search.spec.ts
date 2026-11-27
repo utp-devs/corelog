@@ -1,3 +1,4 @@
+import { APP_BASE_HREF, PlatformLocation } from '@angular/common';
 import { TestBed, type ComponentFixture } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import { PALETTE_SEARCH_DEBOUNCE_MS, SearchApiService, type SearchHit } from '@corelog/core';
@@ -138,5 +139,29 @@ describe('GlobalSearch', () => {
     el.querySelector<HTMLButtonElement>('button[aria-label="Buscar"]')?.click();
     fixture.detectChanges();
     expect(paletteDialog()).not.toBeNull();
+  });
+});
+
+describe('GlobalSearch under the workspace base href', () => {
+  afterEach(() => {
+    TestBed.resetTestingModule();
+  });
+
+  it('opens a search hit under the workspace base without repeating it', async () => {
+    const search = vi.fn(() => of(hits));
+    TestBed.configureTestingModule({
+      imports: [GlobalSearch],
+      providers: [
+        provideRouter([{ path: 'issues/:id', children: [] }]),
+        { provide: APP_BASE_HREF, useValue: '/workspace/' },
+        { provide: SearchApiService, useValue: { search } },
+      ],
+    });
+    const fixture = TestBed.createComponent(GlobalSearch);
+    fixture.detectChanges();
+    const router = TestBed.inject(Router);
+    await router.navigateByUrl(hits[0].link);
+    expect(router.url).toBe('/issues/i-1');
+    expect(TestBed.inject(PlatformLocation).pathname).toBe('/workspace/issues/i-1');
   });
 });

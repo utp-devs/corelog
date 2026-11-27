@@ -1,5 +1,7 @@
+import { APP_BASE_HREF } from '@angular/common';
 import { TestBed } from '@angular/core/testing';
-import { describe, expect, it } from 'vitest';
+import { provideRouter } from '@angular/router';
+import { afterEach, describe, expect, it } from 'vitest';
 
 import { TeamChip } from './team-chip';
 
@@ -9,7 +11,7 @@ function create(inputs: {
   memberCount?: number;
   href?: string;
 }): HTMLElement {
-  TestBed.configureTestingModule({});
+  TestBed.configureTestingModule({ providers: [provideRouter([])] });
   const fixture = TestBed.createComponent(TeamChip);
   fixture.componentRef.setInput('id', inputs.id);
   fixture.componentRef.setInput('name', inputs.name);
@@ -64,5 +66,39 @@ describe('TeamChip text wrapping', () => {
       'Plataforma de datos internos',
     );
     expect(findByText(el, '3 miembros')?.getAttribute('title')).toBe('3 miembros');
+  });
+});
+
+describe('TeamChip under the workspace base href', () => {
+  afterEach(() => {
+    TestBed.resetTestingModule();
+  });
+
+  it('links in-app team paths through the router with the base prefixed once', () => {
+    TestBed.configureTestingModule({
+      providers: [provideRouter([]), { provide: APP_BASE_HREF, useValue: '/workspace/' }],
+    });
+    const fixture = TestBed.createComponent(TeamChip);
+    fixture.componentRef.setInput('id', 't1');
+    fixture.componentRef.setInput('name', 'Plataforma');
+    fixture.componentRef.setInput('href', '/teams/t1');
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('a')?.getAttribute('href')).toBe(
+      '/workspace/teams/t1',
+    );
+  });
+
+  it('keeps absolute URLs as plain links', () => {
+    TestBed.configureTestingModule({
+      providers: [provideRouter([]), { provide: APP_BASE_HREF, useValue: '/workspace/' }],
+    });
+    const fixture = TestBed.createComponent(TeamChip);
+    fixture.componentRef.setInput('id', 't1');
+    fixture.componentRef.setInput('name', 'Plataforma');
+    fixture.componentRef.setInput('href', 'https://example.test/teams/t1');
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('a')?.getAttribute('href')).toBe(
+      'https://example.test/teams/t1',
+    );
   });
 });

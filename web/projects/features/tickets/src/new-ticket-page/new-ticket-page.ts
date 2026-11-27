@@ -9,7 +9,7 @@ import {
   asApiError,
   isApiError,
   warnBeforeUnload,
-  ISSUES_BASE_PATH,
+  ISSUES_PATH,
   issuePath,
 } from '@corelog/core';
 import { PageContainer } from '@corelog/ui/page-container';
@@ -87,6 +87,6 @@ export class NewTicketPage {
   }
 
   protected cancel(): void {
-    void this.router.navigateByUrl(ISSUES_BASE_PATH);
+    void this.router.navigateByUrl(ISSUES_PATH);
   }
 }

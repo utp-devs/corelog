@@ -1,7 +1,11 @@
-/** Absolute path of the issue area. The workspace app mounts the tickets routes here. */
-export const ISSUES_BASE_PATH = '/workspace/issues';
+/**
+ * Router path of the issue area, relative to the application base href. The workspace app serves
+ * it at /workspace/issues; the base is added by the browser, so routerLink and navigateByUrl must
+ * use this path without it.
+ */
+export const ISSUES_PATH = '/issues';
 
-/** Absolute path of one issue. */
+/** Router path of one issue. Use with routerLink or navigateByUrl, never with a full-page navigation. */
 export function issuePath(id: string): string {
-  return `${ISSUES_BASE_PATH}/${id}`;
+  return `${ISSUES_PATH}/${id}`;
 }

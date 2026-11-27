@@ -7,15 +7,15 @@ import { DEFAULT_SHELL_BRAND, type ShellBrand, type ShellNavConfig } from '@core
  */
 export const ADMIN_NAV: ShellNavConfig = {
   menus: [
-    { key: 'projects', label: 'Proyectos', path: '/workspace/projects' },
-    { key: 'filters', label: 'Filtros', path: '/workspace/issues' },
-    { key: 'dashboards', label: 'Paneles', path: '/workspace/dashboard' },
+    { key: 'projects', label: 'Proyectos', path: '/workspace/projects', external: true },
+    { key: 'filters', label: 'Filtros', path: '/workspace/issues', external: true },
+    { key: 'dashboards', label: 'Paneles', path: '/workspace/dashboard', external: true },
     {
       key: 'teams',
       label: 'Equipos',
       path: '/workspace/teams',
       external: true,
-      extras: [{ key: 'people', label: 'Ver personas', path: '/workspace/people' }],
+      extras: [{ key: 'people', label: 'Ver personas', path: '/workspace/people', external: true }],
     },
   ],
   sidebars: {

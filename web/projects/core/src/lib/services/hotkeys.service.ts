@@ -23,6 +23,11 @@ export type GlobalShortcutOptions = {
   onHelp?: () => void;
   /** Project in context: 'g b' opens its board. */
   projectId?: string | null;
+  /**
+   * The app mounts the work pages (issues, projects, dashboard). Without them only the help and
+   * note shortcuts are registered, so no shortcut navigates to a path the app does not serve.
+   */
+  workPages?: boolean;
 };
 
 /** True when the target is a field the user types into: shortcuts must not fire there. */
@@ -75,13 +80,13 @@ export class HotkeysService {
 
   /** Shell shortcuts: c, ?, g i, g d, g p, g b and n (coming soon). '/' belongs to the command palette. */
   registerGlobalShortcuts(options: GlobalShortcutOptions = {}): () => void {
-    const { onHelp, projectId } = options;
+    const { onHelp, projectId, workPages = true } = options;
     const boardPath = projectId ? `/projects/${encodeURIComponent(projectId)}/board` : '/projects';
     const go = (path: string) => () => {
       void this.router.navigateByUrl(path);
     };
 
-    return this.register([
+    const bindings: HotkeyBinding[] = [
       { keys: 'c', group: 'General', description: 'Crear incidencia', run: go('/issues/new') },
       {
         keys: '?',
@@ -101,7 +106,9 @@ export class HotkeysService {
           : 'Ir a Proyectos (no hay proyecto abierto)',
         run: go(boardPath),
       },
-    ]);
+    ];
+    const helpAndNotes = bindings.filter((binding) => binding.keys === '?' || binding.keys === 'n');
+    return this.register(workPages ? bindings : helpAndNotes);
   }
 
   private publish(): void {
