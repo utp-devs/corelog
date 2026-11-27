@@ -223,3 +223,27 @@ func TestEffectivePermissionsPerRole(t *testing.T) {
 		})
 	}
 }
+
+// TestSchemeWritesOnArchivedProjectAreConflicts checks that the permission scheme cannot change on an
+// archived project (409 project.archived), while reading it keeps working.
+func TestSchemeWritesOnArchivedProjectAreConflicts(t *testing.T) {
+	ctx := context.Background()
+	project, actor := uuid.New(), uuid.New()
+	lead := domain.Access{OrgRole: domain.OrgRoleMember, ProjectRole: roleOfValue(domain.ProjectRoleLead), Visibility: domain.VisibilityOpen, Archived: true}
+	service, _, schemes := newPermissionFixture(lead)
+
+	valid := domain.DefaultScheme().Grants()
+	_, err := service.Replace(ctx, actor, "user", project, valid)
+	if apperror.CodeOf(err) != domain.CodeProjectArchived || apperror.KindOf(err) != apperror.KindConflict {
+		t.Fatalf("Replace on archived project: want 409 project.archived, got %v", err)
+	}
+	if _, err := service.Reset(ctx, actor, "user", project); apperror.CodeOf(err) != domain.CodeProjectArchived {
+		t.Fatalf("Reset on archived project: want project.archived, got %v", err)
+	}
+	if _, stored := schemes.rows[project]; stored {
+		t.Fatal("a scheme write on an archived project must not be stored")
+	}
+	if _, err := service.Get(ctx, actor, "user", project); err != nil {
+		t.Fatalf("Get scheme on archived project: %v", err)
+	}
+}

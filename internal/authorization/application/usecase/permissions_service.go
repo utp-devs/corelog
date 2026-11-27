@@ -108,14 +108,7 @@ func (s *PermissionService) requireEdit(ctx context.Context, actorID uuid.UUID, 
 	if err := s.requireBrowse(ctx, actorID, globalRole, projectID); err != nil {
 		return err
 	}
-	ok, err := s.authorizer.Can(ctx, actorID, globalRole, projectID, domain.PermissionEditProject)
-	if err != nil {
-		return err
-	}
-	if !ok {
-		return forbidden()
-	}
-	return nil
+	return s.authorizer.Require(ctx, actorID, globalRole, projectID, domain.PermissionEditProject)
 }
 
 func defaultView(projectID uuid.UUID) SchemeView {

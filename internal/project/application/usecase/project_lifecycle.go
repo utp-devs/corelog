@@ -140,7 +140,7 @@ func (s *ProjectService) Archive(ctx context.Context, actorID uuid.UUID, globalR
 	if err != nil {
 		return nil, err
 	}
-	if err := s.requireManage(ctx, port.ActionEditProject, project, actorID, globalRole, orgRole); err != nil {
+	if err := s.requireManage(ctx, port.ActionArchiveProject, project, actorID, globalRole, orgRole); err != nil {
 		return nil, err
 	}
 	if err := project.Archive(time.Now()); err != nil {
@@ -158,7 +158,7 @@ func (s *ProjectService) Restore(ctx context.Context, actorID uuid.UUID, globalR
 	if err != nil {
 		return nil, err
 	}
-	if err := s.requireManage(ctx, port.ActionEditProject, project, actorID, globalRole, orgRole); err != nil {
+	if err := s.requireManage(ctx, port.ActionRestoreProject, project, actorID, globalRole, orgRole); err != nil {
 		return nil, err
 	}
 	if err := project.Restore(time.Now()); err != nil {

@@ -44,6 +44,9 @@ type Access struct {
 	// TeamRole is the best grant of a project team the caller belongs to, nil when there is none.
 	TeamRole   *ProjectRole
 	Visibility Visibility
+	// Archived is true when the project is archived: every write except the archive-allowed set is
+	// blocked, while reads keep working.
+	Archived bool
 }
 
 // rank orders project roles: lead is the strongest. Unknown values rank last.

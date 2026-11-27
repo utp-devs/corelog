@@ -161,11 +161,13 @@ type CatalogRepository interface {
 
 // Acciones de proyecto que el modulo delega al autorizador. Usan los nombres de la matriz de permisos.
 const (
-	ActionViewProject   = "view_project"
-	ActionEditProject   = "edit_project"
-	ActionDeleteProject = "delete_project"
-	ActionManageMembers = "manage_members"
-	ActionEditIssue     = "edit_issue"
+	ActionViewProject    = "view_project"
+	ActionEditProject    = "edit_project"
+	ActionDeleteProject  = "delete_project"
+	ActionManageMembers  = "manage_members"
+	ActionEditIssue      = "edit_issue"
+	ActionArchiveProject = "archive_project"
+	ActionRestoreProject = "restore_project"
 )
 
 // RecentRecorder records that a user viewed an entity. Errors are logged by the caller and never

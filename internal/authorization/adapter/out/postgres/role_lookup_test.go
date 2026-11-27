@@ -48,7 +48,8 @@ func openAccessSchema(t *testing.T) *sqlx.DB {
 		`CREATE TABLE projects (
 			id UUID PRIMARY KEY,
 			organization_id UUID NOT NULL,
-			visibility VARCHAR(10) NOT NULL
+			visibility VARCHAR(10) NOT NULL,
+			archived_at TIMESTAMPTZ
 		)`,
 		`CREATE TABLE project_members (
 			project_id UUID NOT NULL,
@@ -178,4 +179,50 @@ func sameRole(a, b *domain.ProjectRole) bool {
 		return a == b
 	}
 	return *a == *b
+}
+
+// TestRoleLookupFindAccessArchivedPostgres checks that the archive state read from PostgreSQL
+// follows archived_at: set on an archived project, cleared on restore, and false for a missing project.
+func TestRoleLookupFindAccessArchivedPostgres(t *testing.T) {
+	db := openAccessSchema(t)
+	ctx := context.Background()
+
+	org, project, lead := uuid.New(), uuid.New(), uuid.New()
+	if _, err := db.Exec(`INSERT INTO organizations (id, deleted_at) VALUES ($1, NULL)`, org); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`INSERT INTO organization_members (organization_id, user_id, role) VALUES ($1, $2, 'member')`, org, lead); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`INSERT INTO projects (id, organization_id, visibility, archived_at) VALUES ($1, $2, 'open', now())`, project, org); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`INSERT INTO project_members (project_id, user_id, role) VALUES ($1, $2, 'lead')`, project, lead); err != nil {
+		t.Fatal(err)
+	}
+
+	lookup := NewRoleLookup(db)
+	access, err := lookup.FindAccess(ctx, project, lead)
+	if err != nil {
+		t.Fatalf("FindAccess archived: %v", err)
+	}
+	if !access.Archived {
+		t.Fatal("archived project must report Archived=true")
+	}
+
+	if _, err := db.Exec(`UPDATE projects SET archived_at = NULL WHERE id = $1`, project); err != nil {
+		t.Fatal(err)
+	}
+	access, err = lookup.FindAccess(ctx, project, lead)
+	if err != nil {
+		t.Fatalf("FindAccess restored: %v", err)
+	}
+	if access.Archived {
+		t.Fatal("restored project must report Archived=false")
+	}
+
+	missing, err := lookup.FindAccess(ctx, uuid.New(), lead)
+	if err != nil || missing.Archived {
+		t.Fatalf("missing project = %+v, %v; want empty access without error", missing, err)
+	}
 }

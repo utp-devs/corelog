@@ -34,6 +34,7 @@ var (
 // retirado no conserva acceso. El mejor rol de equipo ordena lead, contributor, viewer.
 const accessQuery = `
 SELECT p.visibility,
+       p.archived_at IS NOT NULL,
        om.role,
        CASE WHEN om.user_id IS NULL THEN NULL ELSE pm.role END,
        CASE WHEN om.user_id IS NULL THEN NULL ELSE (
@@ -53,11 +54,12 @@ WHERE p.id = $1`
 func (r *RoleLookup) FindAccess(ctx context.Context, projectID, userID uuid.UUID) (domain.Access, error) {
 	var (
 		visibility sql.NullString
+		archived   bool
 		orgRole    sql.NullString
 		projRole   sql.NullString
 		teamRole   sql.NullString
 	)
-	err := r.db.QueryRowContext(ctx, accessQuery, projectID, userID).Scan(&visibility, &orgRole, &projRole, &teamRole)
+	err := r.db.QueryRowContext(ctx, accessQuery, projectID, userID).Scan(&visibility, &archived, &orgRole, &projRole, &teamRole)
 	if errors.Is(err, sql.ErrNoRows) {
 		return domain.Access{}, nil
 	}
@@ -65,6 +67,7 @@ func (r *RoleLookup) FindAccess(ctx context.Context, projectID, userID uuid.UUID
 		return domain.Access{}, apperror.Wrap(apperror.KindInternal, "failed to look up project access", err)
 	}
 	access := domain.Access{OrgRole: domain.OrgRoleNone, Visibility: domain.VisibilityOpen}
+	access.Archived = archived
 	if visibility.String == string(domain.VisibilityPrivate) {
 		access.Visibility = domain.VisibilityPrivate
 	}

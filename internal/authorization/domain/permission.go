@@ -125,9 +125,11 @@ func (h Holder) Valid() bool {
 // actionPermissions maps the action names used by callers (port.Action) that differ from the
 // permission catalog. Every other action name is the permission of the same name.
 var actionPermissions = map[string]Permission{
-	"view_project":  PermissionBrowseProject,
-	"comment":       PermissionCommentIssue,
-	"manage_sprint": PermissionManageSprints,
+	"view_project":    PermissionBrowseProject,
+	"comment":         PermissionCommentIssue,
+	"manage_sprint":   PermissionManageSprints,
+	"archive_project": PermissionEditProject,
+	"restore_project": PermissionEditProject,
 }
 
 // PermissionForAction resolves an action name to its permission. It reports false for names that
