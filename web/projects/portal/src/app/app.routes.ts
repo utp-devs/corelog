@@ -26,6 +26,6 @@ export const routes: Routes = [
   {
     path: '**',
     title: 'Página no encontrada',
-    loadComponent: () => import('@corelog/ui/not-found').then((m) => m.NotFound),
+    loadComponent: () => import('./portal-not-found').then((m) => m.PortalNotFound),
   },
 ];

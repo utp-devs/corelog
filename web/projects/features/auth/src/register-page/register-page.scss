@@ -1,0 +1,13 @@
+@use '../shared/auth-page' as a;
+
+.register-page {
+  &__form {
+    @include a.form;
+  }
+
+  &__terms {
+    margin: 0;
+    font-size: var(--cl-font-small);
+    color: var(--cl-text-subtle);
+  }
+}

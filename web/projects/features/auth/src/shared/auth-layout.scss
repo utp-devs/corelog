@@ -1,150 +1,206 @@
-// Centered auth template. Colors come only from --cl-* tokens (both themes).
+@use '../../../../ui/styles/mixins' as m;
+@use '../../../../ui/field-row/src/control' as c;
+
+// Split auth template. Colors, sizes and spacing come only from --cl-* tokens (both themes).
 :host {
-  position: relative;
-  display: flex;
-  flex-direction: column;
+  display: block;
   min-height: 100vh;
   min-height: 100dvh;
-  background: linear-gradient(160deg, var(--cl-brand-subtle) 0%, var(--cl-bg-page) 60%);
+  background: var(--cl-bg-page);
 }
 
-.skip-link {
-  position: absolute;
-  top: var(--cl-space-2);
-  left: var(--cl-space-2);
-  z-index: var(--cl-z-modal);
-  padding: var(--cl-space-2) var(--cl-space-4);
-  border-radius: var(--cl-radius-md);
-  background: var(--cl-bg-surface);
-  color: var(--cl-text);
-  box-shadow: var(--cl-shadow-2);
-  transform: translateY(-200%);
-}
+.auth-layout {
+  &__skip {
+    position: absolute;
+    top: var(--cl-space-2);
+    left: var(--cl-space-2);
+    z-index: var(--cl-z-modal);
+    padding: var(--cl-space-2) var(--cl-space-4);
+    border-radius: var(--cl-radius-md);
+    background: var(--cl-bg-surface);
+    color: var(--cl-text);
+    box-shadow: var(--cl-elev-2);
+    transform: translateY(-200%);
 
-.skip-link:focus {
-  transform: none;
-  outline: none;
-  box-shadow: var(--cl-shadow-focus);
-}
-
-// Split template: a brand panel beside the form panel. Both panels are painted full height, so the page
-// has no bare band beside the form on wide screens. Colors come only from --cl-* tokens (both themes).
-.main {
-  display: flex;
-  flex: 1 0 auto;
-  min-width: 0;
-}
-
-.main:focus {
-  outline: none;
-}
-
-.split {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  flex: 1 1 auto;
-  width: 100%;
-  min-width: 0;
-}
-
-.brand {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: var(--cl-space-8);
-  background: linear-gradient(160deg, var(--cl-brand-subtle) 0%, var(--cl-bg-page) 75%);
-}
-
-.panel {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 0;
-  padding: var(--cl-space-6) var(--cl-gutter);
-  background: var(--cl-bg-surface);
-  border-inline-start: 1px solid var(--cl-border);
-}
-
-.form-column {
-  box-sizing: border-box;
-  width: min(440px, 100%);
-  min-width: 0;
-}
-
-.banner {
-  display: block;
-  width: 240px;
-  max-width: 100%;
-  height: auto;
-}
-
-.title {
-  margin: 0;
-  font-size: var(--cl-font-h2);
-  font-weight: 700;
-  line-height: 1.25;
-  color: var(--cl-text);
-  overflow-wrap: anywhere;
-}
-
-.subtitle {
-  margin: var(--cl-space-1) 0 var(--cl-space-6);
-  color: var(--cl-text-subtle);
-}
-
-.footer {
-  margin-top: var(--cl-space-5);
-  text-align: center;
-  font-size: var(--cl-font-small);
-  color: var(--cl-text-subtle);
-}
-
-.footer:empty {
-  display: none;
-}
-
-.footer ::ng-deep a {
-  display: inline-flex;
-  align-items: center;
-  min-height: 40px;
-  color: var(--cl-brand);
-  font-weight: 600;
-  text-decoration: none;
-  border-radius: var(--cl-radius-sm);
-}
-
-.footer ::ng-deep a:hover {
-  text-decoration: underline;
-}
-
-.footer ::ng-deep a:focus-visible {
-  outline: none;
-  box-shadow: var(--cl-shadow-focus);
-}
-
-.page-footer {
-  padding: var(--cl-space-3) var(--cl-gutter) var(--cl-space-4);
-  text-align: center;
-  font-size: var(--cl-font-small);
-  color: var(--cl-text-subtle);
-}
-
-@media (max-width: 767.98px) {
-  .split {
-    grid-template-columns: minmax(0, 1fr);
+    &:focus {
+      transform: none;
+      @include c.focus-ring;
+    }
   }
 
-  .brand {
-    padding: var(--cl-space-5) var(--cl-gutter);
+  &__main {
+    display: grid;
+    grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
+    min-height: 100vh;
+    min-height: 100dvh;
+
+    &:focus {
+      outline: none;
+    }
   }
 
-  .banner {
-    width: 180px;
+  // Brand panel: logo, value proposition and soft shapes made of tokens.
+  &__brand {
+    position: relative;
+    display: flex;
+    overflow: hidden;
+    padding: var(--cl-space-12) var(--cl-space-10);
+    background: linear-gradient(160deg, var(--cl-brand-subtle) 0%, var(--cl-bg-page) 85%);
   }
 
-  .panel {
-    align-items: flex-start;
-    border-inline-start: 0;
-    border-top: 1px solid var(--cl-border);
+  &__brand-inner {
+    @include m.flex-column(10, flex-start);
+    position: relative;
+    z-index: 1;
+    justify-content: center;
+    width: 100%;
+    max-width: 28rem;
+    margin-inline: auto;
+  }
+
+  &__logo {
+    display: block;
+    width: 11rem;
+    max-width: 100%;
+    height: auto;
+    padding: var(--cl-space-1) var(--cl-space-2);
+  }
+
+  &__pitch {
+    @include m.flex-column(5);
+  }
+
+  &__headline {
+    margin: 0;
+    font-size: var(--cl-font-display);
+    font-weight: 700;
+    line-height: var(--cl-lh-tight);
+    color: var(--cl-text);
+  }
+
+  &__points {
+    @include m.flex-column(3);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  &__point {
+    @include m.flex-row(3, flex-start);
+    font-size: var(--cl-font-body-strong);
+    color: var(--cl-text-subtle);
+  }
+
+  &__point-icon {
+    flex: none;
+    margin-top: var(--cl-space-1);
+    color: var(--cl-brand);
+  }
+
+  &__shape {
+    position: absolute;
+    border-radius: var(--cl-radius-full);
+    background: var(--cl-brand);
+    opacity: 0.08;
+    pointer-events: none;
+
+    &--one {
+      right: -6rem;
+      bottom: -6rem;
+      width: 22rem;
+      height: 22rem;
+    }
+
+    &--two {
+      top: -4rem;
+      right: 20%;
+      width: 10rem;
+      height: 10rem;
+    }
+  }
+
+  &__panel {
+    @include m.flex-row(0, center, center);
+    min-width: 0;
+    padding: var(--cl-space-8) var(--cl-gutter);
+    background: var(--cl-bg-surface);
+    border-inline-start: 1px solid var(--cl-border);
+  }
+
+  &__card {
+    width: min(26rem, 100%);
+    min-width: 0;
+  }
+
+  &__title {
+    margin: 0;
+    font-size: var(--cl-font-h1);
+    font-weight: 700;
+    line-height: var(--cl-lh-tight);
+    color: var(--cl-text);
+    overflow-wrap: anywhere;
+  }
+
+  &__subtitle {
+    margin: var(--cl-space-2) 0 var(--cl-space-6);
+    color: var(--cl-text-subtle);
+  }
+
+  &__switch {
+    margin: var(--cl-space-6) 0 0;
+    text-align: center;
+    font-size: var(--cl-font-body);
+    color: var(--cl-text-subtle);
+  }
+
+  &__switch-link {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--cl-control-h-md);
+    border-radius: var(--cl-radius-sm);
+    color: var(--cl-brand);
+    font-weight: var(--cl-weight-semibold);
+    text-decoration: none;
+
+    &:hover {
+      text-decoration: underline;
+    }
+
+    &:focus-visible {
+      @include c.focus-ring;
+    }
+  }
+
+  // Tablet and phone: the brand panel becomes a compact header and the form follows.
+  @include m.respond-down(1024px) {
+    &__main {
+      grid-template-columns: minmax(0, 1fr);
+      grid-template-rows: auto 1fr;
+    }
+
+    &__brand {
+      padding: var(--cl-space-5) var(--cl-gutter);
+    }
+
+    &__brand-inner {
+      max-width: none;
+      margin-inline: 0;
+    }
+
+    &__pitch,
+    &__shape {
+      display: none;
+    }
+
+    &__logo {
+      width: 9rem;
+    }
+
+    &__panel {
+      align-items: flex-start;
+      padding-top: var(--cl-space-8);
+      border-inline-start: 0;
+      border-top: 1px solid var(--cl-border);
+    }
   }
 }

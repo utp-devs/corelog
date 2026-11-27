@@ -7,8 +7,14 @@ import {
   inject,
   signal,
 } from '@angular/core';
-import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import {
+  AbstractControl,
+  FormControl,
+  FormGroup,
+  ReactiveFormsModule,
+  Validators,
+} from '@angular/forms';
+import { ActivatedRoute, Router } from '@angular/router';
 import {
   AuthStore,
   HOME_URL,
@@ -17,22 +23,34 @@ import {
   asApiError,
   safeRedirect,
 } from '@corelog/core';
+import { FieldControl, FieldRow } from '@corelog/ui/field-row';
 import { PasswordInput } from '@corelog/ui/password-input';
+import { Button } from 'primeng/button';
+import { InputText } from 'primeng/inputtext';
 
-import { goAfterAuth, focusFirstInvalid } from '../auth-navigation';
-import { AuthField } from '../shared/auth-field';
+import { authErrorMessage } from '../auth-messages';
+import { focusFirstInvalid, goAfterAuth } from '../auth-navigation';
+import { AuthAlert } from '../shared/auth-alert';
 import { AuthLayout } from '../shared/auth-layout';
 
-const GENERIC_ERROR = 'No se pudo iniciar sesión. Revisa tus datos e inténtalo de nuevo.';
 const EMAIL_MESSAGE = 'Introduce un correo electrónico válido';
 const PASSWORD_MESSAGE = 'La contraseña es obligatoria';
 
-/** Sign-in screen. Server field details are shown under their fields; other failures in an alert. */
+/** Sign-in screen. Server field details are shown under their fields; other failures in a banner. */
 @Component({
   selector: 'app-login-page',
-  imports: [ReactiveFormsModule, RouterLink, AuthLayout, AuthField, PasswordInput],
+  imports: [
+    ReactiveFormsModule,
+    AuthLayout,
+    AuthAlert,
+    FieldRow,
+    FieldControl,
+    PasswordInput,
+    Button,
+    InputText,
+  ],
   templateUrl: './login-page.html',
-  styleUrl: '../shared/_auth-form.scss',
+  styleUrl: './login-page.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class LoginPage {
@@ -48,6 +66,9 @@ export class LoginPage {
     ? { returnUrl: this.returnUrl }
     : {};
 
+  protected readonly emailMessages = { required: EMAIL_MESSAGE, email: EMAIL_MESSAGE };
+  protected readonly passwordMessages = { required: PASSWORD_MESSAGE };
+
   protected readonly form = new FormGroup({
     email: new FormControl('', {
       nonNullable: true,
@@ -60,25 +81,17 @@ export class LoginPage {
   protected readonly submitting = signal(false);
   protected readonly formError = signal<string | null>(null);
 
-  protected emailError(): string | null {
-    const control = this.form.controls.email;
-    if (control.hasError('server')) return control.getError('server');
-    return this.submitted() && (control.hasError('required') || control.hasError('email'))
-      ? EMAIL_MESSAGE
-      : null;
-  }
-
-  protected passwordError(): string | null {
-    const control = this.form.controls.password;
-    if (control.hasError('server')) return control.getError('server');
-    return this.submitted() && control.hasError('required') ? PASSWORD_MESSAGE : null;
+  /** Detail the server attached to the field, if any. */
+  protected serverError(control: AbstractControl): string | undefined {
+    return control.getError('server') ?? undefined;
   }
 
   protected async onSubmit(): Promise<void> {
+    if (this.submitting()) return;
     this.submitted.set(true);
     this.formError.set(null);
     // Drops server errors from the previous attempt so they do not block the next submit.
-    this.form.updateValueAndValidity();
+    Object.values(this.form.controls).forEach((control) => control.updateValueAndValidity());
     if (this.form.invalid) {
       afterNextRender(() => focusFirstInvalid(this.host.nativeElement), {
         injector: this.injector,
@@ -91,9 +104,8 @@ export class LoginPage {
       await this.auth.login(this.form.getRawValue());
       goAfterAuth(safeRedirect(this.returnUrl, this.home), this.router, this.assign);
     } catch (error) {
-      const apiError = asApiError(error);
-      if (!applyServerErrors(this.form, apiError)) {
-        this.formError.set(apiError.message || GENERIC_ERROR);
+      if (!applyServerErrors(this.form, asApiError(error))) {
+        this.formError.set(authErrorMessage(error, 'login'));
       }
     } finally {
       this.submitting.set(false);

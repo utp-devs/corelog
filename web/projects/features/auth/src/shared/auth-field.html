@@ -1,7 +1,0 @@
-<div class="field">
-  <label class="label" [attr.for]="inputId()">{{ label() }}</label>
-  <ng-content />
-  @if (message(); as text) {
-    <p class="message" [class.error]="tone() === 'error'" [attr.id]="messageId()">{{ text }}</p>
-  }
-</div>

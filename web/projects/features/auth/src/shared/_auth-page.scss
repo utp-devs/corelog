@@ -1,0 +1,12 @@
+@use '../../../../ui/styles/mixins' as m;
+
+// Vertical stack of fields, banner and actions shared by the auth screens.
+@mixin form {
+  @include m.flex-column(4);
+  width: 100%;
+  min-width: 0;
+}
+
+@mixin actions {
+  @include m.flex-column(2);
+}

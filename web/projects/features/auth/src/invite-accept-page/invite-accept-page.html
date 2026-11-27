@@ -1,79 +1,129 @@
-@if (!sessionChecked() || state().kind === 'loading') {
-  <app-auth-layout title="Invitación" subtitle="Comprobando la invitación...">
-    <div class="center" role="status" aria-live="polite">
-      <span class="spinner" aria-hidden="true"></span>
+<app-auth-layout [title]="heading()" [subtitle]="subheading()">
+  @if (!sessionChecked() || state().kind === 'loading') {
+    <div class="invite-accept-page__loading" role="status" aria-live="polite">
+      <p-progressspinner ariaLabel="Comprobando la invitación" strokeWidth="4" />
     </div>
-  </app-auth-layout>
-} @else if (ready(); as preview) {
-  @if (preview.status !== 'pending') {
-    <app-auth-layout
-      [title]="'Invitación a ' + preview.organizationName"
-      subtitle="Esta invitación ya no se puede aceptar."
-    >
-      <div class="alert warning" role="alert">{{ unusableMessage(preview.status) }}</div>
-    </app-auth-layout>
-  } @else {
-    <app-auth-layout
-      [title]="'Invitación a ' + preview.organizationName"
-      [subtitle]="'Te invitan a unirte como ' + roleLabels[preview.role] + '.'"
-    >
-      <div class="form">
-        <p class="summary">
-          <strong>Organización:</strong> {{ preview.organizationName }}
-          <br />
-          <strong>Rol:</strong> {{ roleLabels[preview.role] }}
-          <br />
-          <strong>Correo invitado:</strong> {{ preview.email }}
-        </p>
+  } @else if (ready(); as preview) {
+    <div class="invite-accept-page__body">
+      <dl class="invite-accept-page__card">
+        <div class="invite-accept-page__org">
+          <app-org-logo
+            [orgId]="preview.organizationName"
+            [name]="preview.organizationName"
+            [size]="32"
+          />
+          <span class="invite-accept-page__org-name">{{ preview.organizationName }}</span>
+        </div>
+        <div class="invite-accept-page__row">
+          <dt class="invite-accept-page__term">Rol</dt>
+          <dd class="invite-accept-page__value">{{ roleLabels[preview.role] }}</dd>
+        </div>
+        <div class="invite-accept-page__row">
+          <dt class="invite-accept-page__term">Correo invitado</dt>
+          <dd class="invite-accept-page__value">{{ preview.email }}</dd>
+        </div>
+      </dl>
 
-        @if (!user()) {
-          <p class="summary">
-            Inicia sesión o crea una cuenta con {{ preview.email }} para aceptar la invitación.
-          </p>
-          <div class="actions">
-            <button type="button" class="btn btn-primary" (click)="goToLogin()">
-              Iniciar sesión
-            </button>
-            <button type="button" class="btn" (click)="goToRegister()">Crear cuenta</button>
-          </div>
-        } @else {
-          @if (!sameAccount()) {
-            <div class="alert warning" role="status">
-              <strong>
-                Esta invitación es para {{ preview.email }}, pero has iniciado sesión como
-                {{ user()?.email }}.
-              </strong>
-              Cambia de cuenta para aceptarla.
-            </div>
+      @if (preview.status !== 'pending') {
+        <app-auth-alert tone="warning">{{ unusableMessage(preview.status) }}</app-auth-alert>
+        <div class="invite-accept-page__actions">
+          @if (!user()) {
+            <p-button label="Iniciar sesión" size="large" [fluid]="true" (onClick)="goToLogin()" />
           }
-          @if (acceptError(); as message) {
-            <div class="alert error" role="alert">{{ message }}</div>
-          }
-          <div class="actions">
-            <button
-              type="button"
-              class="btn btn-primary"
-              [disabled]="accepting()"
-              (click)="accept(preview)"
-            >
-              @if (accepting()) {
-                <span class="spinner" aria-hidden="true"></span>
-              }
-              Aceptar invitación
-            </button>
-            @if (!sameAccount() || acceptError()) {
-              <button type="button" class="btn" (click)="switchAccount()">Cambiar de cuenta</button>
-            }
-          </div>
+          <p-button
+            label="Ir al inicio"
+            size="large"
+            severity="secondary"
+            [outlined]="true"
+            [fluid]="true"
+            (onClick)="goHome()"
+          />
+        </div>
+      } @else if (!user()) {
+        <p class="invite-accept-page__hint">
+          Inicia sesión o crea una cuenta con {{ preview.email }} para aceptar la invitación.
+        </p>
+        <div class="invite-accept-page__actions">
+          <p-button label="Iniciar sesión" size="large" [fluid]="true" (onClick)="goToLogin()" />
+          <p-button
+            label="Crear cuenta"
+            size="large"
+            severity="secondary"
+            [outlined]="true"
+            [fluid]="true"
+            (onClick)="goToRegister()"
+          />
+        </div>
+      } @else if (alreadyMember()) {
+        <app-auth-alert tone="info">
+          Ya eres miembro de {{ preview.organizationName }}. Entra a tu espacio de trabajo.
+        </app-auth-alert>
+        <div class="invite-accept-page__actions">
+          <p-button
+            label="Ir al espacio de trabajo"
+            size="large"
+            [fluid]="true"
+            (onClick)="openWorkspace()"
+          />
+        </div>
+      } @else {
+        @if (!sameAccount()) {
+          <app-auth-alert tone="warning">
+            <strong class="invite-accept-page__strong">
+              Esta invitación es para {{ preview.email }}, pero has iniciado sesión como
+              {{ user()?.email }}.
+            </strong>
+            Cambia de cuenta para aceptarla.
+          </app-auth-alert>
         }
-      </div>
-    </app-auth-layout>
-  }
-} @else {
-  <app-auth-layout title="Invitación no disponible" subtitle="No pudimos abrir esta invitación.">
-    <div class="alert error" role="alert">
-      <strong>{{ failureMessage() }}</strong>
-      Revisa el enlace o pide a un administrador que te envíe una invitación nueva.
+        @if (acceptError(); as message) {
+          <app-auth-alert tone="error">{{ message }}</app-auth-alert>
+        }
+        <div class="invite-accept-page__actions">
+          <p-button
+            label="Aceptar invitación"
+            size="large"
+            [fluid]="true"
+            [loading]="accepting()"
+            (onClick)="accept(preview)"
+          />
+          @if (!sameAccount() || acceptError()) {
+            <p-button
+              label="Cambiar de cuenta"
+              size="large"
+              severity="secondary"
+              [outlined]="true"
+              [fluid]="true"
+              (onClick)="switchAccount()"
+            />
+          }
+        </div>
+      }
     </div>
-  </app-auth-layout>
-}
+  } @else {
+    <div class="invite-accept-page__body">
+      <app-auth-alert tone="error">
+        <strong class="invite-accept-page__strong">{{ failureMessage() }}</strong>
+        @if (state().kind === 'invalid') {
+          Puede que el enlace esté incompleto o que la invitación ya no exista. Pide a un
+          administrador que te envíe una invitación nueva.
+        } @else {
+          Revisa tu conexión e inténtalo de nuevo.
+        }
+      </app-auth-alert>
+      <div class="invite-accept-page__actions">
+        @if (state().kind === 'failed') {
+          <p-button label="Reintentar" size="large" [fluid]="true" (onClick)="retry()" />
+        }
+        <p-button
+          label="Ir al inicio"
+          size="large"
+          [severity]="state().kind === 'failed' ? 'secondary' : undefined"
+          [outlined]="state().kind === 'failed'"
+          [fluid]="true"
+          (onClick)="goHome()"
+        />
+      </div>
+    </div>
+  }
+</app-auth-layout>

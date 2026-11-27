@@ -1,0 +1,65 @@
+@use '../../../../ui/styles/mixins' as m;
+@use '../shared/auth-page' as a;
+
+.invite-accept-page {
+  &__loading {
+    @include m.flex-row(0, center, center);
+    min-height: 10rem;
+  }
+
+  &__body {
+    @include a.form;
+  }
+
+  &__card {
+    @include m.flex-column(3);
+    margin: 0;
+    padding: var(--cl-space-4);
+    border: 1px solid var(--cl-border);
+    border-radius: var(--cl-radius-lg);
+    background: var(--cl-bg-page);
+  }
+
+  &__org {
+    @include m.flex-row(3);
+    min-width: 0;
+  }
+
+  &__org-name {
+    @include m.truncate;
+    font-size: var(--cl-font-body-strong);
+    font-weight: var(--cl-weight-semibold);
+    color: var(--cl-text);
+  }
+
+  &__row {
+    @include m.flex-row(3, baseline, space-between);
+  }
+
+  &__term {
+    flex: none;
+    color: var(--cl-text-subtle);
+  }
+
+  &__value {
+    margin: 0;
+    min-width: 0;
+    overflow-wrap: anywhere;
+    text-align: right;
+    font-weight: var(--cl-weight-medium);
+    color: var(--cl-text);
+  }
+
+  &__hint {
+    margin: 0;
+    color: var(--cl-text-subtle);
+  }
+
+  &__strong {
+    display: block;
+  }
+
+  &__actions {
+    @include a.actions;
+  }
+}

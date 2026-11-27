@@ -7,9 +7,15 @@ import {
   inject,
   signal,
 } from '@angular/core';
+import {
+  AbstractControl,
+  FormControl,
+  FormGroup,
+  ReactiveFormsModule,
+  Validators,
+} from '@angular/forms';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
-import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import {
   AuthStore,
   HOME_URL,
@@ -18,32 +24,38 @@ import {
   asApiError,
   safeRedirect,
 } from '@corelog/core';
+import { FieldControl, FieldRow } from '@corelog/ui/field-row';
 import { PasswordInput } from '@corelog/ui/password-input';
 import { PasswordStrength } from '@corelog/ui/password-strength';
+import { Button } from 'primeng/button';
+import { InputText } from 'primeng/inputtext';
 
-import { goAfterAuth, focusFirstInvalid } from '../auth-navigation';
-import { AuthField } from '../shared/auth-field';
+import { authErrorMessage } from '../auth-messages';
+import { focusFirstInvalid, goAfterAuth } from '../auth-navigation';
+import { AuthAlert } from '../shared/auth-alert';
 import { AuthLayout } from '../shared/auth-layout';
 
-const GENERIC_ERROR = 'No se pudo crear la cuenta. Inténtalo de nuevo en unos minutos.';
-const EMAIL_MESSAGE = 'Introduce un correo electrónico válido';
 const NAME_MESSAGE = 'El nombre debe tener al menos 2 caracteres';
-const PASSWORD_MESSAGE = 'La contraseña debe tener al menos 8 caracteres';
 const PASSWORD_HELPER = 'Mínimo 8 caracteres.';
+const EMAIL_MESSAGE = 'Introduce un correo electrónico válido';
+const PASSWORD_MESSAGE = 'La contraseña debe tener al menos 8 caracteres';
 
 /** Account creation screen. Signs the new account in on success. */
 @Component({
   selector: 'app-register-page',
   imports: [
     ReactiveFormsModule,
-    RouterLink,
     AuthLayout,
-    AuthField,
+    AuthAlert,
+    FieldRow,
+    FieldControl,
     PasswordInput,
     PasswordStrength,
+    Button,
+    InputText,
   ],
   templateUrl: './register-page.html',
-  styleUrl: '../shared/_auth-form.scss',
+  styleUrl: './register-page.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class RegisterPage {
@@ -58,6 +70,11 @@ export class RegisterPage {
   protected readonly loginQuery: Readonly<Record<string, string>> = this.returnUrl
     ? { returnUrl: this.returnUrl }
     : {};
+
+  protected readonly emailMessages = { required: EMAIL_MESSAGE, email: EMAIL_MESSAGE };
+  protected readonly nameMessages = { required: NAME_MESSAGE, minlength: NAME_MESSAGE };
+  protected readonly passwordMessages = { required: PASSWORD_MESSAGE, minlength: PASSWORD_MESSAGE };
+  protected readonly passwordHelper = PASSWORD_HELPER;
 
   protected readonly form = new FormGroup({
     name: new FormControl('', {
@@ -84,40 +101,17 @@ export class RegisterPage {
   protected readonly submitting = signal(false);
   protected readonly formError = signal<string | null>(null);
 
-  protected nameError(): string | null {
-    const control = this.form.controls.name;
-    if (control.hasError('server')) return control.getError('server');
-    return this.submitted() && (control.hasError('required') || control.hasError('minlength'))
-      ? NAME_MESSAGE
-      : null;
-  }
-
-  protected emailError(): string | null {
-    const control = this.form.controls.email;
-    if (control.hasError('server')) return control.getError('server');
-    return this.submitted() && (control.hasError('required') || control.hasError('email'))
-      ? EMAIL_MESSAGE
-      : null;
-  }
-
-  protected passwordError(): string | null {
-    const control = this.form.controls.password;
-    if (control.hasError('server')) return control.getError('server');
-    return this.submitted() && (control.hasError('required') || control.hasError('minlength'))
-      ? PASSWORD_MESSAGE
-      : null;
-  }
-
-  /** Helper text under the password, replaced by the error while there is one. */
-  protected passwordHelper(): string | null {
-    return this.passwordError() ? null : PASSWORD_HELPER;
+  /** Detail the server attached to the field, if any. */
+  protected serverError(control: AbstractControl): string | undefined {
+    return control.getError('server') ?? undefined;
   }
 
   protected async onSubmit(): Promise<void> {
+    if (this.submitting()) return;
     this.submitted.set(true);
     this.formError.set(null);
     // Drops server errors from the previous attempt so they do not block the next submit.
-    this.form.updateValueAndValidity();
+    Object.values(this.form.controls).forEach((control) => control.updateValueAndValidity());
     if (this.form.invalid) {
       afterNextRender(() => focusFirstInvalid(this.host.nativeElement), {
         injector: this.injector,
@@ -130,9 +124,8 @@ export class RegisterPage {
       await this.auth.register(this.form.getRawValue());
       goAfterAuth(safeRedirect(this.returnUrl, this.home), this.router, this.assign);
     } catch (error) {
-      const apiError = asApiError(error);
-      if (!applyServerErrors(this.form, apiError)) {
-        this.formError.set(apiError.message || GENERIC_ERROR);
+      if (!applyServerErrors(this.form, asApiError(error))) {
+        this.formError.set(authErrorMessage(error, 'register'));
       }
     } finally {
       this.submitting.set(false);

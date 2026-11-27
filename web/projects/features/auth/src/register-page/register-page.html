@@ -1,81 +1,95 @@
-<app-auth-layout title="Crear cuenta" subtitle="Regístrate para empezar a trabajar en CoreLog.">
+<app-auth-layout
+  title="Crear cuenta"
+  subtitle="Regístrate para empezar a trabajar en CoreLog."
+  switchText="¿Ya tienes cuenta?"
+  switchLabel="Iniciar sesión"
+  switchPath="/login"
+  [switchQuery]="loginQuery"
+>
   <form
-    class="form"
+    class="register-page__form"
     novalidate
     [formGroup]="form"
     [attr.aria-busy]="submitting()"
     (ngSubmit)="onSubmit()"
   >
     @if (formError(); as message) {
-      <div class="alert error" role="alert">{{ message }}</div>
+      <app-auth-alert tone="error">{{ message }}</app-auth-alert>
     }
-    <fieldset class="fieldset" [disabled]="submitting()">
-      <app-auth-field label="Nombre" inputId="register-name" [message]="nameError()" tone="error">
-        <input
-          id="register-name"
-          class="input"
-          type="text"
-          formControlName="name"
-          autocomplete="name"
-          aria-required="true"
-          [attr.aria-invalid]="nameError() ? 'true' : null"
-          [attr.aria-describedby]="nameError() ? 'register-name-message' : null"
-        />
-      </app-auth-field>
 
-      <app-auth-field
-        label="Correo electrónico"
-        inputId="register-email"
-        [message]="emailError()"
-        tone="error"
-      >
-        <input
-          id="register-email"
-          class="input"
-          type="email"
-          formControlName="email"
-          autocomplete="email"
-          inputmode="email"
-          autocapitalize="none"
-          spellcheck="false"
-          aria-required="true"
-          [attr.aria-invalid]="emailError() ? 'true' : null"
-          [attr.aria-describedby]="emailError() ? 'register-email-message' : null"
-        />
-      </app-auth-field>
+    <app-field-row
+      label="Nombre"
+      [required]="true"
+      [control]="form.controls.name"
+      [messages]="nameMessages"
+      [submitted]="submitted()"
+      [error]="serverError(form.controls.name)"
+    >
+      <input
+        pInputText
+        appFieldControl
+        pSize="large"
+        formControlName="name"
+        type="text"
+        autocomplete="name"
+        [fluid]="true"
+      />
+    </app-field-row>
 
-      <app-auth-field
-        label="Contraseña"
-        inputId="register-password"
-        [message]="passwordError() ?? passwordHelper()"
-        [tone]="passwordError() ? 'error' : 'helper'"
-      >
-        <app-password-input
-          inputId="register-password"
-          formControlName="password"
-          autocomplete="new-password"
-          [required]="true"
-          [invalid]="!!passwordError()"
-          [describedBy]="passwordError() || passwordHelper() ? 'register-password-message' : null"
-        />
-        <app-password-strength [password]="password()" />
-      </app-auth-field>
+    <app-field-row
+      label="Correo electrónico"
+      [required]="true"
+      [control]="form.controls.email"
+      [messages]="emailMessages"
+      [submitted]="submitted()"
+      [error]="serverError(form.controls.email)"
+    >
+      <input
+        pInputText
+        appFieldControl
+        pSize="large"
+        formControlName="email"
+        type="email"
+        autocomplete="email"
+        inputmode="email"
+        autocapitalize="none"
+        spellcheck="false"
+        [fluid]="true"
+      />
+    </app-field-row>
 
-      <p class="terms">
-        Al crear tu cuenta aceptas las condiciones de uso y la política de privacidad de CoreLog.
-      </p>
+    <app-field-row
+      #passwordRow
+      label="Contraseña"
+      [required]="true"
+      [helper]="passwordHelper"
+      [control]="form.controls.password"
+      [messages]="passwordMessages"
+      [submitted]="submitted()"
+      [error]="serverError(form.controls.password)"
+    >
+      <app-password-input
+        size="lg"
+        formControlName="password"
+        autocomplete="new-password"
+        [inputId]="passwordRow.controlId"
+        [required]="true"
+        [invalid]="passwordRow.invalid()"
+        [describedBy]="passwordRow.describedBy()"
+      />
+      <app-password-strength [password]="password()" />
+    </app-field-row>
 
-      <button type="submit" class="btn btn-primary" [disabled]="submitting()">
-        @if (submitting()) {
-          <span class="spinner" aria-hidden="true"></span>
-        }
-        Crear cuenta
-      </button>
-    </fieldset>
+    <p class="register-page__terms">
+      Al crear tu cuenta aceptas las condiciones de uso y la política de privacidad de CoreLog.
+    </p>
+
+    <p-button
+      type="submit"
+      label="Crear cuenta"
+      size="large"
+      [fluid]="true"
+      [loading]="submitting()"
+    />
   </form>
-
-  <span authFooter>
-    ¿Ya tienes cuenta?
-    <a routerLink="/login" [queryParams]="loginQuery">Iniciar sesión</a>
-  </span>
 </app-auth-layout>

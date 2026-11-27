@@ -145,9 +145,11 @@ describe('InviteAcceptPage', () => {
   it('shows the organization, role and invited email for a valid invitation', async () => {
     const { fixture, el } = setup();
     await settle(fixture);
-    const details = el.querySelector('.summary');
-    expect(details?.textContent).toContain('Rol: Miembro');
-    expect(details?.textContent).toContain('Correo invitado: ana@example.com');
+    const details = el.querySelector('.invite-accept-page__card');
+    expect(details?.textContent).toContain('Acme');
+    expect(details?.textContent).toContain('Rol');
+    expect(details?.textContent).toContain('Miembro');
+    expect(details?.textContent).toContain('ana@example.com');
     expect(button(el, 'Aceptar invitación')?.disabled).toBe(false);
   });
 
@@ -205,6 +207,29 @@ describe('InviteAcceptPage', () => {
     await settle(fixture);
     expect(el.textContent).toContain('Este enlace no es válido.');
     expect(button(el, 'Aceptar invitación')).toBeUndefined();
+  });
+
+  it('says the user is already a member and offers the workspace', async () => {
+    const { fixture, el, fakes } = setup();
+    fakes.acceptInvitation.mockReturnValue(
+      throwError(() => apiError({ status: 409, code: 'org.already_member', message: 'member' })),
+    );
+    await settle(fixture);
+    button(el, 'Aceptar invitación')?.click();
+    await settle(fixture);
+    expect(el.textContent).toContain('Ya eres miembro de Acme');
+    button(el, 'Ir al espacio de trabajo')?.click();
+    expect(fakes.assign).toHaveBeenCalledWith('/workspace/');
+  });
+
+  it('offers a way home and to retry when the invitation could not be loaded', async () => {
+    const { fixture, el, router } = setup({
+      previewResult: throwError(() => apiError({ status: 500, message: 'boom' })),
+    });
+    await settle(fixture);
+    expect(button(el, 'Reintentar')).toBeDefined();
+    button(el, 'Ir al inicio')?.click();
+    expect(router.navigateByUrl).toHaveBeenCalledWith('/');
   });
 
   it('shows a loading status while the preview is pending', () => {

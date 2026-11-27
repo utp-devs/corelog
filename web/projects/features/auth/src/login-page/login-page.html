@@ -1,66 +1,71 @@
 <app-auth-layout
   title="Iniciar sesión"
-  subtitle="Accede con tu cuenta corporativa para continuar con tu trabajo."
+  subtitle="Accede con tu cuenta para continuar con tu trabajo."
+  switchText="¿No tienes cuenta?"
+  switchLabel="Crear una"
+  switchPath="/register"
+  [switchQuery]="registerQuery"
 >
   <form
-    class="form"
+    class="login-page__form"
     novalidate
     [formGroup]="form"
     [attr.aria-busy]="submitting()"
     (ngSubmit)="onSubmit()"
   >
     @if (formError(); as message) {
-      <div class="alert error" role="alert">{{ message }}</div>
+      <app-auth-alert tone="error">{{ message }}</app-auth-alert>
     }
-    <fieldset class="fieldset" [disabled]="submitting()">
-      <app-auth-field
-        label="Correo electrónico"
-        inputId="login-email"
-        [message]="emailError()"
-        tone="error"
-      >
-        <input
-          id="login-email"
-          class="input"
-          type="email"
-          formControlName="email"
-          autocomplete="email"
-          inputmode="email"
-          autocapitalize="none"
-          spellcheck="false"
-          aria-required="true"
-          [attr.aria-invalid]="emailError() ? 'true' : null"
-          [attr.aria-describedby]="emailError() ? 'login-email-message' : null"
-        />
-      </app-auth-field>
 
-      <app-auth-field
-        label="Contraseña"
-        inputId="login-password"
-        [message]="passwordError()"
-        tone="error"
-      >
-        <app-password-input
-          inputId="login-password"
-          formControlName="password"
-          autocomplete="current-password"
-          [required]="true"
-          [invalid]="!!passwordError()"
-          [describedBy]="passwordError() ? 'login-password-message' : null"
-        />
-      </app-auth-field>
+    <app-field-row
+      #emailRow
+      label="Correo electrónico"
+      [required]="true"
+      [control]="form.controls.email"
+      [messages]="emailMessages"
+      [submitted]="submitted()"
+      [error]="serverError(form.controls.email)"
+    >
+      <input
+        pInputText
+        appFieldControl
+        pSize="large"
+        formControlName="email"
+        type="email"
+        autocomplete="email"
+        inputmode="email"
+        autocapitalize="none"
+        spellcheck="false"
+        [fluid]="true"
+      />
+    </app-field-row>
 
-      <button type="submit" class="btn btn-primary" [disabled]="submitting()">
-        @if (submitting()) {
-          <span class="spinner" aria-hidden="true"></span>
-        }
-        Iniciar sesión
-      </button>
-    </fieldset>
+    <app-field-row
+      #passwordRow
+      label="Contraseña"
+      [required]="true"
+      [control]="form.controls.password"
+      [messages]="passwordMessages"
+      [submitted]="submitted()"
+      [error]="serverError(form.controls.password)"
+    >
+      <app-password-input
+        size="lg"
+        formControlName="password"
+        autocomplete="current-password"
+        [inputId]="passwordRow.controlId"
+        [required]="true"
+        [invalid]="passwordRow.invalid()"
+        [describedBy]="passwordRow.describedBy()"
+      />
+    </app-field-row>
+
+    <p-button
+      type="submit"
+      label="Iniciar sesión"
+      size="large"
+      [fluid]="true"
+      [loading]="submitting()"
+    />
   </form>
-
-  <span authFooter>
-    ¿No tienes cuenta?
-    <a routerLink="/register" [queryParams]="registerQuery">Crear una</a>
-  </span>
 </app-auth-layout>

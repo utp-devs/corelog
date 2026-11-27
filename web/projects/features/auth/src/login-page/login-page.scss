@@ -1,0 +1,7 @@
+@use '../shared/auth-page' as a;
+
+.login-page {
+  &__form {
+    @include a.form;
+  }
+}

@@ -46,9 +46,17 @@ function setup(query: Record<string, string> = {}): Setup {
   return { fixture, el: fixture.nativeElement as HTMLElement, login, assign, router };
 }
 
+/** The control a visible label points to. */
+function controlOf(el: HTMLElement, label: string): HTMLInputElement | null {
+  const found = Array.from(el.querySelectorAll('label')).find((l) =>
+    l.textContent?.trim().startsWith(label),
+  );
+  return found ? el.querySelector<HTMLInputElement>(`#${found.htmlFor}`) : null;
+}
+
 function fill(el: HTMLElement, email: string, password: string): void {
-  const emailInput = el.querySelector<HTMLInputElement>('#login-email');
-  const passwordInput = el.querySelector<HTMLInputElement>('#login-password');
+  const emailInput = controlOf(el, 'Correo electrónico');
+  const passwordInput = controlOf(el, 'Contraseña');
   if (!emailInput || !passwordInput) throw new Error('login fields not rendered');
   emailInput.value = email;
   emailInput.dispatchEvent(new Event('input'));
@@ -106,18 +114,18 @@ describe('LoginPage server field errors', () => {
     fill(el, 'ana@corelog.test', 'Secreta123');
     submit(el);
     await settle(fixture);
-    expect(el.querySelector('#login-email-message')?.textContent).toContain(
-      'debe ser un correo válido',
-    );
+    const email = controlOf(el, 'Correo electrónico');
+    const described = document.getElementById(email?.getAttribute('aria-describedby') ?? '');
+    expect(described?.textContent).toContain('debe ser un correo válido');
   });
 
-  it('shows the error message in an alert when there are no field details', async () => {
+  it('shows the Spanish message in an alert when there are no field details', async () => {
     const { fixture, el, login } = setup();
     login.mockRejectedValue(apiError());
     fill(el, 'ana@corelog.test', 'Secreta123');
     submit(el);
     await settle(fixture);
-    expect(el.querySelector('[role="alert"]')?.textContent).toContain('invalid email or password');
+    expect(el.querySelector('[role="alert"]')?.textContent).toContain('no son correctos');
   });
 });
 
@@ -135,19 +143,15 @@ describe('LoginPage landmarks and labels', () => {
 
   it('renders the brand banner in the brand panel beside the form panel', () => {
     const { el } = setup();
-    const brand = el.querySelector('main#auth-main .brand');
-    const form = el.querySelector('main#auth-main section.panel');
+    const brand = el.querySelector('main#auth-main .auth-layout__brand');
+    const form = el.querySelector('main#auth-main section.auth-layout__panel');
     expect(brand?.querySelector('img[alt="CoreLog"]')).not.toBeNull();
     expect(form?.querySelector('form')).not.toBeNull();
   });
 
   it('associates each input with its visible label and marks it required', () => {
     const { el } = setup();
-    const label = Array.from(el.querySelectorAll('label')).find(
-      (l) => l.textContent?.trim() === 'Correo electrónico',
-    );
-    expect(label?.getAttribute('for')).toBe('login-email');
-    const email = el.querySelector<HTMLInputElement>('#login-email');
+    const email = controlOf(el, 'Correo electrónico');
     expect(email?.getAttribute('aria-required')).toBe('true');
     expect(email?.getAttribute('autocomplete')).toBe('email');
     expect(email?.getAttribute('type')).toBe('email');
@@ -155,9 +159,34 @@ describe('LoginPage landmarks and labels', () => {
 });
 
 describe('LoginPage form behaviour', () => {
+  it('disables the submit button while the request is pending', async () => {
+    const { fixture, el, login } = setup();
+    let release: () => void = () => undefined;
+    login.mockReturnValue(new Promise<void>((resolve) => (release = resolve)));
+    fill(el, 'ana@corelog.test', 'Secreta123');
+    submit(el);
+    fixture.detectChanges();
+    expect(el.querySelector<HTMLButtonElement>('button[type="submit"]')?.disabled).toBe(true);
+    release();
+    await settle(fixture);
+  });
+
+  it('does not offer a password recovery link or a remember-me option', () => {
+    const { el } = setup();
+    expect(el.textContent).not.toMatch(/olvid|recordarme/i);
+  });
+
+  it('moves focus to the first invalid field after an empty submit', async () => {
+    const { fixture, el } = setup();
+    submit(el);
+    await settle(fixture);
+    await fixture.whenStable();
+    expect(document.activeElement).toBe(controlOf(el, 'Correo electrónico'));
+  });
+
   it('uses current-password autocomplete on the password field', () => {
     const { el } = setup();
-    const password = el.querySelector<HTMLInputElement>('#login-password');
+    const password = controlOf(el, 'Contraseña');
     expect(password?.getAttribute('autocomplete')).toBe('current-password');
     expect(password?.type).toBe('password');
   });
@@ -165,7 +194,7 @@ describe('LoginPage form behaviour', () => {
   it('toggles password visibility from a keyboard-reachable button', async () => {
     const { fixture, el } = setup();
     const toggle = el.querySelector<HTMLButtonElement>('button[aria-label="Mostrar contraseña"]');
-    const password = el.querySelector<HTMLInputElement>('#login-password');
+    const password = controlOf(el, 'Contraseña');
     expect(toggle?.getAttribute('aria-pressed')).toBe('false');
     toggle?.click();
     fixture.detectChanges();
@@ -176,13 +205,15 @@ describe('LoginPage form behaviour', () => {
     expect(password?.type).toBe('password');
   });
 
-  it('shows a generic alert for a failure without field details', async () => {
+  it('never shows the raw English API message', async () => {
     const { fixture, el, login } = setup();
     login.mockRejectedValue(apiError());
     fill(el, 'ana@corelog.test', 'Secreta123');
     submit(el);
     await settle(fixture);
-    expect(el.querySelector('[role="alert"]')?.textContent).toContain('invalid email or password');
+    const text = el.querySelector('[role="alert"]')?.textContent ?? '';
+    expect(text).toContain('no son correctos');
+    expect(text).not.toContain('invalid');
   });
 
   it('maps server details to the email field and marks it invalid', async () => {
@@ -198,7 +229,7 @@ describe('LoginPage form behaviour', () => {
     fill(el, 'ana@corelog.test', 'Secreta123');
     submit(el);
     await settle(fixture);
-    const email = el.querySelector<HTMLInputElement>('#login-email');
+    const email = controlOf(el, 'Correo electrónico');
     expect(email?.getAttribute('aria-invalid')).toBe('true');
     const described = document.getElementById(email?.getAttribute('aria-describedby') ?? '');
     expect(described?.textContent).toContain('debe ser un correo válido');

@@ -1,0 +1,43 @@
+@use '../../../../ui/styles/mixins' as m;
+
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.auth-alert {
+  @include m.flex-row(3, flex-start);
+  padding: var(--cl-space-3) var(--cl-space-4);
+  border: 1px solid var(--cl-border);
+  border-radius: var(--cl-radius-md);
+  font-size: var(--cl-font-body);
+  line-height: var(--cl-lh-body);
+  overflow-wrap: anywhere;
+
+  &__icon {
+    flex: none;
+    margin-top: var(--cl-space-1);
+  }
+
+  &__body {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  &[data-tone='error'] {
+    border-color: var(--cl-danger);
+    background: var(--cl-danger-bg);
+    color: var(--cl-danger-text);
+  }
+
+  &[data-tone='warning'] {
+    border-color: var(--cl-warning);
+    background: var(--cl-warning-bg);
+    color: var(--cl-warning-text);
+  }
+
+  &[data-tone='info'] {
+    background: var(--cl-bg-sunken);
+    color: var(--cl-text);
+  }
+}

@@ -1,0 +1,20 @@
+<div class="portal-not-found">
+  <header class="portal-not-found__header">
+    <a class="portal-not-found__brand" routerLink="/" aria-label="CoreLog, ir al inicio">
+      <img
+        class="portal-not-found__logo"
+        src="/brand/corelog-banner-480.png"
+        alt=""
+        width="128"
+        height="32"
+      />
+    </a>
+  </header>
+  <main class="portal-not-found__main">
+    <app-error-page
+      [variant]="404"
+      title="Página no encontrada"
+      description="La dirección que escribiste no existe o el contenido se ha movido."
+    />
+  </main>
+</div>
