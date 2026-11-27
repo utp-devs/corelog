@@ -22,6 +22,13 @@ type Handler struct {
 	jwtSecret   string
 	attachments port.AttachmentRepository
 	files       port.FileStorage
+	fieldScope  port.CustomFieldScopeReader
+}
+
+// WithFieldScope fixes the reader that lists the custom fields of an issue in its responses.
+func (h *Handler) WithFieldScope(scope port.CustomFieldScopeReader) *Handler {
+	h.fieldScope = scope
+	return h
 }
 
 func NewHandler(service port.Service, jwtSecret string) *Handler {
@@ -64,6 +71,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		ParentID:    parseOptionalUUID(req.ParentID),
 		DueDate:     req.DueDate,
 		StoryPoints: req.StoryPoints,
+		Custom:      req.Custom,
 	})
 	if err != nil {
 		httpresponse.Error(w, err)
@@ -80,7 +88,21 @@ func (h *Handler) writeIssue(w http.ResponseWriter, r *http.Request, status int,
 		httpresponse.Error(w, err)
 		return
 	}
-	httpresponse.JSON(w, status, toIssueResponse(issue, names))
+	resp := toIssueResponse(issue, names)
+	resp.Custom = issue.Custom
+	if resp.Custom == nil {
+		resp.Custom = map[string]any{}
+	}
+	resp.CustomFields = []issueCustomFieldResponse{}
+	if h.fieldScope != nil {
+		scope, err := h.fieldScope.ScopeFor(r.Context(), issue.ProjectID, issue.IssueTypeID)
+		if err != nil {
+			httpresponse.Error(w, err)
+			return
+		}
+		resp.CustomFields = toIssueCustomFields(scope)
+	}
+	httpresponse.JSON(w, status, resp)
 }
 
 func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
@@ -386,6 +408,7 @@ func (h *Handler) UpdateDetails(w http.ResponseWriter, r *http.Request) {
 		ParentID:    parseOptionalUUID(req.ParentID),
 		DueDate:     req.DueDate,
 		StoryPoints: req.StoryPoints,
+		Custom:      req.Custom,
 	})
 	if err != nil {
 		httpresponse.Error(w, err)

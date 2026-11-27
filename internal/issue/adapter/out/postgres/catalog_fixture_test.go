@@ -28,7 +28,8 @@ func addCatalogFixtures(t *testing.T, db *sqlx.DB) {
 			position INT NOT NULL DEFAULT 0, is_default BOOLEAN NOT NULL DEFAULT FALSE)`,
 		`ALTER TABLE projects ADD COLUMN organization_id UUID NOT NULL DEFAULT '` + fixtureOrgID + `'`,
 		`ALTER TABLE issues ADD COLUMN issue_type_id UUID, ADD COLUMN priority_id UUID,
-			ADD COLUMN resolution_id UUID, ADD COLUMN resolved_at TIMESTAMPTZ`,
+			ADD COLUMN resolution_id UUID, ADD COLUMN resolved_at TIMESTAMPTZ,
+			ADD COLUMN custom JSONB NOT NULL DEFAULT '{}'`,
 		`INSERT INTO issue_types (organization_id, name, is_default, legacy_key)
 			VALUES ('` + fixtureOrgID + `', 'Tarea', TRUE, 'task')`,
 		`INSERT INTO priorities (organization_id, name, is_default, legacy_key)

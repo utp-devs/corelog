@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"math/rand/v2"
 	"strconv"
@@ -77,6 +78,7 @@ type issueRec struct {
 	closed                       *time.Time
 	labels, components, watchers []uuid.UUID
 	comments                     []commentRec
+	custom                       map[string]any
 }
 
 func priorityFor(r float64) string {
@@ -247,7 +249,7 @@ func emitIssues(ds *dataset, recs []issueRec) {
 	issues := ds.table("issues", "id", "project_id", "summary", "description", "status", "priority",
 		"reporter_id", "assignee_id", "issue_type", "parent_id", "due_date", "story_points",
 		"rank", "closed_at", "created_at", "updated_at", "sprint_id", "key_number",
-		"issue_type_id", "priority_id", "resolution_id", "resolved_at")
+		"issue_type_id", "priority_id", "resolution_id", "resolved_at", "custom")
 	issueLabels := ds.ignoreDuplicates("issue_labels", "issue_id", "label_id")
 	issueComponents := ds.ignoreDuplicates("issue_components", "issue_id", "component_id")
 	watchers := ds.ignoreDuplicates("watchers", "issue_id", "user_id", "created_at")
@@ -270,7 +272,7 @@ func emitIssues(ds *dataset, recs []issueRec) {
 			r.reporter, opt(r.assignee), r.itype, opt(r.parent), opt(r.due), opt(r.points),
 			r.rank, opt(r.closed), r.created, r.updated, opt(r.sprint), keyNumbers[r.projectID],
 			catalogRef{org: r.orgID, table: "issue_types", legacy: r.itype},
-			catalogRef{org: r.orgID, table: "priorities", legacy: r.priority}, resolutionID, resolvedAt)
+			catalogRef{org: r.orgID, table: "priorities", legacy: r.priority}, resolutionID, resolvedAt, customJSON(r.custom))
 		for _, l := range r.labels {
 			issueLabels.add(r.id, l)
 		}
@@ -293,4 +295,16 @@ func emitIssues(ds *dataset, recs []issueRec) {
 			comments.add(idFor("comment", r.id.String(), strconv.Itoa(k)), r.id, c.author, c.body, c.at, c.at)
 		}
 	}
+}
+
+// customJSON encodes the custom field values of an issue. Issues without values store an empty object.
+func customJSON(values map[string]any) json.RawMessage {
+	if len(values) == 0 {
+		return json.RawMessage("{}")
+	}
+	raw, err := json.Marshal(values)
+	if err != nil {
+		panic(fmt.Sprintf("seed: encode custom values: %v", err))
+	}
+	return raw
 }

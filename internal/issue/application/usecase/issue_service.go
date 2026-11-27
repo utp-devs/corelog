@@ -37,6 +37,8 @@ type IssueService struct {
 	savedFilters  port.SavedFilterRepository
 	authorizer    port.ProjectAuthorizer
 	catalog       port.IssueCatalog
+	customScope   port.CustomFieldScopeReader
+	browse        port.ProjectBrowseChecker
 }
 
 func NewIssueService(repo port.Repository, directory port.UserDirectory, repositories ...any) *IssueService {
@@ -120,6 +122,9 @@ func (s *IssueService) Create(ctx context.Context, in port.CreateInput) (*domain
 		if err := issue.UpdateMetadata(in.IssueType, in.ParentID, in.DueDate, in.StoryPoints); err != nil {
 			return nil, err
 		}
+	}
+	if err := s.applyCustom(ctx, issue, true, uuid.Nil, in.Custom); err != nil {
+		return nil, err
 	}
 
 	if err := s.repo.Save(ctx, issue); err != nil {
@@ -433,6 +438,7 @@ func (s *IssueService) UpdateMetadata(ctx context.Context, id, actorID uuid.UUID
 	if err := s.requireIssueEdit(ctx, issue.ProjectID, actorID, globalRole); err != nil {
 		return nil, err
 	}
+	previousType := issue.IssueTypeID
 	issueType := input.IssueType
 	if s.catalog != nil {
 		if err := s.resolveTypeInto(ctx, issue, input.IssueTypeID, input.IssueType); err != nil {
@@ -441,6 +447,9 @@ func (s *IssueService) UpdateMetadata(ctx context.Context, id, actorID uuid.UUID
 		issueType = issue.IssueType
 	}
 	if err := issue.UpdateMetadata(issueType, input.ParentID, input.DueDate, input.StoryPoints); err != nil {
+		return nil, err
+	}
+	if err := s.applyCustom(ctx, issue, false, previousType, nil); err != nil {
 		return nil, err
 	}
 	if err := s.repo.Update(ctx, issue); err != nil {
@@ -457,6 +466,7 @@ func (s *IssueService) UpdateDetails(ctx context.Context, id, actorID uuid.UUID,
 	if err := s.requireIssueEdit(ctx, issue.ProjectID, actorID, globalRole); err != nil {
 		return nil, err
 	}
+	previousType := issue.IssueTypeID
 	priority, issueType := input.Priority, input.IssueType
 	if s.catalog != nil {
 		if err := s.resolvePriorityInto(ctx, issue, input.PriorityID, input.Priority); err != nil {
@@ -471,6 +481,9 @@ func (s *IssueService) UpdateDetails(ctx context.Context, id, actorID uuid.UUID,
 		return nil, err
 	}
 	if err := issue.UpdateMetadata(issueType, input.ParentID, input.DueDate, input.StoryPoints); err != nil {
+		return nil, err
+	}
+	if err := s.applyCustom(ctx, issue, false, previousType, input.Custom); err != nil {
 		return nil, err
 	}
 	if err := s.repo.Update(ctx, issue); err != nil {

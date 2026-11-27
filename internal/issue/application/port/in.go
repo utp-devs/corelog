@@ -2,6 +2,7 @@ package port
 
 import (
 	"context"
+	"encoding/json"
 	"time"
 
 	"github.com/google/uuid"
@@ -23,6 +24,8 @@ type CreateInput struct {
 	ParentID    *uuid.UUID
 	DueDate     *time.Time
 	StoryPoints *float64
+	// Custom is the raw "custom" object of the request (field id to value). Nil when absent.
+	Custom map[string]json.RawMessage
 }
 
 type UpdateMetadataInput struct {
@@ -43,6 +46,8 @@ type UpdateDetailsInput struct {
 	ParentID    *uuid.UUID
 	DueDate     *time.Time
 	StoryPoints *float64
+	// Custom is the raw "custom" object of the request. Nil when absent; an empty object checks nothing.
+	Custom map[string]json.RawMessage
 }
 
 type CreateCommentInput struct {

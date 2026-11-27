@@ -71,14 +71,18 @@ paths:
               $ref: '#/components/schemas/LoginRequest'
       responses:
         '200':
-          description: Authentication succeeded
+          description: >-
+            Credenciales correctas. Si la cuenta tiene autenticacion en dos pasos activa, la respuesta es un
+            reto (two_factor_required=true) y no abre sesion; el cliente debe llamar a /auth/login/2fa.
           content:
             application/json:
               schema:
                 type: object
                 properties:
                   data:
-                    $ref: '#/components/schemas/AuthSession'
+                    oneOf:
+                      - $ref: '#/components/schemas/AuthSession'
+                      - $ref: '#/components/schemas/TwoFactorChallenge'
         '401':
           description: The email or password is invalid
           content:
@@ -87,6 +91,190 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
         '422':
           $ref: '#/components/responses/ValidationError'
+  /auth/login/2fa:
+    post:
+      tags: [auth]
+      summary: Completar el inicio de sesion con el codigo de la aplicacion o un codigo de recuperacion
+      operationId: loginSecondFactor
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TwoFactorLoginRequest'
+      responses:
+        '200':
+          description: Codigo correcto; devuelve la sesion como el login normal
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/AuthSession'
+        '401':
+          description: El reto ha caducado, ya se uso o agoto sus intentos (auth.challenge_expired)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: >-
+            Codigo incorrecto (auth.two_factor_invalid) o falta el codigo (auth.two_factor_required), o datos
+            invalidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /auth/2fa:
+    get:
+      tags: [auth]
+      summary: Estado de la autenticacion en dos pasos del usuario actual
+      operationId: getTwoFactorStatus
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Estado actual
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/TwoFactorStatus'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /auth/2fa/enroll:
+    post:
+      tags: [auth]
+      summary: Iniciar la configuracion de la autenticacion en dos pasos (devuelve el secreto una sola vez)
+      operationId: enrollTwoFactor
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Secreto pendiente de confirmar; la autenticacion aun no esta activa
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/TwoFactorEnrollment'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          description: La autenticacion en dos pasos ya esta activada (auth.two_factor_already_enabled)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /auth/2fa/confirm:
+    post:
+      tags: [auth]
+      summary: Confirmar la configuracion con un codigo y activar la autenticacion en dos pasos
+      operationId: confirmTwoFactor
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TwoFactorCodeRequest'
+      responses:
+        '200':
+          description: Activada; devuelve los codigos de recuperacion una sola vez
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/RecoveryCodes'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          description: No hay configuracion pendiente (auth.two_factor_not_enrolled) o ya esta activada (auth.two_factor_already_enabled)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Codigo incorrecto (auth.two_factor_invalid) o datos invalidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /auth/2fa/disable:
+    post:
+      tags: [auth]
+      summary: Desactivar la autenticacion en dos pasos (contrasena actual y codigo o codigo de recuperacion)
+      operationId: disableTwoFactor
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TwoFactorDisableRequest'
+      responses:
+        '204':
+          description: Desactivada; se eliminan el secreto y los codigos de recuperacion
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          description: La autenticacion en dos pasos no esta activada (auth.two_factor_not_enabled)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Codigo incorrecto (auth.two_factor_invalid), falta el codigo (auth.two_factor_required) o datos invalidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /auth/2fa/recovery-codes:
+    post:
+      tags: [auth]
+      summary: Regenerar los codigos de recuperacion (invalida los anteriores)
+      operationId: regenerateTwoFactorRecoveryCodes
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TwoFactorCodeRequest'
+      responses:
+        '200':
+          description: Nuevos codigos de recuperacion, mostrados una sola vez
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/RecoveryCodes'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          description: La autenticacion en dos pasos no esta activada (auth.two_factor_not_enabled)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Codigo incorrecto (auth.two_factor_invalid) o datos invalidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /auth/logout:
     post:
       tags: [users]
@@ -3799,6 +3987,194 @@ paths:
             reassign_to no existe o no es compatible (catalog.reassign_target_invalid, catalog.reassign_to_self), o es el ultimo
             elemento obligatorio de su tipo (catalog.last_required_item).
           content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+  /organizations/{org}/custom-fields:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationId'
+    get:
+      tags: [custom-fields]
+      summary: Listar campos personalizados
+      description: >-
+        Devuelve las definiciones de campos de la organizacion, con sus contextos (proyectos y tipos donde aplican).
+        Cualquier miembro puede leerlas.
+      operationId: listCustomFields
+      responses:
+        '200':
+          description: Definiciones de campos
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: {$ref: '#/components/schemas/CustomField'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+    post:
+      tags: [custom-fields]
+      summary: Crear campo personalizado
+      description: >-
+        Crea una definicion al final de la lista. Solo administradores de la organizacion. El nombre es unico en la
+        organizacion sin distinguir mayusculas. Las opciones (select y multiselect) reciben identificador al crearse;
+        el tipo no se puede cambiar despues. Los limites (settings) solo aplican al tipo number.
+      operationId: createCustomField
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/CustomFieldCreateRequest'}
+      responses:
+        '201':
+          description: Campo creado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: {$ref: '#/components/schemas/CustomField'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409':
+          description: Ya existe un campo con ese nombre (custom_field.name_taken).
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+        '422': {$ref: '#/components/responses/ValidationError'}
+  /organizations/{org}/custom-fields/{id}:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationId'
+      - name: id
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+    patch:
+      tags: [custom-fields]
+      summary: Actualizar campo personalizado
+      description: >-
+        Cambio parcial de nombre, descripcion, opciones o limites. Si la lista de opciones omite una opcion que las
+        incidencias usan, la opcion se archiva en lugar de borrarse; las opciones archivadas no admiten valores nuevos.
+        Solo administradores de la organizacion.
+      operationId: updateCustomField
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/CustomFieldPatchRequest'}
+      responses:
+        '200':
+          description: Campo actualizado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: {$ref: '#/components/schemas/CustomField'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409':
+          description: Ya existe un campo con ese nombre (custom_field.name_taken).
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+        '422': {$ref: '#/components/responses/ValidationError'}
+    delete:
+      tags: [custom-fields]
+      summary: Eliminar campo personalizado
+      description: >-
+        Elimina la definicion, sus contextos y los valores guardados en las incidencias de la organizacion.
+        Solo administradores de la organizacion.
+      operationId: deleteCustomField
+      responses:
+        '204': {description: Campo eliminado}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+  /organizations/{org}/custom-fields/{id}/contexts:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationId'
+      - name: id
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+    put:
+      tags: [custom-fields]
+      summary: Reemplazar contextos del campo
+      description: >-
+        Sustituye todos los contextos del campo. Cada contexto indica proyecto y tipo de incidencia (null = todos),
+        si el campo es obligatorio en ese contexto y su valor por defecto. Solo administradores de la organizacion.
+      operationId: replaceCustomFieldContexts
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/CustomFieldContextsRequest'}
+      responses:
+        '200':
+          description: Campo con sus contextos
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: {$ref: '#/components/schemas/CustomField'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+  /projects/{id}/fields:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: Identificador del proyecto. Los no miembros reciben 404.
+        schema: {type: string, format: uuid}
+      - name: issue_type_id
+        in: query
+        required: true
+        description: Tipo de incidencia cuya disposicion de campos se consulta o se guarda.
+        schema: {type: string, format: uuid}
+    get:
+      tags: [custom-fields]
+      summary: Disposicion de campos del proyecto para un tipo
+      description: >-
+        Devuelve los campos del sistema y los personalizados que aplican al tipo en el proyecto, en orden, con su
+        marca de obligatorio. Sin disposicion guardada (configured false) se usa el orden por defecto. Requiere ver el proyecto.
+      operationId: getProjectFieldLayout
+      responses:
+        '200':
+          description: Disposicion de campos
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: {$ref: '#/components/schemas/ProjectFieldLayout'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+    put:
+      tags: [custom-fields]
+      summary: Guardar disposicion de campos del proyecto para un tipo
+      description: >-
+        Reemplaza la disposicion del tipo en el proyecto. Cada entrada es un campo del sistema (key) o un campo
+        personalizado de la organizacion (field_id), sin repetir. Requiere editar el proyecto.
+      operationId: replaceProjectFieldLayout
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/ProjectFieldLayoutRequest'}
+      responses:
+        '200':
+          description: Disposicion guardada
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: {$ref: '#/components/schemas/ProjectFieldLayout'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
   /projects/{id}/issue-types:
     parameters:
       - name: id
@@ -4846,6 +5222,90 @@ components:
           schema:
             $ref: '#/components/schemas/ErrorResponse'
   schemas:
+    TwoFactorChallenge:
+      type: object
+      description: Reto de inicio de sesion. El token caduca a los 5 minutos y solo sirve para /auth/login/2fa.
+      required: [two_factor_required, challenge_token]
+      properties:
+        two_factor_required:
+          type: boolean
+          enum: [true]
+        challenge_token:
+          type: string
+    TwoFactorLoginRequest:
+      type: object
+      description: Indica exactamente uno de code o recovery_code.
+      required: [challenge_token]
+      additionalProperties: false
+      properties:
+        challenge_token:
+          type: string
+        code:
+          type: string
+          maxLength: 16
+          description: Codigo de 6 digitos de la aplicacion de autenticacion
+        recovery_code:
+          type: string
+          maxLength: 64
+          description: Codigo de recuperacion de 10 caracteres (guiones y mayusculas se ignoran)
+    TwoFactorStatus:
+      type: object
+      required: [enabled, enabled_at, recovery_codes_remaining]
+      properties:
+        enabled:
+          type: boolean
+        enabled_at:
+          type: string
+          format: date-time
+          nullable: true
+        recovery_codes_remaining:
+          type: integer
+          minimum: 0
+    TwoFactorEnrollment:
+      type: object
+      description: Se devuelve una sola vez. El secreto no vuelve a mostrarse.
+      required: [secret, otpauth_uri]
+      properties:
+        secret:
+          type: string
+          description: Secreto en base32 para introducir manualmente
+        otpauth_uri:
+          type: string
+          description: URI otpauth:// para generar el codigo QR
+    TwoFactorCodeRequest:
+      type: object
+      required: [code]
+      additionalProperties: false
+      properties:
+        code:
+          type: string
+          maxLength: 16
+          description: Codigo de 6 digitos de la aplicacion de autenticacion
+    TwoFactorDisableRequest:
+      type: object
+      description: Requiere la contrasena actual y un codigo de la aplicacion o un codigo de recuperacion.
+      required: [password]
+      additionalProperties: false
+      properties:
+        password:
+          type: string
+        code:
+          type: string
+          maxLength: 16
+        recovery_code:
+          type: string
+          maxLength: 64
+    RecoveryCodes:
+      type: object
+      description: Codigos de recuperacion de un solo uso, mostrados una sola vez.
+      required: [recovery_codes]
+      properties:
+        recovery_codes:
+          type: array
+          items:
+            type: string
+          minItems: 10
+          maxItems: 10
     Role:
       type: string
       enum: [admin, user]
@@ -5723,6 +6183,10 @@ components:
       type: object
       required: [summary, description]
       properties:
+        custom:
+          type: object
+          additionalProperties: true
+          description: Valores de campos personalizados por id de campo. Solo se aceptan campos que aplican al proyecto y tipo; los obligatorios y los valores por defecto se aplican al crear (issue.custom_field_invalid con details por campo).
         summary:
           type: string
           minLength: 3
@@ -5782,6 +6246,10 @@ components:
       type: object
       required: [summary, description]
       properties:
+        custom:
+          type: object
+          additionalProperties: true
+          description: Cambio parcial de valores personalizados (null borra el valor). Los campos obligatorios que el cuerpo nombra se validan; una incidencia que cambia de tipo revalida todos los obligatorios y descarta los valores fuera de contexto.
         summary:
           type: string
           minLength: 3
@@ -6178,6 +6646,166 @@ components:
         configured:
           type: boolean
           description: false cuando el proyecto no tiene configuracion propia y usa todos los tipos de la organizacion.
+    CustomFieldOption:
+      type: object
+      required: [id, label, position, archived]
+      properties:
+        id: {type: string, maxLength: 64, description: Identificador estable de la opcion. Lo asigna el servidor al crearla.}
+        label: {type: string, maxLength: 60}
+        color: {type: string, description: Color de la paleta de la aplicacion; vacio si no tiene.}
+        position: {type: integer, minimum: 0}
+        archived: {type: boolean, description: Las opciones archivadas siguen resolviendo valores existentes pero no admiten valores nuevos.}
+    CustomFieldSettings:
+      type: object
+      description: Limites del tipo number. Ausentes cuando el campo no tiene limites.
+      properties:
+        min: {type: number, nullable: true}
+        max: {type: number, nullable: true}
+    CustomFieldContext:
+      type: object
+      required: [required, default_value]
+      properties:
+        project_id: {type: string, format: uuid, nullable: true, description: Proyecto del contexto; null = todos los proyectos de la organizacion.}
+        issue_type_id: {type: string, format: uuid, nullable: true, description: Tipo de incidencia del contexto; null = todos los tipos.}
+        required: {type: boolean}
+        default_value: {nullable: true, description: Valor por defecto aplicado al crear, con la forma del tipo de campo.}
+    CustomField:
+      type: object
+      required: [id, name, description, type, options, position, contexts, created_at, updated_at]
+      properties:
+        id: {type: string, format: uuid}
+        name: {type: string, maxLength: 60}
+        description: {type: string, maxLength: 500}
+        type:
+          type: string
+          enum: [text, paragraph, number, date, datetime, select, multiselect, checkbox, user, url, labels]
+        options:
+          type: array
+          description: Solo para select y multiselect; vacio en los demas tipos.
+          items: {$ref: '#/components/schemas/CustomFieldOption'}
+        settings: {$ref: '#/components/schemas/CustomFieldSettings'}
+        position: {type: integer, minimum: 0}
+        contexts:
+          type: array
+          items: {$ref: '#/components/schemas/CustomFieldContext'}
+        created_at: {type: string, format: date-time}
+        updated_at: {type: string, format: date-time}
+    CustomFieldCreateRequest:
+      type: object
+      required: [name, type]
+      additionalProperties: false
+      properties:
+        name: {type: string, maxLength: 60}
+        description: {type: string, maxLength: 500}
+        type:
+          type: string
+          enum: [text, paragraph, number, date, datetime, select, multiselect, checkbox, user, url, labels]
+        options:
+          type: array
+          maxItems: 100
+          description: Opciones iniciales (solo select y multiselect). Al crear no se envia id.
+          items:
+            type: object
+            required: [label]
+            additionalProperties: false
+            properties:
+              label: {type: string, maxLength: 60}
+              color: {type: string}
+        settings:
+          type: object
+          additionalProperties: false
+          properties:
+            min: {type: number}
+            max: {type: number}
+    CustomFieldPatchRequest:
+      type: object
+      additionalProperties: false
+      description: Cambio parcial. Enviar options reemplaza la lista completa; las opciones con id existente conservan su identificador.
+      properties:
+        name: {type: string, maxLength: 60}
+        description: {type: string, maxLength: 500}
+        options:
+          type: array
+          maxItems: 100
+          items:
+            type: object
+            required: [label]
+            additionalProperties: false
+            properties:
+              id: {type: string, maxLength: 64, description: Vacio o ausente crea una opcion nueva.}
+              label: {type: string, maxLength: 60}
+              color: {type: string}
+              archived: {type: boolean}
+        settings:
+          type: object
+          additionalProperties: false
+          properties:
+            min: {type: number, nullable: true}
+            max: {type: number, nullable: true}
+    CustomFieldContextsRequest:
+      type: object
+      required: [contexts]
+      additionalProperties: false
+      properties:
+        contexts:
+          type: array
+          description: Lista completa de contextos. Cada par proyecto y tipo aparece una sola vez.
+          items:
+            type: object
+            additionalProperties: false
+            properties:
+              project_id: {type: string, format: uuid, nullable: true}
+              issue_type_id: {type: string, format: uuid, nullable: true}
+              required: {type: boolean}
+              default_value: {nullable: true}
+    IssueCustomField:
+      type: object
+      description: Campo personalizado que aplica a la incidencia, para renderizar su valor.
+      required: [field_id, name, type, options, required]
+      properties:
+        field_id: {type: string, format: uuid}
+        name: {type: string}
+        type: {type: string}
+        options: {type: array, items: {$ref: '#/components/schemas/CustomFieldOption'}}
+        required: {type: boolean, description: Obligatorio en el contexto de la incidencia (contexto o disposicion).}
+    ProjectFieldLayout:
+      type: object
+      required: [issue_type_id, configured, items]
+      properties:
+        issue_type_id: {type: string, format: uuid}
+        configured: {type: boolean, description: false cuando el proyecto no tiene disposicion propia para el tipo.}
+        items:
+          type: array
+          items:
+            type: object
+            required: [kind, required]
+            properties:
+              kind: {type: string, enum: [system, custom]}
+              key: {type: string, description: Presente en entradas del sistema.}
+              field_id: {type: string, format: uuid, description: Presente en entradas personalizadas.}
+              name: {type: string}
+              type: {type: string}
+              options: {type: array, items: {$ref: '#/components/schemas/CustomFieldOption'}}
+              required: {type: boolean}
+    ProjectFieldLayoutRequest:
+      type: object
+      required: [items]
+      additionalProperties: false
+      properties:
+        items:
+          type: array
+          minItems: 1
+          items:
+            type: object
+            required: [kind]
+            additionalProperties: false
+            properties:
+              kind: {type: string, enum: [system, custom]}
+              key:
+                type: string
+                enum: [summary, description, priority, assignee, parent, due_date, story_points, labels]
+              field_id: {type: string, format: uuid}
+              required: {type: boolean}
     IssueTypeRef:
       type: object
       description: Tipo de incidencia de una incidencia.

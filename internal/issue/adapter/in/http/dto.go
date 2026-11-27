@@ -27,16 +27,17 @@ func toSavedFilterResponse(filter *domain.SavedFilter) savedFilterResponse {
 }
 
 type createIssueRequest struct {
-	Summary     string     `json:"summary" validate:"required,min=3,max=200"`
-	Description string     `json:"description" validate:"required,min=3"`
-	Priority    string     `json:"priority" validate:"omitempty,oneof=low medium high critical"`
-	PriorityID  string     `json:"priority_id" validate:"omitempty,uuid"`
-	ProjectID   string     `json:"project_id" validate:"omitempty,uuid"`
-	IssueType   string     `json:"issue_type" validate:"omitempty,oneof=task bug story epic subtask"`
-	IssueTypeID string     `json:"issue_type_id" validate:"omitempty,uuid"`
-	ParentID    string     `json:"parent_id" validate:"omitempty,uuid4"`
-	DueDate     *time.Time `json:"due_date"`
-	StoryPoints *float64   `json:"story_points"`
+	Summary     string                     `json:"summary" validate:"required,min=3,max=200"`
+	Description string                     `json:"description" validate:"required,min=3"`
+	Priority    string                     `json:"priority" validate:"omitempty,oneof=low medium high critical"`
+	PriorityID  string                     `json:"priority_id" validate:"omitempty,uuid"`
+	ProjectID   string                     `json:"project_id" validate:"omitempty,uuid"`
+	IssueType   string                     `json:"issue_type" validate:"omitempty,oneof=task bug story epic subtask"`
+	IssueTypeID string                     `json:"issue_type_id" validate:"omitempty,uuid"`
+	ParentID    string                     `json:"parent_id" validate:"omitempty,uuid4"`
+	DueDate     *time.Time                 `json:"due_date"`
+	StoryPoints *float64                   `json:"story_points"`
+	Custom      map[string]json.RawMessage `json:"custom"`
 }
 
 type updateMetadataRequest struct {
@@ -48,15 +49,16 @@ type updateMetadataRequest struct {
 }
 
 type updateDetailsRequest struct {
-	Summary     string     `json:"summary" validate:"required,min=3,max=200"`
-	Description string     `json:"description" validate:"required,min=3"`
-	Priority    string     `json:"priority" validate:"omitempty,oneof=low medium high critical"`
-	PriorityID  string     `json:"priority_id" validate:"omitempty,uuid"`
-	IssueType   string     `json:"issue_type" validate:"omitempty,oneof=task bug story epic subtask"`
-	IssueTypeID string     `json:"issue_type_id" validate:"omitempty,uuid"`
-	ParentID    string     `json:"parent_id" validate:"omitempty,uuid4"`
-	DueDate     *time.Time `json:"due_date"`
-	StoryPoints *float64   `json:"story_points"`
+	Summary     string                     `json:"summary" validate:"required,min=3,max=200"`
+	Description string                     `json:"description" validate:"required,min=3"`
+	Priority    string                     `json:"priority" validate:"omitempty,oneof=low medium high critical"`
+	PriorityID  string                     `json:"priority_id" validate:"omitempty,uuid"`
+	IssueType   string                     `json:"issue_type" validate:"omitempty,oneof=task bug story epic subtask"`
+	IssueTypeID string                     `json:"issue_type_id" validate:"omitempty,uuid"`
+	ParentID    string                     `json:"parent_id" validate:"omitempty,uuid4"`
+	DueDate     *time.Time                 `json:"due_date"`
+	StoryPoints *float64                   `json:"story_points"`
+	Custom      map[string]json.RawMessage `json:"custom"`
 }
 
 type createCommentRequest struct {
@@ -148,28 +150,30 @@ type assignedUserValidation struct {
 }
 
 type issueResponse struct {
-	ID           string         `json:"id"`
-	Key          string         `json:"key"`
-	ProjectID    string         `json:"project_id"`
-	ProjectKey   string         `json:"project_key"`
-	Summary      string         `json:"summary"`
-	Description  string         `json:"description"`
-	Status       string         `json:"status"`
-	IssueType    *issueTypeRef  `json:"issue_type"`
-	Priority     *priorityRef   `json:"priority"`
-	Resolution   *resolutionRef `json:"resolution"`
-	ResolvedAt   *time.Time     `json:"resolved_at"`
-	ParentID     *string        `json:"parent_id,omitempty"`
-	DueDate      *time.Time     `json:"due_date,omitempty"`
-	StoryPoints  *float64       `json:"story_points,omitempty"`
-	Rank         string         `json:"rank"`
-	ClosedAt     *time.Time     `json:"closed_at,omitempty"`
-	ReporterID   string         `json:"reporter_id"`
-	ReporterName string         `json:"reporter_name"`
-	AssigneeID   *string        `json:"assignee_id,omitempty"`
-	AssigneeName *string        `json:"assignee_name,omitempty"`
-	CreatedAt    time.Time      `json:"created_at"`
-	UpdatedAt    time.Time      `json:"updated_at"`
+	ID           string                     `json:"id"`
+	Key          string                     `json:"key"`
+	ProjectID    string                     `json:"project_id"`
+	ProjectKey   string                     `json:"project_key"`
+	Summary      string                     `json:"summary"`
+	Description  string                     `json:"description"`
+	Status       string                     `json:"status"`
+	IssueType    *issueTypeRef              `json:"issue_type"`
+	Priority     *priorityRef               `json:"priority"`
+	Resolution   *resolutionRef             `json:"resolution"`
+	ResolvedAt   *time.Time                 `json:"resolved_at"`
+	ParentID     *string                    `json:"parent_id,omitempty"`
+	DueDate      *time.Time                 `json:"due_date,omitempty"`
+	StoryPoints  *float64                   `json:"story_points,omitempty"`
+	Rank         string                     `json:"rank"`
+	ClosedAt     *time.Time                 `json:"closed_at,omitempty"`
+	ReporterID   string                     `json:"reporter_id"`
+	ReporterName string                     `json:"reporter_name"`
+	AssigneeID   *string                    `json:"assignee_id,omitempty"`
+	AssigneeName *string                    `json:"assignee_name,omitempty"`
+	CreatedAt    time.Time                  `json:"created_at"`
+	Custom       map[string]any             `json:"custom"`
+	CustomFields []issueCustomFieldResponse `json:"custom_fields"`
+	UpdatedAt    time.Time                  `json:"updated_at"`
 }
 
 // toIssueResponse arma la respuesta de una incidencia. names contiene el nombre de cada persona implicada.

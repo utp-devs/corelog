@@ -35,6 +35,8 @@ type Issue struct {
 	PriorityRef   *CatalogRef
 	ResolutionRef *CatalogRef
 	ReporterID    uuid.UUID
+	// Custom holds the values of custom fields keyed by field id. Values are normalized by NormalizeFieldValue.
+	Custom map[string]any
 	// KeyNumber is the per-project issue number; ProjectKey is read from the project and not stored on the issue.
 	KeyNumber  int
 	ProjectKey string

@@ -1,6 +1,7 @@
 package postgres
 
 import (
+	"encoding/json"
 	"time"
 
 	"github.com/google/uuid"
@@ -13,7 +14,7 @@ import (
 const issueColumns = `id, project_id, summary, description, status, priority, issue_type, parent_id,
 		       due_date, story_points, rank, closed_at, reporter_id, assignee_id, key_number,
 		       (SELECT p.key FROM projects p WHERE p.id = issues.project_id) AS project_key, created_at, updated_at,
-		       issue_type_id, priority_id, resolution_id, resolved_at,
+		       issue_type_id, priority_id, resolution_id, resolved_at, custom,
 		       (SELECT it.name FROM issue_types it WHERE it.id = issues.issue_type_id) AS issue_type_name,
 		       (SELECT it.icon FROM issue_types it WHERE it.id = issues.issue_type_id) AS issue_type_icon,
 		       (SELECT it.color FROM issue_types it WHERE it.id = issues.issue_type_id) AS issue_type_color,
@@ -47,6 +48,7 @@ type issueRow struct {
 	PriorityID     uuid.UUID  `db:"priority_id"`
 	ResolutionID   *uuid.UUID `db:"resolution_id"`
 	ResolvedAt     *time.Time `db:"resolved_at"`
+	Custom         []byte     `db:"custom"`
 	IssueTypeName  *string    `db:"issue_type_name"`
 	IssueTypeIcon  *string    `db:"issue_type_icon"`
 	IssueTypeColor *string    `db:"issue_type_color"`
@@ -81,6 +83,7 @@ func (r issueRow) toDomain() *domain.Issue {
 		PriorityID:   r.PriorityID,
 		ResolutionID: r.ResolutionID,
 		ResolvedAt:   r.ResolvedAt,
+		Custom:       decodeCustom(r.Custom),
 	}
 	if r.IssueTypeName != nil {
 		issue.IssueTypeRef = &domain.CatalogRef{
@@ -123,7 +126,34 @@ func fromDomain(t *domain.Issue) issueRow {
 		PriorityID:   t.PriorityID,
 		ResolutionID: t.ResolutionID,
 		ResolvedAt:   t.ResolvedAt,
+		Custom:       encodeCustom(t.Custom),
 	}
+}
+
+// decodeCustom reads the custom values column. The column is a JSON object by constraint; anything else reads
+// as no values, so a corrupt row cannot break the issue read path.
+func decodeCustom(raw []byte) map[string]any {
+	values := map[string]any{}
+	if len(raw) == 0 {
+		return values
+	}
+	if err := json.Unmarshal(raw, &values); err != nil || values == nil {
+		return map[string]any{}
+	}
+	return values
+}
+
+// encodeCustom writes the custom values as a JSON object. The values were normalized by the use cases, so
+// marshalling them cannot fail; a nil map is stored as an empty object.
+func encodeCustom(values map[string]any) []byte {
+	if len(values) == 0 {
+		return []byte("{}")
+	}
+	raw, err := json.Marshal(values)
+	if err != nil {
+		return []byte("{}")
+	}
+	return raw
 }
 
 func deref(s *string) string {

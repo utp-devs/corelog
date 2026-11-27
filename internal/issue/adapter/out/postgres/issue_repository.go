@@ -85,13 +85,13 @@ func (r *IssueRepository) save(ctx context.Context, t *domain.Issue) error {
 		INSERT INTO issues (
 			project_id, summary, description, status, priority, issue_type, parent_id,
 			due_date, story_points, rank, closed_at, reporter_id, assignee_id, key_number, created_at, updated_at,
-			issue_type_id, priority_id, resolution_id, resolved_at
+			issue_type_id, priority_id, resolution_id, resolved_at, custom
 		)
 		VALUES (
 			:project_id, :summary, :description, :status, :priority,
 			:issue_type, :parent_id, :due_date, :story_points, :rank, :closed_at,
 			:reporter_id, :assignee_id, :key_number, :created_at, :updated_at,
-			:issue_type_id, :priority_id, :resolution_id, :resolved_at
+			:issue_type_id, :priority_id, :resolution_id, :resolved_at, CAST(:custom AS JSONB)
 		)
 		RETURNING id`
 
@@ -283,7 +283,8 @@ func (r *IssueRepository) Update(ctx context.Context, t *domain.Issue) error {
 		    story_points = :story_points, rank = :rank, closed_at = :closed_at,
 		    assignee_id = :assignee_id, updated_at = :updated_at,
 		    issue_type_id = :issue_type_id, priority_id = :priority_id,
-		    resolution_id = :resolution_id, resolved_at = :resolved_at
+		    resolution_id = :resolution_id, resolved_at = :resolved_at,
+		    custom = CAST(:custom AS JSONB)
 		WHERE id = :id AND EXISTS (SELECT 1 FROM projects p WHERE p.id = issues.project_id AND p.deleted_at IS NULL)`
 
 	result, err := sqlx.NamedExecContext(ctx, database.Executor(ctx, r.db), query, row)
@@ -323,7 +324,8 @@ func (r *IssueRepository) updateAndWatchAssignee(ctx context.Context, t *domain.
 		    story_points = :story_points, rank = :rank, closed_at = :closed_at,
 		    assignee_id = :assignee_id, updated_at = :updated_at,
 		    issue_type_id = :issue_type_id, priority_id = :priority_id,
-		    resolution_id = :resolution_id, resolved_at = :resolved_at
+		    resolution_id = :resolution_id, resolved_at = :resolved_at,
+		    custom = CAST(:custom AS JSONB)
 		WHERE id = :id AND EXISTS (SELECT 1 FROM projects p WHERE p.id = issues.project_id AND p.deleted_at IS NULL)`
 	result, err := sqlx.NamedExecContext(ctx, exec, query, row)
 	if err != nil {

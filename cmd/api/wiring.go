@@ -72,6 +72,14 @@ func buildRouter(cfg *config.Config, db *sqlx.DB, log *slog.Logger) (chi.Router,
 	issueCatalogRepo := issuepostgres.NewCatalogRepository(db)
 
 	userModule := user.NewModule(userRepo, sessionRepo, database.NewTxManager(db), userpostgres.NewMembershipDetacher(db), cfg.Auth.JWTSecret, cfg.Auth.JWTExpiration)
+	secretCipher, err := twoFactorCipher(cfg, log)
+	if err != nil {
+		return nil, err
+	}
+	twoFactorService := user.NewTwoFactorService(userRepo, userpostgres.NewTwoFactorRepository(db), secretCipher,
+		database.NewTxManager(db), events.NewPostgresPublisher(func(ctx context.Context) sqlx.ExtContext { return database.Executor(ctx, db) }),
+		clock.RealClock{})
+	userModule.Handler.WithTwoFactor(twoFactorService)
 	orgModule := organization.NewModule(
 		organizationpostgres.NewRepository(db),
 		database.NewTxManager(db),
@@ -117,6 +125,9 @@ func buildRouter(cfg *config.Config, db *sqlx.DB, log *slog.Logger) (chi.Router,
 	issueModule.WithCatalog(issueCatalogRepo)
 	catalogModule := issue.NewCatalogModule(issueCatalogRepo, orgCatalogRoleChecker{svc: orgModule.Service}, projectAuthorizer, database.NewTxManager(db), clock.RealClock{}, cfg.Auth.JWTSecret)
 	issueModule.Handler.WithAttachments(attachmentRepo, fileStorage)
+	customFieldModule := issue.NewCustomFieldModule(issuepostgres.NewCustomFieldRepository(db), orgCatalogRoleChecker{svc: orgModule.Service}, projectAuthorizer, database.NewTxManager(db), clock.RealClock{}, cfg.Auth.JWTSecret)
+	issueModule.WithCustomFields(customFieldModule.Service, projectBrowseChecker{authorizer: projectAuthorizer})
+	issueModule.Handler.WithFieldScope(customFieldModule.Service)
 
 	avatarStorage := filestorage.NewDiskStorage(dirFromEnv("AVATARS_DIR", filepath.Join("data", "avatars")))
 	logoStorage := filestorage.NewDiskStorage(dirFromEnv("LOGOS_DIR", filepath.Join("data", "logos")))
@@ -128,6 +139,7 @@ func buildRouter(cfg *config.Config, db *sqlx.DB, log *slog.Logger) (chi.Router,
 		avatar.RegisterRoutes(r)
 		logo.RegisterRoutes(r)
 		catalogModule.Handler.RegisterCatalogRoutes(r)
+		customFieldModule.Handler.RegisterCustomFieldRoutes(r)
 		httpserver.Mount(r, userModule.Handler, teamModule.Handler, projectModule.Handler, boardModule.Handler, issueModule.Handler, sprintModule.Handler, notificationModule.Handler, calendarModule.Handler, searchModule.Handler, dashboardModule.Handler, favoriteModule.Handler, noteModule.Handler, orgModule.Handler)
 	})
 	return router, nil

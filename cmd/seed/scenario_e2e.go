@@ -279,6 +279,7 @@ func buildE2E(passwordHash string) *dataset {
 		}
 		recs = append(recs, rec)
 	}
+	addE2ECustomFields(ds, org, recs)
 	emitIssues(ds, recs)
 	syncIssueCounters(ds, recs)
 	addE2EFilterAndNotifications(ds, org, recs)
