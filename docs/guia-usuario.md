@@ -19,7 +19,7 @@ Quien no es miembro de un proyecto no lo ve: ni en el listado, ni en la búsqued
 |---|:-:|:-:|:-:|:-:|:-:|
 | Ver proyecto e incidencias | Sí | Sí | Sí | Sí | No |
 | Editar datos del proyecto | Sí | Sí | No | No | No |
-| Eliminar proyecto | Sí | No | No | No | No |
+| Eliminar proyecto | Sí | Sí | No | No | No |
 | Gestionar miembros y roles | Sí | Sí | No | No | No |
 | Crear y editar incidencias | Sí | Sí | Sí | No | No |
 | Comentar y adjuntar | Sí | Sí | Sí | No | No |
@@ -29,7 +29,7 @@ Quien no es miembro de un proyecto no lo ve: ni en el listado, ni en la búsqued
 | Gestionar flujo de estados | Sí | Sí | No | No | No |
 | Planificar, iniciar y cerrar sprints | Sí | Sí | No | No | No |
 
-Nota: "Eliminar proyecto" está reservado al administrador en la matriz de permisos, aunque en la versión actual el lead puede borrarlo; esta diferencia está pendiente de decisión.
+Los propietarios y administradores de la organización actúan como lead en todos sus proyectos, incluidos los privados. La matriz describe el esquema de permisos predeterminado; cada proyecto puede tener su propio esquema (ver "Proyectos").
 
 ## Navegación
 
@@ -42,6 +42,84 @@ Nota: "Eliminar proyecto" está reservado al administrador en la matriz de permi
 - **Mi resumen:** tus incidencias abiertas, las vencidas, tus proyectos, los sprints activos de esos proyectos y las incidencias más urgentes.
 - **Búsqueda:** en la cabecera, busca proyectos (por nombre o clave) e incidencias (por título o descripción). Solo aparece lo que puedes ver. Escribe al menos dos caracteres.
 - **Notificaciones:** la campana de la cabecera muestra cuántos avisos tienes sin leer. Se actualiza cada 30 segundos. Recibes un aviso cuando te asignan una incidencia.
+
+## Proyectos
+
+### Crear un proyecto
+
+Quien crea un proyecto queda como su lead. Pueden crear proyectos los propietarios y administradores de la organización, y los miembros cuando la política de la organización lo permite. Los invitados no pueden crear proyectos.
+
+Al crear el proyecto indicas:
+
+- **Nombre** (hasta 120 caracteres) y **descripción** opcional.
+- **Clave**: de 2 a 10 caracteres, empieza por una letra y usa solo letras y números. Se guarda en mayúsculas (por ejemplo `CORE`). Puedes usar la clave en lugar del identificador en las direcciones de la API.
+- **Plantilla** (ver la tabla siguiente).
+- **Visibilidad**: abierta o privada.
+- **Color** e **icono** para reconocer el proyecto en la interfaz.
+
+La clave debe ser única dentro de la organización entre los proyectos no eliminados. Si está ocupada, el formulario lo indica antes de crear. Al eliminar un proyecto su clave queda libre.
+
+### Plantillas
+
+| Plantilla | Tipo | Sprints | Columnas del tablero | Tipos de incidencia |
+|---|---|:-:|---|---|
+| Scrum | Scrum | Sí | Por hacer, En curso, En revisión, Hecho | Épica, Historia, Tarea, Error, Subtarea |
+| Kanban | Kanban | No | Por hacer, En curso, En revisión, Hecho | Épica, Historia, Tarea, Error, Subtarea |
+| Seguimiento de tareas | Kanban | No | Por hacer, En curso, Hecho | Tarea, Subtarea |
+| Seguimiento de errores | Kanban | No | Nuevo, Confirmado, En curso, Resuelto, Cerrado | Error, Regresión, Incidencia, Mejora |
+
+La plantilla define el tablero predeterminado, los estados del flujo y los tipos de incidencia. Solo Scrum tiene backlog de sprints. Puedes cambiar un proyecto Scrum a Kanban y al revés. Un proyecto de seguimiento de tareas o de errores no puede pasar a Scrum.
+
+### Visibilidad
+
+- **Abierta:** todos los miembros de la organización ven el proyecto y sus incidencias. Los invitados solo lo ven si tienen acceso explícito (miembro del proyecto o de un equipo con acceso).
+- **Privada:** lo ven los propietarios y administradores de la organización, los miembros del proyecto y los miembros de los equipos con acceso. Para cualquier otra persona el proyecto no existe: la API responde 404 y no aparece en listados, búsquedas ni favoritos.
+
+La visibilidad predeterminada de los proyectos nuevos la define la organización.
+
+### Roles en el proyecto
+
+Cada persona con acceso tiene un rol en el proyecto: **lead**, **contributor** o **viewer**.
+
+- **Lead:** gestiona el proyecto: datos, miembros y roles, tablero, flujo de estados, sprints, componentes, borrado de incidencias, archivado y eliminación. Un proyecto siempre conserva al menos un lead.
+- **Contributor:** crea, edita y asigna incidencias, las mueve por el tablero, comenta, adjunta archivos, enlaza incidencias, registra horas y usa los cambios masivos. No gestiona el tablero, los sprints, los componentes ni los miembros.
+- **Viewer:** ve el proyecto, sigue y vota incidencias, consulta informes y exporta. No modifica nada. Solo puede cambiar de estado una incidencia de la que es responsable.
+
+Un usuario puede tener un rol directo y, además, heredar el de un equipo. Se aplica el más amplio.
+
+Los invitados de una organización no reciben rol por pertenecer a ella: necesitan un rol directo o a través de un equipo. Un miembro de la organización ve los proyectos abiertos como viewer aunque no esté en el proyecto.
+
+### Acceso de equipos
+
+El lead puede dar a un equipo de la organización un rol en el proyecto (lead, contributor o viewer). Ese rol se aplica a todos los miembros del equipo, incluidos los que se incorporen después. Solo se pueden dar equipos de la misma organización. Para quitar el acceso, elimina la concesión del equipo; los miembros que tengan un rol directo lo conservan.
+
+### Esquema de permisos
+
+Cada proyecto puede ajustar qué puede hacer cada rol. El esquema predeterminado es el de la matriz de arriba. El lead edita el esquema por permiso: elige qué titulares lo tienen (lead, contributor, viewer, org_admin, reporter, assignee, watcher). Los cambios se aplican desde la siguiente petición.
+
+Reglas que el servidor siempre comprueba:
+
+- El rol lead debe conservar `manage_members` y `edit_project`.
+- `delete_project` debe seguir asignado al lead o al org_admin.
+- `browse_project` debe incluir a viewer, contributor o lead, para que alguien pueda ver el proyecto.
+
+Ejemplo: si concedes "crear incidencias" al viewer, un viewer puede crear incidencias en ese proyecto. Si quitas "crear incidencias" al contributor, deja de poder crearlas, aunque siga siendo miembro. Para volver al esquema predeterminado, usa "Restablecer": se borran todas las reglas propias del proyecto.
+
+### Favoritos y recientes
+
+- **Favoritos:** marca un proyecto con la estrella para tenerlo arriba en el menú de proyectos. Solo aparecen los que puedes ver todavía.
+- **Recientes:** se registra un proyecto cada vez que lo abres. El menú muestra los últimos.
+
+### Archivar y eliminar
+
+- **Archivar** deja el proyecto en solo lectura: no puedes cambiar su nombre, su configuración, su visibilidad ni su plantilla, y la API responde 409 (`project.archived`). El proyecto desaparece del listado normal y se puede ver con el filtro de archivados. **Restaurar** lo devuelve a la lista activa. En esta versión, el bloqueo cubre la configuración del proyecto; las incidencias y el tablero todavía no se bloquean al archivar.
+- **Eliminar** es un borrado lógico. Solo lo pueden hacer el lead y los propietarios o administradores de la organización. Debes escribir el nombre exacto del proyecto para confirmarlo. El proyecto deja de aparecer en todas las vistas y su clave queda libre. La interfaz no ofrece recuperarlo.
+
+### Qué pueden hacer los invitados y los viewers
+
+- **Invitado sin acceso explícito:** no ve el proyecto. No aparece en listados, búsquedas ni favoritos.
+- **Invitado con rol viewer:** ve el proyecto, sigue y vota incidencias, consulta informes y exporta. No crea ni modifica incidencias.
+- **Viewer:** igual que el invitado con rol viewer. Un administrador del proyecto puede concederle permisos adicionales en el esquema, por ejemplo crear incidencias.
 
 ## Tareas frecuentes
 

@@ -128,6 +128,8 @@ Los miembros de un proyecto pueden seguir o dejar de seguir sus issues. Quien co
 
 Cada proyecto recibe un tablero predeterminado con columnas para abierto, en progreso, resuelto y cerrado. La migración crea tableros iniciales para los proyectos existentes; la creación de nuevos proyectos guarda el proyecto, su líder, el tablero, sus columnas y el flujo de estados predeterminado en una sola transacción. La vista protegida `GET /api/v1/projects/{id}/board` devuelve las columnas ordenadas, tarjetas con tipo, resumen, responsable, prioridad y puntos, además del conteo por columna. En la UI se abre desde la tarjeta de cada proyecto.
 
+Los proyectos se crean desde una de las cuatro plantillas (Scrum, Kanban, seguimiento de tareas y seguimiento de errores), que fijan el tablero, los estados y los tipos de incidencia. Cada proyecto tiene una clave única en su organización, visibilidad abierta o privada, y permisos por rol (lead, contributor y viewer) que se pueden ajustar por proyecto. Los equipos reciben un rol en el proyecto y el rol efectivo es el más amplio entre el directo y el de equipo. Un proyecto archivado queda en solo lectura para su configuración y se restaura desde la API; eliminarlo exige escribir su nombre. Los proyectos se pueden marcar como favoritos y se registran como recientes. La guía de usuario describe el detalle en `docs/guia-usuario.md`.
+
 Las pruebas de integración de adjuntos, seguidores, filtros guardados y tableros usan PostgreSQL real y se activan con `CORELOG_TEST_DATABASE_URL`; crean y eliminan esquemas temporales aislados.
 
 ### Equipos y asignación
@@ -242,7 +244,7 @@ $env:SEED_PASSWORD = '<contrasena>'; .\scripts\seed.ps1 --scenario demo
 | Escenario | Contenido |
 | --- | --- |
 | `demo` | 21 cuentas (`admin@corelog.local`, `agent@corelog.local`, `requester@corelog.local` y personas `@corelog.test`), 5 equipos, 4 proyectos (CORE, OPS, SEC, WEB), 120 incidencias con comentarios, seguidores, enlaces, sprints, filtros guardados y notificaciones |
-| `e2e` | Cuentas de las pruebas de Playwright (`admin@corelog.local`, `agent@corelog.local`, `requester@corelog.local`, `ana.torres@corelog.test`), 1 equipo, 2 proyectos (SCRUM, KAN), 15 incidencias, 1 sprint activo con incidencias, comentarios y notificaciones |
+| `e2e` | Cuentas de las pruebas de Playwright (`admin@corelog.local`, `agent@corelog.local`, `requester@corelog.local`, `ana.torres@corelog.test` y personas `@corelog.test` de la organización Acme), 2 organizaciones, 2 equipos (Platform, Design), 4 proyectos (SCRUM con sprint activo, KAN, SEC privado y EMP vacío), 15 incidencias, concesiones de equipo, un favorito y una vista reciente para `member@corelog.test`, 1 sprint activo con incidencias, comentarios y notificaciones |
 | `scale` | Organización de `demo` más una cuenta extra por cada 1000 incidencias, y `--issues N` incidencias (50 000 por defecto) con sus comentarios y etiquetas. Tarda unos 30 s con 50 000 |
 
 Opciones:
