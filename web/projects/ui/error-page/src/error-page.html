@@ -1,17 +1,24 @@
-<div class="error-page" role="alert" [attr.data-variant]="variant()">
-  <span class="error-page__icon" aria-hidden="true"><i [class]="copy().icon"></i></span>
-  <p class="error-page__code">{{ variant() }}</p>
-  <h1 class="error-page__title">{{ title() ?? copy().title }}</h1>
-  <p class="error-page__description">{{ description() ?? copy().description }}</p>
-  <div class="error-page__actions">
-    <a class="error-page__primary" routerLink="/">Volver al inicio</a>
-    @if (variant() === 500 && canRetry()) {
-      <p-button
-        label="Reintentar"
-        severity="secondary"
-        [outlined]="true"
-        (onClick)="retry.emit()"
-      />
-    }
+<div
+  class="error-page"
+  role="alert"
+  [class.error-page--framed]="framed()"
+  [attr.data-variant]="variant()"
+>
+  <div class="error-page__body">
+    <span class="error-page__icon" aria-hidden="true"><i [class]="copy().icon"></i></span>
+    <p class="error-page__code">{{ variant() }}</p>
+    <h1 class="error-page__title">{{ title() ?? copy().title }}</h1>
+    <p class="error-page__description">{{ description() ?? copy().description }}</p>
+    <div class="error-page__actions">
+      <a class="error-page__primary" routerLink="/">Volver al inicio</a>
+      @if (variant() === 500 && canRetry()) {
+        <p-button
+          label="Reintentar"
+          severity="secondary"
+          [outlined]="true"
+          (onClick)="retry.emit()"
+        />
+      }
+    </div>
   </div>
 </div>

@@ -5,21 +5,36 @@
   min-height: 0;
 }
 
-/* Centered column with side margins: it never touches the viewport edges, even on a phone. */
 .error-page {
   display: flex;
   flex: 1 1 auto;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: var(--cl-space-3);
   box-sizing: border-box;
   width: 100%;
-  max-width: 36rem;
   min-height: 60vh;
-  margin-inline: auto;
-  padding: var(--cl-space-12) var(--cl-gutter);
-  text-align: center;
+
+  /* Inside a page: a surface that fills the free height, so short pages never leave a blank area. */
+  &--framed {
+    border: 1px solid var(--cl-border);
+    border-radius: var(--cl-radius-lg);
+    background: var(--cl-bg-surface);
+    box-shadow: var(--cl-elev-raised);
+  }
+
+  /* Centered column with side margins: it never touches the viewport edges, even on a phone. */
+  &__body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--cl-space-3);
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 36rem;
+    padding: var(--cl-space-12) var(--cl-gutter);
+    text-align: center;
+  }
 
   &__icon {
     display: inline-flex;

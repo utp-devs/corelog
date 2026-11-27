@@ -49,6 +49,8 @@ export class ErrorPage {
   readonly description = input<string>();
   /** Enables the "Reintentar" action, which exists on the 500 variant only. */
   readonly canRetry = input(false);
+  /** Draws the message inside a bordered surface that fills the page area (for pages with a header). */
+  readonly framed = input(false);
   readonly retry = output<void>();
 
   protected readonly copy = computed(() => COPY[this.variant()]);

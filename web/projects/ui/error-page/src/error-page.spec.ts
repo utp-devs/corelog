@@ -12,6 +12,7 @@ import { ErrorPage, type ErrorPageVariant } from './error-page';
       [title]="title()"
       [description]="description()"
       [canRetry]="canRetry()"
+      [framed]="framed()"
       (retry)="retries = retries + 1"
     />
   `,
@@ -21,6 +22,7 @@ class Host {
   readonly title = signal<string | undefined>(undefined);
   readonly description = signal<string | undefined>(undefined);
   readonly canRetry = signal(false);
+  readonly framed = signal(false);
   retries = 0;
 }
 
@@ -49,6 +51,15 @@ describe('ErrorPage', () => {
     const root = el(create(403));
     expect(root.querySelector('h1')?.textContent).toBe('No tienes acceso a esta página');
     expect(root.querySelector('.error-page__code')?.textContent).toBe('403');
+  });
+
+  it('draws a bordered surface only when framed', () => {
+    const fixture = create(404);
+    expect(el(fixture).querySelector('.error-page--framed')).toBeNull();
+    fixture.componentInstance.framed.set(true);
+    fixture.detectChanges();
+    expect(el(fixture).querySelector('.error-page--framed')).not.toBeNull();
+    expect(el(fixture).querySelector('.error-page__body h1')).not.toBeNull();
   });
 
   it('shows the Spanish 404 copy', () => {
