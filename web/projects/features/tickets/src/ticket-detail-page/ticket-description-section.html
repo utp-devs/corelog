@@ -32,6 +32,7 @@
           <p-select
             formControlName="issueType"
             [inputId]="typeRow.controlId"
+            [ariaLabelledBy]="typeRow.labelId"
             [options]="issueTypeOptions"
             optionLabel="label"
             optionValue="value"
@@ -42,6 +43,7 @@
           <p-datepicker
             formControlName="dueDate"
             [inputId]="dueRow.controlId"
+            [ariaLabelledBy]="dueRow.labelId"
             dateFormat="dd/mm/yy"
             [showIcon]="true"
           />
@@ -50,6 +52,7 @@
           <p-inputnumber
             formControlName="storyPoints"
             [inputId]="storyRow.controlId"
+            [ariaLabelledBy]="storyRow.labelId"
             [min]="0"
             [max]="999"
           />

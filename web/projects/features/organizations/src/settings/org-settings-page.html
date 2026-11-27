@@ -73,6 +73,7 @@
             <p-select
               formControlName="whoCanCreateProjects"
               [inputId]="projectsRow.controlId"
+              [ariaLabelledBy]="projectsRow.labelId"
               [options]="whoOptions"
               optionLabel="label"
               optionValue="value"
@@ -86,6 +87,7 @@
             <p-select
               formControlName="whoCanCreateTeams"
               [inputId]="teamsRow.controlId"
+              [ariaLabelledBy]="teamsRow.labelId"
               [options]="whoOptions"
               optionLabel="label"
               optionValue="value"
@@ -99,6 +101,7 @@
             <p-select
               formControlName="defaultProjectVisibility"
               [inputId]="visibilityRow.controlId"
+              [ariaLabelledBy]="visibilityRow.labelId"
               [options]="visibilityOptions"
               optionLabel="label"
               optionValue="value"
@@ -127,6 +130,7 @@
             <p-inputnumber
               formControlName="hoursPerDay"
               [inputId]="hoursRow.controlId"
+              [ariaLabelledBy]="hoursRow.labelId"
               [min]="1"
               [max]="24"
               styleClass="number-input"
@@ -141,6 +145,7 @@
             <p-inputnumber
               formControlName="daysPerWeek"
               [inputId]="daysRow.controlId"
+              [ariaLabelledBy]="daysRow.labelId"
               [min]="1"
               [max]="7"
               [maxFractionDigits]="0"
@@ -156,6 +161,7 @@
             <p-select
               formControlName="timezone"
               [inputId]="zoneRow.controlId"
+              [ariaLabelledBy]="zoneRow.labelId"
               [options]="timezones()"
               optionLabel="label"
               optionValue="value"

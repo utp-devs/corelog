@@ -45,8 +45,8 @@
       <div appToolbarLeft class="toolbar-left">
         <app-search-input
           [(value)]="query"
-          placeholder="Buscar por nombre o correo"
-          ariaLabel="Buscar miembros"
+          [placeholder]="'Buscar por nombre o correo'"
+          [ariaLabel]="'Buscar miembros'"
         />
         <p-select
           ariaLabel="Filtrar por rol"

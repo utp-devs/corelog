@@ -1,6 +1,8 @@
 <div class="workspace">
   @if (accessVariant(); as variant) {
-    <app-error-page [variant]="variant" />
+    <app-page-container variant="wide" pageName="project-access" [ready]="true" [fill]="true">
+      <app-error-page [variant]="variant" />
+    </app-page-container>
   } @else {
     <app-breadcrumbs [items]="breadcrumbs()" />
 

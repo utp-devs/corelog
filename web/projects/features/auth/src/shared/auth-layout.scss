@@ -27,37 +27,55 @@
   box-shadow: var(--cl-shadow-focus);
 }
 
-// The card is centered vertically and horizontally in the space above the footer.
+// Split template: a brand panel beside the form panel. Both panels are painted full height, so the page
+// has no bare band beside the form on wide screens. Colors come only from --cl-* tokens (both themes).
 .main {
   display: flex;
   flex: 1 0 auto;
-  align-items: center;
-  justify-content: center;
   min-width: 0;
-  padding: var(--cl-space-6) var(--cl-gutter);
 }
 
 .main:focus {
   outline: none;
 }
 
-.card {
+.split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  flex: 1 1 auto;
+  width: 100%;
+  min-width: 0;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--cl-space-8);
+  background: linear-gradient(160deg, var(--cl-brand-subtle) 0%, var(--cl-bg-page) 75%);
+}
+
+.panel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  padding: var(--cl-space-6) var(--cl-gutter);
+  background: var(--cl-bg-surface);
+  border-inline-start: 1px solid var(--cl-border);
+}
+
+.form-column {
   box-sizing: border-box;
   width: min(440px, 100%);
   min-width: 0;
-  padding: var(--cl-space-6);
-  border: 1px solid var(--cl-border);
-  border-radius: var(--cl-radius-lg);
-  background: var(--cl-bg-surface);
-  box-shadow: var(--cl-shadow-2);
 }
 
 .banner {
   display: block;
-  width: 180px;
+  width: 240px;
   max-width: 100%;
   height: auto;
-  margin: 0 0 var(--cl-space-5);
 }
 
 .title {
@@ -86,6 +104,9 @@
 }
 
 .footer ::ng-deep a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
   color: var(--cl-brand);
   font-weight: 600;
   text-decoration: none;
@@ -108,8 +129,22 @@
   color: var(--cl-text-subtle);
 }
 
-@media (min-width: 768px) {
-  .card {
-    padding: var(--cl-space-8);
+@media (max-width: 767.98px) {
+  .split {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .brand {
+    padding: var(--cl-space-5) var(--cl-gutter);
+  }
+
+  .banner {
+    width: 180px;
+  }
+
+  .panel {
+    align-items: flex-start;
+    border-inline-start: 0;
+    border-top: 1px solid var(--cl-border);
   }
 }

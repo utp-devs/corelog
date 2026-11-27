@@ -12,6 +12,7 @@ import {
 } from '@corelog/core';
 import { BreadcrumbItem, Breadcrumbs } from '@corelog/ui/breadcrumbs';
 import { ErrorPage } from '@corelog/ui/error-page';
+import { PageContainer } from '@corelog/ui/page-container';
 import { ErrorState } from '@corelog/ui/error-state';
 import { LoadingSkeleton } from '@corelog/ui/loading-skeleton';
 import { Lozenge } from '@corelog/ui/lozenge';
@@ -41,6 +42,7 @@ type LoadState =
 @Component({
   selector: 'app-project-workspace',
   imports: [
+    PageContainer,
     RouterLink,
     RouterOutlet,
     Breadcrumbs,

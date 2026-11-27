@@ -28,6 +28,7 @@
   <app-field-row #timezoneRow label="Zona horaria" [required]="true" [error]="errorOf('timezone')">
     <p-select
       [inputId]="timezoneRow.controlId"
+      [ariaLabelledBy]="timezoneRow.labelId"
       ariaLabel="Zona horaria"
       formControlName="timezone"
       [options]="timezones()"

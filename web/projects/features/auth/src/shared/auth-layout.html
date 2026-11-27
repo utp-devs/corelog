@@ -1,25 +1,31 @@
 <a class="skip-link" href="#auth-main">Saltar al formulario</a>
 
 <main [attr.id]="mainId" class="main" tabindex="-1">
-  <section class="card" [attr.aria-labelledby]="titleId">
-    <img
-      class="banner"
-      src="/brand/corelog-banner-480.png"
-      srcset="/brand/corelog-banner-480.png 480w, /brand/corelog-banner-960.png 960w"
-      sizes="180px"
-      alt="CoreLog"
-      width="180"
-      height="48"
-    />
-    <h1 class="title" [attr.id]="titleId">{{ title() }}</h1>
-    @if (subtitle(); as text) {
-      <p class="subtitle">{{ text }}</p>
-    }
-    <ng-content />
-    <div class="footer">
-      <ng-content select="[authFooter]" />
+  <div class="split">
+    <div class="brand">
+      <img
+        class="banner"
+        src="/brand/corelog-banner-480.png"
+        srcset="/brand/corelog-banner-480.png 480w, /brand/corelog-banner-960.png 960w"
+        sizes="180px"
+        alt="CoreLog"
+        width="180"
+        height="48"
+      />
     </div>
-  </section>
+    <section class="panel" [attr.aria-labelledby]="titleId">
+      <div class="form-column">
+        <h1 class="title" [attr.id]="titleId">{{ title() }}</h1>
+        @if (subtitle(); as text) {
+          <p class="subtitle">{{ text }}</p>
+        }
+        <ng-content />
+        <div class="footer">
+          <ng-content select="[authFooter]" />
+        </div>
+      </div>
+    </section>
+  </div>
 </main>
 
 <footer class="page-footer">CoreLog</footer>

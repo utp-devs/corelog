@@ -133,10 +133,12 @@ describe('LoginPage landmarks and labels', () => {
     expect(el.querySelector('aside')).toBeNull();
   });
 
-  it('renders the brand banner inside the single centered card', () => {
+  it('renders the brand banner in the brand panel beside the form panel', () => {
     const { el } = setup();
-    const card = el.querySelector('main#auth-main section');
-    expect(card?.querySelector('img[alt="CoreLog"]')).not.toBeNull();
+    const brand = el.querySelector('main#auth-main .brand');
+    const form = el.querySelector('main#auth-main section.panel');
+    expect(brand?.querySelector('img[alt="CoreLog"]')).not.toBeNull();
+    expect(form?.querySelector('form')).not.toBeNull();
   });
 
   it('associates each input with its visible label and marks it required', () => {

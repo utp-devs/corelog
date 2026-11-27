@@ -1,5 +1,5 @@
 @if (accessVariant(); as variant) {
-  <app-page-container variant="reading" pageName="permissions">
+  <app-page-container variant="reading" pageName="permissions" [fill]="true">
     <app-error-page [variant]="variant" />
   </app-page-container>
 } @else {

@@ -3,8 +3,16 @@
   min-width: 0;
 }
 
-.main {
+.main,
+[appSplitSide] {
+  display: flex;
+  flex-direction: column;
   min-width: 0;
+}
+
+.main,
+[appSplitSide] {
+  flex: 1 1 auto;
 }
 
 .header {

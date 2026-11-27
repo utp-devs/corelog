@@ -55,6 +55,7 @@
       <p-select
         formControlName="type"
         [inputId]="typeRow.controlId"
+        [ariaLabelledBy]="typeRow.labelId"
         [options]="typeOptions"
         optionLabel="label"
         optionValue="value"
@@ -70,6 +71,7 @@
       <p-select
         formControlName="visibility"
         [inputId]="visibilityRow.controlId"
+        [ariaLabelledBy]="visibilityRow.labelId"
         [options]="visibilityOptions"
         optionLabel="label"
         optionValue="value"

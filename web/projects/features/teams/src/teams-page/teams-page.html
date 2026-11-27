@@ -6,7 +6,11 @@
 
   <app-toolbar>
     <div appToolbarLeft>
-      <app-search-input [(value)]="query" placeholder="Buscar equipos" ariaLabel="Buscar equipos" />
+      <app-search-input
+        [(value)]="query"
+        [placeholder]="'Buscar equipos'"
+        [ariaLabel]="'Buscar equipos'"
+      />
     </div>
     @if (teams().length > 0 && canCreate()) {
       <div appToolbarRight>

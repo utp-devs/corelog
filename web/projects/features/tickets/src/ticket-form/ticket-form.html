@@ -52,6 +52,7 @@
             <p-select
               formControlName="issueType"
               [inputId]="typeRow.controlId"
+              [ariaLabelledBy]="typeRow.labelId"
               [options]="issueTypeOptions"
               optionLabel="label"
               optionValue="value"
@@ -62,6 +63,7 @@
             <p-select
               formControlName="priority"
               [inputId]="priorityRow.controlId"
+              [ariaLabelledBy]="priorityRow.labelId"
               [options]="priorityOptions"
               optionLabel="label"
               optionValue="value"

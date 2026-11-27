@@ -1,5 +1,5 @@
 @if (accessVariant(); as variant) {
-  <app-page-container variant="wide" pageName="sprints">
+  <app-page-container variant="wide" pageName="sprints" [fill]="true">
     <app-error-page [variant]="variant" />
   </app-page-container>
 } @else {

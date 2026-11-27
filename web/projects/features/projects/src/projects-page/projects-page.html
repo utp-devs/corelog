@@ -1,5 +1,5 @@
 @if (accessVariant(); as variant) {
-  <app-page-container variant="wide" pageName="projects">
+  <app-page-container variant="wide" pageName="projects" [fill]="true">
     <app-error-page [variant]="variant" />
   </app-page-container>
 } @else {
@@ -28,8 +28,8 @@
       <div appToolbarLeft class="filters">
         <app-search-input
           [(value)]="query"
-          placeholder="Buscar por nombre o clave"
-          ariaLabel="Buscar proyectos"
+          [placeholder]="'Buscar por nombre o clave'"
+          [ariaLabel]="'Buscar proyectos'"
         />
         <div role="group" aria-label="Filtrar por visibilidad">
           <p-selectbutton

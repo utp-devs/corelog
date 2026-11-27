@@ -54,6 +54,7 @@
           <p-select
             formControlName="role"
             [inputId]="roleRow.controlId"
+            [ariaLabelledBy]="roleRow.labelId"
             [options]="roleOptions()"
             optionLabel="label"
             optionValue="value"

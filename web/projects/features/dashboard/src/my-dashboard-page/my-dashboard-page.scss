@@ -9,19 +9,28 @@
  */
 .panels {
   display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: var(--cl-space-4);
+  min-height: 0;
+  width: 100%;
+}
+
+.row {
+  display: flex;
   flex-wrap: wrap;
   align-items: stretch;
   gap: var(--cl-space-4);
   width: 100%;
 }
 
-.panels > * {
+.row > * {
   flex: 1 1 320px;
   min-width: 0;
 }
 
 /* The chart card fills the height of its panel row. */
-.panels > app-chart-card {
+.row > app-chart-card {
   display: flex;
   flex-direction: column;
 }
@@ -90,11 +99,11 @@
 
 /* Stacked layout below 768 px: one column, full-width panels. */
 @media (max-width: 767px) {
-  .panels {
+  .row {
     flex-direction: column;
   }
 
-  .panels > * {
+  .row > * {
     flex: none;
     width: 100%;
   }

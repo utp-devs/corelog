@@ -1,4 +1,4 @@
-<app-page-container variant="wide" pageName="dashboard" [ready]="ready()">
+<app-page-container variant="wide" pageName="dashboard" [ready]="ready()" [fill]="true">
   <app-page-header
     title="Mi resumen"
     subtitle="Tu trabajo asignado, lo que vence y los sprints activos de tus proyectos."
@@ -16,108 +16,114 @@
     </app-card-grid>
 
     <div class="panels" [attr.data-layout]="isMobile() ? 'stacked' : 'grid'">
-      @if (!dashboard.hasWork()) {
-        <app-section
-          title="Primeros pasos"
-          description="Lo que puedes hacer para empezar a trabajar."
-        >
-          <ol class="steps" data-empty-state="true">
-            <li class="step">
-              <a routerLink="/projects">Crea tu primer proyecto</a>
-              <span class="subtle"> para organizar el trabajo en un espacio propio.</span>
-            </li>
-            <li class="step">
-              <span>Crea una incidencia con el botón </span>
-              <strong>Crear</strong>
-              <span> de la barra superior.</span>
-            </li>
-            <li class="step">
-              <span>Abre el tablero de un proyecto para ver y mover tus incidencias.</span>
-            </li>
-          </ol>
-        </app-section>
-      }
-
-      <app-chart-card
-        title="Por estado"
-        description="Tus incidencias asignadas agrupadas por estado."
-        chartType="progress"
-        [isEmpty]="statusRows().length === 0"
-        emptyText="Sin trabajo asignado."
-        [table]="statusTable()"
-        [labels]="statusLabels()"
-        [series]="statusSeries()"
-      />
-
-      <app-section title="Lo más urgente">
-        @if (data.recentIssues.length === 0) {
-          <app-empty-state
-            title="No tienes incidencias abiertas"
-            description="Las incidencias que te asignen aparecerán aquí."
-          />
-        } @else {
-          <ul class="list" aria-label="Incidencias urgentes">
-            @for (issue of data.recentIssues; track issue.id) {
-              <li class="list-item">
-                <a class="item-link" [routerLink]="['/issues', issue.id]" [title]="issue.title">{{
-                  issue.title
-                }}</a>
-                <span class="meta">{{ issueMeta(issue) }}</span>
-              </li>
-            }
-          </ul>
-        }
-      </app-section>
-
-      <app-section title="Sprints activos">
-        @if (data.activeSprints.length === 0) {
-          <app-empty-state
-            title="No hay sprints activos"
-            description="Cuando un sprint de tus proyectos esté activo, aparecerá aquí."
-          />
-        } @else {
-          <ul class="list" aria-label="Sprints activos">
-            @for (sprint of data.activeSprints; track sprint.id) {
-              <li class="list-item">
-                <span class="item-text">{{ sprintLabel(sprint) }}</span>
-                <app-lozenge tone="success">Activo</app-lozenge>
-              </li>
-            }
-          </ul>
-        }
-      </app-section>
-
-      <app-section title="Mis proyectos">
-        @if (projectsSkeleton()) {
-          <app-loading-skeleton variant="table" [rows]="3" />
-        } @else if (projectsFailed()) {
-          <span class="subtle">No se pudieron cargar tus proyectos.</span>
-        } @else if (projects().length === 0) {
-          <app-empty-state
-            title="Aún no tienes proyectos"
-            description="Crea un proyecto para empezar a organizar el trabajo."
+      <div class="row">
+        @if (!dashboard.hasWork()) {
+          <app-section
+            title="Primeros pasos"
+            description="Lo que puedes hacer para empezar a trabajar."
           >
-            <a action routerLink="/projects" class="empty-link">Ir a proyectos</a>
-          </app-empty-state>
-        } @else {
-          <ul class="list" aria-label="Mis proyectos">
-            @for (project of projects(); track project.id) {
-              <li class="list-item project-item">
-                <app-project-avatar [name]="project.name" [projectKey]="project.key" [size]="24" />
-                <a
-                  class="item-link"
-                  [routerLink]="['/projects', project.id, 'board']"
-                  [title]="project.name"
-                  >{{ project.name }}</a
-                >
-                <span class="meta subtle">{{ project.key }}</span>
+            <ol class="steps" data-empty-state="true">
+              <li class="step">
+                <a routerLink="/projects">Crea tu primer proyecto</a>
+                <span class="subtle"> para organizar el trabajo en un espacio propio.</span>
               </li>
-            }
-          </ul>
+              <li class="step">
+                <span>Crea una incidencia con el botón </span>
+                <strong>Crear</strong>
+                <span> de la barra superior.</span>
+              </li>
+              <li class="step">
+                <span>Abre el tablero de un proyecto para ver y mover tus incidencias.</span>
+              </li>
+            </ol>
+          </app-section>
         }
-      </app-section>
 
-      <app-section title="Visto recientemente">
+        <app-chart-card
+          title="Por estado"
+          description="Tus incidencias asignadas agrupadas por estado."
+          chartType="progress"
+          [isEmpty]="statusRows().length === 0"
+          emptyText="Sin trabajo asignado."
+          [table]="statusTable()"
+          [labels]="statusLabels()"
+          [series]="statusSeries()"
+        />
+
+        <app-section title="Lo más urgente">
+          @if (data.recentIssues.length === 0) {
+            <app-empty-state
+              title="No tienes incidencias abiertas"
+              description="Las incidencias que te asignen aparecerán aquí."
+            />
+          } @else {
+            <ul class="list" aria-label="Incidencias urgentes">
+              @for (issue of data.recentIssues; track issue.id) {
+                <li class="list-item">
+                  <a class="item-link" [routerLink]="['/issues', issue.id]" [title]="issue.title">{{
+                    issue.title
+                  }}</a>
+                  <span class="meta">{{ issueMeta(issue) }}</span>
+                </li>
+              }
+            </ul>
+          }
+        </app-section>
+
+        <app-section title="Sprints activos">
+          @if (data.activeSprints.length === 0) {
+            <app-empty-state
+              title="No hay sprints activos"
+              description="Cuando un sprint de tus proyectos esté activo, aparecerá aquí."
+            />
+          } @else {
+            <ul class="list" aria-label="Sprints activos">
+              @for (sprint of data.activeSprints; track sprint.id) {
+                <li class="list-item">
+                  <span class="item-text">{{ sprintLabel(sprint) }}</span>
+                  <app-lozenge tone="success">Activo</app-lozenge>
+                </li>
+              }
+            </ul>
+          }
+        </app-section>
+
+        <app-section title="Mis proyectos">
+          @if (projectsSkeleton()) {
+            <app-loading-skeleton variant="table" [rows]="3" />
+          } @else if (projectsFailed()) {
+            <span class="subtle">No se pudieron cargar tus proyectos.</span>
+          } @else if (projects().length === 0) {
+            <app-empty-state
+              title="Aún no tienes proyectos"
+              description="Crea un proyecto para empezar a organizar el trabajo."
+            >
+              <a action routerLink="/projects" class="empty-link">Ir a proyectos</a>
+            </app-empty-state>
+          } @else {
+            <ul class="list" aria-label="Mis proyectos">
+              @for (project of projects(); track project.id) {
+                <li class="list-item project-item">
+                  <app-project-avatar
+                    [name]="project.name"
+                    [projectKey]="project.key"
+                    [size]="24"
+                  />
+                  <a
+                    class="item-link"
+                    [routerLink]="['/projects', project.id, 'board']"
+                    [title]="project.name"
+                    >{{ project.name }}</a
+                  >
+                  <span class="meta subtle">{{ project.key }}</span>
+                </li>
+              }
+            </ul>
+          }
+        </app-section>
+      </div>
+
+      <app-section title="Visto recientemente" [fill]="true">
         @if (recent.length === 0) {
           <app-empty-state
             title="Aún no has abierto nada"

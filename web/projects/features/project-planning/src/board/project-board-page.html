@@ -1,5 +1,5 @@
 @if (accessVariant(); as variant) {
-  <app-page-container variant="fluid" pageName="board">
+  <app-page-container variant="fluid" pageName="board" [fill]="true">
     <div class="frame">
       <app-error-page [variant]="variant" />
     </div>
@@ -28,8 +28,8 @@
           <div class="filters" role="search" aria-label="Filtrar tarjetas del tablero">
             <app-search-input
               class="search-field"
-              placeholder="Buscar en el tablero"
-              ariaLabel="Buscar en el tablero"
+              [placeholder]="'Buscar en el tablero'"
+              [ariaLabel]="'Buscar en el tablero'"
               [debounceMs]="0"
               [value]="filter().search"
               (valueChange)="setSearch($event)"
