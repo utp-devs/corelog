@@ -7,6 +7,7 @@ import {
   inject,
   Provider,
   makeEnvironmentProviders,
+  provideAppInitializer,
   provideBrowserGlobalErrorListeners,
 } from '@angular/core';
 import {
@@ -22,6 +23,7 @@ import { MessageService } from 'primeng/api';
 import { providePrimeNG } from 'primeng/config';
 
 import { OrganizationApiService } from '../services/api/organization-api.service';
+import { AuthStore } from '../state/auth.store';
 import { MEMBER_NAMES_SOURCE } from '../state/ticket.store';
 import { ORGANIZATION_ID_PROVIDER } from '../utils/org-id-provider';
 import { getOrgId } from '../utils/org-context';
@@ -69,6 +71,8 @@ export function provideCorelog(options: CorelogOptions): EnvironmentProviders {
   registerLocaleData(localeEsPe);
   const providers: (Provider | EnvironmentProviders)[] = [
     provideBrowserGlobalErrorListeners(),
+    // Validates a stored token before the first navigation, so guards and shells see the account.
+    provideAppInitializer(() => inject(AuthStore).restoreSession()),
     provideRouter(
       options.routes as Route[],
       withComponentInputBinding(),
