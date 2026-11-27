@@ -10,7 +10,6 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { Button } from 'primeng/button';
-import { Select } from 'primeng/select';
 import {
   AuthStore,
   LOCATION_ASSIGN,
@@ -25,13 +24,14 @@ import {
 import { ConfirmDangerModal } from '@corelog/ui/confirm-danger-modal';
 import { ConfirmModal } from '@corelog/ui/confirm-modal';
 import { Section } from '@corelog/ui/section';
+import { SelectField } from '@corelog/ui/select-field';
 
 import { adminErrorMessage, isLastOwnerError } from '../shared/admin-error-message';
 
 /** Danger zone: leave for everyone, transfer ownership and delete for owners only. */
 @Component({
   selector: 'app-org-danger-zone',
-  imports: [Button, Select, FormsModule, ConfirmDangerModal, ConfirmModal, Section],
+  imports: [Button, SelectField, FormsModule, ConfirmDangerModal, ConfirmModal, Section],
   templateUrl: './org-danger-zone.html',
   styleUrl: './org-danger-zone.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

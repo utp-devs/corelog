@@ -1,0 +1,24 @@
+<div class="policy-choice" role="radiogroup" [attr.aria-label]="label()">
+  @for (option of options(); track option.value) {
+    <label
+      class="policy-choice__card"
+      [class.policy-choice__card--selected]="value() === option.value"
+      [class.policy-choice__card--disabled]="disabled()"
+    >
+      <input
+        type="radio"
+        class="policy-choice__input"
+        [name]="name"
+        [value]="option.value"
+        [checked]="value() === option.value"
+        [disabled]="disabled()"
+        (change)="select(option.value)"
+      />
+      <span class="policy-choice__dot" aria-hidden="true"></span>
+      <span class="policy-choice__text">
+        <span class="policy-choice__label">{{ option.label }}</span>
+        <span class="policy-choice__hint">{{ option.hint }}</span>
+      </span>
+    </label>
+  }
+</div>

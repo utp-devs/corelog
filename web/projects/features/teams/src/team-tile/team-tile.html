@@ -1,8 +1,8 @@
 <span
-  class="tile"
+  class="team-tile"
   aria-hidden="true"
-  [class.md]="size() === 'md'"
-  [class.lg]="size() === 'lg'"
+  [class.team-tile--md]="size() === 'md'"
+  [class.team-tile--lg]="size() === 'lg'"
   [attr.data-custom]="customColor() ? 'true' : null"
   [attr.data-palette]="customColor() ? null : palette()"
   [style.--cl-team-color]="customColor()"

@@ -1,38 +1,35 @@
-.form-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  column-gap: var(--cl-space-4);
+@use '../../../../ui/styles/mixins' as m;
+
+:host {
+  display: block;
 }
 
-.half {
-  min-width: 0;
-}
+.org-form-step {
+  @include m.flex-column(4);
 
-.full {
-  grid-column: 1 / -1;
-}
-
-.actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--cl-space-2);
-  justify-content: flex-start;
-}
-
-.form-grid input {
-  width: 100%;
-}
-
-@media (max-width: 767.98px) {
-  .form-grid {
-    grid-template-columns: minmax(0, 1fr);
+  &__preview {
+    margin: 0;
+    font-size: var(--cl-font-small);
+    color: var(--cl-text-subtle);
   }
 
-  .half {
-    grid-column: 1 / -1;
+  &__slug {
+    padding: 0 var(--cl-space-1);
+    border-radius: var(--cl-radius-sm);
+    background: var(--cl-bg-sunken);
+    color: var(--cl-text);
+    overflow-wrap: anywhere;
   }
 
-  .touch-target {
-    min-height: var(--cl-space-12);
+  &__actions {
+    @include m.cluster(2, center, space-between);
+    margin-top: var(--cl-space-2);
+  }
+
+  @include m.respond-down(768px) {
+    &__actions {
+      flex-direction: column-reverse;
+      align-items: stretch;
+    }
   }
 }

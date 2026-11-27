@@ -1,70 +1,73 @@
+@use '../../../../ui/styles/mixins' as m;
+@use '../../../../ui/field-row/src/control' as c;
+
 :host {
   display: flex;
   min-width: 0;
 }
 
-.card {
-  display: flex;
+.team-card {
+  @include m.flex-column(3);
   flex: 1 1 auto;
-  min-width: 0;
-  flex-direction: column;
-  gap: var(--cl-space-3);
+  box-sizing: border-box;
   width: 100%;
+  min-width: 0;
   padding: var(--cl-space-4);
   background: var(--cl-bg-surface);
   border: 1px solid var(--cl-border);
   border-radius: var(--cl-radius-lg);
-  box-shadow: var(--cl-shadow-1);
+  box-shadow: var(--cl-elev-raised);
   color: var(--cl-text);
   text-decoration: none;
-  transition: box-shadow 150ms ease;
+  transition:
+    box-shadow var(--cl-motion) var(--cl-ease),
+    border-color var(--cl-motion) var(--cl-ease);
 
   &:hover {
-    box-shadow: var(--cl-shadow-2);
+    border-color: var(--cl-border-strong);
+    box-shadow: var(--cl-elev-overlay);
   }
 
   &:focus-visible {
-    outline: none;
-    box-shadow: var(--cl-shadow-focus);
+    @include c.focus-ring;
   }
-}
 
-.card-header {
-  display: flex;
-  align-items: center;
-  gap: var(--cl-space-3);
-  min-width: 0;
-}
+  &__header {
+    @include m.flex-row(3);
+    min-width: 0;
+  }
 
-.card-name {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  font-size: var(--cl-font-body-strong);
-  font-weight: 600;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
+  &__name {
+    @include m.truncate;
+    flex: 1;
+    font-size: var(--cl-font-body-strong);
+    font-weight: var(--cl-weight-semibold);
+  }
 
-.card-description {
-  display: -webkit-box;
-  flex: 1;
-  margin: 0;
-  overflow: hidden;
-  color: var(--cl-text-subtle);
-  font-size: var(--cl-font-small);
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 3;
-  line-clamp: 3;
-}
+  &__description {
+    display: -webkit-box;
+    flex: 1;
+    margin: 0;
+    overflow: hidden;
+    color: var(--cl-text-subtle);
+    font-size: var(--cl-font-body);
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+  }
 
-.card-meta {
-  color: var(--cl-text-subtle);
-  font-size: var(--cl-font-caption);
-}
+  &__footer {
+    @include m.flex-row(2, center, space-between);
+    min-width: 0;
+  }
 
-@media (prefers-reduced-motion: reduce) {
-  .card {
+  &__meta {
+    @include m.flex-row(2);
+    color: var(--cl-text-subtle);
+    font-size: var(--cl-font-small);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
     transition: none;
   }
 }

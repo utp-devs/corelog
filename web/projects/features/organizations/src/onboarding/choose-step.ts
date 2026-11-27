@@ -4,11 +4,12 @@ import { Router } from '@angular/router';
 import { Button } from 'primeng/button';
 import { InputText } from 'primeng/inputtext';
 import { parseInvitationToken } from '@corelog/core';
+import { FieldControl, FieldRow } from '@corelog/ui/field-row';
 
 /** Wizard step 1: create an organization, or join one with an invitation link or token. */
 @Component({
   selector: 'app-choose-step',
-  imports: [Button, InputText, FormsModule],
+  imports: [Button, InputText, FieldRow, FieldControl, FormsModule],
   templateUrl: './choose-step.html',
   styleUrl: './choose-step.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

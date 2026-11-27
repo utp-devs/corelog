@@ -1,76 +1,112 @@
-<main class="page">
-  <app-page-container variant="reading" pageName="onboarding" [ready]="true" [fill]="true">
-    <div class="wizard">
-      <header class="header">
+<main class="onboarding">
+  <app-page-container variant="reading" pageName="onboarding" [ready]="true">
+    <div class="onboarding__wizard">
+      <header class="onboarding__header">
         <img
+          class="onboarding__logo"
           src="/brand/corelog-banner-480.png"
           alt="CoreLog"
           width="128"
           height="32"
-          class="logo"
         />
+        <div class="onboarding__header-actions">
+          @if (canCancel) {
+            <p-button
+              label="Cancelar"
+              severity="secondary"
+              [text]="true"
+              type="button"
+              (onClick)="cancel()"
+            />
+          }
+          <p-button
+            label="Cerrar sesión"
+            icon="pi pi-sign-out"
+            severity="secondary"
+            [text]="true"
+            type="button"
+            (onClick)="signOut()"
+          />
+        </div>
       </header>
 
-      <nav aria-label="Pasos del asistente" class="steps-nav">
-        <ol class="steps">
-          @for (title of stepTitles; track title; let index = $index) {
+      <nav class="onboarding__steps-nav" aria-label="Pasos del asistente">
+        <ol class="onboarding__steps">
+          @for (item of steps; track item.title; let index = $index) {
             <li
-              class="step"
+              class="onboarding__step"
               [attr.data-state]="stateOf(index)"
               [attr.aria-current]="index === step() ? 'step' : null"
             >
-              <span class="step-number" aria-hidden="true">{{ index + 1 }}</span>
-              <span class="step-title">
-                {{ title }}
+              <span class="onboarding__step-number" aria-hidden="true">
                 @if (stateOf(index) === 'done') {
-                  <span class="sr-only"> (completado)</span>
+                  <i class="pi pi-check"></i>
+                } @else {
+                  {{ index + 1 }}
+                }
+              </span>
+              <span class="onboarding__step-title">
+                {{ item.title }}
+                @if (item.optional) {
+                  <span class="onboarding__step-optional">(Opcional)</span>
+                }
+                @if (stateOf(index) === 'done') {
+                  <span class="onboarding__sr"> (completado)</span>
                 }
               </span>
             </li>
           }
         </ol>
+        <p class="onboarding__step-label" aria-live="polite">{{ stepLabel() }}</p>
       </nav>
 
-      <div class="step-body">
-        @if (step() === 0) {
+      @switch (step()) {
+        @case (0) {
           <app-choose-step (create)="step.set(1)" />
         }
-
-        @if (step() === 1) {
-          <section class="panel" aria-labelledby="onboarding-org-title">
-            <h2 id="onboarding-org-title" class="panel-title">Datos de la organización</h2>
+        @case (1) {
+          <section class="onboarding__panel" aria-labelledby="onboarding-org-title">
+            <h2 id="onboarding-org-title" class="onboarding__panel-title">
+              Datos de la organización
+            </h2>
+            <p class="onboarding__panel-lead">
+              Una organización agrupa tus proyectos, equipos e incidencias. Serás su propietario.
+            </p>
             <app-org-form-step (back)="step.set(0)" (created)="step.set(2)" />
           </section>
         }
-
-        @if (step() === 2) {
-          <section class="panel" aria-labelledby="onboarding-invite-title">
-            <h2 id="onboarding-invite-title" class="panel-title">Invita a tu equipo</h2>
+        @case (2) {
+          <section class="onboarding__panel" aria-labelledby="onboarding-invite-title">
+            <h2 id="onboarding-invite-title" class="onboarding__panel-title">
+              Invita a tu equipo
+              <span class="onboarding__badge">Opcional</span>
+            </h2>
             @if (org(); as current) {
               <app-invite-step [orgId]="current.id" (continued)="step.set(3)" />
             } @else {
-              <p>No hay una organización activa. Vuelve al paso anterior.</p>
+              <p class="onboarding__panel-lead">
+                No hay una organización activa. Vuelve al paso anterior.
+              </p>
             }
           </section>
         }
-
-        @if (step() === 3) {
-          <section class="panel" aria-labelledby="onboarding-finish-title">
-            <h2 id="onboarding-finish-title" class="panel-title">Todo listo</h2>
-            <p>
+        @case (3) {
+          <section
+            class="onboarding__panel onboarding__panel--done"
+            aria-labelledby="onboarding-finish-title"
+          >
+            <span class="onboarding__done-icon" aria-hidden="true">
+              <i class="pi pi-check"></i>
+            </span>
+            <h2 id="onboarding-finish-title" class="onboarding__panel-title">Todo listo</h2>
+            <p class="onboarding__panel-lead">
               {{ orgName() ? orgName() + ' está preparada.' : 'Tu cuenta está preparada.' }} Empieza
               creando tu primer proyecto.
             </p>
-            <p-button
-              label="Ir a proyectos"
-              size="large"
-              type="button"
-              class="touch-target"
-              (onClick)="finish()"
-            />
+            <p-button label="Ir a proyectos" size="large" type="button" (onClick)="finish()" />
           </section>
         }
-      </div>
+      }
     </div>
   </app-page-container>
 </main>

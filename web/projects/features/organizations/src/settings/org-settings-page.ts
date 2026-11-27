@@ -12,10 +12,8 @@ import {
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { AbstractControl, ReactiveFormsModule } from '@angular/forms';
 import { Button } from 'primeng/button';
-import { InputNumber } from 'primeng/inputnumber';
 import { InputText } from 'primeng/inputtext';
 import { Message } from 'primeng/message';
-import { Select } from 'primeng/select';
 import { Textarea } from 'primeng/textarea';
 import { map } from 'rxjs';
 import {
@@ -32,15 +30,16 @@ import {
 } from '@corelog/core';
 import { EmptyState } from '@corelog/ui/empty-state';
 import { FieldRow, FieldControl } from '@corelog/ui/field-row';
-import { Lozenge } from '@corelog/ui/lozenge';
 import { PageContainer } from '@corelog/ui/page-container';
 import { PageHeader } from '@corelog/ui/page-header';
 import { Section } from '@corelog/ui/section';
+import { SelectField, SelectFieldOption } from '@corelog/ui/select-field';
 
 import { adminErrorMessage } from '../shared/admin-error-message';
 import { fieldMessage } from '../shared/field-message';
 import { OrgDangerZone } from './org-danger-zone';
 import { OrgLogoField } from './org-logo-field';
+import { PolicyChoice, PolicyChoiceOption } from './policy-choice';
 import {
   SettingsFormValues,
   applySettingsServerErrors,
@@ -50,22 +49,23 @@ import {
   settingsValuesOf,
 } from './settings-form';
 
-const WHO_CAN_OPTIONS: { label: string; value: OrgWhoCan }[] = [
-  { value: 'members', label: 'Todos los miembros' },
-  { value: 'admins', label: 'Solo administradores' },
+const WHO_CAN_OPTIONS: readonly PolicyChoiceOption[] = [
+  {
+    value: 'members' satisfies OrgWhoCan,
+    label: 'Todos los miembros',
+    hint: 'Cualquier miembro puede crearlos.',
+  },
+  {
+    value: 'admins' satisfies OrgWhoCan,
+    label: 'Solo administradores',
+    hint: 'Solo propietarios y administradores.',
+  },
 ];
 
-const VISIBILITY_OPTIONS: { label: string; value: OrgDefaultVisibility }[] = [
+const VISIBILITY_OPTIONS: readonly (SelectFieldOption & { value: OrgDefaultVisibility })[] = [
   { value: 'open', label: 'Abierta: visible para todos los miembros' },
   { value: 'private', label: 'Privada: solo para quienes se añaden' },
 ];
-
-const SECTION_LINKS = [
-  { href: '#org-general', label: 'General' },
-  { href: '#org-policies', label: 'Políticas' },
-  { href: '#org-time', label: 'Tiempo' },
-  { href: '#org-danger', label: 'Zona de peligro' },
-] as const;
 
 const BLANK_VALUES: SettingsFormValues = {
   name: '',
@@ -84,20 +84,19 @@ const BLANK_VALUES: SettingsFormValues = {
   imports: [
     Button,
     ReactiveFormsModule,
-    InputNumber,
     InputText,
     Message,
-    Select,
     Textarea,
     EmptyState,
     FieldRow,
     FieldControl,
-    Lozenge,
     PageContainer,
     PageHeader,
     Section,
     OrgDangerZone,
     OrgLogoField,
+    PolicyChoice,
+    SelectField,
   ],
   templateUrl: './org-settings-page.html',
   styleUrl: './org-settings-page.scss',
@@ -109,7 +108,6 @@ export class OrgSettingsPage implements UnsavedChangesAware {
   private readonly notify = inject(NotificationService);
   private readonly destroyRef = inject(DestroyRef);
 
-  protected readonly sectionLinks = SECTION_LINKS;
   protected readonly whoOptions = WHO_CAN_OPTIONS;
   protected readonly visibilityOptions = VISIBILITY_OPTIONS;
 

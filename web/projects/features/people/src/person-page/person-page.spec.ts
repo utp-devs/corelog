@@ -104,6 +104,29 @@ describe('PersonPage', () => {
     expect(el.querySelector('aside[aria-label="Equipos de la persona"]')).not.toBeNull();
   });
 
+  it('shows a header card with the role line, the email and the role lozenge', async () => {
+    setup();
+    const harness = await render();
+
+    await expectText(harness, 'Luis P.');
+    const el = harness.fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('.person-page__role-line')?.textContent?.trim()).toBe(
+      'Analista · Operaciones',
+    );
+    expect(el.querySelector('a[href="mailto:luis@corelog.test"]')).not.toBeNull();
+    expect(el.querySelector('.person-page__header app-lozenge')?.textContent?.trim()).toBe(
+      'Miembro',
+    );
+  });
+
+  it('leaves out the role line when the person has no job title or department', async () => {
+    setup({ getPerson: () => of({ ...person, jobTitle: '', department: '' }) });
+    const harness = await render();
+
+    await expectText(harness, 'Luis P.');
+    expect(harness.fixture.nativeElement.querySelector('.person-page__role-line')).toBeNull();
+  });
+
   it('renders team chips that link to the team page', async () => {
     setup();
     const harness = await render();

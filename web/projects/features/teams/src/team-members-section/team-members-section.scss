@@ -1,41 +1,37 @@
+@use '../../../../ui/styles/mixins' as m;
+
 :host {
   display: block;
   min-width: 0;
 }
 
-.add-form {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--cl-space-3);
-  margin-bottom: var(--cl-space-4);
-}
+.team-members-section {
+  &__add {
+    @include m.cluster(3, flex-start);
+    margin-bottom: var(--cl-space-4);
+  }
 
-.picker {
-  flex: 1 1 280px;
-  min-width: 0;
-}
+  &__picker {
+    flex: 1 1 18rem;
+    min-width: 0;
+  }
 
-.role-select {
-  min-width: var(--cl-space-16);
-}
+  &__new-role {
+    flex: 0 0 11rem;
+    max-width: 100%;
+  }
 
-.mobile-card {
-  display: flex;
-  flex-direction: column;
-  gap: var(--cl-space-3);
-  min-width: 0;
-}
+  &__role {
+    width: 11rem;
+    max-width: 100%;
+  }
 
-.mobile-actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--cl-space-2);
-}
+  &__card {
+    @include m.flex-column(3);
+    min-width: 0;
+  }
 
-@media (max-width: 767.98px) {
-  .touch-target {
-    min-height: var(--cl-space-12);
+  &__card-actions {
+    @include m.cluster(2);
   }
 }

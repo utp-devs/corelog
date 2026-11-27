@@ -21,9 +21,9 @@
     <app-breadcrumbs [items]="crumbs()" />
 
     <app-split-layout sideLabel="Equipos de la persona">
-      <div appSplitMain class="main">
+      <div appSplitMain class="person-page__main">
         <app-section [ariaLabel]="'Ficha de ' + displayName()" [fill]="true">
-          <div class="header">
+          <div class="person-page__header">
             <app-user-avatar
               [id]="v.person.userId"
               [name]="displayName()"
@@ -31,51 +31,55 @@
               [size]="64"
               data-testid="person-avatar"
             />
-            <div class="identity">
-              <h2 class="name">{{ displayName() }}</h2>
-              <app-lozenge [tone]="toneOf(v.person.orgRole)">
-                {{ labelOf(v.person.orgRole) }}
-              </app-lozenge>
+            <div class="person-page__identity">
+              <div class="person-page__title-row">
+                <h2 class="person-page__name">{{ displayName() }}</h2>
+                <app-lozenge [tone]="toneOf(v.person.orgRole)">
+                  {{ labelOf(v.person.orgRole) }}
+                </app-lozenge>
+              </div>
+              @if (roleLine(v.person); as line) {
+                <p class="person-page__role-line">{{ line }}</p>
+              }
+              <a class="person-page__email" [href]="'mailto:' + v.person.email">{{
+                v.person.email
+              }}</a>
             </div>
           </div>
 
-          <dl class="details">
-            <div class="detail">
+          <dl class="person-page__details">
+            <div class="person-page__detail">
               <dt>Cargo</dt>
               <dd>{{ v.person.jobTitle || '—' }}</dd>
             </div>
-            <div class="detail">
+            <div class="person-page__detail">
               <dt>Departamento</dt>
               <dd>{{ v.person.department || '—' }}</dd>
             </div>
-            <div class="detail">
-              <dt>Correo</dt>
-              <dd>{{ v.person.email }}</dd>
-            </div>
-            <div class="detail">
+            <div class="person-page__detail">
               <dt>Zona horaria</dt>
               <dd>{{ v.person.timezone || '—' }}</dd>
             </div>
-            <div class="detail">
+            <div class="person-page__detail">
               <dt>Se unió</dt>
               <dd>{{ v.person.joinedAt | date: 'dd/MM/yyyy' }}</dd>
             </div>
           </dl>
 
-          <a class="back" routerLink="..">Volver al directorio</a>
+          <a class="person-page__back" routerLink="..">Volver al directorio</a>
         </app-section>
       </div>
 
-      <div appSplitSide>
+      <div appSplitSide class="person-page__side">
         <app-section title="Equipos" [fill]="true">
           @if (v.teams === null) {
-            <p class="secondary">No se pudieron cargar los equipos.</p>
+            <p class="person-page__secondary">No se pudieron cargar los equipos.</p>
           } @else if (v.teams.length === 0) {
-            <p class="secondary">Sin equipos.</p>
+            <p class="person-page__secondary">Sin equipos.</p>
           } @else {
-            <ul class="team-list">
+            <ul class="person-page__teams">
               @for (team of v.teams; track team.id) {
-                <li>
+                <li class="person-page__team">
                   <app-team-chip
                     [id]="team.id"
                     [name]="team.name"

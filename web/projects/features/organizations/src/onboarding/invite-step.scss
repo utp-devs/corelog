@@ -1,110 +1,84 @@
-.intro {
-  margin: 0 0 var(--cl-space-4);
-  color: var(--cl-text-subtle);
+@use '../../../../ui/styles/mixins' as m;
+
+:host {
+  display: block;
 }
 
-.invite-form {
-  display: flex;
-  flex-direction: column;
-  gap: var(--cl-space-3);
-}
+.invite-step {
+  @include m.flex-column(4);
 
-.row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  gap: var(--cl-space-3);
-  width: 100%;
-}
-
-.email-field {
-  flex: 1 1 240px;
-  min-width: 0;
-}
-
-.role-field {
-  flex: 0 0 180px;
-  min-width: 0;
-}
-
-.text-input {
-  width: 100%;
-  min-height: var(--cl-space-10);
-  padding: var(--cl-space-2) var(--cl-space-3);
-  border: 1px solid var(--cl-border-strong);
-  border-radius: var(--cl-radius-md);
-  background: var(--cl-bg-surface);
-  color: var(--cl-text);
-  font: inherit;
-}
-
-.icon-button {
-  align-self: flex-start;
-  width: var(--cl-space-10);
-  height: var(--cl-space-10);
-  border: 0;
-  border-radius: var(--cl-radius-md);
-  background: transparent;
-  color: var(--cl-text-subtle);
-  cursor: pointer;
-}
-
-.icon-button:disabled {
-  opacity: 0.4;
-  cursor: default;
-}
-
-.actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--cl-space-2);
-  margin-top: var(--cl-space-4);
-}
-
-.invite-list {
-  display: flex;
-  flex-direction: column;
-  gap: var(--cl-space-3);
-  padding: 0;
-  list-style: none;
-}
-
-.invite-item {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--cl-space-3);
-}
-
-.link-button {
-  padding: var(--cl-space-1) var(--cl-space-3);
-  border: 1px solid var(--cl-border-strong);
-  border-radius: var(--cl-radius-md);
-  background: var(--cl-bg-surface);
-  color: var(--cl-text);
-  cursor: pointer;
-}
-
-.muted {
-  color: var(--cl-text-subtle);
-}
-
-.touch-target {
-  min-height: var(--cl-space-10);
-}
-
-@media (max-width: 767.98px) {
-  .role-field {
-    flex: 1 1 100%;
+  &__intro {
+    margin: 0;
+    color: var(--cl-text-subtle);
   }
 
-  .touch-target,
-  .link-button,
-  .icon-button {
-    min-height: var(--cl-space-12);
+  &__row {
+    @include m.cluster(3, flex-start);
   }
 
-  .icon-button {
-    width: var(--cl-space-12);
+  &__email-field {
+    flex: 1 1 14rem;
+    min-width: 0;
+  }
+
+  &__role-field {
+    flex: 0 0 11rem;
+    min-width: 0;
+  }
+
+  // Lines the remove button up with the controls, below the labels.
+  &__remove {
+    align-self: flex-end;
+    flex: none;
+  }
+
+  &__actions {
+    @include m.cluster(2, center, flex-end);
+    margin-top: var(--cl-space-2);
+
+    &--end {
+      justify-content: flex-end;
+    }
+  }
+
+  &__list {
+    @include m.flex-column(3);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  &__item {
+    @include m.cluster(3);
+    padding: var(--cl-space-3);
+    border: 1px solid var(--cl-border);
+    border-radius: var(--cl-radius-md);
+  }
+
+  &__email {
+    flex: 1 1 12rem;
+    min-width: 0;
+    overflow-wrap: anywhere;
+    font-weight: var(--cl-weight-medium);
+    color: var(--cl-text);
+  }
+
+  &__role {
+    color: var(--cl-text-subtle);
+  }
+
+  @include m.respond-down(768px) {
+    &__role-field {
+      flex: 1 1 100%;
+    }
+
+    &__remove {
+      align-self: flex-start;
+    }
+
+    &__actions {
+      flex-direction: column-reverse;
+      align-items: stretch;
+    }
   }
 }

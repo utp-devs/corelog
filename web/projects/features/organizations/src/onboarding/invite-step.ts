@@ -11,6 +11,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { Button } from 'primeng/button';
 import { Message } from 'primeng/message';
+import { InputText } from 'primeng/inputtext';
 import { Select } from 'primeng/select';
 import {
   InvitationCreated,
@@ -20,7 +21,8 @@ import {
   OrgRole,
   isApiError,
 } from '@corelog/core';
-import { FieldRow } from '@corelog/ui/field-row';
+import { FieldControl, FieldRow } from '@corelog/ui/field-row';
+import { AppTooltip } from '@corelog/ui/tooltip';
 
 import { copyText } from '../shared/copy-text';
 import { InviteRow, InviteRowErrors, validateInviteRows } from './invite-rows';
@@ -34,7 +36,7 @@ const INVITABLE_ROLE_OPTIONS: { value: OrgRole; label: string }[] = [
 /** Wizard step 3 (optional): invitation emails with roles. No email is sent; the accept links are shown to copy. */
 @Component({
   selector: 'app-invite-step',
-  imports: [Button, Message, Select, FieldRow, FormsModule],
+  imports: [Button, InputText, Message, Select, FieldRow, FieldControl, AppTooltip, FormsModule],
   templateUrl: './invite-step.html',
   styleUrl: './invite-step.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

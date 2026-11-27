@@ -3,9 +3,12 @@ import {
   Component,
   OnInit,
   computed,
+  effect,
   inject,
   signal,
+  untracked,
 } from '@angular/core';
+import { ActivatedRoute, Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import {
   canCreateTeam,
@@ -60,6 +63,8 @@ export class TeamsPage implements OnInit {
   private readonly store = inject(TeamStore);
   private readonly organizations = inject(OrganizationStore);
   private readonly notify = inject(NotificationService);
+  private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
 
   protected readonly teams = this.store.teams;
   protected readonly error = this.store.error;
@@ -95,12 +100,36 @@ export class TeamsPage implements OnInit {
   protected readonly skeletonCards = Array.from({ length: SKELETON_CARDS }, (_, index) => index);
   protected readonly emptyTeam = EMPTY_TEAM;
 
+  /** `?new=1` asks for the create dialog to open as soon as the caller is known to be allowed. */
+  private readonly createRequested = signal(false);
+
   constructor() {
     warnBeforeUnload(this.dirty);
+
+    effect(() => {
+      if (!this.createRequested()) return;
+      const role = this.organizations.currentRole();
+      // Without a role the organization is still loading: wait for it before deciding.
+      if (role === null) return;
+      const allowed = this.canCreate();
+      untracked(() => {
+        this.createRequested.set(false);
+        if (allowed) this.createOpen.set(true);
+      });
+    });
   }
 
   ngOnInit(): void {
     this.load();
+    if (this.route.snapshot.queryParamMap.get('new') === '1') {
+      this.createRequested.set(true);
+      void this.router.navigate([], {
+        relativeTo: this.route,
+        queryParams: { new: null },
+        queryParamsHandling: 'merge',
+        replaceUrl: true,
+      });
+    }
   }
 
   protected load(): void {

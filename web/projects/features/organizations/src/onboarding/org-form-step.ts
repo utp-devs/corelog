@@ -6,7 +6,7 @@ import {
   output,
   signal,
 } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import {
   FormControl,
   FormGroup,
@@ -15,8 +15,8 @@ import {
   Validators,
 } from '@angular/forms';
 import { Button } from 'primeng/button';
-import { Message } from 'primeng/message';
 import { InputText } from 'primeng/inputtext';
+import { Message } from 'primeng/message';
 import {
   OrganizationStore,
   applyServerErrors,
@@ -25,7 +25,7 @@ import {
   orgCreateErrorMessage,
   slugFromName,
 } from '@corelog/core';
-import { FieldRow } from '@corelog/ui/field-row';
+import { FieldControl, FieldRow } from '@corelog/ui/field-row';
 
 import { fieldMessage, ruleOf } from '../shared/field-message';
 
@@ -40,7 +40,7 @@ const slugValidator: ValidatorFn = ruleOf(
 /** Wizard step 2: name and slug of the new organization, with live slug validation and server errors. */
 @Component({
   selector: 'app-org-form-step',
-  imports: [Button, InputText, Message, FieldRow, ReactiveFormsModule],
+  imports: [Button, InputText, Message, FieldRow, FieldControl, ReactiveFormsModule],
   templateUrl: './org-form-step.html',
   styleUrl: './org-form-step.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -59,6 +59,7 @@ export class OrgFormStep {
   protected readonly formError = signal<string | null>(null);
   protected readonly submitted = signal(false);
   private slugEdited = false;
+  private deriving = false;
 
   protected readonly form = new FormGroup({
     name: new FormControl('', {
@@ -83,18 +84,23 @@ export class OrgFormStep {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((name) => {
         if (!this.slugEdited) {
-          this.form.controls.slug.setValue(slugFromName(name), { emitEvent: false });
+          this.deriving = true;
+          this.form.controls.slug.setValue(slugFromName(name));
+          this.deriving = false;
         }
       });
 
     this.form.controls.slug.valueChanges
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((value) => {
-        this.slugEdited = true;
+        if (!this.deriving) this.slugEdited = true;
         const lower = value.toLowerCase();
-        if (lower !== value) this.form.controls.slug.setValue(lower, { emitEvent: false });
+        if (lower !== value) this.form.controls.slug.setValue(lower);
       });
   }
+
+  /** Live slug for the preview line. */
+  protected readonly slug = toSignal(this.form.controls.slug.valueChanges, { initialValue: '' });
 
   /** Message under a field: the server or rule message once the field is dirty or the form was submitted. */
   protected errorOf(control: FormControl<string>): string | undefined {

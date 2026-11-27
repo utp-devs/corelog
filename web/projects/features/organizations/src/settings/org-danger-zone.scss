@@ -1,48 +1,49 @@
-.danger {
-  margin-top: var(--cl-space-6);
-}
+@use '../../../../ui/styles/mixins' as m;
 
-.danger-row {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--cl-space-4);
-  flex-wrap: wrap;
-  padding: var(--cl-space-3) 0;
-  border-bottom: 1px solid var(--cl-border);
-}
-
-.danger-row:last-child {
-  border-bottom: none;
-}
-
-.danger-copy {
-  display: flex;
-  flex-direction: column;
-  gap: var(--cl-space-1);
+:host {
+  display: block;
   min-width: 0;
-  flex: 1 1 280px;
 }
 
-.hint {
-  margin: var(--cl-space-1) 0 0;
-  color: var(--cl-text-subtle);
-  overflow-wrap: anywhere;
-}
+.org-danger-zone {
+  min-width: 0;
 
-:host ::ng-deep .transfer-select {
-  width: 100%;
-  max-width: min(100%, var(--cl-content-max));
-  margin-top: var(--cl-space-2);
-}
-
-@media (max-width: 767.98px) {
-  .danger-row {
-    flex-direction: column;
-    align-items: stretch;
+  &__list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
   }
 
-  .touch-target {
-    min-height: var(--cl-space-12);
+  &__row {
+    @include m.flex-row(4, center, space-between);
+    flex-wrap: wrap;
+    min-width: 0;
+    padding: var(--cl-space-4);
+
+    & + & {
+      border-top: 1px solid var(--cl-divider);
+    }
+  }
+
+  &__copy {
+    @include m.flex-column(1);
+    flex: 1 1 18rem;
+    min-width: 0;
+  }
+
+  &__title {
+    font-weight: var(--cl-weight-semibold);
+  }
+
+  &__hint {
+    margin: 0;
+    color: var(--cl-text-subtle);
+    font-size: var(--cl-font-small);
+    overflow-wrap: anywhere;
+  }
+
+  &__select {
+    margin-block-start: var(--cl-space-2);
+    max-width: var(--cl-dialog-w-md);
   }
 }

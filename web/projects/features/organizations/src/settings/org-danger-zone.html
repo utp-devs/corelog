@@ -1,74 +1,77 @@
-<div id="org-danger" class="danger">
+<div id="org-danger" class="org-danger-zone">
   <app-section
     title="Zona de peligro"
     description="Estas acciones afectan a toda la organización."
     ariaLabel="Zona de peligro"
+    [flush]="true"
   >
-    <div class="danger-row">
-      <div class="danger-copy">
-        <strong>Salir de la organización</strong>
-        <p class="hint">
-          Perderás el acceso a sus proyectos y equipos. No puedes salir si eres el último
-          propietario.
-        </p>
-      </div>
-      <p-button
-        label="Salir de la organización"
-        severity="danger"
-        class="touch-target"
-        type="button"
-        (onClick)="leaveOpen.set(true)"
-      />
-    </div>
+    <ul class="org-danger-zone__list">
+      <li class="org-danger-zone__row">
+        <div class="org-danger-zone__copy">
+          <strong class="org-danger-zone__title">Salir de la organización</strong>
+          <p class="org-danger-zone__hint">
+            Perderás el acceso a sus proyectos y equipos. No puedes salir si eres el último
+            propietario.
+          </p>
+        </div>
+        <p-button
+          label="Salir de la organización"
+          severity="danger"
+          [outlined]="true"
+          type="button"
+          (onClick)="leaveOpen.set(true)"
+        />
+      </li>
 
-    @if (isOwner()) {
-      <div class="danger-row">
-        <div class="danger-copy">
-          <strong>Transferir la propiedad</strong>
-          <p class="hint">
-            El miembro elegido pasa a ser propietario y tú pasas a ser administrador.
-          </p>
-          <p-select
-            ariaLabel="Nuevo propietario"
-            placeholder="Elige un miembro"
-            styleClass="transfer-select"
-            [options]="transferOptions()"
-            optionLabel="label"
-            optionValue="value"
-            [ngModel]="transferTarget()"
-            (ngModelChange)="transferTarget.set($event)"
+      @if (isOwner()) {
+        <li class="org-danger-zone__row">
+          <div class="org-danger-zone__copy">
+            <strong class="org-danger-zone__title">Transferir la propiedad</strong>
+            <p class="org-danger-zone__hint">
+              El miembro elegido pasa a ser propietario y tú pasas a ser administrador.
+            </p>
+            <app-select-field
+              class="org-danger-zone__select"
+              ariaLabel="Nuevo propietario"
+              placeholder="Elige un miembro"
+              emptyMessage="No hay otros miembros"
+              [options]="transferOptions()"
+              [ngModel]="transferTarget()"
+              (ngModelChange)="transferTarget.set($event)"
+            />
+          </div>
+          <p-button
+            label="Transferir propiedad"
+            severity="danger"
+            [outlined]="true"
+            type="button"
+            [disabled]="!selectedTarget() || busy()"
+            (onClick)="transferOpen.set(true)"
           />
-        </div>
-        <p-button
-          label="Transferir propiedad"
-          severity="danger"
-          class="touch-target"
-          type="button"
-          [disabled]="!selectedTarget() || busy()"
-          (onClick)="transferOpen.set(true)"
-        />
-      </div>
-      <div class="danger-row">
-        <div class="danger-copy">
-          <strong>Eliminar la organización</strong>
-          <p class="hint">
-            Los proyectos, equipos e incidencias dejan de estar disponibles. El identificador queda
-            reservado.
+        </li>
+        <li class="org-danger-zone__row">
+          <div class="org-danger-zone__copy">
+            <strong class="org-danger-zone__title">Eliminar la organización</strong>
+            <p class="org-danger-zone__hint">
+              Los proyectos, equipos e incidencias dejan de estar disponibles. El identificador
+              queda reservado.
+            </p>
+          </div>
+          <p-button
+            label="Eliminar organización"
+            severity="danger"
+            type="button"
+            (onClick)="deleteOpen.set(true)"
+          />
+        </li>
+      } @else {
+        <li class="org-danger-zone__row">
+          <p class="org-danger-zone__hint">
+            Solo el propietario puede transferir la propiedad o eliminar la organización.
           </p>
-        </div>
-        <p-button
-          label="Eliminar organización"
-          severity="danger"
-          class="touch-target"
-          type="button"
-          (onClick)="deleteOpen.set(true)"
-        />
-      </div>
-    } @else {
-      <p class="hint">
-        Solo el propietario puede transferir la propiedad o eliminar la organización.
-      </p>
-    }
+        </li>
+      }
+    </ul>
   </app-section>
 
   <app-confirm-modal

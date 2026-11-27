@@ -78,6 +78,12 @@ export class PersonPage {
   protected labelOf(role: OrgRole): string {
     return ORG_ROLE_LABELS[role];
   }
+
+  /** Job title and department on one line, whichever of them is filled in. */
+  protected roleLine(person: PersonProfile): string {
+    return [person.jobTitle, person.department].filter((part) => part !== '').join(' · ');
+  }
+
   protected readonly notFoundTitle = NOT_FOUND_TITLE;
   protected readonly notFoundDescription = NOT_FOUND_DESCRIPTION;
 

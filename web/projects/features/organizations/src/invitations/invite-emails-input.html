@@ -1,0 +1,41 @@
+<div
+  class="invite-emails-input"
+  [class.invite-emails-input--invalid]="invalid()"
+  [class.invite-emails-input--disabled]="disabled()"
+  (click)="focusField()"
+>
+  @for (chip of chips(); track $index) {
+    <span
+      class="invite-emails-input__chip"
+      [class.invite-emails-input__chip--invalid]="!chip.valid"
+    >
+      <span class="invite-emails-input__email">{{ chip.email }}</span>
+      <button
+        type="button"
+        class="invite-emails-input__remove"
+        [attr.aria-label]="'Quitar ' + chip.email"
+        [disabled]="disabled()"
+        (click)="remove($index); $event.stopPropagation()"
+      >
+        <i class="pi pi-times" aria-hidden="true"></i>
+      </button>
+    </span>
+  }
+  <input
+    #field
+    type="text"
+    class="invite-emails-input__field"
+    inputmode="email"
+    autocomplete="off"
+    autocapitalize="off"
+    spellcheck="false"
+    [id]="inputId()"
+    [placeholder]="chips().length === 0 ? placeholder() : ''"
+    [disabled]="disabled()"
+    [attr.aria-describedby]="describedBy()"
+    [attr.aria-invalid]="invalid() ? 'true' : null"
+    (input)="onInput($event)"
+    (keydown)="onKeydown($event)"
+    (blur)="onBlur()"
+  />
+</div>

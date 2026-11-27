@@ -1,48 +1,50 @@
-.link-list {
-  display: flex;
-  flex-direction: column;
-  gap: var(--cl-space-3);
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
+@use '../../../../ui/styles/mixins' as m;
 
-.link-item {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: var(--cl-space-2);
-  align-items: center;
-  padding-bottom: var(--cl-space-3);
-  border-bottom: 1px solid var(--cl-border);
-}
-
-.link-item:last-child {
-  border-bottom: none;
-}
-
-.link-meta {
-  display: flex;
-  gap: var(--cl-space-2);
-  align-items: baseline;
-  flex-wrap: wrap;
-  grid-column: 1 / -1;
-}
-
-.link-url {
+:host {
+  display: block;
   min-width: 0;
-  overflow-wrap: anywhere;
+  margin-block-start: var(--cl-space-6);
 }
 
-.muted {
-  color: var(--cl-text-subtle);
-}
-
-@media (max-width: 767.98px) {
-  .link-item {
-    grid-template-columns: minmax(0, 1fr);
+.invite-links-panel {
+  &__list {
+    @include m.flex-column(0);
+    margin: 0;
+    padding: 0;
+    list-style: none;
   }
 
-  .touch-target {
-    min-height: var(--cl-space-12);
+  &__item {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: var(--cl-space-2) var(--cl-space-3);
+    align-items: center;
+    padding-block: var(--cl-space-3);
+
+    & + & {
+      border-top: 1px solid var(--cl-divider);
+    }
+
+    @include m.respond-down(768px) {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+
+  &__meta {
+    @include m.cluster(2);
+    grid-column: 1 / -1;
+  }
+
+  &__email {
+    overflow-wrap: anywhere;
+  }
+
+  &__url {
+    min-width: 0;
+    padding: var(--cl-space-2) var(--cl-space-3);
+    border-radius: var(--cl-radius-md);
+    background: var(--cl-bg-sunken);
+    font-size: var(--cl-font-small);
+    overflow-wrap: anywhere;
   }
 }

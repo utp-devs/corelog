@@ -1,56 +1,49 @@
-.banner {
+@use '../../../../ui/styles/mixins' as m;
+
+:host {
   display: block;
-  margin-bottom: var(--cl-space-4);
-}
-
-.alert-body {
-  display: flex;
-  flex-direction: column;
-  gap: var(--cl-space-1);
-}
-
-.form {
-  display: flex;
-  flex-direction: column;
-  gap: var(--cl-space-4);
   min-width: 0;
 }
 
-.form-actions {
-  display: flex;
-  justify-content: flex-end;
-}
+.org-invitations-page {
+  &__banner {
+    display: block;
+    margin-bottom: var(--cl-space-4);
+  }
 
-.toolbar {
-  display: flex;
-  justify-content: flex-start;
-  margin-bottom: var(--cl-space-3);
-}
+  &__alert {
+    @include m.flex-column(1);
+  }
 
-.email {
-  font-weight: 600;
-  overflow-wrap: anywhere;
-}
+  &__form {
+    @include m.flex-column(4);
+    min-width: 0;
+  }
 
-.muted {
-  color: var(--cl-text-subtle);
-}
+  &__role {
+    max-width: var(--cl-dialog-w-sm);
+  }
 
-.mobile-card {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: var(--cl-space-1);
-  min-width: 0;
-}
+  &__actions {
+    @include m.flex-row(2, center, flex-end);
+  }
 
-:host ::ng-deep .role-select {
-  width: var(--cl-space-16);
-  max-width: 100%;
-}
+  &__scope {
+    @include m.flex-row(0, center, flex-start);
+    margin-block: var(--cl-space-6) var(--cl-space-3);
+  }
 
-@media (max-width: 767.98px) {
-  .touch-target {
-    min-height: var(--cl-space-12);
+  &__email {
+    font-weight: var(--cl-weight-semibold);
+    overflow-wrap: anywhere;
+  }
+
+  &__muted {
+    color: var(--cl-text-subtle);
+  }
+
+  &__card {
+    @include m.flex-column(1, flex-start);
+    min-width: 0;
   }
 }

@@ -2,33 +2,33 @@
   title="Enlaces de invitación"
   description="Este enlace solo se muestra una vez. Cópialo y compártelo ahora. Si lo pierdes, reenvía la invitación para generar uno nuevo; el anterior dejará de funcionar."
   ariaLabel="Enlaces de invitación"
+  class="invite-links-panel"
 >
-  <div appSectionActions>
-    <p-button
-      label="Ocultar"
-      [text]="true"
-      type="button"
-      class="touch-target"
-      (onClick)="dismissed.emit()"
-    />
-  </div>
-  <ul class="link-list">
+  <p-button
+    appSectionActions
+    label="Ocultar"
+    [text]="true"
+    type="button"
+    (onClick)="dismissed.emit()"
+  />
+  <ul class="invite-links-panel__list">
     @for (invitation of invitations(); track invitation.id) {
-      <li class="link-item">
-        <div class="link-meta">
-          <strong>{{ invitation.email }}</strong>
-          <span class="muted">{{ roleLabel(invitation.role) }}</span>
+      <li class="invite-links-panel__item">
+        <div class="invite-links-panel__meta">
+          <strong class="invite-links-panel__email">{{ invitation.email }}</strong>
+          <app-lozenge tone="neutral">{{ roleLabel(invitation.role) }}</app-lozenge>
         </div>
-        <code class="link-url" [attr.aria-label]="'Enlace de ' + invitation.email">{{
+        <code class="invite-links-panel__url" [attr.aria-label]="'Enlace de ' + invitation.email">{{
           invitation.acceptUrl
         }}</code>
         <p-button
-          size="small"
+          appTooltip="Copiar el enlace al portapapeles"
+          icon="pi pi-copy"
+          label="Copiar"
           severity="secondary"
           [outlined]="true"
           type="button"
-          class="touch-target"
-          [label]="'Copiar enlace de ' + invitation.email"
+          [ariaLabel]="'Copiar enlace de ' + invitation.email"
           (onClick)="copy(invitation.acceptUrl)"
         />
       </li>

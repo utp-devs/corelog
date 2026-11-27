@@ -1,89 +1,89 @@
+@use '../../../../ui/styles/mixins' as m;
+
 :host {
   display: block;
   min-width: 0;
 }
 
-.main,
-[appSplitSide] {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
+.person-page {
+  &__main,
+  &__side {
+    @include m.flex-column(0);
+    flex: 1 1 auto;
+    min-width: 0;
+  }
 
-.main,
-[appSplitSide] {
-  flex: 1 1 auto;
-}
+  &__header {
+    @include m.flex-row(4);
+    margin-bottom: var(--cl-space-6);
+    min-width: 0;
+  }
 
-.header {
-  display: flex;
-  align-items: center;
-  gap: var(--cl-space-4);
-  margin-bottom: var(--cl-space-4);
-  min-width: 0;
-}
+  &__identity {
+    @include m.flex-column(1, flex-start);
+    min-width: 0;
+  }
 
-.identity {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: var(--cl-space-1);
-  min-width: 0;
-}
+  &__title-row {
+    @include m.cluster(2, center);
+  }
 
-.name {
-  margin: 0;
-  font-size: var(--cl-font-h3);
-  overflow-wrap: anywhere;
-}
+  &__name {
+    margin: 0;
+    font-size: var(--cl-font-h3);
+    line-height: var(--cl-lh-tight);
+    overflow-wrap: anywhere;
+  }
 
-.details {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: var(--cl-space-3);
-  margin: 0;
-}
+  &__role-line {
+    margin: 0;
+    color: var(--cl-text-subtle);
+    overflow-wrap: anywhere;
+  }
 
-.detail {
-  display: grid;
-  grid-template-columns: minmax(120px, 180px) minmax(0, 1fr);
-  gap: var(--cl-space-3);
-}
+  &__email {
+    color: var(--cl-brand);
+    overflow-wrap: anywhere;
+  }
 
-.detail dt {
-  color: var(--cl-text-subtle);
-}
+  &__details {
+    @include m.grid-auto(14rem, 4);
+    margin: 0;
+    padding-top: var(--cl-space-4);
+    border-top: 1px solid var(--cl-divider);
+  }
 
-.detail dd {
-  margin: 0;
-  overflow-wrap: anywhere;
-}
+  &__detail {
+    @include m.flex-column(1);
+    min-width: 0;
 
-.secondary {
-  margin: 0;
-  color: var(--cl-text-subtle);
-}
+    dt {
+      color: var(--cl-text-subtle);
+      font-size: var(--cl-font-small);
+    }
 
-.back {
-  display: inline-flex;
-  align-items: center;
-  align-self: flex-start;
-  min-height: 44px;
-  margin-top: var(--cl-space-4);
-}
+    dd {
+      margin: 0;
+      overflow-wrap: anywhere;
+    }
+  }
 
-.team-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--cl-space-2);
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
+  &__secondary {
+    margin: 0;
+    color: var(--cl-text-subtle);
+  }
 
-@media (max-width: 575.98px) {
-  .detail {
-    grid-template-columns: minmax(0, 1fr);
-    gap: var(--cl-space-1);
+  &__back {
+    @include m.flex-row(0);
+    align-self: flex-start;
+    min-height: var(--cl-control-h-lg);
+    margin-top: var(--cl-space-4);
+  }
+
+  &__teams {
+    @include m.cluster(2);
+    margin: 0;
+    padding: 0;
+    list-style: none;
   }
 }

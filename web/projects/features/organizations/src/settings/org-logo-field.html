@@ -1,20 +1,20 @@
-<div class="logo-field">
-  <div class="logo-preview" [attr.aria-hidden]="logoUrl() ? null : 'true'">
+<div class="org-logo-field">
+  <div class="org-logo-field__preview" [attr.aria-hidden]="logoUrl() ? null : 'true'">
     @if (logoUrl(); as url) {
-      <img class="logo-image" [src]="url" [alt]="'Logo de ' + organizationName()" />
+      <img class="org-logo-field__image" [src]="url" [alt]="'Logo de ' + organizationName()" />
     } @else {
-      <span class="muted">Sin logo</span>
+      <span class="org-logo-field__empty">Sin logo</span>
     }
   </div>
-  <div class="logo-actions">
-    <span class="muted">PNG, JPEG o WebP de hasta 2 MB.</span>
-    <div class="button-row">
+  <div class="org-logo-field__actions">
+    <span class="org-logo-field__hint">PNG, JPEG o WebP de hasta 2 MB.</span>
+    <div class="org-logo-field__buttons">
       <p-button
         label="Subir logo"
+        icon="pi pi-upload"
         severity="secondary"
         [outlined]="true"
         type="button"
-        class="touch-target"
         [disabled]="!canEdit() || busy()"
         [loading]="busy()"
         [attr.title]="
@@ -28,7 +28,6 @@
           severity="danger"
           [text]="true"
           type="button"
-          class="touch-target"
           [disabled]="!canEdit() || busy()"
           (onClick)="removeLogo()"
         />
@@ -37,14 +36,14 @@
     <input
       #fileInput
       type="file"
-      class="hidden-input"
+      class="org-logo-field__file"
       [attr.accept]="accept"
       aria-label="Elegir archivo de logo"
       [disabled]="!canEdit()"
       (change)="onFileChosen($event)"
     />
     @if (clientError(); as message) {
-      <p class="error" role="alert">{{ message }}</p>
+      <p class="org-logo-field__error" role="alert">{{ message }}</p>
     }
   </div>
 </div>

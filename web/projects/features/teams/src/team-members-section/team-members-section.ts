@@ -21,13 +21,14 @@ import {
   UserDirectoryApiService,
 } from '@corelog/core';
 import { Button } from 'primeng/button';
-import { Select } from 'primeng/select';
 import { firstValueFrom } from 'rxjs';
+import { ConfirmModal } from '@corelog/ui/confirm-modal';
 import { DataTable, DataTableColumn, DataTableCell } from '@corelog/ui/data-table';
 import { EmptyState } from '@corelog/ui/empty-state';
 import { Lozenge } from '@corelog/ui/lozenge';
 import { PickableUser, UserPicker } from '@corelog/ui/user-picker';
 import { Section } from '@corelog/ui/section';
+import { SelectField } from '@corelog/ui/select-field';
 import { UserChip } from '@corelog/ui/user-chip';
 
 import { memberErrorMessage } from '../shared/team-messages';
@@ -52,12 +53,13 @@ export type TeamMembersStatus = 'idle' | 'loading' | 'error';
     FormsModule,
     NgTemplateOutlet,
     Button,
+    ConfirmModal,
     DataTable,
     DataTableCell,
     EmptyState,
     Lozenge,
     Section,
-    Select,
+    SelectField,
     UserChip,
     UserPicker,
   ],
@@ -93,6 +95,9 @@ export class TeamMembersSection {
   protected readonly candidates = signal<PickableUser[]>([]);
   protected readonly searching = signal(false);
   protected readonly adding = signal(false);
+  /** Member waiting for the confirmation to be removed from the team. */
+  protected readonly removing = signal<TeamMemberView | null>(null);
+  protected readonly removingBusy = signal(false);
 
   protected readonly pickable = computed(() => {
     const memberIds = new Set(this.members().map((member) => member.userId));
@@ -138,7 +143,13 @@ export class TeamMembersSection {
     }
   }
 
-  protected async changeRole(member: TeamMemberView, role: TeamRole): Promise<void> {
+  protected setNewRole(value: string | null): void {
+    this.newRole.set(value === 'maintainer' ? 'maintainer' : 'member');
+  }
+
+  protected async changeRole(member: TeamMemberView, value: string | null): Promise<void> {
+    const role: TeamRole = value === 'maintainer' ? 'maintainer' : 'member';
+    if (role === member.role) return;
     try {
       await firstValueFrom(this.store.updateMemberRole(this.teamId(), member.userId, role));
       this.notify.success('Rol actualizado');
@@ -147,12 +158,22 @@ export class TeamMembersSection {
     }
   }
 
-  protected async removeMember(member: TeamMemberView): Promise<void> {
+  protected askRemove(member: TeamMemberView): void {
+    this.removing.set(member);
+  }
+
+  protected async confirmRemove(): Promise<void> {
+    const member = this.removing();
+    if (!member) return;
+    this.removingBusy.set(true);
     try {
       await firstValueFrom(this.store.removeMember(this.teamId(), member.userId));
       this.notify.success(`${member.name} ya no pertenece al equipo`);
     } catch (error) {
       this.notify.error(memberErrorMessage(error, 'No se pudo quitar el miembro'));
+    } finally {
+      this.removingBusy.set(false);
+      this.removing.set(null);
     }
   }
 

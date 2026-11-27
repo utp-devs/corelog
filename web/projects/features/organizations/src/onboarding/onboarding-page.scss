@@ -1,153 +1,180 @@
 @use '../../../../ui/styles/mixins' as m;
 
-.page {
+.onboarding {
   min-height: 100vh;
+  min-height: 100dvh;
   background: var(--cl-bg-page);
-}
 
-.wizard {
-  display: flex;
-  flex: 1 1 auto;
-  flex-direction: column;
-  width: min(880px, 100%);
-  min-height: 0;
-  margin: 0 auto;
-  padding: var(--cl-space-6) 0 var(--cl-space-12);
-}
-
-/* The step fills the rest of the wizard, so the page has no bare band under a short step. */
-.step-body {
-  display: flex;
-  flex: 1 1 auto;
-  flex-direction: column;
-  min-height: 0;
-}
-
-.step-body > * {
-  display: flex;
-  flex: 1 1 auto;
-  flex-direction: column;
-  min-height: 0;
-}
-
-.header {
-  display: flex;
-  align-items: center;
-  margin-bottom: var(--cl-space-6);
-}
-
-.logo {
-  display: block;
-  width: auto;
-  height: var(--cl-space-8);
-}
-
-.steps-nav {
-  margin-bottom: var(--cl-space-8);
-}
-
-.steps {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: var(--cl-space-2);
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.step {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--cl-space-2);
-  min-width: 0;
-  color: var(--cl-text-subtle);
-  font-size: var(--cl-font-small);
-  text-align: center;
-}
-
-.step::before {
-  content: '';
-  order: -1;
-  width: 100%;
-  height: 2px;
-  border-radius: var(--cl-radius-full);
-  background: var(--cl-border);
-}
-
-.step[data-state='done']::before,
-.step[data-state='current']::before {
-  background: var(--cl-brand);
-}
-
-.step-number {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  border-radius: var(--cl-radius-full);
-  border: 1px solid var(--cl-border-strong);
-  background: var(--cl-bg-surface);
-  color: var(--cl-text-subtle);
-  font-weight: 600;
-}
-
-.step[data-state='done'] .step-number {
-  border-color: var(--cl-brand);
-  background: var(--cl-brand);
-  color: var(--cl-bg-surface);
-}
-
-.step[data-state='current'] .step-number {
-  border-color: var(--cl-brand);
-  color: var(--cl-brand);
-  box-shadow: var(--cl-shadow-focus);
-}
-
-.step[data-state='current'] .step-title {
-  color: var(--cl-text);
-  font-weight: 600;
-}
-
-.sr-only {
-  @include m.visually-hidden;
-}
-
-.panel {
-  padding: var(--cl-space-6);
-  border: 1px solid var(--cl-border);
-  border-radius: var(--cl-radius-lg);
-  background: var(--cl-bg-surface);
-}
-
-.panel-title {
-  margin: 0 0 var(--cl-space-4);
-  font-size: var(--cl-font-h2);
-  color: var(--cl-text);
-}
-
-@media (max-width: 767.98px) {
-  .steps {
-    grid-template-columns: minmax(0, 1fr);
-    gap: var(--cl-space-3);
+  &__wizard {
+    @include m.flex-column(6);
+    width: min(44rem, 100%);
+    margin: 0 auto;
+    padding: var(--cl-space-6) 0 var(--cl-space-12);
   }
 
-  .step {
-    flex-direction: row;
-    text-align: left;
-    padding: var(--cl-space-2) var(--cl-space-3);
-    border: 1px solid var(--cl-border);
-    border-radius: var(--cl-radius-md);
+  &__header {
+    @include m.flex-row(3, center, space-between);
+  }
+
+  &__logo {
+    display: block;
+    width: auto;
+    height: var(--cl-space-8);
+  }
+
+  &__header-actions {
+    @include m.cluster(1, center, flex-end);
+  }
+
+  &__steps {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: var(--cl-space-2);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  &__step-label {
+    @include m.visually-hidden;
+  }
+
+  &__step {
+    @include m.flex-column(2, center);
+    min-width: 0;
+    color: var(--cl-text-subtle);
+    font-size: var(--cl-font-small);
+    text-align: center;
+
+    // Progress bar over the step: filled for the finished and the current step.
+    &::before {
+      content: '';
+      order: -1;
+      width: 100%;
+      height: var(--cl-space-1);
+      border-radius: var(--cl-radius-full);
+      background: var(--cl-border);
+    }
+
+    &[data-state='done']::before,
+    &[data-state='current']::before {
+      background: var(--cl-brand);
+    }
+
+    &[data-state='current'] {
+      color: var(--cl-text);
+    }
+  }
+
+  &__step-number {
+    @include m.flex-row(0, center, center);
+    width: var(--cl-space-8);
+    height: var(--cl-space-8);
+    border: 1px solid var(--cl-border-strong);
+    border-radius: var(--cl-radius-full);
     background: var(--cl-bg-surface);
+    color: var(--cl-text-subtle);
+    font-weight: var(--cl-weight-semibold);
+
+    .onboarding__step[data-state='done'] & {
+      border-color: var(--cl-brand);
+      background: var(--cl-brand);
+      color: var(--cl-text-on-brand);
+    }
+
+    .onboarding__step[data-state='current'] & {
+      border-color: var(--cl-brand);
+      color: var(--cl-brand);
+      box-shadow: var(--cl-shadow-focus);
+    }
   }
 
-  .step::before {
-    display: none;
+  &__step-title {
+    font-weight: var(--cl-weight-medium);
+
+    .onboarding__step[data-state='current'] & {
+      font-weight: var(--cl-weight-semibold);
+    }
   }
 
-  .touch-target {
-    min-height: var(--cl-space-12);
+  &__step-optional {
+    display: block;
+    font-weight: var(--cl-weight-regular);
+    color: var(--cl-text-subtle);
+  }
+
+  &__sr {
+    @include m.visually-hidden;
+  }
+
+  // The card is as tall as its content.
+  &__panel {
+    @include m.flex-column(3);
+    padding: var(--cl-space-6);
+    border: 1px solid var(--cl-border);
+    border-radius: var(--cl-radius-lg);
+    background: var(--cl-bg-surface);
+
+    &--done {
+      align-items: center;
+      text-align: center;
+    }
+  }
+
+  &__panel-title {
+    @include m.cluster(2);
+    margin: 0;
+    font-size: var(--cl-font-h2);
+    font-weight: 700;
+    line-height: var(--cl-lh-tight);
+    color: var(--cl-text);
+  }
+
+  &__panel-lead {
+    margin: 0;
+    color: var(--cl-text-subtle);
+  }
+
+  &__badge {
+    padding: 0 var(--cl-space-2);
+    border-radius: var(--cl-radius-full);
+    background: var(--cl-bg-sunken);
+    color: var(--cl-text-subtle);
+    font-size: var(--cl-font-small);
+    font-weight: var(--cl-weight-medium);
+    line-height: var(--cl-space-5);
+  }
+
+  &__done-icon {
+    @include m.flex-row(0, center, center);
+    width: var(--cl-space-16);
+    height: var(--cl-space-16);
+    border-radius: var(--cl-radius-full);
+    background: var(--cl-success-bg);
+    color: var(--cl-success-text);
+    font-size: var(--cl-font-h2);
+  }
+
+  // Phone: only the current step keeps its title; the others stay as numbered dots.
+  @include m.respond-down(768px) {
+    &__step:not([data-state='current']) &__step-title {
+      @include m.visually-hidden;
+    }
+
+    &__step-label {
+      position: static;
+      width: auto;
+      height: auto;
+      margin: var(--cl-space-2) 0 0;
+      clip-path: none;
+      white-space: normal;
+      font-size: var(--cl-font-small);
+      color: var(--cl-text-subtle);
+      text-align: center;
+    }
+
+    &__panel {
+      padding: var(--cl-space-4);
+    }
   }
 }

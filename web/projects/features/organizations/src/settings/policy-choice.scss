@@ -1,0 +1,83 @@
+@use '../../../../ui/styles/mixins' as m;
+@use '../../../../ui/field-row/src/control' as c;
+
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.policy-choice {
+  @include m.grid-auto(14rem, 3);
+
+  &__card {
+    @include m.flex-row(3, flex-start);
+    box-sizing: border-box;
+    min-width: 0;
+    padding: var(--cl-space-3);
+    border: 1px solid var(--cl-border-strong);
+    border-radius: var(--cl-radius-lg);
+    background: var(--cl-bg-surface);
+    cursor: pointer;
+    transition:
+      border-color var(--cl-motion-fast) var(--cl-ease),
+      background-color var(--cl-motion-fast) var(--cl-ease);
+
+    &:hover {
+      background: var(--cl-bg-hover);
+    }
+
+    &:has(.policy-choice__input:focus-visible) {
+      @include c.focus-ring;
+    }
+
+    &--selected,
+    &--selected:hover {
+      border-color: var(--cl-brand);
+      background: var(--cl-brand-subtle);
+    }
+
+    &--disabled {
+      cursor: not-allowed;
+      opacity: var(--cl-disabled-opacity);
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      transition: none;
+    }
+  }
+
+  &__input {
+    @include m.visually-hidden;
+  }
+
+  // Radio indicator drawn with borders, so it follows the selected state of the card.
+  &__dot {
+    flex: none;
+    box-sizing: border-box;
+    width: var(--cl-space-4);
+    height: var(--cl-space-4);
+    margin-block-start: var(--cl-space-1);
+    border: 2px solid var(--cl-border-strong);
+    border-radius: var(--cl-radius-full);
+    background: var(--cl-bg-surface);
+
+    .policy-choice__card--selected & {
+      border: 5px solid var(--cl-brand);
+    }
+  }
+
+  &__text {
+    @include m.flex-column(1);
+    min-width: 0;
+  }
+
+  &__label {
+    font-weight: var(--cl-weight-semibold);
+    overflow-wrap: anywhere;
+  }
+
+  &__hint {
+    color: var(--cl-text-subtle);
+    font-size: var(--cl-font-small);
+  }
+}

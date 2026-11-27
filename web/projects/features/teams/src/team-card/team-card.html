@@ -1,11 +1,16 @@
-<a class="card" data-testid="team-card" [routerLink]="[team().id]">
-  <div class="card-header">
+<a class="team-card" data-testid="team-card" [routerLink]="[team().id]">
+  <div class="team-card__header">
     <app-team-tile [id]="team().id" [name]="team().name" [color]="team().avatarColor" size="lg" />
-    <span class="card-name">{{ team().name }}</span>
+    <span class="team-card__name">{{ team().name }}</span>
+  </div>
+  <p class="team-card__description">{{ team().description || 'Sin descripción' }}</p>
+  <div class="team-card__footer">
+    <span class="team-card__meta">
+      <i class="pi pi-users" aria-hidden="true"></i>
+      {{ memberCount() }}
+    </span>
     @if (isMaintainer()) {
       <app-lozenge tone="info">Responsable</app-lozenge>
     }
   </div>
-  <p class="card-description">{{ team().description || 'Sin descripción' }}</p>
-  <span class="card-meta">{{ memberCount() }}</span>
 </a>

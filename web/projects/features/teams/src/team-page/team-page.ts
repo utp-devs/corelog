@@ -19,14 +19,12 @@ import {
   warnBeforeUnload,
 } from '@corelog/core';
 import { Button } from 'primeng/button';
-import { Tab, TabList, TabPanel, TabPanels, Tabs } from 'primeng/tabs';
 import { ConfirmDangerModal } from '@corelog/ui/confirm-danger-modal';
 import { LoadingSkeleton } from '@corelog/ui/loading-skeleton';
-import { PageContainer, PageSidebar } from '@corelog/ui/page-container';
-import { Section } from '@corelog/ui/section';
+import { PageContainer } from '@corelog/ui/page-container';
 import { ErrorState } from '@corelog/ui/error-state';
 
-import { formatTeamDate, messageOf } from '../shared/team-messages';
+import { formatTeamDate, memberCountText, messageOf } from '../shared/team-messages';
 import { TeamFormInitial, TeamFormValues } from '../team-form-modal/team-form';
 import { TeamFormModal } from '../team-form-modal/team-form-modal';
 import { TeamMembersSection } from '../team-members-section/team-members-section';
@@ -35,7 +33,7 @@ import { TeamTile } from '../team-tile/team-tile';
 const DELETE_DESCRIPTION =
   'Los miembros dejarán de pertenecer a este equipo. Esta acción no se puede deshacer.';
 
-/** Team detail: header with actions for owners, admins and maintainers, the members tab and a summary panel. */
+/** Team detail: header card with its data and actions for owners, admins and maintainers, then the members. */
 @Component({
   selector: 'app-team-page',
   imports: [
@@ -44,13 +42,6 @@ const DELETE_DESCRIPTION =
     ErrorState,
     LoadingSkeleton,
     PageContainer,
-    PageSidebar,
-    Section,
-    Tab,
-    TabList,
-    TabPanel,
-    TabPanels,
-    Tabs,
     TeamFormModal,
     TeamMembersSection,
     TeamTile,
@@ -110,8 +101,10 @@ export class TeamPage {
       'Persona de la organización'
     );
   });
-  protected readonly membersCountText = computed(() =>
-    this.membersStatus() === 'error' ? 'No disponible' : String(this.members().length),
+  protected readonly membersSummary = computed(() =>
+    this.membersStatus() === 'error'
+      ? 'Miembros no disponibles'
+      : memberCountText(this.members().length),
   );
 
   protected readonly deleteDescription = DELETE_DESCRIPTION;

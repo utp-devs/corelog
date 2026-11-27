@@ -19,7 +19,7 @@ describe('TeamTile', () => {
     const fixture = TestBed.createComponent(Host);
     fixture.detectChanges();
 
-    const tile = fixture.nativeElement.querySelector('.tile') as HTMLElement;
+    const tile = fixture.nativeElement.querySelector('.team-tile') as HTMLElement;
     expect(tile.textContent?.trim()).toBe('SN');
     expect(tile.getAttribute('aria-hidden')).toBe('true');
     expect(tile.getAttribute('data-palette')).toMatch(/^([1-9]|1[0-2])$/);
@@ -31,7 +31,7 @@ describe('TeamTile', () => {
     fixture.componentInstance.color = '#112233';
     fixture.detectChanges();
 
-    const tile = fixture.nativeElement.querySelector('.tile') as HTMLElement;
+    const tile = fixture.nativeElement.querySelector('.team-tile') as HTMLElement;
     expect(tile.getAttribute('data-custom')).toBe('true');
     expect(tile.hasAttribute('data-palette')).toBe(false);
   });

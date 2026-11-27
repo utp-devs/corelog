@@ -133,23 +133,22 @@ describe('TeamPage', () => {
     expect(el.querySelector('h1')?.textContent?.trim()).toBe('Soporte Nivel 1');
   });
 
-  it('only offers the members tab; projects and calendar tabs are not shown', () => {
+  it('shows the members section without tabs or a side panel', () => {
     const { el } = setup();
 
-    const tabs = Array.from(el.querySelectorAll('[role="tab"]')).map((tab) =>
-      tab.textContent?.trim(),
-    );
-    expect(tabs).toEqual(['Miembros']);
+    expect(el.querySelector('[role="tab"]')).toBeNull();
+    expect(el.querySelector('aside')).toBeNull();
+    expect(el.querySelector('app-team-members-section h2')?.textContent?.trim()).toBe('Miembros');
   });
 
-  it('shows the details panel with the creator and creation date', () => {
+  it('shows the member count, the creator and the creation date in the header', () => {
     const { el } = setup();
 
-    const details = el.querySelector('aside[aria-label="Panel lateral"]') as HTMLElement;
-    expect(details).not.toBeNull();
-    expect(details.textContent).toContain('Detalles');
-    expect(details.textContent).toContain('Ana Pérez');
-    expect(details.textContent).toContain('Fecha de creación');
+    const meta = el.querySelector('[aria-label="Datos del equipo"]') as HTMLElement;
+    expect(meta).not.toBeNull();
+    expect(meta.textContent).toContain('2 miembros');
+    expect(meta.textContent).toContain('Creado por Ana Pérez');
+    expect(meta.querySelector('time')).not.toBeNull();
   });
 
   describe('permissions by role', () => {
@@ -201,10 +200,14 @@ describe('TeamPage', () => {
     expect(store.updateMemberRole).toHaveBeenCalledWith('team-1', 'me', 'maintainer');
   });
 
-  it('removes a member from the team', async () => {
+  it('asks for confirmation before removing a member from the team', async () => {
     const { fixture, el, store, notify } = setup({ viewerId: 'u2' });
 
     buttonByLabel(el, 'Quitar a Ana Pérez del equipo')?.click();
+    fixture.detectChanges();
+    expect(store.removeMember).not.toHaveBeenCalled();
+    expect(dialog().textContent).toContain('Ana Pérez dejará de pertenecer a este equipo.');
+    buttonByText(dialog(), 'Quitar')?.click();
 
     await settle(fixture, () => expect(store.removeMember).toHaveBeenCalledWith('team-1', 'me'));
     await settle(fixture, () => expect(notify.success).toHaveBeenCalled());

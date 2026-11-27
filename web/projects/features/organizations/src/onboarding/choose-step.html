@@ -1,39 +1,50 @@
-<div class="choices">
-  <section class="choice" aria-labelledby="onboarding-create-title">
-    <h3 id="onboarding-create-title">Crear organización</h3>
-    <p>Crea un espacio nuevo para tus proyectos, equipos e incidencias. Serás su propietario.</p>
-    <div>
+<div class="choose-step">
+  <section class="choose-step__choice" aria-labelledby="onboarding-create-title">
+    <span class="choose-step__icon" aria-hidden="true"><i class="pi pi-building"></i></span>
+    <h3 id="onboarding-create-title" class="choose-step__title">Crear organización</h3>
+    <p class="choose-step__text">
+      Crea un espacio nuevo para tus proyectos, equipos e incidencias. Serás su propietario.
+    </p>
+    <div class="choose-step__actions">
       <p-button
         label="Crear organización"
         size="large"
         type="button"
-        class="touch-target"
+        [fluid]="true"
         (onClick)="create.emit()"
       />
     </div>
   </section>
 
-  <section class="choice" aria-labelledby="onboarding-join-title">
-    <h3 id="onboarding-join-title">Unirme con invitación</h3>
-    <p>Pega el enlace que te han enviado para unirte a una organización existente.</p>
-    <form class="join-form" (submit)="$event.preventDefault(); join()">
-      <div class="join-field">
+  <section class="choose-step__choice" aria-labelledby="onboarding-join-title">
+    <span class="choose-step__icon" aria-hidden="true"><i class="pi pi-link"></i></span>
+    <h3 id="onboarding-join-title" class="choose-step__title">Unirme con invitación</h3>
+    <p class="choose-step__text">
+      Pega el enlace que te han enviado para unirte a una organización existente.
+    </p>
+    <form class="choose-step__form" novalidate (submit)="$event.preventDefault(); join()">
+      <app-field-row label="Enlace de invitación" [error]="error() ?? undefined">
         <input
           pInputText
+          appFieldControl
+          pSize="large"
           type="text"
           placeholder="https://.../invite/..."
           aria-label="Enlace o código de invitación"
+          [fluid]="true"
           [ngModel]="link()"
           [ngModelOptions]="{ standalone: true }"
           (ngModelChange)="onLinkInput($event)"
-          [attr.aria-invalid]="error() ? 'true' : null"
-          [attr.aria-describedby]="error() ? 'onboarding-join-error' : null"
         />
-        @if (error(); as message) {
-          <p id="onboarding-join-error" class="field-error">{{ message }}</p>
-        }
-      </div>
-      <p-button label="Continuar" type="submit" size="large" class="touch-target join-button" />
+      </app-field-row>
+      <p-button
+        label="Continuar"
+        type="submit"
+        size="large"
+        severity="secondary"
+        [outlined]="true"
+        [fluid]="true"
+      />
     </form>
   </section>
 </div>

@@ -1,8 +1,8 @@
 @if (org() && !canManage()) {
   <app-page-container variant="wide" pageName="org-invitations" [ready]="true">
     <app-page-header title="Invitaciones" [subtitle]="subtitle()" />
-    <p-message severity="info" [closable]="false" styleClass="banner">
-      <span class="alert-body">
+    <p-message severity="info" [closable]="false" class="org-invitations-page__banner">
+      <span class="org-invitations-page__alert">
         <strong>Solo lectura</strong>
         <span
           >Solo los propietarios y administradores pueden invitar personas y gestionar las
@@ -22,15 +22,15 @@
     <app-section
       title="Invitar personas"
       [description]="
-        'Puedes escribir hasta ' +
+        'Escribe los correos y pulsa Enter o coma para añadirlos. Hasta ' +
         maxInvitations +
-        ' correos separados por comas o saltos de línea.'
+        ' por envío.'
       "
     >
       <form
         aria-label="Invitar personas"
         novalidate
-        class="form"
+        class="org-invitations-page__form"
         [formGroup]="form"
         (ngSubmit)="submit()"
       >
@@ -41,24 +41,21 @@
           [error]="emailsError()"
           [helper]="emailsHelper()"
         >
-          <textarea
-            #emailsField
-            pTextarea
-            appFieldControl
+          <app-invite-emails-input
             formControlName="emails"
-            rows="3"
-            placeholder="ana@empresa.com, luis@empresa.com"
-          ></textarea>
+            [inputId]="emailsRow.controlId"
+            [invalid]="emailsRow.invalid()"
+            [describedBy]="emailsRow.describedBy()"
+          />
         </app-field-row>
         <app-field-row #roleRow label="Rol para todos" [required]="true">
-          <p-select
+          <app-select-field
+            class="org-invitations-page__role"
             formControlName="role"
+            filter="off"
             [inputId]="roleRow.controlId"
             [ariaLabelledBy]="roleRow.labelId"
             [options]="roleOptions()"
-            optionLabel="label"
-            optionValue="value"
-            styleClass="role-select"
           />
         </app-field-row>
         @if (submitError(); as message) {
@@ -66,11 +63,10 @@
             <p-message severity="error" [closable]="false">{{ message }}</p-message>
           </div>
         }
-        <div class="form-actions">
+        <div class="org-invitations-page__actions">
           <p-button
             label="Enviar invitaciones"
             type="submit"
-            class="touch-target"
             [loading]="busy()"
             [disabled]="!canManage()"
           />
@@ -82,7 +78,7 @@
       <app-invite-links-panel [invitations]="created()" (dismissed)="dismissLinks()" />
     }
 
-    <div class="toolbar" role="group" aria-label="Mostrar invitaciones">
+    <div class="org-invitations-page__scope" role="group" aria-label="Mostrar invitaciones">
       <p-selectbutton
         [options]="scopeOptions"
         optionLabel="label"
@@ -106,7 +102,7 @@
       [mobileRender]="mobileTpl"
     >
       <ng-template appDataTableCell="email" let-row>
-        <span class="email">{{ row.email }}</span>
+        <span class="org-invitations-page__email">{{ row.email }}</span>
       </ng-template>
       <ng-template appDataTableCell="role" let-row>
         <app-lozenge tone="neutral">{{ roleLabel(row.role) }}</app-lozenge>
@@ -123,10 +119,10 @@
     </app-data-table>
 
     <ng-template #mobileTpl let-row>
-      <div class="mobile-card">
-        <span class="email">{{ row.email }}</span>
+      <div class="org-invitations-page__card">
+        <span class="org-invitations-page__email">{{ row.email }}</span>
         <app-lozenge [tone]="statusTone(row.status)">{{ statusLabel(row.status) }}</app-lozenge>
-        <span class="muted">{{ roleLabel(row.role) }}</span>
+        <span class="org-invitations-page__muted">{{ roleLabel(row.role) }}</span>
       </div>
     </ng-template>
 
@@ -135,18 +131,8 @@
         [title]="
           scope() === 'pending' ? 'No hay invitaciones pendientes' : 'Aún no has invitado a nadie'
         "
-        description="Escribe uno o varios correos arriba y elige su rol para enviar las invitaciones."
+        description="Invita a alguien con el formulario de arriba: aquí verás su estado."
       />
-      @if (canManage()) {
-        <p-button
-          label="Invitar personas"
-          severity="secondary"
-          [outlined]="true"
-          type="button"
-          class="touch-target"
-          (onClick)="focusInvite()"
-        />
-      }
     </ng-template>
   </app-page-container>
 

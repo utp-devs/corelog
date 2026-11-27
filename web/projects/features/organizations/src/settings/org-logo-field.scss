@@ -1,58 +1,51 @@
-.logo-field {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--cl-space-4);
-  flex-wrap: wrap;
-}
+@use '../../../../ui/styles/mixins' as m;
 
-.logo-preview {
-  width: var(--cl-space-16);
-  height: var(--cl-space-16);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  overflow: hidden;
-  border: 1px solid var(--cl-border);
-  border-radius: var(--cl-radius-md);
-  background: var(--cl-bg-sunken);
-}
-
-.logo-image {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-}
-
-.logo-actions {
-  display: flex;
-  flex-direction: column;
-  gap: var(--cl-space-2);
+:host {
+  display: block;
   min-width: 0;
 }
 
-.button-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--cl-space-2);
-}
+.org-logo-field {
+  @include m.cluster(4, flex-start);
 
-.hidden-input {
-  display: none;
-}
+  &__preview {
+    @include m.flex-row(0, center, center);
+    flex: none;
+    width: var(--cl-space-16);
+    height: var(--cl-space-16);
+    overflow: hidden;
+    border: 1px solid var(--cl-border);
+    border-radius: var(--cl-radius-lg);
+    background: var(--cl-bg-sunken);
+  }
 
-.muted {
-  color: var(--cl-text-subtle);
-}
+  &__image {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
 
-.error {
-  margin: 0;
-  color: var(--cl-danger);
-}
+  &__empty,
+  &__hint {
+    color: var(--cl-text-subtle);
+    font-size: var(--cl-font-small);
+  }
 
-/* Phones: buttons keep a 48 px tap target. */
-@media (max-width: 767.98px) {
-  .touch-target {
-    min-height: var(--cl-space-12);
+  &__actions {
+    @include m.flex-column(2);
+    min-width: 0;
+  }
+
+  &__buttons {
+    @include m.cluster(2);
+  }
+
+  &__file {
+    display: none;
+  }
+
+  &__error {
+    margin: 0;
+    color: var(--cl-danger-text);
   }
 }

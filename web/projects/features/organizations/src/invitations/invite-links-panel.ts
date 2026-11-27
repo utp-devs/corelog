@@ -1,7 +1,9 @@
 import { ChangeDetectionStrategy, Component, input, output, inject } from '@angular/core';
 import { Button } from 'primeng/button';
 import { InvitationCreated, NotificationService, ROLE_LABELS, OrgRole } from '@corelog/core';
-import { Section } from '@corelog/ui/section';
+import { Lozenge } from '@corelog/ui/lozenge';
+import { Section, SectionActions } from '@corelog/ui/section';
+import { AppTooltip } from '@corelog/ui/tooltip';
 
 import { copyText } from '../shared/copy-text';
 
@@ -11,7 +13,7 @@ import { copyText } from '../shared/copy-text';
  */
 @Component({
   selector: 'app-invite-links-panel',
-  imports: [Button, Section],
+  imports: [AppTooltip, Button, Lozenge, Section, SectionActions],
   templateUrl: './invite-links-panel.html',
   styleUrl: './invite-links-panel.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

@@ -14,12 +14,7 @@
     </div>
     @if (teams().length > 0 && canCreate()) {
       <div appToolbarRight>
-        <p-button
-          label="Crear equipo"
-          icon="pi pi-plus"
-          class="touch-target"
-          (onClick)="openCreate()"
-        />
+        <p-button label="Crear equipo" icon="pi pi-plus" (onClick)="openCreate()" />
       </div>
     }
   </app-toolbar>
@@ -28,7 +23,7 @@
     <div role="status" aria-busy="true" aria-label="Cargando equipos">
       <app-card-grid>
         @for (index of skeletonCards; track index) {
-          <div class="skeleton" aria-hidden="true">
+          <div class="teams-page__skeleton" aria-hidden="true">
             <app-loading-skeleton variant="card" />
           </div>
         }
@@ -42,13 +37,7 @@
     <app-section [fill]="true" ariaLabel="Equipos">
       @if (canCreate()) {
         <app-empty-state title="Aún no hay equipos" [description]="emptyDescription()">
-          <p-button
-            action
-            label="Crear equipo"
-            icon="pi pi-plus"
-            class="touch-target"
-            (onClick)="openCreate()"
-          />
+          <p-button action label="Crear equipo" icon="pi pi-plus" (onClick)="openCreate()" />
         </app-empty-state>
       } @else {
         <app-empty-state title="Aún no hay equipos" [description]="emptyDescription()" />

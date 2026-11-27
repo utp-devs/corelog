@@ -1,65 +1,72 @@
 <form
-  class="form-grid"
+  class="org-form-step"
   aria-label="Datos de la organización"
   novalidate
   (submit)="$event.preventDefault(); submit()"
 >
   <app-field-row
-    #nameRow
     label="Nombre de la organización"
-    class="half"
+    [required]="true"
     [error]="errorOf(form.controls.name)"
   >
     <input
       pInputText
+      appFieldControl
+      pSize="large"
       type="text"
       autocomplete="organization"
       aria-label="Nombre de la organización"
+      [fluid]="true"
       [formControl]="form.controls.name"
-      [attr.id]="nameRow.controlId"
-      [attr.aria-invalid]="errorOf(form.controls.name) ? 'true' : null"
     />
   </app-field-row>
 
   <app-field-row
-    #slugRow
     label="Identificador (slug)"
-    class="half"
+    [required]="true"
     [error]="errorOf(form.controls.slug)"
     [helper]="slugRule"
   >
     <input
       pInputText
+      appFieldControl
+      pSize="large"
       type="text"
+      autocapitalize="none"
+      spellcheck="false"
       aria-label="Identificador de la organización"
+      [fluid]="true"
       [formControl]="form.controls.slug"
-      [attr.id]="slugRow.controlId"
-      [attr.aria-invalid]="errorOf(form.controls.slug) ? 'true' : null"
     />
+    @if (slug()) {
+      <p class="org-form-step__preview">
+        Tu organización se identificará como <code class="org-form-step__slug">{{ slug() }}</code>
+      </p>
+    }
   </app-field-row>
 
   @if (formError(); as message) {
-    <div class="full" role="alert">
+    <div role="alert">
       <p-message severity="error" [closable]="false">{{ message }}</p-message>
     </div>
   }
 
-  <div class="full actions">
+  <div class="org-form-step__actions">
     <p-button
       label="Atrás"
       severity="secondary"
       [outlined]="true"
       size="large"
       type="button"
-      class="touch-target"
       (onClick)="back.emit()"
+      [fluid]="true"
     />
     <p-button
       label="Crear organización"
       size="large"
       type="submit"
-      class="touch-target"
       [loading]="submitting()"
+      [fluid]="true"
     />
   </div>
 </form>

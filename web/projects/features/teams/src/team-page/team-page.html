@@ -1,71 +1,60 @@
 @if (teamReady() && team(); as current) {
   <app-page-container variant="wide" [ready]="true" pageName="team">
-    <div appPageSidebar>
-      <app-section title="Detalles" [headingLevel]="3">
-        <dl class="details">
-          <dt>Creado por</dt>
-          <dd>{{ creatorName() }}</dd>
-          <dt>Fecha de creación</dt>
-          <dd>
-            <time [attr.datetime]="current.createdAt">{{ formatDate(current.createdAt) }}</time>
-          </dd>
-          <dt>Miembros</dt>
-          <dd>{{ membersCountText() }}</dd>
-        </dl>
-      </app-section>
-    </div>
-
-    <header class="header">
-      <div class="identity">
+    <div class="team-page">
+      <header class="team-page__header">
         <app-team-tile
           [id]="current.id"
           [name]="current.name"
           [color]="current.avatarColor"
           size="lg"
         />
-        <div class="title-block">
-          <h1 class="title">{{ current.name }}</h1>
-          <p class="description">{{ current.description || 'Sin descripción' }}</p>
+        <div class="team-page__identity">
+          <h1 class="team-page__title">{{ current.name }}</h1>
+          <p class="team-page__description">{{ current.description || 'Sin descripción' }}</p>
+          <ul class="team-page__meta" aria-label="Datos del equipo">
+            <li class="team-page__meta-item">
+              <i class="pi pi-users" aria-hidden="true"></i>
+              {{ membersSummary() }}
+            </li>
+            <li class="team-page__meta-item">
+              <i class="pi pi-user" aria-hidden="true"></i>
+              Creado por {{ creatorName() }}
+            </li>
+            <li class="team-page__meta-item">
+              <i class="pi pi-calendar" aria-hidden="true"></i>
+              <time [attr.datetime]="current.createdAt">{{ formatDate(current.createdAt) }}</time>
+            </li>
+          </ul>
         </div>
-      </div>
-      @if (canManage()) {
-        <div class="actions">
-          <p-button
-            label="Editar equipo"
-            icon="pi pi-pencil"
-            severity="secondary"
-            [outlined]="true"
-            class="touch-target"
-            (onClick)="editOpen.set(true)"
-          />
-          <p-button
-            label="Eliminar equipo"
-            icon="pi pi-trash"
-            severity="danger"
-            class="touch-target"
-            (onClick)="deleteOpen.set(true)"
-          />
-        </div>
-      }
-    </header>
+        @if (canManage()) {
+          <div class="team-page__actions">
+            <p-button
+              label="Editar equipo"
+              icon="pi pi-pencil"
+              severity="secondary"
+              [outlined]="true"
+              (onClick)="editOpen.set(true)"
+            />
+            <p-button
+              label="Eliminar equipo"
+              icon="pi pi-trash"
+              severity="danger"
+              [outlined]="true"
+              (onClick)="deleteOpen.set(true)"
+            />
+          </div>
+        }
+      </header>
 
-    <p-tabs value="members">
-      <p-tablist>
-        <p-tab value="members">Miembros</p-tab>
-      </p-tablist>
-      <p-tabpanels>
-        <p-tabpanel value="members">
-          <app-team-members-section
-            [teamId]="current.id"
-            [members]="members()"
-            [status]="membersStatus()"
-            [error]="membersError()"
-            [canManage]="canManage()"
-            (retry)="reloadMembers()"
-          />
-        </p-tabpanel>
-      </p-tabpanels>
-    </p-tabs>
+      <app-team-members-section
+        [teamId]="current.id"
+        [members]="members()"
+        [status]="membersStatus()"
+        [error]="membersError()"
+        [canManage]="canManage()"
+        (retry)="reloadMembers()"
+      />
+    </div>
 
     <app-team-form-modal
       [open]="editOpen()"

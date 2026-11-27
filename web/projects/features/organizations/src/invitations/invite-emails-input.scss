@@ -1,0 +1,86 @@
+@use '../../../../ui/styles/mixins' as m;
+@use '../../../../ui/field-row/src/control' as c;
+
+:host {
+  display: block;
+  min-width: 0;
+}
+
+// The box looks like any other text control; the chips and the typing field live inside it.
+.invite-emails-input {
+  @include m.cluster(2);
+  box-sizing: border-box;
+  min-height: var(--cl-control-h-lg);
+  padding: var(--cl-space-2) var(--cl-space-3);
+  border: 1px solid var(--cl-border-strong);
+  border-radius: var(--cl-radius-md);
+  background: var(--cl-bg-surface);
+  cursor: text;
+  transition: border-color var(--cl-motion-fast) var(--cl-ease);
+
+  &:hover {
+    border-color: var(--cl-text-subtle);
+  }
+
+  &:focus-within {
+    @include c.focus-ring;
+    border-color: var(--cl-brand);
+  }
+
+  &--invalid {
+    border-color: var(--cl-danger);
+  }
+
+  &--disabled {
+    background: var(--cl-bg-sunken);
+    cursor: not-allowed;
+  }
+
+  &__chip {
+    @include m.flex-row(1);
+    max-width: 100%;
+    min-height: var(--cl-control-h-sm);
+    padding-inline: var(--cl-space-3) var(--cl-space-1);
+    border-radius: var(--cl-radius-full);
+    background: var(--cl-brand-subtle);
+    color: var(--cl-text);
+    font-size: var(--cl-font-body);
+
+    &--invalid {
+      background: var(--cl-danger-bg);
+      color: var(--cl-danger-text);
+    }
+  }
+
+  &__email {
+    @include m.truncate;
+  }
+
+  &__remove {
+    @include c.icon-button(var(--cl-space-6));
+    border-radius: var(--cl-radius-full);
+    color: inherit;
+    font-size: var(--cl-font-small);
+  }
+
+  &__field {
+    flex: 1 1 10rem;
+    min-width: 8rem;
+    min-height: var(--cl-control-h-sm);
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--cl-text);
+    font: inherit;
+    outline: none;
+
+    &::placeholder {
+      color: var(--cl-text-placeholder);
+      opacity: 1;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+  }
+}

@@ -1,7 +1,10 @@
-<app-section title="Miembros" [description]="canManage() ? undefined : readOnlyText">
+<app-section
+  title="Miembros"
+  [description]="canManage() ? 'Agrega personas de la organización y define su rol.' : readOnlyText"
+>
   @if (canManage()) {
-    <div class="add-form" role="group" aria-label="Agregar miembro">
-      <div class="picker">
+    <div class="team-members-section__add" role="group" aria-label="Agregar miembro">
+      <div class="team-members-section__picker">
         <app-user-picker
           [users]="pickable()"
           [(value)]="pickedId"
@@ -10,18 +13,16 @@
           placeholder="Buscar una persona de la organización"
         />
       </div>
-      <p-select
+      <app-select-field
+        class="team-members-section__new-role"
         ariaLabel="Rol del nuevo miembro"
-        styleClass="role-select"
+        filter="off"
         [options]="roleOptions"
-        optionLabel="label"
-        optionValue="value"
         [ngModel]="newRole()"
-        (ngModelChange)="newRole.set($event)"
+        (ngModelChange)="setNewRole($event)"
       />
       <p-button
         label="Agregar miembro"
-        class="touch-target"
         [disabled]="!pickedId()"
         [loading]="adding()"
         (onClick)="handleAdd()"
@@ -56,12 +57,12 @@
 
 <ng-template #roleControl let-member>
   @if (canManage()) {
-    <p-select
+    <app-select-field
+      class="team-members-section__role"
+      size="compact"
+      filter="off"
       [ariaLabel]="'Rol de ' + member.name"
-      styleClass="role-select"
       [options]="roleOptions"
-      optionLabel="label"
-      optionValue="value"
       [ngModel]="member.role"
       (ngModelChange)="changeRole(member, $event)"
     />
@@ -77,11 +78,11 @@
     <p-button
       severity="danger"
       size="small"
+      [text]="true"
       icon="pi pi-user-minus"
       label="Quitar"
-      class="touch-target"
       [ariaLabel]="'Quitar a ' + member.name + ' del equipo'"
-      (onClick)="removeMember(member)"
+      (onClick)="askRemove(member)"
     />
   }
 </ng-template>
@@ -94,11 +95,22 @@
 </ng-template>
 
 <ng-template #mobileTemplate let-member>
-  <div class="mobile-card">
+  <div class="team-members-section__card">
     <app-user-chip [user]="{ id: member.userId, name: member.name, role: member.email || null }" />
-    <div class="mobile-actions">
+    <div class="team-members-section__card-actions">
       <ng-container *ngTemplateOutlet="roleControl; context: { $implicit: member }" />
       <ng-container *ngTemplateOutlet="removeButton; context: { $implicit: member }" />
     </div>
   </div>
 </ng-template>
+
+<app-confirm-modal
+  [open]="removing() !== null"
+  title="¿Quitar del equipo?"
+  [description]="removing() ? removing()!.name + ' dejará de pertenecer a este equipo.' : undefined"
+  confirmText="Quitar"
+  [danger]="true"
+  [loading]="removingBusy()"
+  (confirmed)="confirmRemove()"
+  (cancelled)="removing.set(null)"
+/>

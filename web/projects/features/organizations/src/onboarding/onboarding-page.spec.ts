@@ -1,6 +1,12 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, Router, convertToParamMap } from '@angular/router';
-import { ApiError, LOCATION_ASSIGN, Organization, OrganizationApiService } from '@corelog/core';
+import {
+  ApiError,
+  AuthStore,
+  LOCATION_ASSIGN,
+  Organization,
+  OrganizationApiService,
+} from '@corelog/core';
 import { Observable, of, throwError } from 'rxjs';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -52,7 +58,7 @@ function buttonNamed(name: string): HTMLButtonElement | undefined {
 
 function heading(name: string): HTMLElement | undefined {
   return Array.from(document.querySelectorAll<HTMLElement>('h2, h3')).find(
-    (h) => h.textContent?.trim() === name,
+    (h) => h.textContent?.trim().startsWith(name) ?? false,
   );
 }
 
@@ -192,5 +198,53 @@ describe('OnboardingPage', () => {
     fixture.detectChanges();
     expect(document.body.textContent).toContain('Introduce un enlace de invitación válido.');
     expect(navigate).not.toHaveBeenCalled();
+  });
+
+  it('labels the steps in Spanish, highlights the current one and marks the team step optional', () => {
+    create({ new: true });
+    const steps = Array.from(document.querySelectorAll('.onboarding__step'));
+    expect(steps.map((s) => s.querySelector('.onboarding__step-title')?.textContent)).toEqual([
+      expect.stringContaining('Elegir'),
+      expect.stringContaining('Organización'),
+      expect.stringContaining('Equipo'),
+      expect.stringContaining('Finalizar'),
+    ]);
+    expect(steps[1].getAttribute('aria-current')).toBe('step');
+    expect(steps[2].textContent).toContain('Opcional');
+  });
+
+  it('always offers to sign out and returns to the login page', () => {
+    const { fixture, navigate } = create();
+    const logout = vi.fn();
+    (TestBed.inject(AuthStore) as unknown as { logout: () => void }).logout = logout;
+    buttonNamed('Cerrar sesión')?.click();
+    fixture.detectChanges();
+    expect(logout).toHaveBeenCalled();
+    expect(navigate).toHaveBeenCalledWith('/login', { replaceUrl: true });
+  });
+
+  it('lets a user who opened the wizard from the switcher cancel back to the workspace', () => {
+    const { assign } = create({ new: true });
+    buttonNamed('Cancelar')?.click();
+    expect(assign).toHaveBeenCalledWith('/workspace/');
+  });
+
+  it('shows no cancel action when the wizard is the first thing the user sees', () => {
+    create();
+    expect(buttonNamed('Cancelar')).toBeUndefined();
+  });
+
+  it('goes back from the organization form to the choice step', () => {
+    const { fixture } = create({ new: true });
+    buttonNamed('Atrás')?.click();
+    fixture.detectChanges();
+    expect(buttonNamed('Crear organización')).toBeDefined();
+    expect(heading('Datos de la organización')).toBeUndefined();
+  });
+
+  it('previews the slug under the identifier field', () => {
+    const { fixture } = create({ new: true });
+    typeInto(input('Nombre de la organización'), 'Acme Corp', fixture);
+    expect(document.querySelector('.org-form-step__slug')?.textContent).toBe('acme-corp');
   });
 });

@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { ActivatedRoute, Router, convertToParamMap } from '@angular/router';
 import {
   OrgRole,
   OrgWhoCan,
@@ -26,7 +27,11 @@ interface Setup {
   notify: { success: ReturnType<typeof vi.fn>; error: ReturnType<typeof vi.fn> };
 }
 
-function setup(role: OrgRole | null = 'admin', policy: OrgWhoCan = 'admins'): Setup {
+function setup(
+  role: OrgRole | null = 'admin',
+  policy: OrgWhoCan = 'admins',
+  query: Record<string, string> | null = null,
+): Setup {
   const store = fakeTeamStore();
   const organizations = fakeOrganizationStore(role, policy);
   const notify = { success: vi.fn(), error: vi.fn(), info: vi.fn() };
@@ -37,8 +42,17 @@ function setup(role: OrgRole | null = 'admin', policy: OrgWhoCan = 'admins'): Se
       { provide: TeamStore, useValue: store },
       { provide: OrganizationStore, useValue: organizations },
       { provide: NotificationService, useValue: notify },
+      ...(query
+        ? [
+            {
+              provide: ActivatedRoute,
+              useValue: { snapshot: { queryParamMap: convertToParamMap(query) } },
+            },
+          ]
+        : []),
     ],
   });
+  if (query) vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
   const fixture = TestBed.createComponent(TeamsPage);
   fixture.detectChanges();
   return { fixture, el: fixture.nativeElement as HTMLElement, store, notify };
@@ -113,6 +127,33 @@ describe('TeamsPage', () => {
         expect(createButton(el) !== undefined).toBe(allowed);
       },
     );
+  });
+
+  describe('create dialog requested by the URL', () => {
+    it('opens the create dialog for ?new=1 and clears the parameter', () => {
+      const { fixture } = setup('admin', 'admins', { new: '1' });
+      fixture.detectChanges();
+
+      expect(dialog().textContent).toContain('Nuevo equipo');
+      expect(TestBed.inject(Router).navigate).toHaveBeenCalledWith(
+        [],
+        expect.objectContaining({ queryParams: { new: null }, replaceUrl: true }),
+      );
+    });
+
+    it('does not open the dialog when the caller is not allowed to create teams', () => {
+      const { fixture } = setup('member', 'admins', { new: '1' });
+      fixture.detectChanges();
+
+      expect(document.querySelector('[role="dialog"]')).toBeNull();
+    });
+
+    it('does not open the dialog without the parameter', () => {
+      const { fixture } = setup('admin', 'admins');
+      fixture.detectChanges();
+
+      expect(document.querySelector('[role="dialog"]')).toBeNull();
+    });
   });
 
   it('shows a loading skeleton with the final card geometry while loading', () => {

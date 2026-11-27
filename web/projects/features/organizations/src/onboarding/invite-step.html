@@ -1,61 +1,70 @@
 @if (created(); as list) {
-  <div>
-    <p class="intro">
+  <div class="invite-step">
+    <p class="invite-step__intro">
       Hemos creado {{ list.length === 1 ? 'una invitación' : list.length + ' invitaciones' }}. No
       enviamos correos: comparte cada enlace con la persona invitada. Caduca en 7 días.
     </p>
-    <ul aria-label="Enlaces de invitación" class="invite-list">
+    <ul aria-label="Enlaces de invitación" class="invite-step__list">
       @for (invitation of list; track invitation.id) {
-        <li class="invite-item">
-          <span>{{ invitation.email }}</span>
-          <span class="muted">{{ roleLabel(invitation.role) }}</span>
-          <button
+        <li class="invite-step__item">
+          <span class="invite-step__email">{{ invitation.email }}</span>
+          <span class="invite-step__role">{{ roleLabel(invitation.role) }}</span>
+          <p-button
+            label="Copiar enlace"
+            icon="pi pi-copy"
+            size="small"
+            severity="secondary"
+            [outlined]="true"
             type="button"
-            class="link-button touch-target"
-            [attr.aria-label]="'Copiar enlace de ' + invitation.email"
-            (click)="copyLink(invitation.acceptUrl)"
-          >
-            Copiar enlace
-          </button>
+            [ariaLabel]="'Copiar enlace de ' + invitation.email"
+            (onClick)="copyLink(invitation.acceptUrl)"
+          />
         </li>
       }
     </ul>
-    <div class="actions">
+    <div class="invite-step__actions invite-step__actions--end">
       <p-button
         label="Continuar"
         size="large"
         type="button"
-        class="touch-target"
         (onClick)="continued.emit()"
+        [fluid]="true"
       />
     </div>
   </div>
 } @else {
-  <form aria-label="Invitar a tu equipo" class="invite-form" novalidate (submit)="onSubmit($event)">
-    <p class="intro">
-      Añade los correos de tu equipo. Es opcional: puedes invitar a más personas después desde la
-      configuración.
+  <form
+    aria-label="Invitar a tu equipo"
+    class="invite-step invite-step__form"
+    novalidate
+    (submit)="onSubmit($event)"
+  >
+    <p class="invite-step__intro">
+      Añade los correos de tu equipo. Es opcional: puedes omitir este paso e invitar a más personas
+      después desde la configuración.
     </p>
 
     @for (row of rows(); track row.id; let index = $index) {
-      <div class="row">
+      <div class="invite-step__row">
         <app-field-row
+          class="invite-step__email-field"
           [label]="'Correo ' + (index + 1)"
           [error]="rowErrors()[row.id]"
-          class="email-field"
         >
           <input
+            pInputText
+            appFieldControl
             type="text"
             inputmode="email"
             autocomplete="off"
-            class="text-input"
+            placeholder="persona@empresa.com"
+            [fluid]="true"
             [value]="row.email"
             [attr.aria-label]="'Correo del invitado ' + (index + 1)"
-            [attr.aria-invalid]="rowErrors()[row.id] ? 'true' : null"
             (input)="onEmailInput(row.id, $event)"
           />
         </app-field-row>
-        <app-field-row [label]="'Rol'" class="role-field">
+        <app-field-row class="invite-step__role-field" label="Rol">
           <p-select
             [ngModel]="row.role"
             [ngModelOptions]="{ standalone: true }"
@@ -63,29 +72,31 @@
             [options]="roleOptions"
             optionLabel="label"
             optionValue="value"
+            [fluid]="true"
             [ariaLabel]="'Rol del invitado ' + (index + 1)"
           />
         </app-field-row>
-        <button
+        <p-button
+          class="invite-step__remove"
+          icon="pi pi-trash"
+          severity="secondary"
+          [text]="true"
           type="button"
-          class="icon-button touch-target"
-          [attr.aria-label]="'Quitar invitado ' + (index + 1)"
+          appTooltip="Quitar invitado"
+          [ariaLabel]="'Quitar invitado ' + (index + 1)"
           [disabled]="rows().length === 1"
-          (click)="removeRow(row.id)"
-        >
-          <i class="pi pi-trash" aria-hidden="true"></i>
-        </button>
+          (onClick)="removeRow(row.id)"
+        />
       </div>
     }
 
-    <div class="actions">
+    <div>
       <p-button
         label="Añadir otro correo"
         icon="pi pi-plus"
         severity="secondary"
-        [outlined]="true"
+        [text]="true"
         type="button"
-        class="touch-target"
         (onClick)="addRow()"
       />
     </div>
@@ -96,7 +107,7 @@
       </div>
     }
 
-    <div class="actions">
+    <div class="invite-step__actions">
       @if (showBack()) {
         <p-button
           label="Atrás"
@@ -104,8 +115,8 @@
           [outlined]="true"
           size="large"
           type="button"
-          class="touch-target"
           (onClick)="back.emit()"
+          [fluid]="true"
         />
       }
       <p-button
@@ -114,15 +125,15 @@
         [outlined]="true"
         size="large"
         type="button"
-        class="touch-target"
         (onClick)="continued.emit()"
+        [fluid]="true"
       />
       <p-button
         label="Crear invitaciones"
         size="large"
         type="submit"
-        class="touch-target"
         [loading]="submitting()"
+        [fluid]="true"
       />
     </div>
   </form>

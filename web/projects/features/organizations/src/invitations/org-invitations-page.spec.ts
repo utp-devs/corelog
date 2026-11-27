@@ -46,6 +46,10 @@ function buttonNamed(name: string, root: ParentNode = document): HTMLButtonEleme
   );
 }
 
+function copyButton(email: string): HTMLButtonElement | null {
+  return document.querySelector(`button[aria-label="Copiar enlace de ${email}"]`);
+}
+
 function fieldLabelled(label: RegExp): HTMLElement {
   const found = Array.from(document.querySelectorAll('label')).find((el) =>
     label.test(el.textContent ?? ''),
@@ -56,7 +60,7 @@ function fieldLabelled(label: RegExp): HTMLElement {
 }
 
 function typeEmails(fixture: ComponentFixture<unknown>, text: string): void {
-  const field = fieldLabelled(/Correos electrónicos/) as HTMLTextAreaElement;
+  const field = fieldLabelled(/Correos electrónicos/) as HTMLInputElement;
   field.value = text;
   field.dispatchEvent(new Event('input'));
   fixture.detectChanges();
@@ -111,10 +115,10 @@ describe('OrgInvitationsPage', () => {
     expect(api.listInvitations).not.toHaveBeenCalled();
   });
 
-  it('shows the empty state with a call to action when nothing is pending', () => {
+  it('shows the empty state without repeating the invite button when nothing is pending', () => {
     const { fixture } = create('owner');
     expect(document.body.textContent).toContain('No hay invitaciones pendientes');
-    expect(buttonNamed('Invitar personas', fixture.nativeElement)).toBeDefined();
+    expect(buttonNamed('Invitar personas', fixture.nativeElement)).toBeUndefined();
     expect(document.querySelector('[data-page="org-invitations"]')?.getAttribute('data-fill')).toBe(
       'true',
     );
@@ -145,7 +149,7 @@ describe('OrgInvitationsPage', () => {
     expect(document.body.textContent).toContain('Enlaces de invitación');
     expect(document.body.textContent).toContain('Este enlace solo se muestra una vez');
 
-    buttonNamed('Copiar enlace de ana@acme.test')?.click();
+    copyButton('ana@acme.test')?.click();
     await vi.waitFor(() =>
       expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
         createdOf('i-1', 'ana@acme.test').acceptUrl,
@@ -165,7 +169,7 @@ describe('OrgInvitationsPage', () => {
     typeEmails(fixture, 'ana@acme.test');
     buttonNamed('Enviar invitaciones')?.click();
     fixture.detectChanges();
-    buttonNamed('Copiar enlace de ana@acme.test')?.click();
+    copyButton('ana@acme.test')?.click();
     await vi.waitFor(() => expect(notifyError).toHaveBeenCalled());
     expect(String(notifyError.mock.calls[0][0])).toContain('No se pudo copiar');
   });
@@ -196,7 +200,7 @@ describe('OrgInvitationsPage', () => {
     rowActionItem(fixture, 'Reenviar (nuevo enlace)');
     expect(api.resendInvitation).toHaveBeenCalledWith(ORG_ID, 'i-1');
     fixture.detectChanges();
-    expect(buttonNamed('Copiar enlace de ana@acme.test')).toBeDefined();
+    expect(copyButton('ana@acme.test')).toBeDefined();
   });
 
   it('revokes a pending invitation after confirmation', () => {
@@ -246,5 +250,38 @@ describe('OrgInvitationsPage', () => {
     expect(api.createInvitations).toHaveBeenCalledWith(ORG_ID, [
       { email: 'marta@acme.test', role: 'guest' },
     ]);
+  });
+
+  it('counts the ready emails with the right plural and never uses "correo(s)"', () => {
+    const { fixture } = create('owner');
+    expect(document.body.textContent).toContain('Aún no hay correos listos para invitar');
+
+    typeEmails(fixture, 'ana@acme.test');
+    expect(document.body.textContent).toContain('1 correo listo para invitar');
+
+    typeEmails(fixture, 'ana@acme.test, luis@acme.test');
+    expect(document.body.textContent).toContain('2 correos listos para invitar');
+    expect(document.body.textContent).not.toContain('correo(s)');
+  });
+
+  it('turns completed addresses into chips that can be removed', () => {
+    const { fixture } = create('owner');
+    typeEmails(fixture, 'ana@acme.test, luis@acme.test, ');
+    const chips = Array.from(document.querySelectorAll('.invite-emails-input__chip'));
+    expect(chips.map((chip) => chip.textContent?.trim())).toEqual([
+      'ana@acme.test',
+      'luis@acme.test',
+    ]);
+
+    (document.querySelector('[aria-label="Quitar ana@acme.test"]') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    expect(document.querySelectorAll('.invite-emails-input__chip').length).toBe(1);
+    expect(document.body.textContent).toContain('1 correo listo para invitar');
+  });
+
+  it('marks an address without a valid format in its chip', () => {
+    const { fixture } = create('owner');
+    typeEmails(fixture, 'ana@acme.test, no-es-correo, ');
+    expect(document.querySelectorAll('.invite-emails-input__chip--invalid').length).toBe(1);
   });
 });

@@ -77,11 +77,39 @@ describe('OrgSettingsPage', () => {
     expect(notifySuccess).toHaveBeenCalledWith('Configuración guardada');
   });
 
-  it('shows the 2FA row as informational with the coming-soon note', () => {
+  it('does not offer features that are not available yet', () => {
     setupOrgContext('owner');
     create();
-    expect(document.body.textContent).toContain('Exigir verificación en dos pasos');
-    expect(document.body.textContent).toContain('Disponible próximamente');
+    expect(document.body.textContent).not.toContain('Exigir verificación');
+    expect(document.body.textContent).not.toContain('Disponible próximamente');
+  });
+
+  it('groups the settings into cards and offers the creation policies as radio cards', () => {
+    setupOrgContext('owner');
+    create();
+    const titles = Array.from(document.querySelectorAll('app-section h2')).map((el) =>
+      el.textContent?.trim(),
+    );
+    expect(titles).toEqual(['Identidad', 'Logo', 'Políticas', 'Tiempo', 'Zona de peligro']);
+
+    expect(document.querySelectorAll('app-policy-choice input[type="radio"]').length).toBe(4);
+    const projects = document.querySelector('[aria-label="Quién puede crear proyectos"]');
+    const checked = projects?.querySelector('input:checked') as HTMLInputElement;
+    expect(checked.value).toBe('members');
+  });
+
+  it('saves a changed creation policy', () => {
+    const { api } = setupOrgContext('owner');
+    const fixture = create();
+    const teams = document.querySelector('[aria-label="Quién puede crear equipos"]');
+    const other = teams?.querySelector('input:not(:checked)') as HTMLInputElement;
+    other.click();
+    fixture.detectChanges();
+    buttonNamed('Guardar cambios')?.click();
+    fixture.detectChanges();
+
+    const [, patch] = api['updateOrganization'].mock.calls[0] as [string, Record<string, unknown>];
+    expect(patch['settings']).toMatchObject({ whoCanCreateTeams: 'members' });
   });
 
   it('lets an admin edit settings but not transfer or delete the organization', () => {

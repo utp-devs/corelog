@@ -14,9 +14,8 @@ import { NgTemplateOutlet } from '@angular/common';
 import { FormControl, FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
-import { Button } from 'primeng/button';
+import { Button, ButtonProps } from 'primeng/button';
 import { Message } from 'primeng/message';
-import { Select } from 'primeng/select';
 import { Tooltip } from 'primeng/tooltip';
 import {
   AuthStore,
@@ -47,6 +46,7 @@ import { Lozenge } from '@corelog/ui/lozenge';
 import { PageContainer } from '@corelog/ui/page-container';
 import { PageHeader, PageHeaderActions } from '@corelog/ui/page-header';
 import { SearchInput } from '@corelog/ui/search-input';
+import { SelectField } from '@corelog/ui/select-field';
 import { Toolbar, ToolbarLeft } from '@corelog/ui/toolbar';
 import { ConfirmDangerModal } from '@corelog/ui/confirm-danger-modal';
 import { ConfirmModal } from '@corelog/ui/confirm-modal';
@@ -90,7 +90,7 @@ function matchesQuery(member: OrganizationMember, query: string): boolean {
     NgTemplateOutlet,
     Button,
     Message,
-    Select,
+    SelectField,
     Tooltip,
     FormsModule,
     ReactiveFormsModule,
@@ -143,6 +143,11 @@ export class OrgMembersPage {
   protected readonly bulkOpen = signal(false);
   protected readonly busy = signal(false);
 
+  /**
+   * PrimeNG marks every button with the autofocus attribute unless it is told `false` explicitly, and the
+   * browser then focuses the first one of a freshly loaded page, leaving a focus ring on it.
+   */
+  protected readonly noAutofocus: ButtonProps = { autofocus: false };
   protected readonly roleFilterOptions = ROLE_FILTER_OPTIONS;
   protected readonly formatDate = formatOrgDate;
 
@@ -259,6 +264,10 @@ export class OrgMembersPage {
 
   protected roleTone(role: OrgRole): LozengeTone {
     return ORG_ROLE_TONES[role];
+  }
+
+  protected setRoleFilter(value: string | null): void {
+    this.roleFilter.set(ORG_ROLES.find((role) => role === value) ?? 'all');
   }
 
   protected roleLabel(role: OrgRole): string {

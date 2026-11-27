@@ -2,21 +2,17 @@ import {
   ChangeDetectionStrategy,
   Component,
   DestroyRef,
-  ElementRef,
   computed,
   effect,
   inject,
   signal,
   untracked,
-  viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { Button } from 'primeng/button';
 import { Message } from 'primeng/message';
-import { Select } from 'primeng/select';
 import { SelectButton } from 'primeng/selectbutton';
-import { Textarea } from 'primeng/textarea';
 import { map } from 'rxjs';
 import {
   Invitation,
@@ -32,15 +28,17 @@ import {
 import { ConfirmModal } from '@corelog/ui/confirm-modal';
 import { DataTable, DataTableColumn, RowMenuItem, DataTableCell } from '@corelog/ui/data-table';
 import { EmptyState } from '@corelog/ui/empty-state';
-import { FieldControl, FieldRow } from '@corelog/ui/field-row';
+import { FieldRow } from '@corelog/ui/field-row';
 import { Lozenge, LozengeTone } from '@corelog/ui/lozenge';
 import { PageContainer } from '@corelog/ui/page-container';
 import { PageHeader } from '@corelog/ui/page-header';
 import { Section } from '@corelog/ui/section';
+import { SelectField } from '@corelog/ui/select-field';
 
 import { adminErrorMessage } from '../shared/admin-error-message';
 import { fieldMessage } from '../shared/field-message';
 import { formatOrgDate } from '../shared/org-format';
+import { InviteEmailsInput } from './invite-emails-input';
 import { InviteLinksPanel } from './invite-links-panel';
 import {
   InvitableRole,
@@ -83,9 +81,8 @@ const COLUMNS: DataTableColumn[] = [
   imports: [
     Button,
     Message,
-    Select,
+    SelectField,
     SelectButton,
-    Textarea,
     FormsModule,
     ReactiveFormsModule,
     ConfirmModal,
@@ -93,11 +90,11 @@ const COLUMNS: DataTableColumn[] = [
     DataTableCell,
     EmptyState,
     FieldRow,
-    FieldControl,
     Lozenge,
     PageContainer,
     PageHeader,
     Section,
+    InviteEmailsInput,
     InviteLinksPanel,
   ],
   templateUrl: './org-invitations-page.html',
@@ -109,7 +106,6 @@ export class OrgInvitationsPage {
   private readonly orgs = inject(OrganizationStore);
   private readonly notify = inject(NotificationService);
   private readonly destroyRef = inject(DestroyRef);
-  private readonly emailsField = viewChild<ElementRef<HTMLTextAreaElement>>('emailsField');
 
   protected readonly org = this.orgs.currentOrg;
   protected readonly role = this.orgs.currentRole;
@@ -181,9 +177,12 @@ export class OrgInvitationsPage {
 
   protected emailsHelper(): string {
     const parsed = this.parsed();
-    return parsed.duplicates.length > 0
-      ? `Se omitirán los repetidos: ${parsed.duplicates.join(', ')}`
-      : `${parsed.emails.length} correo(s) listo(s) para invitar`;
+    if (parsed.duplicates.length > 0) {
+      return `Se omitirán los repetidos: ${parsed.duplicates.join(', ')}`;
+    }
+    const count = parsed.emails.length;
+    if (count === 0) return 'Aún no hay correos listos para invitar';
+    return count === 1 ? '1 correo listo para invitar' : `${count} correos listos para invitar`;
   }
 
   protected load(next?: InvitationScope): void {
@@ -221,10 +220,6 @@ export class OrgInvitationsPage {
           this.submitError.set(adminErrorMessage(error, 'No se pudieron enviar las invitaciones.'));
         },
       });
-  }
-
-  protected focusInvite(): void {
-    this.emailsField()?.nativeElement.focus();
   }
 
   protected resend(invitation: Invitation): void {
