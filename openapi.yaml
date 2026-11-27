@@ -2931,7 +2931,10 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PermissionScheme'
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/PermissionScheme'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '404':
@@ -2965,7 +2968,10 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PermissionScheme'
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/PermissionScheme'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
@@ -3008,7 +3014,10 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PermissionScheme'
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/PermissionScheme'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
@@ -3045,7 +3054,10 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/EffectivePermissions'
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/EffectivePermissions'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '404':
