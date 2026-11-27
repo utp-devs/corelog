@@ -1,0 +1,88 @@
+@use '../shared/profile' as *;
+
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.section {
+  @include section-root;
+}
+
+.section-title {
+  @include section-title;
+}
+
+.card {
+  @include card;
+}
+
+.card-title {
+  @include card-title;
+}
+
+.hint {
+  @include hint;
+}
+
+.segmented {
+  display: inline-flex;
+  flex-wrap: wrap;
+  max-width: 100%;
+  padding: 2px;
+  border-radius: var(--cl-radius-md);
+  background: var(--cl-bg-sunken);
+}
+
+.segment {
+  min-height: 36px;
+  padding: var(--cl-space-1) var(--cl-space-4);
+  border: 0;
+  border-radius: var(--cl-radius-sm);
+  background: transparent;
+  color: var(--cl-text);
+  font: inherit;
+  cursor: pointer;
+
+  &.active {
+    background: var(--cl-bg-surface);
+    box-shadow: var(--cl-shadow-1);
+    font-weight: 600;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--cl-brand);
+    outline-offset: 2px;
+  }
+}
+
+.touch-target {
+  @include touch-target;
+}
+
+.row {
+  @include row-between;
+}
+
+.row-text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cl-space-1);
+  min-width: 0;
+}
+
+.row-title {
+  font-weight: 600;
+}
+
+.row-end {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--cl-space-3);
+}
+
+.language-select {
+  min-width: 160px;
+  max-width: 100%;
+}

@@ -1,0 +1,39 @@
+:host {
+  display: inline-flex;
+  flex: none;
+}
+
+.tile {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--cl-radius-md);
+  font-weight: 600;
+  user-select: none;
+}
+
+.md {
+  width: var(--cl-space-8);
+  height: var(--cl-space-8);
+  font-size: var(--cl-font-small);
+}
+
+.lg {
+  width: var(--cl-space-12);
+  height: var(--cl-space-12);
+  font-size: var(--cl-font-h3);
+}
+
+.tile[data-custom='true'] {
+  background: var(--cl-team-color);
+  color: var(--cl-avatar-1-text);
+}
+
+// One rule per palette token: the color is chosen by the team id, never by a computed style.
+@for $index from 1 through 12 {
+  .tile[data-palette='#{$index}'] {
+    background: var(--cl-palette-#{$index}-bg);
+    color: var(--cl-palette-#{$index}-text);
+  }
+}

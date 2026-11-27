@@ -1,0 +1,20 @@
+<section id="perfil-general" aria-labelledby="perfil-general-title" class="section">
+  <h2 id="perfil-general-title" class="section-title">General</h2>
+
+  <section class="card" aria-labelledby="perfil-foto-title">
+    <h3 id="perfil-foto-title" class="card-title">Foto de perfil</h3>
+    <app-profile-avatar-uploader [user]="user()" (userChange)="userChange.emit($event)" />
+  </section>
+
+  <section class="card" aria-labelledby="perfil-datos-title">
+    <h3 id="perfil-datos-title" class="card-title">Datos personales</h3>
+    <p class="hint">Tu nombre y tu correo son los que ven tus compañeros en las incidencias.</p>
+    <app-profile-form
+      [user]="user()"
+      [timezones]="timezones()"
+      [isSubmitting]="isSaving()"
+      [save]="save"
+      [(dirty)]="dirty"
+    />
+  </section>
+</section>

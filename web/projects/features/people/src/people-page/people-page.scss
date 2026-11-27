@@ -1,0 +1,32 @@
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.person {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--cl-space-2);
+  min-width: 0;
+  max-width: 100%;
+}
+
+.person-name {
+  overflow: hidden;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.secondary {
+  color: var(--cl-text-subtle);
+  overflow-wrap: anywhere;
+}
+
+.mobile-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--cl-space-1);
+  min-width: 0;
+}

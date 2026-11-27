@@ -1,0 +1,139 @@
+@use '../shared/profile' as *;
+
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cl-space-5);
+  width: 100%;
+  min-width: 0;
+}
+
+.summary {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cl-space-3);
+  min-width: 0;
+  padding: var(--cl-space-4);
+  border: 1px solid var(--cl-border);
+  border-radius: var(--cl-radius-md);
+  background: var(--cl-bg-surface);
+  box-shadow: var(--cl-shadow-1);
+}
+
+.summary-main {
+  display: flex;
+  align-items: center;
+  gap: var(--cl-space-4);
+  min-width: 0;
+}
+
+.identity {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cl-space-1);
+  min-width: 0;
+}
+
+.name {
+  margin: 0;
+  font-size: var(--cl-font-h3);
+  overflow-wrap: anywhere;
+}
+
+.email {
+  color: var(--cl-text-subtle);
+  overflow-wrap: anywhere;
+}
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--cl-space-2);
+}
+
+// Navigation (240 px on desktop) next to the section content.
+.layout {
+  display: grid;
+  grid-template-columns: 240px minmax(0, 1fr);
+  gap: var(--cl-space-5);
+  align-items: start;
+  min-width: 0;
+}
+
+.side-nav {
+  position: sticky;
+  top: var(--cl-space-4);
+  min-width: 0;
+}
+
+.menu,
+.tabs {
+  display: flex;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.menu {
+  flex-direction: column;
+  gap: var(--cl-space-1);
+}
+
+.menu-item,
+.tab {
+  display: flex;
+  align-items: center;
+  gap: var(--cl-space-2);
+  min-height: 44px;
+  padding: var(--cl-space-2) var(--cl-space-3);
+  border-radius: var(--cl-radius-sm);
+  color: var(--cl-text);
+  text-decoration: none;
+  white-space: nowrap;
+
+  &:hover {
+    background: var(--cl-bg-sunken);
+  }
+
+  &.active {
+    background: var(--cl-brand-subtle);
+    color: var(--cl-brand);
+    font-weight: 600;
+  }
+}
+
+// Narrow screens: the section tabs form one row that scrolls sideways instead of wrapping or clipping.
+.tabs-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: thin;
+  padding-block: var(--cl-space-1);
+}
+
+.tabs {
+  gap: var(--cl-space-2);
+  width: max-content;
+}
+
+.sections {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cl-space-5);
+  min-width: 0;
+}
+
+@media (max-width: 991.98px) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .side-nav {
+    position: static;
+  }
+}

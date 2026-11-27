@@ -1,0 +1,56 @@
+<form
+  class="form"
+  [formGroup]="form"
+  (ngSubmit)="submit()"
+  novalidate
+  aria-label="Datos personales"
+>
+  <app-field-row label="Nombre" [required]="true" [error]="errorOf('name')">
+    <input pInputText appFieldControl type="text" formControlName="name" maxlength="120" />
+  </app-field-row>
+
+  <app-field-row
+    label="Nombre para mostrar"
+    helper="Así aparecerás en listas y menciones. Si lo dejas vacío se usa tu nombre."
+    [error]="errorOf('displayName')"
+  >
+    <input pInputText appFieldControl type="text" formControlName="displayName" maxlength="120" />
+  </app-field-row>
+
+  <app-field-row label="Cargo" [error]="errorOf('jobTitle')">
+    <input pInputText appFieldControl type="text" formControlName="jobTitle" maxlength="120" />
+  </app-field-row>
+
+  <app-field-row label="Departamento" [error]="errorOf('department')">
+    <input pInputText appFieldControl type="text" formControlName="department" maxlength="120" />
+  </app-field-row>
+
+  <app-field-row #timezoneRow label="Zona horaria" [required]="true" [error]="errorOf('timezone')">
+    <p-select
+      [inputId]="timezoneRow.controlId"
+      ariaLabel="Zona horaria"
+      formControlName="timezone"
+      [options]="timezones()"
+      [filter]="true"
+      [invalid]="!!errorOf('timezone')"
+      styleClass="timezone-select"
+    />
+  </app-field-row>
+
+  <app-field-row
+    label="Correo electrónico"
+    helper="Tu correo de acceso no se puede cambiar desde aquí."
+  >
+    <input pInputText appFieldControl type="email" [value]="user().email" disabled readonly />
+  </app-field-row>
+
+  <div class="actions">
+    <p-button
+      type="submit"
+      label="Guardar cambios"
+      class="touch-target"
+      [loading]="isSubmitting()"
+      [disabled]="!dirty() || isSubmitting()"
+    />
+  </div>
+</form>

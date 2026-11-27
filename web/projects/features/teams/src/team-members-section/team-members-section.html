@@ -1,0 +1,104 @@
+<app-section title="Miembros" [description]="canManage() ? undefined : readOnlyText">
+  @if (canManage()) {
+    <div class="add-form" role="group" aria-label="Agregar miembro">
+      <div class="picker">
+        <app-user-picker
+          [users]="pickable()"
+          [(value)]="pickedId"
+          (search)="handleSearch($event)"
+          [loading]="searching()"
+          placeholder="Buscar una persona de la organización"
+        />
+      </div>
+      <p-select
+        ariaLabel="Rol del nuevo miembro"
+        styleClass="role-select"
+        [options]="roleOptions"
+        optionLabel="label"
+        optionValue="value"
+        [ngModel]="newRole()"
+        (ngModelChange)="newRole.set($event)"
+      />
+      <p-button
+        label="Agregar miembro"
+        class="touch-target"
+        [disabled]="!pickedId()"
+        [loading]="adding()"
+        (onClick)="handleAdd()"
+      />
+    </div>
+  }
+
+  <app-data-table
+    tableKey="team-members"
+    [columns]="columns"
+    [data]="members()"
+    rowKey="userId"
+    [loading]="status() === 'loading'"
+    [error]="errorMessage()"
+    [emptyState]="emptyTemplate"
+    [mobileRender]="mobileTemplate"
+    (retry)="retry.emit()"
+  >
+    <ng-template appDataTableCell="person" let-member>
+      <app-user-chip
+        [user]="{ id: member.userId, name: member.name, role: member.email || null }"
+      />
+    </ng-template>
+    <ng-template appDataTableCell="role" let-member>
+      <ng-container *ngTemplateOutlet="roleControl; context: { $implicit: member }" />
+    </ng-template>
+    <ng-template appDataTableCell="actions" let-member>
+      <ng-container *ngTemplateOutlet="removeButton; context: { $implicit: member }" />
+    </ng-template>
+  </app-data-table>
+</app-section>
+
+<ng-template #roleControl let-member>
+  @if (canManage()) {
+    <p-select
+      [ariaLabel]="'Rol de ' + member.name"
+      styleClass="role-select"
+      [options]="roleOptions"
+      optionLabel="label"
+      optionValue="value"
+      [ngModel]="member.role"
+      (ngModelChange)="changeRole(member, $event)"
+    />
+  } @else {
+    <app-lozenge [tone]="member.role === 'maintainer' ? 'info' : 'neutral'">{{
+      roleLabel(member.role)
+    }}</app-lozenge>
+  }
+</ng-template>
+
+<ng-template #removeButton let-member>
+  @if (canManage()) {
+    <p-button
+      severity="danger"
+      size="small"
+      icon="pi pi-user-minus"
+      label="Quitar"
+      class="touch-target"
+      [ariaLabel]="'Quitar a ' + member.name + ' del equipo'"
+      (onClick)="removeMember(member)"
+    />
+  }
+</ng-template>
+
+<ng-template #emptyTemplate>
+  <app-empty-state
+    title="Este equipo aún no tiene miembros"
+    [description]="canManage() ? 'Agrega personas con el formulario de arriba.' : undefined"
+  />
+</ng-template>
+
+<ng-template #mobileTemplate let-member>
+  <div class="mobile-card">
+    <app-user-chip [user]="{ id: member.userId, name: member.name, role: member.email || null }" />
+    <div class="mobile-actions">
+      <ng-container *ngTemplateOutlet="roleControl; context: { $implicit: member }" />
+      <ng-container *ngTemplateOutlet="removeButton; context: { $implicit: member }" />
+    </div>
+  </div>
+</ng-template>

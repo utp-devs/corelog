@@ -1,0 +1,93 @@
+@let v = view();
+
+@if (v.kind === 'no-org') {
+  <app-error-page [variant]="404" [title]="notFoundTitle" [description]="notFoundDescription" />
+} @else if (v.kind === 'forbidden') {
+  <app-error-page [variant]="403" />
+} @else if (v.kind === 'not-found') {
+  <app-error-page [variant]="404" [title]="notFoundTitle" [description]="notFoundDescription" />
+} @else if (v.kind === 'loading') {
+  <app-page-container variant="wide" pageName="person" [ready]="false">
+    <app-section ariaLabel="Cargando persona">
+      <app-loading-skeleton />
+    </app-section>
+  </app-page-container>
+} @else if (v.kind === 'error') {
+  <app-page-container variant="wide" pageName="person" [ready]="true">
+    <app-error-state [message]="v.message" [canRetry]="true" (retry)="retry()" />
+  </app-page-container>
+} @else if (v.kind === 'ready') {
+  <app-page-container variant="wide" pageName="person" [ready]="true" [fill]="true">
+    <app-breadcrumbs [items]="crumbs()" />
+
+    <app-split-layout sideLabel="Equipos de la persona">
+      <div appSplitMain class="main">
+        <app-section [ariaLabel]="'Ficha de ' + displayName()" [fill]="true">
+          <div class="header">
+            <app-user-avatar
+              [id]="v.person.userId"
+              [name]="displayName()"
+              [hasAvatar]="v.person.hasAvatar"
+              [size]="64"
+              data-testid="person-avatar"
+            />
+            <div class="identity">
+              <h2 class="name">{{ displayName() }}</h2>
+              <app-lozenge [tone]="toneOf(v.person.orgRole)">
+                {{ labelOf(v.person.orgRole) }}
+              </app-lozenge>
+            </div>
+          </div>
+
+          <dl class="details">
+            <div class="detail">
+              <dt>Cargo</dt>
+              <dd>{{ v.person.jobTitle || '—' }}</dd>
+            </div>
+            <div class="detail">
+              <dt>Departamento</dt>
+              <dd>{{ v.person.department || '—' }}</dd>
+            </div>
+            <div class="detail">
+              <dt>Correo</dt>
+              <dd>{{ v.person.email }}</dd>
+            </div>
+            <div class="detail">
+              <dt>Zona horaria</dt>
+              <dd>{{ v.person.timezone || '—' }}</dd>
+            </div>
+            <div class="detail">
+              <dt>Se unió</dt>
+              <dd>{{ v.person.joinedAt | date: 'dd/MM/yyyy' }}</dd>
+            </div>
+          </dl>
+
+          <a class="back" routerLink="..">Volver al directorio</a>
+        </app-section>
+      </div>
+
+      <div appSplitSide>
+        <app-section title="Equipos" [fill]="true">
+          @if (v.teams === null) {
+            <p class="secondary">No se pudieron cargar los equipos.</p>
+          } @else if (v.teams.length === 0) {
+            <p class="secondary">Sin equipos.</p>
+          } @else {
+            <ul class="team-list">
+              @for (team of v.teams; track team.id) {
+                <li>
+                  <app-team-chip
+                    [id]="team.id"
+                    [name]="team.name"
+                    [memberCount]="team.memberCount"
+                    [href]="'/teams/' + team.id"
+                  />
+                </li>
+              }
+            </ul>
+          }
+        </app-section>
+      </div>
+    </app-split-layout>
+  </app-page-container>
+}

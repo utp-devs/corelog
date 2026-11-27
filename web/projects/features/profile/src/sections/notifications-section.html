@@ -1,0 +1,36 @@
+<section id="perfil-notificaciones" aria-labelledby="perfil-notificaciones-title" class="section">
+  <h2 id="perfil-notificaciones-title" class="section-title">Notificaciones</h2>
+
+  <section class="card" aria-labelledby="perfil-avisos-title">
+    <h3 id="perfil-avisos-title" class="card-title">
+      <i class="pi pi-bell" aria-hidden="true"></i> Avisos
+    </h3>
+
+    <div class="stack">
+      <div class="row">
+        <span>Avisos en la aplicación</span>
+        <p-toggleswitch
+          ariaLabel="Avisos en la aplicación"
+          [ngModel]="inAppEnabled() ?? false"
+          [disabled]="inAppEnabled() === null"
+          (onChange)="toggleInApp($event.checked)"
+        />
+      </div>
+
+      <div class="row">
+        <span>Correo electrónico</span>
+        <div class="row-end">
+          <app-tone-tag label="Próximamente" tone="neutral" />
+          <p-toggleswitch ariaLabel="Correo electrónico" [disabled]="true" />
+        </div>
+      </div>
+
+      @if (status(); as message) {
+        <p class="status" role="status">{{ message }}</p>
+      }
+      @if (error(); as message) {
+        <p class="error" role="alert">{{ message }}</p>
+      }
+    </div>
+  </section>
+</section>

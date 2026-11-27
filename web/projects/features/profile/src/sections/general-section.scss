@@ -1,0 +1,26 @@
+@use '../shared/profile' as *;
+
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.section {
+  @include section-root;
+}
+
+.section-title {
+  @include section-title;
+}
+
+.card {
+  @include card;
+}
+
+.card-title {
+  @include card-title;
+}
+
+.hint {
+  @include hint;
+}

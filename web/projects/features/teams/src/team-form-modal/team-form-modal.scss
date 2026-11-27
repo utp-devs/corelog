@@ -1,0 +1,58 @@
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cl-space-4);
+  min-width: 0;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cl-space-1);
+  min-width: 0;
+}
+
+.label {
+  color: var(--cl-text);
+  font-size: var(--cl-font-body);
+  font-weight: 600;
+}
+
+// Touch targets: inputs are at least 44 px high on every screen.
+.control {
+  width: 100%;
+  min-height: 44px;
+}
+
+.help {
+  margin: 0;
+  color: var(--cl-text-subtle);
+  font-size: var(--cl-font-small);
+  overflow-wrap: anywhere;
+
+  &.error {
+    color: var(--cl-danger);
+  }
+}
+
+.alert {
+  padding: var(--cl-space-3);
+  border: 1px solid var(--cl-danger);
+  border-radius: var(--cl-radius-md);
+  color: var(--cl-danger);
+  font-size: var(--cl-font-small);
+  overflow-wrap: anywhere;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--cl-space-2);
+}
+
+@media (max-width: 767.98px) {
+  .touch-target {
+    min-height: var(--cl-space-12);
+  }
+}

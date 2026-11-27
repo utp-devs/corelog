@@ -1,0 +1,56 @@
+// Shared layout pieces of the profile sections. Included with @use by each section stylesheet.
+
+@mixin section-root {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cl-space-4);
+  min-width: 0;
+  scroll-margin-top: var(--cl-space-5);
+}
+
+@mixin section-title {
+  margin: 0;
+  font-size: var(--cl-font-h3);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+@mixin card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cl-space-3);
+  min-width: 0;
+  padding: var(--cl-space-4);
+  border: 1px solid var(--cl-border);
+  border-radius: var(--cl-radius-md);
+  background: var(--cl-bg-surface);
+}
+
+@mixin card-title {
+  margin: 0;
+  font-size: var(--cl-font-body-strong);
+  font-weight: 600;
+}
+
+@mixin row-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--cl-space-4);
+  min-width: 0;
+}
+
+@mixin hint {
+  margin: 0;
+  color: var(--cl-text-subtle);
+  font-size: var(--cl-font-small);
+  overflow-wrap: anywhere;
+}
+
+// Phones: interactive controls keep a 44 px tap target.
+@mixin touch-target {
+  @media (max-width: 767.98px) {
+    min-height: 44px;
+  }
+}

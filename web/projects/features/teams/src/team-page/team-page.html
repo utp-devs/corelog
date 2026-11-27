@@ -1,0 +1,98 @@
+@if (teamReady() && team(); as current) {
+  <app-page-container variant="wide" [ready]="true" pageName="team">
+    <div appPageSidebar>
+      <app-section title="Detalles" [headingLevel]="3">
+        <dl class="details">
+          <dt>Creado por</dt>
+          <dd>{{ creatorName() }}</dd>
+          <dt>Fecha de creación</dt>
+          <dd>
+            <time [attr.datetime]="current.createdAt">{{ formatDate(current.createdAt) }}</time>
+          </dd>
+          <dt>Miembros</dt>
+          <dd>{{ membersCountText() }}</dd>
+        </dl>
+      </app-section>
+    </div>
+
+    <header class="header">
+      <div class="identity">
+        <app-team-tile
+          [id]="current.id"
+          [name]="current.name"
+          [color]="current.avatarColor"
+          size="lg"
+        />
+        <div class="title-block">
+          <h1 class="title">{{ current.name }}</h1>
+          <p class="description">{{ current.description || 'Sin descripción' }}</p>
+        </div>
+      </div>
+      @if (canManage()) {
+        <div class="actions">
+          <p-button
+            label="Editar equipo"
+            icon="pi pi-pencil"
+            severity="secondary"
+            [outlined]="true"
+            class="touch-target"
+            (onClick)="editOpen.set(true)"
+          />
+          <p-button
+            label="Eliminar equipo"
+            icon="pi pi-trash"
+            severity="danger"
+            class="touch-target"
+            (onClick)="deleteOpen.set(true)"
+          />
+        </div>
+      }
+    </header>
+
+    <p-tabs value="members">
+      <p-tablist>
+        <p-tab value="members">Miembros</p-tab>
+      </p-tablist>
+      <p-tabpanels>
+        <p-tabpanel value="members">
+          <app-team-members-section
+            [teamId]="current.id"
+            [members]="members()"
+            [status]="membersStatus()"
+            [error]="membersError()"
+            [canManage]="canManage()"
+            (retry)="reloadMembers()"
+          />
+        </p-tabpanel>
+      </p-tabpanels>
+    </p-tabs>
+
+    <app-team-form-modal
+      [open]="editOpen()"
+      title="Editar equipo"
+      [initial]="initialValues()"
+      [onSubmit]="saveEdit"
+      (cancelled)="editOpen.set(false)"
+      [(dirty)]="formDirty"
+    />
+
+    <app-confirm-danger-modal
+      [open]="deleteOpen()"
+      title="Eliminar equipo"
+      [description]="deleteDescription"
+      [confirmation]="current.name"
+      confirmText="Eliminar equipo"
+      [loading]="deleting()"
+      (confirmed)="confirmDelete()"
+      (cancelled)="deleteOpen.set(false)"
+    />
+  </app-page-container>
+} @else {
+  <app-page-container variant="wide" [ready]="false" pageName="team">
+    @if (teamStatus() === 'error') {
+      <app-error-state [message]="notFoundMessage()" [canRetry]="true" (retry)="reloadTeam()" />
+    } @else {
+      <app-loading-skeleton variant="detail" />
+    }
+  </app-page-container>
+}

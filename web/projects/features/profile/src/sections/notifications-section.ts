@@ -1,0 +1,59 @@
+import { ChangeDetectionStrategy, Component, DestroyRef, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { FormsModule } from '@angular/forms';
+import { NotificationApiService } from '@corelog/core';
+import { ToneTag } from '@corelog/ui/tone-tag';
+import { ToggleSwitch } from 'primeng/toggleswitch';
+
+import { messageOr } from '../shared/feature-error';
+
+/** In-app notification preference (live). The email channel is not available yet. */
+@Component({
+  selector: 'app-profile-notifications-section',
+  imports: [FormsModule, ToggleSwitch, ToneTag],
+  templateUrl: './notifications-section.html',
+  styleUrl: './notifications-section.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
+})
+export class ProfileNotificationsSection {
+  private readonly preferences = inject(NotificationApiService);
+  private readonly destroyRef = inject(DestroyRef);
+
+  /** Null while the preference is not loaded (or not available): the switch stays disabled. */
+  protected readonly inAppEnabled = signal<boolean | null>(null);
+  protected readonly error = signal<string | null>(null);
+  protected readonly status = signal<string | null>(null);
+
+  constructor() {
+    this.preferences
+      .getPreferences()
+      .pipe(takeUntilDestroyed())
+      .subscribe({
+        next: (prefs) => this.inAppEnabled.set(prefs.inApp),
+        error: () => undefined,
+      });
+  }
+
+  protected toggleInApp(checked: boolean): void {
+    const previous = this.inAppEnabled();
+    this.inAppEnabled.set(checked);
+    this.error.set(null);
+    this.preferences
+      .updatePreferences(checked)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (saved) => {
+          this.inAppEnabled.set(saved.inApp);
+          this.status.set(
+            saved.inApp
+              ? 'Avisos en la aplicación activados'
+              : 'Avisos en la aplicación desactivados',
+          );
+        },
+        error: (failure: unknown) => {
+          this.inAppEnabled.set(previous);
+          this.error.set(messageOr(failure, 'No se pudo guardar la preferencia'));
+        },
+      });
+  }
+}

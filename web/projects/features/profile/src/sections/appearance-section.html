@@ -1,0 +1,42 @@
+<section id="perfil-apariencia" aria-labelledby="perfil-apariencia-title" class="section">
+  <h2 id="perfil-apariencia-title" class="section-title">Apariencia</h2>
+
+  <section class="card" aria-labelledby="perfil-tema-title">
+    <h3 id="perfil-tema-title" class="card-title">Tema</h3>
+    <p class="hint">El tema se guarda en este navegador y se aplica al abrir la aplicación.</p>
+    <div class="segmented" role="group" aria-label="Tema de la aplicación">
+      @for (option of themeOptions; track option.value) {
+        <button
+          type="button"
+          class="segment touch-target"
+          [class.active]="theme.mode() === option.value"
+          [attr.aria-pressed]="theme.mode() === option.value"
+          (click)="theme.setMode(option.value)"
+        >
+          {{ option.label }}
+        </button>
+      }
+    </div>
+  </section>
+
+  <section class="card" aria-label="Idioma">
+    <div class="row">
+      <div class="row-text">
+        <span class="row-title"><i class="pi pi-globe" aria-hidden="true"></i> Idioma</span>
+        <p class="hint">La interfaz está disponible en español.</p>
+      </div>
+      <div class="row-end">
+        <app-tone-tag label="Próximamente" tone="neutral" />
+        <p-select
+          ariaLabel="Idioma"
+          styleClass="language-select"
+          [disabled]="true"
+          [options]="languageOptions"
+          optionLabel="label"
+          optionValue="value"
+          [ngModel]="'es'"
+        />
+      </div>
+    </div>
+  </section>
+</section>

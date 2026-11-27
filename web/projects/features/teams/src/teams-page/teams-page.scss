@@ -1,0 +1,22 @@
+:host {
+  display: block;
+  min-width: 0;
+}
+
+// Same frame as a team card, so the loading state keeps the final geometry.
+.skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cl-space-3);
+  height: 100%;
+  padding: var(--cl-space-4);
+  background: var(--cl-bg-surface);
+  border: 1px solid var(--cl-border);
+  border-radius: var(--cl-radius-lg);
+}
+
+@media (max-width: 767.98px) {
+  .touch-target {
+    min-height: var(--cl-space-12);
+  }
+}

@@ -1,0 +1,84 @@
+<p-dialog
+  styleClass="team-form-dialog"
+  [header]="title()"
+  [visible]="open()"
+  [modal]="true"
+  [dismissableMask]="true"
+  [draggable]="false"
+  [resizable]="false"
+  (visibleChange)="onVisibleChange($event)"
+  (onShow)="onDialogShow()"
+>
+  <div class="form" [formGroup]="form">
+    @if (serverError(); as message) {
+      <div class="alert" role="alert">{{ message }}</div>
+    }
+
+    <div class="field">
+      <label class="label" for="team-name">Nombre del equipo</label>
+      <input
+        #nameInput
+        pInputText
+        id="team-name"
+        type="text"
+        class="control"
+        formControlName="name"
+        aria-required="true"
+        [attr.aria-invalid]="nameError() ? 'true' : null"
+        aria-describedby="team-name-help"
+      />
+      <p id="team-name-help" class="help" [class.error]="nameError() !== null">
+        {{ nameError() ?? nameHelp }}
+      </p>
+    </div>
+
+    <div class="field">
+      <label class="label" for="team-description">Descripción</label>
+      <textarea
+        pTextarea
+        id="team-description"
+        class="control"
+        rows="3"
+        formControlName="description"
+        [attr.aria-invalid]="descriptionError() ? 'true' : null"
+        [attr.aria-describedby]="descriptionError() ? 'team-description-help' : null"
+      ></textarea>
+      @if (descriptionError(); as message) {
+        <p id="team-description-help" class="help error">{{ message }}</p>
+      }
+    </div>
+
+    <div class="field">
+      <span class="label">Color del equipo</span>
+      <app-color-picker label="Color del equipo" formControlName="color" data-testid="team-color" />
+    </div>
+  </div>
+
+  <ng-template pTemplate="footer">
+    <div class="actions">
+      <p-button
+        label="Cancelar"
+        class="touch-target"
+        severity="secondary"
+        [outlined]="true"
+        (onClick)="requestCancel()"
+      />
+      <p-button
+        label="Guardar"
+        class="touch-target"
+        [loading]="submitting()"
+        (onClick)="submit()"
+      />
+    </div>
+  </ng-template>
+</p-dialog>
+
+<app-confirm-modal
+  [open]="discardOpen()"
+  [title]="unsavedTitle"
+  [description]="unsavedDescription"
+  [confirmText]="unsavedConfirm"
+  [cancelText]="unsavedCancel"
+  (confirmed)="discard()"
+  (cancelled)="discardOpen.set(false)"
+/>

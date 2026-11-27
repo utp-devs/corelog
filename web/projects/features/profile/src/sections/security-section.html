@@ -1,0 +1,147 @@
+<section id="perfil-seguridad" aria-labelledby="perfil-seguridad-title" class="section">
+  <h2 id="perfil-seguridad-title" class="section-title">Seguridad</h2>
+
+  <section class="card" aria-labelledby="perfil-clave-title">
+    <h3 id="perfil-clave-title" class="card-title">Contraseña</h3>
+    <app-profile-password-form [isSubmitting]="savingPassword()" [save]="changePassword" />
+  </section>
+
+  <section class="card" aria-label="Verificación en dos pasos">
+    <div class="row">
+      <div class="row-text">
+        <span class="row-title">Verificación en dos pasos</span>
+        <p class="hint">Añade una capa extra de seguridad al iniciar sesión.</p>
+      </div>
+      <div class="row-end">
+        <app-tone-tag label="Próximamente" tone="neutral" />
+        <p-toggleswitch ariaLabel="Verificación en dos pasos" [disabled]="true" />
+      </div>
+    </div>
+  </section>
+
+  <section class="card" aria-labelledby="perfil-sesiones-title">
+    <h3 id="perfil-sesiones-title" class="card-title">Sesiones y accesos</h3>
+
+    @if (sessionsError(); as message) {
+      <div class="alert" role="alert">{{ message }}</div>
+    } @else if (sessions() === null) {
+      <app-loading-skeleton [rows]="2" />
+    } @else {
+      <ul class="session-list">
+        @for (session of sessions(); track session.id) {
+          <li class="session-item">
+            <div class="row">
+              <div class="row-text">
+                <span class="row-title session-agent">
+                  {{ describeAgent(session.userAgent) }}
+                  @if (session.current) {
+                    <app-tone-tag label="Esta sesión" tone="green" />
+                  }
+                </span>
+                <p class="hint">
+                  Iniciada {{ session.createdAt | date: 'dd/MM/yyyy HH:mm' }} · Última actividad
+                  {{ session.lastSeenAt | date: 'dd/MM/yyyy HH:mm' }}
+                </p>
+              </div>
+              @if (!session.current) {
+                <p-button
+                  label="Cerrar"
+                  severity="secondary"
+                  [outlined]="true"
+                  class="touch-target"
+                  [loading]="savingSessions()"
+                  (onClick)="revokeSession(session.id)"
+                />
+              }
+            </div>
+          </li>
+        }
+      </ul>
+    }
+
+    @if (hasOtherSessions()) {
+      <div class="row">
+        <p class="hint">Cierra las sesiones que no reconozcas.</p>
+        <p-button
+          label="Cerrar otras sesiones"
+          severity="secondary"
+          class="touch-target"
+          [loading]="savingSessions()"
+          (onClick)="confirmOthersOpen.set(true)"
+        />
+      </div>
+    }
+  </section>
+
+  <section class="card card-danger" aria-labelledby="perfil-peligro-title">
+    <h3 id="perfil-peligro-title" class="card-title">Zona de peligro</h3>
+    <div class="row">
+      <div class="row-text">
+        <span class="row-title">Eliminar mi cuenta</span>
+        <p class="hint">
+          Tu cuenta quedará desactivada y no podrás volver a entrar. Tus incidencias se conservan
+          con tu nombre de solicitante.
+        </p>
+      </div>
+      <p-button
+        label="Eliminar cuenta"
+        icon="pi pi-trash"
+        severity="danger"
+        class="touch-target"
+        (onClick)="openDeactivate()"
+      />
+    </div>
+  </section>
+</section>
+
+<app-confirm-modal
+  title="¿Cerrar las demás sesiones?"
+  description="Tendrás que volver a iniciar sesión en esos dispositivos."
+  confirmText="Sí, cerrar"
+  cancelText="No"
+  [open]="confirmOthersOpen()"
+  [loading]="savingSessions()"
+  (confirmed)="revokeOtherSessions()"
+  (cancelled)="confirmOthersOpen.set(false)"
+/>
+
+<p-dialog
+  header="Eliminar mi cuenta"
+  [visible]="deactivateOpen()"
+  [modal]="true"
+  [draggable]="false"
+  [resizable]="false"
+  (visibleChange)="$event ? null : closeDeactivate()"
+>
+  <p class="dialog-text">
+    Se cerrarán todas tus sesiones. Para confirmar, escribe tu contraseña actual.
+  </p>
+
+  <app-field-row #deactivateRow label="Contraseña actual">
+    <app-password-input
+      [inputId]="deactivateRow.controlId"
+      autocomplete="current-password"
+      [formControl]="deactivatePassword"
+    />
+  </app-field-row>
+
+  <ng-template pTemplate="footer">
+    <div class="dialog-actions">
+      <p-button
+        label="Cancelar"
+        severity="secondary"
+        [outlined]="true"
+        class="touch-target"
+        (onClick)="closeDeactivate()"
+      />
+      <p-button
+        label="Eliminar cuenta"
+        severity="danger"
+        class="touch-target"
+        [disabled]="!canDeactivate()"
+        [loading]="deactivating()"
+        (onClick)="deactivate()"
+      />
+    </div>
+  </ng-template>
+</p-dialog>

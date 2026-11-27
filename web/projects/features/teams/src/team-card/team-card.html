@@ -1,0 +1,11 @@
+<a class="card" data-testid="team-card" [routerLink]="[team().id]">
+  <div class="card-header">
+    <app-team-tile [id]="team().id" [name]="team().name" [color]="team().avatarColor" size="lg" />
+    <span class="card-name">{{ team().name }}</span>
+    @if (isMaintainer()) {
+      <app-lozenge tone="info">Responsable</app-lozenge>
+    }
+  </div>
+  <p class="card-description">{{ team().description || 'Sin descripción' }}</p>
+  <span class="card-meta">{{ memberCount() }}</span>
+</a>

@@ -1,0 +1,10 @@
+<span
+  class="tile"
+  aria-hidden="true"
+  [class.md]="size() === 'md'"
+  [class.lg]="size() === 'lg'"
+  [attr.data-custom]="customColor() ? 'true' : null"
+  [attr.data-palette]="customColor() ? null : palette()"
+  [style.--cl-team-color]="customColor()"
+  >{{ initials() }}</span
+>

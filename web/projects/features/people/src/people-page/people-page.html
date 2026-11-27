@@ -1,0 +1,79 @@
+<app-page-container variant="wide" pageName="people" [ready]="ready()" [fill]="true">
+  <app-page-header title="Personas" [subtitle]="subtitle()" />
+
+  <app-toolbar>
+    <div appToolbarLeft>
+      <app-search-input
+        [(value)]="query"
+        placeholder="Buscar por nombre o correo"
+        ariaLabel="Buscar personas"
+      />
+    </div>
+  </app-toolbar>
+
+  <app-data-table
+    tableKey="people-directory"
+    [fill]="true"
+    [columns]="columns"
+    [data]="visible()"
+    rowKey="userId"
+    [loading]="loading()"
+    [error]="errorMessage()"
+    (retry)="reload()"
+    [emptyState]="emptyTpl"
+    [rowOpenable]="true"
+    (rowOpen)="openPerson($event)"
+    [mobileRender]="mobileTpl"
+  >
+    <ng-template appDataTableCell="name" let-member>
+      <span class="person">
+        <app-user-avatar
+          [id]="member.userId"
+          [name]="member.name"
+          [hasAvatar]="member.hasAvatar"
+          [size]="32"
+        />
+        <span class="person-name">{{ member.name }}</span>
+      </span>
+    </ng-template>
+
+    <ng-template appDataTableCell="jobTitle" let-member>
+      @if (member.jobTitle) {
+        {{ member.jobTitle }}
+      } @else {
+        <span class="secondary">—</span>
+      }
+    </ng-template>
+
+    <ng-template appDataTableCell="role" let-member>
+      <app-lozenge [tone]="toneOf(member.role)">{{ labelOf(member.role) }}</app-lozenge>
+    </ng-template>
+
+    <ng-template appDataTableCell="email" let-member>
+      <span class="secondary">{{ member.email }}</span>
+    </ng-template>
+  </app-data-table>
+
+  <ng-template #emptyTpl>
+    <app-empty-state [title]="emptyTitle()" [description]="emptyDescription()" />
+  </ng-template>
+
+  <ng-template #mobileTpl let-member>
+    <div class="mobile-card">
+      <span class="person">
+        <app-user-avatar
+          [id]="member.userId"
+          [name]="member.name"
+          [hasAvatar]="member.hasAvatar"
+          [size]="32"
+        />
+        <span class="person-name">{{ member.name }}</span>
+      </span>
+      @if (member.jobTitle) {
+        <span>{{ member.jobTitle }}</span>
+      }
+      <app-lozenge [tone]="toneOf(member.role)">{{ labelOf(member.role) }}</app-lozenge>
+      <span class="secondary">{{ member.email }}</span>
+    </div>
+  </ng-template>
+</app-page-container>

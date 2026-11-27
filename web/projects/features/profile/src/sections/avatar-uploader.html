@@ -1,0 +1,78 @@
+<div class="root">
+  <div class="figure">
+    @if (preview(); as current) {
+      <app-avatar
+        [id]="user().id"
+        [name]="user().name"
+        [src]="current.url"
+        [size]="64"
+        data-testid="avatar-preview"
+      />
+      <span class="caption">Vista previa</span>
+    } @else {
+      <app-user-avatar
+        [id]="user().id"
+        [name]="user().name"
+        [avatarKey]="user().avatarKey"
+        [size]="64"
+        data-testid="avatar-current"
+      />
+    }
+  </div>
+
+  <div class="controls">
+    <input
+      #fileInput
+      type="file"
+      class="file-input"
+      tabindex="-1"
+      accept="image/png,image/jpeg,image/webp"
+      aria-label="Elegir foto de perfil"
+      (change)="onPick($event)"
+    />
+
+    <div class="buttons">
+      @if (preview()) {
+        <p-button
+          label="Guardar foto"
+          class="touch-target"
+          [loading]="busy() === 'upload'"
+          (onClick)="upload()"
+        />
+        <p-button
+          label="Cancelar"
+          severity="secondary"
+          [outlined]="true"
+          class="touch-target"
+          [disabled]="busy() !== null"
+          (onClick)="cancelPreview()"
+        />
+      } @else {
+        <p-button
+          label="Subir foto"
+          severity="secondary"
+          [outlined]="true"
+          class="touch-target"
+          [disabled]="busy() !== null"
+          (onClick)="chooseFile()"
+        />
+        @if (user().avatarKey) {
+          <p-button
+            label="Quitar foto"
+            severity="danger"
+            [text]="true"
+            class="touch-target"
+            [loading]="busy() === 'remove'"
+            (onClick)="remove()"
+          />
+        }
+      }
+    </div>
+
+    <p class="hint">PNG, JPEG o WebP de hasta {{ sizeLimitMb }} MB.</p>
+
+    @if (error(); as message) {
+      <div class="alert" role="alert">{{ message }}</div>
+    }
+  </div>
+</div>

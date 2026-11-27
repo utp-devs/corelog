@@ -1,0 +1,76 @@
+<app-page-container variant="wide" [ready]="!loading()" pageName="teams" [fill]="true">
+  <app-page-header
+    title="Equipos"
+    subtitle="Agrupa a las personas de la organización y administra sus equipos."
+  />
+
+  <app-toolbar>
+    <div appToolbarLeft>
+      <app-search-input [(value)]="query" placeholder="Buscar equipos" ariaLabel="Buscar equipos" />
+    </div>
+    @if (teams().length > 0 && canCreate()) {
+      <div appToolbarRight>
+        <p-button
+          label="Crear equipo"
+          icon="pi pi-plus"
+          class="touch-target"
+          (onClick)="openCreate()"
+        />
+      </div>
+    }
+  </app-toolbar>
+
+  @if (loading()) {
+    <div role="status" aria-busy="true" aria-label="Cargando equipos">
+      <app-card-grid>
+        @for (index of skeletonCards; track index) {
+          <div class="skeleton" aria-hidden="true">
+            <app-loading-skeleton variant="card" />
+          </div>
+        }
+      </app-card-grid>
+    </div>
+  } @else if (failed()) {
+    <app-section [fill]="true" ariaLabel="Equipos">
+      <app-error-state [message]="errorMessage()" [canRetry]="true" (retry)="load()" />
+    </app-section>
+  } @else if (teams().length === 0) {
+    <app-section [fill]="true" ariaLabel="Equipos">
+      @if (canCreate()) {
+        <app-empty-state title="Aún no hay equipos" [description]="emptyDescription()">
+          <p-button
+            action
+            label="Crear equipo"
+            icon="pi pi-plus"
+            class="touch-target"
+            (onClick)="openCreate()"
+          />
+        </app-empty-state>
+      } @else {
+        <app-empty-state title="Aún no hay equipos" [description]="emptyDescription()" />
+      }
+    </app-section>
+  } @else if (visible().length === 0) {
+    <app-section [fill]="true" ariaLabel="Equipos">
+      <app-empty-state
+        title="Ningún equipo coincide con la búsqueda"
+        description="Prueba con otro nombre o descripción."
+      />
+    </app-section>
+  } @else {
+    <app-card-grid ariaLabel="Equipos" [fill]="true">
+      @for (team of visible(); track team.id) {
+        <app-team-card [team]="team" />
+      }
+    </app-card-grid>
+  }
+
+  <app-team-form-modal
+    [open]="createOpen()"
+    title="Nuevo equipo"
+    [initial]="emptyTeam"
+    [onSubmit]="handleCreate"
+    (cancelled)="closeCreate()"
+    [(dirty)]="formDirty"
+  />
+</app-page-container>
