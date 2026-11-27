@@ -265,7 +265,8 @@ func TestMyPermissionsPerRole(t *testing.T) {
 		has    string
 		lacks  string
 	}{
-		{"lead", authdomain.Access{OrgRole: authdomain.OrgRoleMember, ProjectRole: rolePtr(authdomain.ProjectRoleLead), Visibility: authdomain.VisibilityOpen}, "lead", "edit_project", "delete_project"},
+		// The lead may delete the project under the default scheme.
+		{"lead", authdomain.Access{OrgRole: authdomain.OrgRoleMember, ProjectRole: rolePtr(authdomain.ProjectRoleLead), Visibility: authdomain.VisibilityOpen}, "lead", "delete_project", ""},
 		{"contributor", authdomain.Access{OrgRole: authdomain.OrgRoleMember, ProjectRole: rolePtr(authdomain.ProjectRoleContributor), Visibility: authdomain.VisibilityOpen}, "contributor", "create_issue", "edit_project"},
 		{"viewer", authdomain.Access{OrgRole: authdomain.OrgRoleMember, ProjectRole: rolePtr(authdomain.ProjectRoleViewer), Visibility: authdomain.VisibilityOpen}, "viewer", "browse_project", "create_issue"},
 		{"org owner", authdomain.Access{OrgRole: authdomain.OrgRoleOwner, Visibility: authdomain.VisibilityPrivate}, "lead", "delete_project", ""},

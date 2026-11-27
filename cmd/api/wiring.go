@@ -85,7 +85,8 @@ func buildRouter(cfg *config.Config, db *sqlx.DB, log *slog.Logger) (chi.Router,
 	projectAuthorizer := projectAuthorizerAdapter{authorizer: authorizer}
 	projectModule := project.NewModule(projectRepo, projectMemberRepo, projectCatalogRepo, orgs, cfg.Auth.JWTSecret, projectAuthorizer).
 		WithEvents(projectpostgres.NewEventPublisher(db)).
-		WithTransactions(database.NewTxManager(db))
+		WithTransactions(database.NewTxManager(db)).
+		WithTeamGrants(projectpostgres.NewTeamGrantRepository(db))
 	projectModule.Handler.WithPermissions(authusecase.NewPermissionService(authorizer, authpostgres.NewSchemeRepository(db)))
 
 	ticketRepo := ticketDBRepo
@@ -110,6 +111,7 @@ func buildRouter(cfg *config.Config, db *sqlx.DB, log *slog.Logger) (chi.Router,
 	searchModule := search.NewModule(searchpostgres.NewSearchIndex(db), cfg.Auth.JWTSecret)
 	dashboardModule := dashboard.NewModule(dashboardpostgres.NewDashboardReader(db), cfg.Auth.JWTSecret)
 	favoriteModule := favorite.NewModule(favoritepostgres.NewRepository(db), favoritepostgres.NewProjectVisibility(db), cfg.Auth.JWTSecret)
+	projectModule.WithRecents(favoriteModule.RecentRecorder)
 	calendarModule := calendar.NewModule(calendarpostgres.NewCalendarRepository(db), projectAuthorizer, cfg.Auth.JWTSecret)
 	sprintModule := sprint.NewModule(sprintpostgres.NewSprintRepository(db), projectAuthorizer, cfg.Auth.JWTSecret)
 	boardModule := board.NewModule(boardpostgres.NewBoardRepository(db), projectModule.Service, projectAuthorizer, boardIssueMover{issues: ticketModule.Service}, cfg.Auth.JWTSecret)

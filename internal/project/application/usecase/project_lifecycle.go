@@ -170,15 +170,16 @@ func (s *ProjectService) Restore(ctx context.Context, actorID uuid.UUID, globalR
 	return project, nil
 }
 
-// DeleteProject soft deletes the project. The lead or an org owner/admin may delete it, and the
-// caller must type the exact project name. Permission is checked before the name so the name is
-// not revealed to actors who cannot manage the project.
+// DeleteProject soft deletes the project. The lead or an org owner/admin may delete it
+// (delete_project in the permission scheme), and the caller must type the exact project name.
+// Permission is checked before the name so the name is not revealed to actors who cannot delete
+// the project.
 func (s *ProjectService) DeleteProject(ctx context.Context, actorID uuid.UUID, globalRole string, id uuid.UUID, confirmation string) error {
 	project, orgRole, err := s.loadVisible(ctx, actorID, globalRole, id)
 	if err != nil {
 		return err
 	}
-	if err := s.requireManage(ctx, port.ActionEditProject, project, actorID, globalRole, orgRole); err != nil {
+	if err := s.requireManage(ctx, port.ActionDeleteProject, project, actorID, globalRole, orgRole); err != nil {
 		return err
 	}
 	if err := project.ConfirmDeletion(confirmation); err != nil {

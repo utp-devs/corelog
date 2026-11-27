@@ -66,6 +66,13 @@ var (
 	ErrUserNotFound = apperror.WithCode(apperror.KindNotFound, "project.user_not_found", "usuario no encontrado")
 	// ErrTeamNotInOrg: a team passed on creation does not belong to the project's organization.
 	ErrTeamNotInOrg = apperror.WithCode(apperror.KindValidation, "project.team_not_in_org", "el equipo no pertenece a la organizacion del proyecto")
+	// ErrTeamGrantNotFound: the team has no role on the project.
+	ErrTeamGrantNotFound = apperror.WithCode(apperror.KindNotFound, "project.team_grant_not_found", "el equipo no tiene acceso a este proyecto")
+	// ErrProjectKeyAmbiguous: the key exists in several organizations the caller belongs to and no
+	// organization_id was given.
+	ErrProjectKeyAmbiguous = apperror.WithCode(apperror.KindConflict, "project.key_ambiguous", "la clave existe en varias organizaciones; indica organization_id")
+	// ErrLastLead: the change would leave the project without a direct lead.
+	ErrLastLead = apperror.WithCode(apperror.KindConflict, "project.last_lead", "el proyecto debe conservar al menos un lead")
 	// ErrProjectArchived: the project is archived and therefore read-only.
 	ErrProjectArchived = apperror.WithCode(apperror.KindConflict, "project.archived", "el proyecto esta archivado y no admite cambios")
 	// ErrProjectAlreadyArchived: archive was requested for a project that is already archived.

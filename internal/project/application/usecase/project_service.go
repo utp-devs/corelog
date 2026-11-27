@@ -2,6 +2,7 @@ package usecase
 
 import (
 	"context"
+	"log/slog"
 	"time"
 
 	"github.com/google/uuid"
@@ -22,6 +23,8 @@ type ProjectService struct {
 	authorizer  port.ProjectAuthorizer
 	events      port.EventPublisher
 	tx          txRunner
+	teamGrants  port.TeamGrantRepository
+	recents     port.RecentRecorder
 }
 
 // txRunner runs fn inside a transaction. It matches database.TxManager without importing it here.
@@ -46,6 +49,19 @@ func (s *ProjectService) WithAuthorizer(authorizer port.ProjectAuthorizer) *Proj
 // WithEvents conecta el publicador de eventos de proyecto. Sin el, las acciones no publican eventos.
 func (s *ProjectService) WithEvents(events port.EventPublisher) *ProjectService {
 	s.events = events
+	return s
+}
+
+// WithTeamGrants conecta el repositorio de roles de equipo. Sin el, los equipos no aportan acceso y
+// las rutas de equipos responden como vacias o no validas.
+func (s *ProjectService) WithTeamGrants(teamGrants port.TeamGrantRepository) *ProjectService {
+	s.teamGrants = teamGrants
+	return s
+}
+
+// WithRecents conecta el registro de vistas recientes. Los fallos se registran y no afectan a la lectura.
+func (s *ProjectService) WithRecents(recents port.RecentRecorder) *ProjectService {
+	s.recents = recents
 	return s
 }
 
@@ -75,9 +91,18 @@ func (s *ProjectService) Create(ctx context.Context, actorID, orgID uuid.UUID, k
 	})
 }
 
+// Get returns a project the actor can see and records the view as a recent item.
 func (s *ProjectService) Get(ctx context.Context, actorID uuid.UUID, globalRole string, id uuid.UUID) (*domain.Project, error) {
 	project, _, err := s.loadVisible(ctx, actorID, globalRole, id)
-	return project, err
+	if err != nil {
+		return nil, err
+	}
+	if s.recents != nil {
+		if err := s.recents.RecordView(ctx, actorID, "project", project.ID); err != nil {
+			slog.Warn("failed to record project view", "error", err)
+		}
+	}
+	return project, nil
 }
 
 // List devuelve los proyectos visibles para el actor dentro de una organizacion.
@@ -116,17 +141,28 @@ func (s *ProjectService) Delete(ctx context.Context, actorID uuid.UUID, globalRo
 	if err != nil {
 		return err
 	}
-	if err := s.requireManage(ctx, port.ActionEditProject, project, actorID, globalRole, orgRole); err != nil {
+	if err := s.requireManage(ctx, port.ActionDeleteProject, project, actorID, globalRole, orgRole); err != nil {
 		return err
 	}
 	return s.softDelete(ctx, project, actorID)
 }
 
-func (s *ProjectService) ListMembers(ctx context.Context, actorID uuid.UUID, globalRole string, projectID uuid.UUID) ([]port.Member, error) {
+// ListMembers returns the direct members followed by the users reached only through team grants.
+func (s *ProjectService) ListMembers(ctx context.Context, actorID uuid.UUID, globalRole string, projectID uuid.UUID) ([]port.MemberEntry, error) {
 	if _, _, err := s.loadVisible(ctx, actorID, globalRole, projectID); err != nil {
 		return nil, err
 	}
-	return s.memberRepo.List(ctx, projectID)
+	direct, err := s.memberRepo.List(ctx, projectID)
+	if err != nil {
+		return nil, err
+	}
+	var teamUsers []port.TeamUserGrant
+	if s.teamGrants != nil {
+		if teamUsers, err = s.teamGrants.ListTeamUsers(ctx, projectID); err != nil {
+			return nil, err
+		}
+	}
+	return mergeMembers(direct, teamUsers), nil
 }
 
 func (s *ProjectService) AddMember(ctx context.Context, actorID uuid.UUID, globalRole string, projectID, userID uuid.UUID, role string) (*port.Member, error) {
@@ -170,6 +206,11 @@ func (s *ProjectService) UpdateMemberRole(ctx context.Context, actorID uuid.UUID
 	if err := validateProjectRole(role); err != nil {
 		return nil, err
 	}
+	if role != string(authorization.ProjectRoleLead) {
+		if err := s.guardLastLead(ctx, projectID, userID); err != nil {
+			return nil, err
+		}
+	}
 	if err := s.memberRepo.UpdateRole(ctx, projectID, userID, role); err != nil {
 		return nil, err
 	}
@@ -182,6 +223,9 @@ func (s *ProjectService) RemoveMember(ctx context.Context, actorID uuid.UUID, gl
 		return err
 	}
 	if err := s.requireManage(ctx, port.ActionManageMembers, project, actorID, globalRole, orgRole); err != nil {
+		return err
+	}
+	if err := s.guardLastLead(ctx, projectID, userID); err != nil {
 		return err
 	}
 	return s.memberRepo.Remove(ctx, projectID, userID)

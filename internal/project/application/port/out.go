@@ -46,6 +46,8 @@ type ProjectFilter struct {
 	// Q matches the name or the key, case insensitive.
 	Q        string
 	Template domain.Template
+	// Type is the legacy filter: scrum matches the scrum template, kanban every other template.
+	Type domain.ProjectType
 	// LeadID filters by lead when not nil.
 	LeadID *uuid.UUID
 	// Starred keeps only the projects the viewer starred.
@@ -77,6 +79,40 @@ type Repository interface {
 	KeyAvailable(ctx context.Context, orgID uuid.UUID, key string) (bool, error)
 	// AllocateIssueNumber atomically takes the next issue number of the project and returns it.
 	AllocateIssueNumber(ctx context.Context, projectID uuid.UUID) (int, error)
+	// FindKeyCandidates returns the live projects that use key in any organization where the user
+	// is a live member, or where the user has an explicit project or team membership. All lifts the
+	// organization test for platform administrators. Visibility is decided by the caller.
+	FindKeyCandidates(ctx context.Context, key string, userID uuid.UUID, all bool) ([]*domain.Project, error)
+}
+
+// TeamGrant gives every member of a team a project role on the project. TeamName is filled by reads.
+type TeamGrant struct {
+	ProjectID uuid.UUID
+	TeamID    uuid.UUID
+	TeamName  string
+	Role      string
+	CreatedAt time.Time
+}
+
+// TeamUserGrant links a user of a granted team to the grant that gives the user a role.
+type TeamUserGrant struct {
+	UserID   uuid.UUID
+	TeamID   uuid.UUID
+	TeamName string
+	Role     string
+}
+
+// TeamGrantRepository stores the team roles of a project (project_team_roles).
+type TeamGrantRepository interface {
+	ListTeamGrants(ctx context.Context, projectID uuid.UUID) ([]TeamGrant, error)
+	// ListTeamUsers returns the live organization members who belong to a team granted on the project.
+	ListTeamUsers(ctx context.Context, projectID uuid.UUID) ([]TeamUserGrant, error)
+	// TeamInOrganization returns the team name and true when the team belongs to the organization.
+	TeamInOrganization(ctx context.Context, orgID, teamID uuid.UUID) (string, bool, error)
+	// UpsertTeamGrant creates or replaces the role of the team on the project.
+	UpsertTeamGrant(ctx context.Context, grant TeamGrant) error
+	// RemoveTeamGrant deletes the grant. It returns domain.ErrTeamGrantNotFound when none exists.
+	RemoveTeamGrant(ctx context.Context, projectID, teamID uuid.UUID) error
 }
 
 // ProjectCreationRepository persists a project and its required initial relations atomically.
@@ -92,6 +128,17 @@ type Member struct {
 	UserID    uuid.UUID
 	Role      string
 	CreatedAt time.Time
+}
+
+// MemberEntry is a project member as shown to managers. Direct members have ViaTeam false and Role set
+// to their explicit role. Users reached only through a team grant have ViaTeam true and the team that
+// gives the best role. EffectiveRole is the best of the explicit role and every team grant of the user.
+type MemberEntry struct {
+	Member
+	EffectiveRole string
+	ViaTeam       bool
+	TeamID        *uuid.UUID
+	TeamName      string
 }
 
 type MemberRepository interface {
@@ -116,9 +163,16 @@ type CatalogRepository interface {
 const (
 	ActionViewProject   = "view_project"
 	ActionEditProject   = "edit_project"
+	ActionDeleteProject = "delete_project"
 	ActionManageMembers = "manage_members"
 	ActionEditIssue     = "edit_issue"
 )
+
+// RecentRecorder records that a user viewed an entity. Errors are logged by the caller and never
+// fail the read that produced the view.
+type RecentRecorder interface {
+	RecordView(ctx context.Context, userID uuid.UUID, entityType string, entityID uuid.UUID) error
+}
 
 // ProjectAuthorizer decide si un actor puede ejecutar una accion sobre un proyecto.
 type ProjectAuthorizer interface {

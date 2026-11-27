@@ -209,6 +209,34 @@ func (r *ProjectRepository) FindByKey(ctx context.Context, orgID uuid.UUID, key 
 	return row.toDomain(), nil
 }
 
+// FindKeyCandidates returns the live projects with the key that the user can reach through an
+// organization membership, a direct project membership or a team grant. Visibility is applied by the
+// use case. When all is true (platform administrator) the organization test is skipped.
+func (r *ProjectRepository) FindKeyCandidates(ctx context.Context, key string, userID uuid.UUID, all bool) ([]*domain.Project, error) {
+	var rows []projectRow
+	if err := sqlx.SelectContext(ctx, r.exec(ctx), &rows, `
+		SELECT `+projectColumns+` FROM projects p
+		WHERE p.key = $1
+		  AND p.deleted_at IS NULL
+		  AND (
+		      $2::boolean
+		      OR EXISTS (SELECT 1 FROM organization_members om
+		                 WHERE om.organization_id = p.organization_id AND om.user_id = $3)
+		      OR EXISTS (SELECT 1 FROM project_members pm WHERE pm.project_id = p.id AND pm.user_id = $3)
+		      OR EXISTS (SELECT 1 FROM project_team_roles ptr
+		                 JOIN team_members tm ON tm.team_id = ptr.team_id
+		                 WHERE ptr.project_id = p.id AND tm.user_id = $3)
+		  )
+		ORDER BY p.created_at ASC, p.id ASC`, domain.NormalizeKey(key), all, userID); err != nil {
+		return nil, apperror.Wrap(apperror.KindInternal, "failed to find project keys", err)
+	}
+	projects := make([]*domain.Project, 0, len(rows))
+	for _, row := range rows {
+		projects = append(projects, row.toDomain())
+	}
+	return projects, nil
+}
+
 // KeyAvailable reports whether no live project of the organization uses the key.
 func (r *ProjectRepository) KeyAvailable(ctx context.Context, orgID uuid.UUID, key string) (bool, error) {
 	var taken bool
@@ -293,6 +321,13 @@ func (r *ProjectRepository) ListPage(ctx context.Context, filter port.ProjectFil
 	}
 	if filter.Template != "" {
 		q.add("template = %s", string(filter.Template))
+	}
+	// The legacy type covers templates: scrum is the scrum template, kanban is every other template.
+	switch filter.Type {
+	case domain.ProjectTypeScrum:
+		q.add("template = %s", string(domain.TemplateScrum))
+	case domain.ProjectTypeKanban:
+		q.add("template <> %s", string(domain.TemplateScrum))
 	}
 	if filter.LeadID != nil {
 		q.add("lead_id = %s", *filter.LeadID)

@@ -13,12 +13,15 @@ func (h *Handler) RegisterRoutes(r chi.Router) {
 		// Static segments are registered explicitly so they are never captured by {id}.
 		r.Get("/key-available", h.KeyAvailable)
 
-		// {id} accepts a project UUID or its key; a key needs organization_id in the query.
+		// {id} accepts a project UUID or its key. organization_id in the query narrows a key lookup.
 		r.Get("/{id}", h.Get)
 		r.Get("/{id}/members", h.ListMembers)
 		r.Post("/{id}/members", h.AddMember)
 		r.Patch("/{id}/members/{user_id}", h.UpdateMember)
 		r.Delete("/{id}/members/{user_id}", h.RemoveMember)
+		r.Get("/{id}/team-roles", h.ListTeamGrants)
+		r.Put("/{id}/team-roles", h.SetTeamGrant)
+		r.Delete("/{id}/team-roles/{team_id}", h.RemoveTeamGrant)
 		r.Get("/{id}/permissions", h.GetPermissions)
 		r.Put("/{id}/permissions", h.ReplacePermissions)
 		r.Post("/{id}/permissions/reset", h.ResetPermissions)

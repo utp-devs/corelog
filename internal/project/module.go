@@ -36,3 +36,15 @@ func (m *Module) WithTransactions(tx txRunner) *Module {
 type txRunner interface {
 	InTx(ctx context.Context, fn func(ctx context.Context) error) error
 }
+
+// WithTeamGrants connects the repository of team roles on projects.
+func (m *Module) WithTeamGrants(teamGrants port.TeamGrantRepository) *Module {
+	m.service.WithTeamGrants(teamGrants)
+	return m
+}
+
+// WithRecents connects the recent-views recorder called after a project read.
+func (m *Module) WithRecents(recents port.RecentRecorder) *Module {
+	m.service.WithRecents(recents)
+	return m
+}

@@ -948,15 +948,14 @@ paths:
       - name: id
         in: path
         required: true
-        description: UUID o clave del proyecto (por ejemplo CORE). Una clave requiere organization_id.
+        description: UUID o clave del proyecto (por ejemplo CORE).
         schema:
           type: string
-          example: CORE
       - name: organization_id
         in: query
         required: false
         description: >-
-          Organizacion del proyecto. Obligatoria cuando {id} es una clave; se ignora cuando es un UUID.
+          Opcional. Solo se usa cuando {id} es una clave que existe en varias organizaciones del usuario; se ignora cuando es un UUID.
         schema:
           type: string
           format: uuid
@@ -965,6 +964,8 @@ paths:
       summary: Obtener un proyecto
       description: >-
         Devuelve 404 (codigo project.not_found) cuando el proyecto no existe o no es visible para el usuario.
+        Con una clave, si existe en varias organizaciones del usuario y no se indica organization_id, responde 409
+        (codigo project.key_ambiguous).
       operationId: getProject
       security:
         - bearerAuth: []
@@ -984,7 +985,7 @@ paths:
           description: El proyecto no existe o no es visible para el usuario (codigo project.not_found).
           content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
         '422':
-          description: La clave no es valida o falta organization_id (codigos project.invalid_key, project.organization_required).
+          description: La clave no es valida (codigo project.invalid_key).
           content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
     patch:
       tags: [projects]
@@ -1026,8 +1027,9 @@ paths:
       tags: [projects]
       summary: Eliminar un proyecto
       description: >-
-        Eliminacion logica. El cuerpo debe repetir el nombre exacto del proyecto en confirmation; si no coincide,
-        responde 422 con codigo project.confirmation_mismatch y no se elimina nada.
+        Eliminacion logica. Pueden eliminarlo el lead del proyecto y los owner o admin de la organizacion. El cuerpo
+        debe repetir el nombre exacto del proyecto en confirmation; si no coincide, responde 422 con codigo
+        project.confirmation_mismatch y no se elimina nada.
       operationId: deleteProject
       security:
         - bearerAuth: []
@@ -1056,14 +1058,13 @@ paths:
       - name: id
         in: path
         required: true
-        description: UUID o clave del proyecto (por ejemplo CORE). Una clave requiere organization_id.
+        description: UUID o clave del proyecto (por ejemplo CORE).
         schema:
           type: string
-          example: CORE
       - name: organization_id
         in: query
         required: false
-        description: Organizacion del proyecto. Obligatoria cuando {id} es una clave.
+        description: Opcional. Solo se usa cuando {id} es una clave que existe en varias organizaciones del usuario.
         schema:
           type: string
           format: uuid
@@ -1095,21 +1096,20 @@ paths:
           description: El proyecto ya estaba archivado (codigo project.already_archived).
           content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
         '422':
-          description: La clave no es valida o falta organization_id (codigos project.invalid_key, project.organization_required).
+          description: La clave no es valida (codigo project.invalid_key).
           content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
   /projects/{id}/restore:
     parameters:
       - name: id
         in: path
         required: true
-        description: UUID o clave del proyecto (por ejemplo CORE). Una clave requiere organization_id.
+        description: UUID o clave del proyecto (por ejemplo CORE).
         schema:
           type: string
-          example: CORE
       - name: organization_id
         in: query
         required: false
-        description: Organizacion del proyecto. Obligatoria cuando {id} es una clave.
+        description: Opcional. Solo se usa cuando {id} es una clave que existe en varias organizaciones del usuario.
         schema:
           type: string
           format: uuid
@@ -1141,7 +1141,7 @@ paths:
           description: El proyecto no estaba archivado (codigo project.not_archived).
           content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
         '422':
-          description: La clave no es valida o falta organization_id (codigos project.invalid_key, project.organization_required).
+          description: La clave no es valida (codigo project.invalid_key).
           content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
   /projects/{id}/board:
     parameters:
@@ -1269,12 +1269,15 @@ paths:
       - name: id
         in: path
         required: true
+        description: UUID o clave del proyecto (por ejemplo CORE).
         schema:
           type: string
-          format: uuid
     get:
       tags: [projects]
       summary: List project members
+      description: >-
+        Direct members followed by the users reached through team grants (via_team true, with team_id and team_name).
+        effective_role is the best role of the user across the direct membership and every team grant.
       security:
         - bearerAuth: []
       responses:
@@ -1338,9 +1341,9 @@ paths:
       - name: id
         in: path
         required: true
+        description: UUID o clave del proyecto (por ejemplo CORE).
         schema:
           type: string
-          format: uuid
       - name: user_id
         in: path
         required: true
@@ -2802,12 +2805,115 @@ paths:
           $ref: '#/components/responses/NotFound'
         '422':
           $ref: '#/components/responses/ValidationError'
+  /projects/{id}/team-roles:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: UUID o clave del proyecto (por ejemplo CORE).
+        schema:
+          type: string
+    get:
+      tags: [projects]
+      summary: Listar los roles de equipo del proyecto
+      description: Requiere manage_members. Equipos con acceso al proyecto y el rol que les da.
+      operationId: listProjectTeamRoles
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Roles de equipo del proyecto.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ProjectTeamRole'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: El proyecto no existe o no es visible para el usuario (codigo project.not_found).
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+    put:
+      tags: [projects]
+      summary: Dar a un equipo un rol en el proyecto
+      description: >-
+        Crea o reemplaza el rol del equipo indicado (cuerpo {team_id, role}). El equipo debe pertenecer a la
+        organizacion del proyecto (codigo project.team_not_in_org). Requiere manage_members.
+      operationId: setProjectTeamRole
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SetProjectTeamRoleRequest'
+      responses:
+        '200':
+          description: Rol de equipo guardado.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/ProjectTeamRole'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: El proyecto no existe o no es visible para el usuario (codigo project.not_found).
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+        '422':
+          description: Datos no validos (codigo validation) o el equipo no pertenece a la organizacion (codigo project.team_not_in_org).
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+  /projects/{id}/team-roles/{team_id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: UUID o clave del proyecto (por ejemplo CORE).
+        schema:
+          type: string
+      - name: team_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    delete:
+      tags: [projects]
+      summary: Quitar el rol de un equipo en el proyecto
+      description: Requiere manage_members. Los miembros del equipo pierden el acceso que daba ese rol.
+      operationId: deleteProjectTeamRole
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: Rol de equipo eliminado.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: El equipo no tiene rol en el proyecto (codigo project.team_grant_not_found).
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+        '422':
+          description: team_id no es un UUID valido.
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
   /projects/{id}/permissions:
     parameters:
       - name: id
         in: path
         required: true
-        description: Identificador del proyecto (UUID o clave; la clave requiere organization_id).
+        description: UUID o clave del proyecto (por ejemplo CORE).
         schema:
           type: string
     get:
@@ -2887,7 +2993,7 @@ paths:
       - name: id
         in: path
         required: true
-        description: Identificador del proyecto (UUID o clave; la clave requiere organization_id).
+        description: UUID o clave del proyecto (por ejemplo CORE).
         schema:
           type: string
     post:
@@ -2922,7 +3028,7 @@ paths:
       - name: id
         in: path
         required: true
-        description: Identificador del proyecto (UUID o clave; la clave requiere organization_id).
+        description: UUID o clave del proyecto (por ejemplo CORE).
         schema:
           type: string
     get:
@@ -2953,9 +3059,9 @@ paths:
       - name: id
         in: path
         required: true
+        description: UUID o clave del proyecto (por ejemplo CORE).
         schema:
           type: string
-          format: uuid
     get:
       tags: [projects]
       summary: List project labels
@@ -2994,9 +3100,9 @@ paths:
         - name: id
           in: path
           required: true
+          description: UUID o clave del proyecto (por ejemplo CORE).
           schema:
             type: string
-            format: uuid
         - name: label_id
           in: path
           required: true
@@ -3013,9 +3119,9 @@ paths:
       - name: id
         in: path
         required: true
+        description: UUID o clave del proyecto (por ejemplo CORE).
         schema:
           type: string
-          format: uuid
     get:
       tags: [projects]
       summary: List project components
@@ -3054,9 +3160,9 @@ paths:
         - name: id
           in: path
           required: true
+          description: UUID o clave del proyecto (por ejemplo CORE).
           schema:
             type: string
-            format: uuid
         - name: component_id
           in: path
           required: true
@@ -4408,6 +4514,44 @@ components:
         user_id:
           type: string
           format: uuid
+        role:
+          type: string
+          enum: [lead, contributor, viewer]
+        effective_role:
+          type: string
+          enum: [lead, contributor, viewer]
+        via_team:
+          type: boolean
+        team_id:
+          type: string
+          format: uuid
+        team_name:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+          description: Absent for users reached only through a team.
+    SetProjectTeamRoleRequest:
+      type: object
+      required: [team_id, role]
+      properties:
+        team_id:
+          type: string
+          format: uuid
+        role:
+          type: string
+          enum: [lead, contributor, viewer]
+    ProjectTeamRole:
+      type: object
+      properties:
+        project_id:
+          type: string
+          format: uuid
+        team_id:
+          type: string
+          format: uuid
+        team_name:
+          type: string
         role:
           type: string
           enum: [lead, contributor, viewer]

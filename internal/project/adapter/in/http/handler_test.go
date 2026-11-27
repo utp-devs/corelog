@@ -39,6 +39,18 @@ type fakeProjects struct {
 	confirm     string    // confirmation received by DeleteProject
 	keyChecked  string    // key received by KeyAvailable
 	available   bool
+	keyErr      error     // error returned by FindByKey
+	keyOrg      uuid.UUID // organization received by FindByKey
+	keyValue    string    // key received by FindByKey
+}
+
+func (f *fakeProjects) FindByKey(_ context.Context, _ uuid.UUID, _ string, orgID uuid.UUID, key string) (*domain.Project, error) {
+	f.keyOrg = orgID
+	f.keyValue = key
+	if f.keyErr != nil {
+		return nil, f.keyErr
+	}
+	return f.project, f.err
 }
 
 func (f *fakeProjects) Get(_ context.Context, _ uuid.UUID, _ string, id uuid.UUID) (*domain.Project, error) {
@@ -377,13 +389,30 @@ func TestProjectHTTPKeyOrUUIDResolution(t *testing.T) {
 		t.Fatalf("archive by key = %d", got.Code)
 	}
 
-	service.listed = nil
-	service.total = 0
+	service.keyErr = domain.ErrProjectNotFound
 	if got := send(h, http.MethodGet, "/projects/NOPE?"+orgQuery, "", auth); got.Code != http.StatusNotFound {
 		t.Fatalf("unknown key = %d, want 404", got.Code)
 	}
-	if got := send(h, http.MethodGet, "/projects/CORE", "", auth); got.Code != http.StatusUnprocessableEntity {
-		t.Fatalf("key without organization_id = %d, want 422", got.Code)
+
+	// organization_id is optional: the use case resolves the key among the caller's projects.
+	service.keyErr = nil
+	service.keyOrg = uuid.Nil
+	if got := send(h, http.MethodGet, "/projects/CORE", "", auth); got.Code != http.StatusOK {
+		t.Fatalf("key without organization_id = %d, want 200; body %s", got.Code, got.Body.String())
+	}
+	if service.keyOrg != uuid.Nil || service.keyValue != "CORE" {
+		t.Fatalf("FindByKey received org %s key %q", service.keyOrg, service.keyValue)
+	}
+
+	// Several organizations: the caller must narrow the lookup.
+	service.keyErr = domain.ErrProjectKeyAmbiguous
+	got := send(h, http.MethodGet, "/projects/CORE", "", auth)
+	if got.Code != http.StatusConflict || !strings.Contains(got.Body.String(), "project.key_ambiguous") {
+		t.Fatalf("ambiguous key = %d %s, want 409 project.key_ambiguous", got.Code, got.Body.String())
+	}
+
+	if got := send(h, http.MethodGet, "/projects/CORE?organization_id=nope", "", auth); got.Code != http.StatusUnprocessableEntity {
+		t.Fatalf("malformed organization_id = %d, want 422", got.Code)
 	}
 }
 

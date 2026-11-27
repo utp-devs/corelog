@@ -74,8 +74,28 @@ type updateProjectMemberRequest struct {
 }
 
 type projectMemberResponse struct {
+	ProjectID string `json:"project_id"`
+	UserID    string `json:"user_id"`
+	// Role is the explicit role of a direct member, or the team grant role for a team-only user.
+	Role string `json:"role"`
+	// EffectiveRole is the best of the explicit role and every team grant of the user.
+	EffectiveRole string     `json:"effective_role"`
+	ViaTeam       bool       `json:"via_team"`
+	TeamID        *string    `json:"team_id,omitempty"`
+	TeamName      string     `json:"team_name,omitempty"`
+	CreatedAt     *time.Time `json:"created_at,omitempty"`
+}
+
+// teamGrantRequest sets the role of one team on a project.
+type teamGrantRequest struct {
+	TeamID string `json:"team_id" validate:"required,uuid"`
+	Role   string `json:"role" validate:"required,oneof=lead contributor viewer"`
+}
+
+type teamGrantResponse struct {
 	ProjectID string    `json:"project_id"`
-	UserID    string    `json:"user_id"`
+	TeamID    string    `json:"team_id"`
+	TeamName  string    `json:"team_name"`
 	Role      string    `json:"role"`
 	CreatedAt time.Time `json:"created_at"`
 }
@@ -127,19 +147,56 @@ func toProjectResponses(projects []*domain.Project) []projectResponse {
 
 func toProjectMemberResponse(member port.Member) projectMemberResponse {
 	return projectMemberResponse{
-		ProjectID: member.ProjectID.String(),
-		UserID:    member.UserID.String(),
-		Role:      member.Role,
-		CreatedAt: member.CreatedAt,
+		ProjectID:     member.ProjectID.String(),
+		UserID:        member.UserID.String(),
+		Role:          member.Role,
+		EffectiveRole: member.Role,
+		CreatedAt:     timePtr(member.CreatedAt),
 	}
 }
 
-func toProjectMemberResponses(members []port.Member) []projectMemberResponse {
-	out := make([]projectMemberResponse, 0, len(members))
-	for _, member := range members {
-		out = append(out, toProjectMemberResponse(member))
+func toProjectMemberEntryResponses(entries []port.MemberEntry) []projectMemberResponse {
+	out := make([]projectMemberResponse, 0, len(entries))
+	for _, entry := range entries {
+		response := toProjectMemberResponse(entry.Member)
+		response.EffectiveRole = entry.EffectiveRole
+		response.ViaTeam = entry.ViaTeam
+		if entry.TeamID != nil {
+			teamID := entry.TeamID.String()
+			response.TeamID = &teamID
+		}
+		response.TeamName = entry.TeamName
+		if entry.ViaTeam {
+			response.CreatedAt = nil
+		}
+		out = append(out, response)
 	}
 	return out
+}
+
+func toTeamGrantResponse(grant port.TeamGrant) teamGrantResponse {
+	return teamGrantResponse{
+		ProjectID: grant.ProjectID.String(),
+		TeamID:    grant.TeamID.String(),
+		TeamName:  grant.TeamName,
+		Role:      grant.Role,
+		CreatedAt: grant.CreatedAt,
+	}
+}
+
+func toTeamGrantResponses(grants []port.TeamGrant) []teamGrantResponse {
+	out := make([]teamGrantResponse, 0, len(grants))
+	for _, grant := range grants {
+		out = append(out, toTeamGrantResponse(grant))
+	}
+	return out
+}
+
+func timePtr(value time.Time) *time.Time {
+	if value.IsZero() {
+		return nil
+	}
+	return &value
 }
 
 func toLabelResponse(label domain.Label) labelResponse {

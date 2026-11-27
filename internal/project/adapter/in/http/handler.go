@@ -22,8 +22,6 @@ import (
 const (
 	defaultListPageSize = 25
 	maxListPageSize     = 100
-	// keyLookupPageSize is the page size used when a project key is resolved through the listing.
-	keyLookupPageSize = 100
 )
 
 type Handler struct {
@@ -257,17 +255,11 @@ func (h *Handler) projectIDFromPath(w http.ResponseWriter, r *http.Request, acto
 	if id, err := uuid.Parse(segment); err == nil {
 		return id, true
 	}
-	orgID, err := uuid.Parse(r.URL.Query().Get("organization_id"))
-	if err != nil {
-		httpresponse.Error(w, organizationRequiredError())
+	orgID, ok := optionalOrganizationID(w, r)
+	if !ok {
 		return uuid.Nil, false
 	}
-	key, err := domain.ValidateKey(segment)
-	if err != nil {
-		httpresponse.Error(w, err)
-		return uuid.Nil, false
-	}
-	project, err := h.findProjectByKey(r.Context(), actorID, globalRole, orgID, key)
+	project, err := h.manager.FindByKey(r.Context(), actorID, globalRole, orgID, segment)
 	if err != nil {
 		httpresponse.Error(w, err)
 		return uuid.Nil, false
@@ -275,28 +267,19 @@ func (h *Handler) projectIDFromPath(w http.ResponseWriter, r *http.Request, acto
 	return project.ID, true
 }
 
-// findProjectByKey walks the visible projects of the organization until it finds the key.
-func (h *Handler) findProjectByKey(ctx context.Context, actorID uuid.UUID, globalRole string, orgID uuid.UUID, key string) (*domain.Project, error) {
-	for page := 1; ; page++ {
-		result, err := h.manager.ListProjects(ctx, actorID, globalRole, orgID, port.ProjectFilter{
-			Q:        key,
-			Archived: port.ArchiveFilterInclude,
-			Sort:     port.SortByKey,
-			Page:     page,
-			PageSize: keyLookupPageSize,
-		})
-		if err != nil {
-			return nil, err
-		}
-		for _, project := range result.Items {
-			if project.Key == key {
-				return project, nil
-			}
-		}
-		if len(result.Items) == 0 || page*keyLookupPageSize >= result.Total {
-			return nil, domain.ErrProjectNotFound
-		}
+// optionalOrganizationID reads organization_id when present. An empty value means no organization.
+// A value that is not a UUID writes the error response and returns false.
+func optionalOrganizationID(w http.ResponseWriter, r *http.Request) (uuid.UUID, bool) {
+	value := r.URL.Query().Get("organization_id")
+	if value == "" {
+		return uuid.Nil, true
 	}
+	orgID, err := uuid.Parse(value)
+	if err != nil {
+		httpresponse.Error(w, organizationRequiredError())
+		return uuid.Nil, false
+	}
+	return orgID, true
 }
 
 // templateFromRequest reads template, or derives it from the legacy type when template is absent.
@@ -319,16 +302,13 @@ func listFilterFromQuery(query url.Values) (port.ProjectFilter, error) {
 		Archived: port.ArchiveFilter(query.Get("archived")),
 		Sort:     port.SortField(query.Get("sort")),
 	}
-	// The legacy type filter only identifies scrum projects; kanban spans several templates, so
-	// it is not applied on its own.
+	// The legacy type filter: scrum matches the scrum template, kanban matches every other template.
 	if legacy := query.Get("type"); legacy != "" {
 		projectType := domain.ProjectType(legacy)
 		if projectType != domain.ProjectTypeKanban && projectType != domain.ProjectTypeScrum {
 			return port.ProjectFilter{}, domain.ErrInvalidProject
 		}
-		if filter.Template == "" && projectType == domain.ProjectTypeScrum {
-			filter.Template = domain.TemplateScrum
-		}
+		filter.Type = projectType
 	}
 	if value := query.Get("lead_id"); value != "" {
 		leadID, err := uuid.Parse(value)
@@ -564,7 +544,7 @@ func (h *Handler) ListMembers(w http.ResponseWriter, r *http.Request) {
 		httpresponse.Error(w, err)
 		return
 	}
-	httpresponse.JSON(w, http.StatusOK, toProjectMemberResponses(members))
+	httpresponse.JSON(w, http.StatusOK, toProjectMemberEntryResponses(members))
 }
 
 func (h *Handler) AddMember(w http.ResponseWriter, r *http.Request) {

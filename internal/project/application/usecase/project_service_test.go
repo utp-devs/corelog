@@ -18,7 +18,13 @@ import (
 type memProjects struct {
 	projects   map[uuid.UUID]*domain.Project
 	members    map[uuid.UUID]map[uuid.UUID]port.Member // project -> user -> member
-	teamGrants map[uuid.UUID][]uuid.UUID
+	teamGrants map[uuid.UUID][]uuid.UUID               // project -> teams granted at creation
+	// Team state shared by the team grant repository and the authorization fake.
+	teamRoles map[uuid.UUID]map[uuid.UUID]string // project -> team -> role
+	teamOrg   map[uuid.UUID]uuid.UUID            // team -> organization
+	teamName  map[uuid.UUID]string               // team -> name
+	teamUsers map[uuid.UUID]map[uuid.UUID]bool   // team -> users
+	orgUsers  map[uuid.UUID]map[uuid.UUID]bool   // organization -> users (filled by fakeOrgs.join)
 }
 
 func newMemProjects() *memProjects {
@@ -26,7 +32,60 @@ func newMemProjects() *memProjects {
 		projects:   map[uuid.UUID]*domain.Project{},
 		members:    map[uuid.UUID]map[uuid.UUID]port.Member{},
 		teamGrants: map[uuid.UUID][]uuid.UUID{},
+		teamRoles:  map[uuid.UUID]map[uuid.UUID]string{},
+		teamOrg:    map[uuid.UUID]uuid.UUID{},
+		teamName:   map[uuid.UUID]string{},
+		teamUsers:  map[uuid.UUID]map[uuid.UUID]bool{},
+		orgUsers:   map[uuid.UUID]map[uuid.UUID]bool{},
 	}
+}
+
+// bestRole returns the stronger of the explicit membership and every team grant the user reaches
+// through a team, the same rule the access lookup applies. It returns "" when there is none.
+func (m *memProjects) bestRole(projectID, userID uuid.UUID) string {
+	best := ""
+	if member, ok := m.members[projectID][userID]; ok {
+		best = member.Role
+	}
+	for team, role := range m.teamRoles[projectID] {
+		if !m.teamUsers[team][userID] {
+			continue
+		}
+		if best == "" || roleRank(role) < roleRank(best) {
+			best = role
+		}
+	}
+	return best
+}
+
+// FindKeyCandidates returns live projects with the key reachable by the user (organization member,
+// explicit member or team member), or every live project when all is true.
+func (m *memProjects) FindKeyCandidates(_ context.Context, key string, userID uuid.UUID, all bool) ([]*domain.Project, error) {
+	var out []*domain.Project
+	for _, p := range m.projects {
+		if p.Key != key || p.IsDeleted() {
+			continue
+		}
+		_, explicit := m.members[p.ID][userID]
+		if all || explicit || m.orgMemberOf(p.OrganizationID, userID) || m.teamMemberOn(p.ID, userID) {
+			out = append(out, p)
+		}
+	}
+	return out, nil
+}
+
+// orgMemberOf reports whether the user is a member of the organization (recorded by fakeOrgs.join).
+func (m *memProjects) orgMemberOf(orgID, userID uuid.UUID) bool {
+	return m.orgUsers[orgID][userID]
+}
+
+func (m *memProjects) teamMemberOn(projectID, userID uuid.UUID) bool {
+	for team := range m.teamRoles[projectID] {
+		if m.teamUsers[team][userID] {
+			return true
+		}
+	}
+	return false
 }
 
 func (m *memProjects) Save(_ context.Context, p *domain.Project) error {
@@ -77,6 +136,12 @@ func (m *memProjects) ListPage(_ context.Context, filter port.ProjectFilter) (po
 			continue
 		}
 		if filter.Template != "" && p.Template != filter.Template {
+			continue
+		}
+		if filter.Type == domain.ProjectTypeScrum && p.Template != domain.TemplateScrum {
+			continue
+		}
+		if filter.Type == domain.ProjectTypeKanban && p.Template == domain.TemplateScrum {
 			continue
 		}
 		items = append(items, p)
@@ -167,6 +232,8 @@ func (m *memProjects) Remove(_ context.Context, projectID, userID uuid.UUID) err
 type fakeOrgs struct {
 	roles  map[uuid.UUID]map[uuid.UUID]string
 	policy map[uuid.UUID][2]string // who_can_create_projects, default_project_visibility
+	// mirror receives organization memberships for the key candidate search. Set by newFixture.
+	mirror *memProjects
 }
 
 func newFakeOrgs() *fakeOrgs {
@@ -178,6 +245,12 @@ func (f *fakeOrgs) join(orgID, userID uuid.UUID, role string) {
 		f.roles[orgID] = map[uuid.UUID]string{}
 	}
 	f.roles[orgID][userID] = role
+	if f.mirror != nil {
+		if f.mirror.orgUsers[orgID] == nil {
+			f.mirror.orgUsers[orgID] = map[uuid.UUID]bool{}
+		}
+		f.mirror.orgUsers[orgID][userID] = true
+	}
 }
 
 func (f *fakeOrgs) MemberRole(_ context.Context, orgID, userID uuid.UUID) (string, bool, error) {
@@ -202,11 +275,11 @@ func (a roleAuth) Authorize(ctx context.Context, action string, actorID uuid.UUI
 	if globalRole == "admin" {
 		return nil
 	}
-	role, _ := a.repo.FindRole(ctx, projectID, actorID)
-	if role == nil {
+	role := a.repo.bestRole(projectID, actorID)
+	if role == "" {
 		return apperror.New(apperror.KindForbidden, "forbidden project operation")
 	}
-	if *role == "lead" || action == port.ActionViewProject {
+	if role == "lead" || action == port.ActionViewProject {
 		return nil
 	}
 	return apperror.New(apperror.KindForbidden, "forbidden project operation")
@@ -234,6 +307,7 @@ func newFixture(t *testing.T) *fixture {
 	t.Helper()
 	repo := newMemProjects()
 	orgs := newFakeOrgs()
+	orgs.mirror = repo
 	f := &fixture{
 		ctx: context.Background(), repo: repo, orgs: orgs,
 		orgA: uuid.New(), orgB: uuid.New(), owner: uuid.New(), admin: uuid.New(),
@@ -244,7 +318,7 @@ func newFixture(t *testing.T) *fixture {
 	orgs.join(f.orgA, f.member, domain.OrgRoleMember)
 	orgs.join(f.orgA, f.guest, domain.OrgRoleGuest)
 	orgs.join(f.orgB, f.outsider, domain.OrgRoleOwner)
-	f.svc = NewProjectService(repo, repo, orgs).WithAuthorizer(roleAuth{repo: repo})
+	f.svc = NewProjectService(repo, repo, orgs).WithAuthorizer(roleAuth{repo: repo}).WithTeamGrants(repo)
 	return f
 }
 

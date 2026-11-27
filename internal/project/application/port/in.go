@@ -16,10 +16,18 @@ type Service interface {
 	// Delete is the legacy entry point: it soft deletes without the typed confirmation. New callers
 	// use ProjectManager.DeleteProject.
 	Delete(ctx context.Context, actorID uuid.UUID, globalRole string, id uuid.UUID) error
-	ListMembers(ctx context.Context, actorID uuid.UUID, globalRole string, projectID uuid.UUID) ([]Member, error)
+	// ListMembers returns the direct members and the users reached through team grants.
+	ListMembers(ctx context.Context, actorID uuid.UUID, globalRole string, projectID uuid.UUID) ([]MemberEntry, error)
 	AddMember(ctx context.Context, actorID uuid.UUID, globalRole string, projectID, userID uuid.UUID, role string) (*Member, error)
 	UpdateMemberRole(ctx context.Context, actorID uuid.UUID, globalRole string, projectID, userID uuid.UUID, role string) (*Member, error)
 	RemoveMember(ctx context.Context, actorID uuid.UUID, globalRole string, projectID, userID uuid.UUID) error
+	// ListTeamGrants returns the team roles of the project. Requires manage_members.
+	ListTeamGrants(ctx context.Context, actorID uuid.UUID, globalRole string, projectID uuid.UUID) ([]TeamGrant, error)
+	// SetTeamGrant creates or replaces the role of a team on the project. The team must belong to the
+	// project organization.
+	SetTeamGrant(ctx context.Context, actorID uuid.UUID, globalRole string, projectID, teamID uuid.UUID, role string) (*TeamGrant, error)
+	// RemoveTeamGrant deletes the team role of the project.
+	RemoveTeamGrant(ctx context.Context, actorID uuid.UUID, globalRole string, projectID, teamID uuid.UUID) error
 	ListLabels(ctx context.Context, actorID uuid.UUID, globalRole string, projectID uuid.UUID) ([]domain.Label, error)
 	CreateLabel(ctx context.Context, actorID uuid.UUID, globalRole string, projectID uuid.UUID, name, color string) (*domain.Label, error)
 	DeleteLabel(ctx context.Context, actorID uuid.UUID, globalRole string, projectID, labelID uuid.UUID) error
@@ -56,6 +64,10 @@ type ProjectManager interface {
 	Restore(ctx context.Context, actorID uuid.UUID, globalRole string, id uuid.UUID) (*domain.Project, error)
 	// DeleteProject soft deletes the project. confirmation must equal the project name.
 	DeleteProject(ctx context.Context, actorID uuid.UUID, globalRole string, id uuid.UUID, confirmation string) error
+	// FindByKey resolves a project key for the actor among the projects the actor can see. orgID is
+	// optional (uuid.Nil): when a key exists in several organizations the actor belongs to and orgID is
+	// not given, the call returns domain.ErrProjectKeyAmbiguous.
+	FindByKey(ctx context.Context, actorID uuid.UUID, globalRole string, orgID uuid.UUID, key string) (*domain.Project, error)
 	// KeyAvailable reports whether a project key is valid and free in the organization.
 	KeyAvailable(ctx context.Context, actorID uuid.UUID, globalRole string, orgID uuid.UUID, key string) (bool, error)
 }
