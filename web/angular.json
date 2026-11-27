@@ -35,6 +35,11 @@
                 "glob": "**/*",
                 "input": "public/brand",
                 "output": "brand"
+              },
+              {
+                "glob": "**/*",
+                "input": "public/images",
+                "output": "images"
               }
             ],
             "styles": ["projects/ui/styles/corelog.scss"]
@@ -215,6 +220,11 @@
                 "glob": "**/*",
                 "input": "public/brand",
                 "output": "brand"
+              },
+              {
+                "glob": "**/*",
+                "input": "public/images",
+                "output": "images"
               }
             ],
             "styles": ["projects/ui/styles/corelog.scss"]
@@ -395,6 +405,11 @@
                 "glob": "**/*",
                 "input": "public/brand",
                 "output": "brand"
+              },
+              {
+                "glob": "**/*",
+                "input": "public/images",
+                "output": "images"
               }
             ],
             "styles": ["projects/ui/styles/corelog.scss"]
