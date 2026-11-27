@@ -1,0 +1,10 @@
+<app-shell
+  [navConfig]="navConfig"
+  [canCreate]="canCreate()"
+  [org]="org()"
+  [docsUrl]="help.docsUrl"
+  [whatsNewUrl]="help.whatsNewUrl"
+  [supportUrl]="help.supportUrl"
+>
+  <app-org-switcher appShellOrgSwitcher />
+</app-shell>

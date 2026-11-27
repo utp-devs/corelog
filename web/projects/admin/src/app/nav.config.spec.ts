@@ -114,10 +114,16 @@ describe('admin navigation', () => {
       );
     });
 
-    it('lists the profile item under the workspace for everyone', () => {
-      expect(buildSidebar({ kind: 'profile' }, new Set(), ADMIN_NAV)).toEqual([
-        expect.objectContaining({ key: 'profile', path: '/workspace/profile' }),
+    it('lists every profile section under the workspace for everyone', () => {
+      const items = buildSidebar({ kind: 'profile' }, new Set(), ADMIN_NAV);
+      expect(items.map((item) => item.path)).toEqual([
+        '/workspace/profile',
+        '/workspace/profile/security',
+        '/workspace/profile/notifications',
+        '/workspace/profile/tokens',
+        '/workspace/profile/appearance',
       ]);
+      expect(items.every((item) => item.external)).toBe(true);
     });
   });
 

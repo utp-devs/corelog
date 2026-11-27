@@ -1,0 +1,10 @@
+@use '../../../ui/styles/mixins' as m;
+
+/* Covers the page without blocking it: the indicator sits above the content, below dialogs. */
+.route-loading {
+  @include m.flex-row(0, center, center);
+  position: fixed;
+  inset: 0;
+  z-index: var(--cl-z-modal);
+  pointer-events: none;
+}

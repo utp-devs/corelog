@@ -7,14 +7,33 @@ import { DEFAULT_SHELL_BRAND, type ShellBrand, type ShellNavConfig } from '@core
  */
 export const ADMIN_NAV: ShellNavConfig = {
   menus: [
-    { key: 'projects', label: 'Proyectos', path: '/workspace/projects', external: true },
-    { key: 'filters', label: 'Filtros', path: '/workspace/issues', external: true },
-    { key: 'dashboards', label: 'Paneles', path: '/workspace/dashboard', external: true },
+    {
+      key: 'projects',
+      label: 'Proyectos',
+      path: '/workspace/projects',
+      external: true,
+      linkBase: '/workspace',
+    },
+    {
+      key: 'filters',
+      label: 'Filtros',
+      path: '/workspace/issues',
+      external: true,
+      linkBase: '/workspace',
+    },
+    {
+      key: 'dashboards',
+      label: 'Paneles',
+      path: '/workspace/dashboard',
+      external: true,
+      linkBase: '/workspace',
+    },
     {
       key: 'teams',
       label: 'Equipos',
       path: '/workspace/teams',
       external: true,
+      linkBase: '/workspace',
       extras: [{ key: 'people', label: 'Ver personas', path: '/workspace/people', external: true }],
     },
   ],
@@ -87,6 +106,35 @@ export const ADMIN_NAV: ShellNavConfig = {
         path: '/workspace/profile',
         external: true,
         icon: 'profile',
+        exact: true,
+      },
+      {
+        key: 'security',
+        label: 'Seguridad',
+        path: '/workspace/profile/security',
+        external: true,
+        icon: 'security',
+      },
+      {
+        key: 'notifications',
+        label: 'Notificaciones',
+        path: '/workspace/profile/notifications',
+        external: true,
+        icon: 'bell',
+      },
+      {
+        key: 'tokens',
+        label: 'Tokens',
+        path: '/workspace/profile/tokens',
+        external: true,
+        icon: 'tokens',
+      },
+      {
+        key: 'appearance',
+        label: 'Apariencia',
+        path: '/workspace/profile/appearance',
+        external: true,
+        icon: 'appearance',
       },
     ],
   },
@@ -103,3 +151,13 @@ export const ADMIN_BRAND: ShellBrand = {
   homePath: '/workspace/issues',
   external: true,
 };
+
+/**
+ * Addresses of the help menu. An entry is listed only when its address is set; set them when the
+ * documentation, release notes and support pages exist.
+ */
+export const HELP_LINKS: {
+  readonly docsUrl: string | null;
+  readonly whatsNewUrl: string | null;
+  readonly supportUrl: string | null;
+} = { docsUrl: null, whatsNewUrl: null, supportUrl: null };

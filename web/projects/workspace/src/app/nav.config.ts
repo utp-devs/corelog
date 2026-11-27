@@ -61,7 +61,18 @@ export const WORKSPACE_NAV: ShellNavConfig = {
         permission: 'org.admin',
       },
     ],
-    profile: [{ key: 'profile', label: 'General', path: '/profile', icon: 'profile' }],
+    profile: [
+      { key: 'profile', label: 'General', path: '/profile', icon: 'profile', exact: true },
+      { key: 'security', label: 'Seguridad', path: '/profile/security', icon: 'security' },
+      {
+        key: 'notifications',
+        label: 'Notificaciones',
+        path: '/profile/notifications',
+        icon: 'bell',
+      },
+      { key: 'tokens', label: 'Tokens', path: '/profile/tokens', icon: 'tokens' },
+      { key: 'appearance', label: 'Apariencia', path: '/profile/appearance', icon: 'appearance' },
+    ],
   },
   sidebarTitles: {
     project: 'Proyecto',
@@ -69,3 +80,13 @@ export const WORKSPACE_NAV: ShellNavConfig = {
     profile: 'Mi cuenta',
   },
 };
+
+/**
+ * Addresses of the help menu. An entry is listed only when its address is set; set them when the
+ * documentation, release notes and support pages exist.
+ */
+export const HELP_LINKS: {
+  readonly docsUrl: string | null;
+  readonly whatsNewUrl: string | null;
+  readonly supportUrl: string | null;
+} = { docsUrl: null, whatsNewUrl: null, supportUrl: null };

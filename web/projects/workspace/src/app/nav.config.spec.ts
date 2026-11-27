@@ -130,11 +130,16 @@ describe('workspace navigation', () => {
       ]);
     });
 
-    it('lists the profile item for everyone and titles each context', () => {
+    it('lists every profile section for everyone and titles each context', () => {
       const items = buildSidebar({ kind: 'profile' }, new Set(), WORKSPACE_NAV);
-      expect(items).toEqual([
-        expect.objectContaining({ key: 'profile', label: 'General', path: '/profile' }),
+      expect(items.map((item) => [item.label, item.path])).toEqual([
+        ['General', '/profile'],
+        ['Seguridad', '/profile/security'],
+        ['Notificaciones', '/profile/notifications'],
+        ['Tokens', '/profile/tokens'],
+        ['Apariencia', '/profile/appearance'],
       ]);
+      expect(items[0].exact).toBe(true);
       expect(sidebarTitleOf({ kind: 'profile' }, WORKSPACE_NAV)).toBe('Mi cuenta');
       expect(sidebarTitleOf({ kind: 'org-admin' }, WORKSPACE_NAV)).toBe('Organización');
     });
