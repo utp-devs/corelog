@@ -110,7 +110,11 @@ test.describe('catalogos de la organizacion', () => {
     as,
     api,
     data,
-  }) => {
+  }, testInfo) => {
+    // Reordering sends the whole priority list of the shared organization, so two projects running
+    // it at the same time would invalidate each other's list. The behavior does not depend on the
+    // viewport or the theme: run it once.
+    test.skip(testInfo.project.name !== 'desktop', 'mutates shared organization data');
     const owner = await api('owner');
     const acme = await orgIdBySlug(owner, 'acme');
     const first = await createItem(owner, acme, 'priorities', data.uniqueName('pa'));

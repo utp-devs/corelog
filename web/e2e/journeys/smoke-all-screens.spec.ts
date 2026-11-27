@@ -74,6 +74,11 @@ const screens: readonly Screen[] = [
     path: (ids) => `/projects/${ids.projectId}/settings/details`,
     template: 'wide',
   },
+  {
+    name: 'project-workflow',
+    path: (ids) => `/projects/${ids.projectId}/settings/workflow`,
+    template: 'wide',
+  },
   { name: 'teams', path: () => '/teams', template: 'wide' },
   { name: 'notes', path: () => '/notes', template: 'wide' },
   { name: 'people', path: () => '/people', template: 'wide' },
@@ -95,6 +100,12 @@ const screens: readonly Screen[] = [
   {
     name: 'org-catalogs',
     path: () => '/organization/catalogs',
+    template: 'wide',
+    onlyFor: ORG_ADMIN_ROLES,
+  },
+  {
+    name: 'org-statuses',
+    path: () => '/organization/statuses',
     template: 'wide',
     onlyFor: ORG_ADMIN_ROLES,
   },
