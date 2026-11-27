@@ -78,7 +78,7 @@ export function toastCopyOf(source: unknown, fallback = 'Ocurrió un error inesp
     const error: ApiError = asApiError(source);
     const known = copyForCode(error.code) ?? copyForStatus(error.status);
     if (known) return known;
-    return { summary: 'Error', detail: error.message || fallback };
+    return { summary: 'Error', detail: error.message ? asSentence(error.message) : fallback };
   }
   if (source instanceof Error && source.message) return copyForText(source.message, fallback);
   return { summary: 'Error', detail: fallback };
@@ -87,16 +87,24 @@ export function toastCopyOf(source: unknown, fallback = 'Ocurrió un error inesp
 /** Short title for a Spanish message that already reads well: the text itself says what failed. */
 function summaryOfSpanish(message: string): string {
   if (/permiso/i.test(message)) return FORBIDDEN.summary;
-  if (/no existe|no se encontr/i.test(message)) return NOT_FOUND.summary;
+  if (/no existe|no se encontr|no encontrad/i.test(message)) return NOT_FOUND.summary;
   if (/conectar con el servidor|conexión/i.test(message)) return NETWORK.summary;
   if (/demasiadas solicitudes|demasiadas peticiones/i.test(message)) return RATE_LIMIT.summary;
   return 'Error';
 }
 
+/** A server message that starts in lower case or has no final stop reads as a sentence. */
+function asSentence(message: string): string {
+  const capitalized = message.charAt(0).toLocaleUpperCase('es') + message.slice(1);
+  return /[.!?…]$/.test(capitalized) ? capitalized : capitalized + '.';
+}
+
 function copyForText(text: string, fallback: string): ToastCopy {
   const message = text.trim();
   if (!message) return { summary: 'Error', detail: fallback };
-  if (SPANISH_HINT.test(message)) return { summary: summaryOfSpanish(message), detail: message };
+  if (SPANISH_HINT.test(message)) {
+    return { summary: summaryOfSpanish(message), detail: asSentence(message) };
+  }
   const match = ENGLISH_PATTERNS.find(([pattern]) => pattern.test(message));
   return match ? match[1] : { summary: 'Error', detail: message };
 }

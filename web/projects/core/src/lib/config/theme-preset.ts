@@ -126,6 +126,10 @@ const CONTROL_CSS = `
 .p-button-lg, .p-select-lg, .p-inputtext-lg, .p-togglebutton-lg {
   min-height: var(--cl-control-h-lg);
 }
+/* The compact select keeps its text centered at body size inside the 28 px box. */
+.p-select-sm .p-select-label { display: flex; align-items: center; font-size: var(--cl-font-body); }
+/* Segmented buttons sit on the same 36 px line as the inputs next to them. */
+.p-togglebutton-content { min-height: calc(var(--cl-control-h-md) - 2 * var(--cl-space-1) - 2px); box-sizing: border-box; }
 .p-button-icon-only { min-width: var(--cl-control-h-md); }
 .p-button-icon-only.p-button-sm { min-width: var(--cl-control-h-sm); }
 .p-button-icon-only.p-button-lg { min-width: var(--cl-control-h-lg); }
@@ -625,6 +629,7 @@ const PRESET_DEFINITION = {
       root: { borderRadius: '{border.radius.md}' },
     },
     togglebutton: {
+      css: CONTROL_CSS,
       root: {
         background: cl('bg-sunken'),
         checkedBackground: cl('bg-surface'),
@@ -640,7 +645,7 @@ const PRESET_DEFINITION = {
       content: {
         checkedBackground: cl('bg-surface'),
         checkedShadow: cl('elev-raised'),
-        padding: `${cl('space-1')} ${cl('space-3')}`,
+        padding: `0 ${cl('space-3')}`,
       },
       icon: { color: cl('text-subtle'), hoverColor: cl('text'), checkedColor: cl('brand') },
     },

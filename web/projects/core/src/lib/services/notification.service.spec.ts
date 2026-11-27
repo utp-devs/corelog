@@ -39,7 +39,7 @@ describe('NotificationService', () => {
     const { notify, add } = setup();
     notify.error('No se pudo guardar');
     expect(add).toHaveBeenCalledWith(
-      expect.objectContaining({ severity: 'error', detail: 'No se pudo guardar', life: 8000 }),
+      expect.objectContaining({ severity: 'error', detail: 'No se pudo guardar.', life: 8000 }),
     );
     expect(TOAST_ERROR_LIFE_MS).toBe(8000);
   });
@@ -126,6 +126,10 @@ describe('toastCopyOf', () => {
     expect(toastCopyOf('No se pudo guardar el equipo.')).toEqual({
       summary: 'Error',
       detail: 'No se pudo guardar el equipo.',
+    });
+    expect(toastCopyOf('proyecto no encontrado')).toEqual({
+      summary: 'No encontrado',
+      detail: 'Proyecto no encontrado.',
     });
     expect(toastCopyOf('No tienes permisos para realizar esta operación.').summary).toBe(
       'Sin permiso',
