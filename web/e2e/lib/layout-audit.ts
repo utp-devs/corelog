@@ -577,7 +577,7 @@ function measureLayout(input: PageInput): PageOutput {
     if (cs.display === 'inline' || el.children.length > 0 || !ownText(el)) continue;
     // Visually hidden text (1px clip box, e.g. screen reader hints) is not clipped content.
     if (isVisuallyHidden(el)) continue;
-    if (el.closest('.ant-tag, .ant-badge')) continue;
+    if (el.closest('.p-tag, .p-badge')) continue;
     if (el.scrollWidth - el.clientWidth <= 2) continue;
     const hasTooltip =
       el.hasAttribute('title') || el.hasAttribute('aria-label') || el.hasAttribute('data-tooltip');

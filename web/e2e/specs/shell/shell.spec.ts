@@ -1,31 +1,19 @@
 import { appPath } from '../../lib/paths.ts';
 import type { Page } from '@playwright/test';
 
-import { orgIdBySlug } from '../../lib/api.ts';
 import { loginViaUi } from '../../lib/auth.ts';
 import { readE2eEnv } from '../../lib/env.ts';
 import { skipVisualOutsideLinux } from '../../lib/visual.ts';
 import { waitForImages } from '../../lib/wait.ts';
 import { expect, test, type OpenAsRole } from '../../fixtures/test.ts';
 
-/** Sidebar of the project context: the only context with an expandable side menu (ContextSidebar). */
+/** Sidebar of a context with its own sections (the profile pages): the only one with an expandable side menu. */
 const sideMenu = (page: Page) => page.getByRole('navigation', { name: /^Navegación:/ });
 
-/** Opens a project board as the role and returns the page. The project comes from the API. */
-async function openProjectBoard(
-  as: OpenAsRole,
-  role: 'admin' | 'owner',
-  api: (r: 'admin' | 'owner') => Promise<import('@playwright/test').APIRequestContext>,
-): Promise<Page> {
-  const client = await api(role);
-  const orgId = await orgIdBySlug(client, role === 'admin' ? 'corelog' : 'acme');
-  const listed = (await (
-    await client.get('projects', { params: { organization_id: orgId } })
-  ).json()) as { data: Array<{ id: string }> };
-  const projectId = listed.data[0]?.id;
-  expect(projectId, 'the organization must have a project').toBeTruthy();
+/** Opens the security section of the profile as the role and returns the page. */
+async function openProfileSection(as: OpenAsRole, role: 'admin' | 'owner'): Promise<Page> {
   const page = await as(role);
-  await page.goto(appPath(`/projects/${projectId}/board`));
+  await page.goto(appPath('/profile/security'));
   await waitForImages(page);
   return page;
 }
@@ -152,8 +140,8 @@ test.describe('barra lateral de contexto', () => {
     'the side menu is expanded only at desktop widths',
   );
 
-  test('el menu lateral se contrae y el estado persiste tras recargar', async ({ as, api }) => {
-    const page = await openProjectBoard(as, 'owner', api);
+  test('el menu lateral se contrae y el estado persiste tras recargar', async ({ as }) => {
+    const page = await openProfileSection(as, 'owner');
     const menu = sideMenu(page);
     await expect(menu).toBeVisible();
     await page.getByRole('button', { name: 'Contraer menú lateral' }).click();
@@ -168,8 +156,8 @@ test.describe('barra lateral de contexto', () => {
   test.describe('@visual encabezado de marca', () => {
     skipVisualOutsideLinux();
 
-    test('expandido: banner de marca', async ({ as, api }) => {
-      const page = await openProjectBoard(as, 'owner', api);
+    test('expandido: banner de marca', async ({ as }) => {
+      const page = await openProfileSection(as, 'owner');
       await expect(page.getByRole('img', { name: 'CoreLog' }).first()).toHaveScreenshot(
         'sidebar-brand-expanded.png',
         { maxDiffPixels: 100 },
