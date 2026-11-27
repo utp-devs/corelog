@@ -128,7 +128,7 @@ func (r *SprintRepository) HasActive(ctx context.Context, projectID, exceptID uu
 
 func (r *SprintRepository) SetIssueSprint(ctx context.Context, projectID, issueID uuid.UUID, sprintID *uuid.UUID) error {
 	result, err := r.db.ExecContext(ctx,
-		`UPDATE issues SET sprint_id = $3, updated_at = now() WHERE id = $1 AND project_id = $2 AND EXISTS (SELECT 1 FROM projects p WHERE p.id = issues.project_id AND p.deleted_at IS NULL)`,
+		`UPDATE issues SET sprint_id = $3, updated_at = now() WHERE id = $1 AND project_id = $2 AND deleted_at IS NULL AND EXISTS (SELECT 1 FROM projects p WHERE p.id = issues.project_id AND p.deleted_at IS NULL)`,
 		issueID, projectID, sprintID,
 	)
 	if err != nil {
@@ -139,7 +139,7 @@ func (r *SprintRepository) SetIssueSprint(ctx context.Context, projectID, issueI
 
 func (r *SprintRepository) RemoveIssueFromSprint(ctx context.Context, projectID, sprintID, issueID uuid.UUID) error {
 	result, err := r.db.ExecContext(ctx,
-		`UPDATE issues SET sprint_id = NULL, updated_at = now() WHERE id = $1 AND project_id = $2 AND sprint_id = $3 AND EXISTS (SELECT 1 FROM projects p WHERE p.id = issues.project_id AND p.deleted_at IS NULL)`,
+		`UPDATE issues SET sprint_id = NULL, updated_at = now() WHERE id = $1 AND project_id = $2 AND sprint_id = $3 AND deleted_at IS NULL AND EXISTS (SELECT 1 FROM projects p WHERE p.id = issues.project_id AND p.deleted_at IS NULL)`,
 		issueID, projectID, sprintID,
 	)
 	if err != nil {
@@ -162,7 +162,7 @@ func (r *SprintRepository) ListIssues(ctx context.Context, sprintID uuid.UUID) (
 	if err := r.db.SelectContext(ctx, &rows, `
 		SELECT id, summary AS title, status, priority, story_points, closed_at
 		FROM issues
-		WHERE sprint_id = $1
+		WHERE sprint_id = $1 AND deleted_at IS NULL
 		  AND EXISTS (SELECT 1 FROM projects p WHERE p.id = issues.project_id AND p.deleted_at IS NULL)
 		ORDER BY rank ASC, id ASC`, sprintID); err != nil {
 		return nil, apperror.Wrap(apperror.KindInternal, "failed to list sprint issues", err)
@@ -181,7 +181,7 @@ func (r *SprintRepository) ListIssues(ctx context.Context, sprintID uuid.UUID) (
 func (r *SprintRepository) MoveUnfinished(ctx context.Context, sprintID uuid.UUID, target *uuid.UUID) error {
 	if _, err := r.db.ExecContext(ctx, `
 		UPDATE issues SET sprint_id = $2, updated_at = now()
-		WHERE sprint_id = $1 AND status <> 'closed'
+		WHERE sprint_id = $1 AND status <> 'closed' AND deleted_at IS NULL
 		  AND EXISTS (SELECT 1 FROM projects p WHERE p.id = issues.project_id AND p.deleted_at IS NULL)`,
 		sprintID, target,
 	); err != nil {
@@ -203,7 +203,7 @@ func (r *SprintRepository) Velocity(ctx context.Context, projectID uuid.UUID, li
 		SELECT s.id, s.name, COALESCE(SUM(i.story_points) FILTER (WHERE i.status = 'closed'), 0) AS points
 		FROM sprints s
 		JOIN projects p ON p.id = s.project_id AND p.deleted_at IS NULL
-		LEFT JOIN issues i ON i.sprint_id = s.id
+		LEFT JOIN issues i ON i.sprint_id = s.id AND i.deleted_at IS NULL
 		WHERE s.project_id = $1 AND s.status = 'closed'
 		GROUP BY s.id, s.name, s.closed_at
 		ORDER BY s.closed_at DESC NULLS LAST

@@ -45,12 +45,15 @@ type issueRow struct {
 
 func (r *DashboardReader) Summary(ctx context.Context, userID uuid.UUID, now time.Time) (port.Summary, error) {
 	summary := port.Summary{AssignedByStatus: map[string]int{}}
+	// due_date is a calendar date. An issue is overdue only after its due day has ended (UTC), so the
+	// comparison is against the current UTC date, not the current instant.
+	today := now.UTC().Format("2006-01-02")
 
 	var byStatus []statusCount
 	if err := r.db.SelectContext(ctx, &byStatus, `
 		SELECT i.status, COUNT(*) AS count FROM issues i
 		JOIN projects p ON p.id = i.project_id AND p.deleted_at IS NULL
-		WHERE i.assignee_id = $1 GROUP BY i.status`, userID); err != nil {
+		WHERE i.assignee_id = $1 AND i.deleted_at IS NULL GROUP BY i.status`, userID); err != nil {
 		return summary, apperror.Wrap(apperror.KindInternal, "failed to count assigned issues", err)
 	}
 	for _, item := range byStatus {
@@ -63,7 +66,7 @@ func (r *DashboardReader) Summary(ctx context.Context, userID uuid.UUID, now tim
 	if err := r.db.GetContext(ctx, &summary.Overdue, `
 		SELECT COUNT(*) FROM issues i
 		JOIN projects p ON p.id = i.project_id AND p.deleted_at IS NULL
-		WHERE i.assignee_id = $1 AND i.status <> 'closed' AND i.due_date < $2`, userID, now); err != nil {
+		WHERE i.assignee_id = $1 AND i.status <> 'closed' AND i.deleted_at IS NULL AND i.due_date < $2::date`, userID, today); err != nil {
 		return summary, apperror.Wrap(apperror.KindInternal, "failed to count overdue issues", err)
 	}
 
@@ -94,7 +97,7 @@ func (r *DashboardReader) Summary(ctx context.Context, userID uuid.UUID, now tim
 		SELECT i.id, i.summary AS title, i.status, i.priority, p.key AS project_key, i.due_date
 		FROM issues i
 		JOIN projects p ON p.id = i.project_id AND p.deleted_at IS NULL
-		WHERE i.assignee_id = $1 AND i.status <> 'closed'
+		WHERE i.assignee_id = $1 AND i.status <> 'closed' AND i.deleted_at IS NULL
 		ORDER BY i.due_date ASC NULLS LAST, i.updated_at DESC
 		LIMIT 5`, userID); err != nil {
 		return summary, apperror.Wrap(apperror.KindInternal, "failed to list recent issues", err)

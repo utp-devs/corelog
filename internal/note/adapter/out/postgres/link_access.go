@@ -60,7 +60,7 @@ func (a *LinkAccess) CanBrowseIssue(ctx context.Context, userID, issueID uuid.UU
 		SELECT EXISTS (
 		    SELECT 1 FROM issues i
 		    JOIN projects p ON p.id = i.project_id
-		    WHERE i.id = $2 AND p.deleted_at IS NULL AND `+projectBrowsable+`
+		    WHERE i.id = $2 AND i.deleted_at IS NULL AND p.deleted_at IS NULL AND `+projectBrowsable+`
 		)`, userID.String(), issueID.String()); err != nil {
 		return false, apperror.Wrap(apperror.KindInternal, "failed to check issue access", err)
 	}

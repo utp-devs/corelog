@@ -46,7 +46,7 @@ func (r *CalendarRepository) Events(ctx context.Context, projectID uuid.UUID, fr
 		UNION ALL
 		SELECT 'issue_due', id, summary, (due_date)::date
 		FROM issues
-		WHERE project_id = $1 AND (due_date)::date BETWEEN $2::date AND $3::date
+		WHERE project_id = $1 AND (due_date)::date BETWEEN $2::date AND $3::date AND deleted_at IS NULL
 		  AND EXISTS (SELECT 1 FROM projects p WHERE p.id = $1 AND p.deleted_at IS NULL)
 		ORDER BY day, kind, title`
 

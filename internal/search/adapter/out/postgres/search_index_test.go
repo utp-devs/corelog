@@ -36,7 +36,7 @@ func newSearchTestDB(t *testing.T) *sqlx.DB {
 	for _, statement := range []string{
 		`CREATE TABLE projects (id UUID PRIMARY KEY, key TEXT NOT NULL, name TEXT NOT NULL, archived_at TIMESTAMPTZ, deleted_at TIMESTAMPTZ)`,
 		`CREATE TABLE project_members (project_id UUID NOT NULL, user_id UUID NOT NULL, PRIMARY KEY (project_id, user_id))`,
-		`CREATE TABLE issues (id UUID PRIMARY KEY, project_id UUID NOT NULL REFERENCES projects (id), summary TEXT NOT NULL, description TEXT NOT NULL DEFAULT '', updated_at TIMESTAMPTZ NOT NULL DEFAULT now())`,
+		`CREATE TABLE issues (id UUID PRIMARY KEY, project_id UUID NOT NULL REFERENCES projects (id), summary TEXT NOT NULL, description TEXT NOT NULL DEFAULT '', updated_at TIMESTAMPTZ NOT NULL DEFAULT now(), deleted_at TIMESTAMPTZ)`,
 	} {
 		if _, err := db.Exec(statement); err != nil {
 			t.Fatal(err)
@@ -137,5 +137,32 @@ func TestSearchSkipsDeletedProjectsKeepsArchivedPostgres(t *testing.T) {
 	}
 	if gone, err := index.Search(ctx, admin, true, "borrado", 20); err != nil || len(gone) != 0 {
 		t.Fatalf("deleted project issue found: %d hits, err %v", len(gone), err)
+	}
+}
+
+// TestSearchSkipsSoftDeletedIssuesPostgres checks that a soft-deleted issue never matches, while a live
+// issue with the same words in the same project still does.
+func TestSearchSkipsSoftDeletedIssuesPostgres(t *testing.T) {
+	db := newSearchTestDB(t)
+	ctx := context.Background()
+	admin := uuid.New()
+
+	project := uuid.New()
+	if _, err := db.Exec(`INSERT INTO projects (id, key, name) VALUES ($1, 'CORE', 'Core')`, project); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`INSERT INTO issues (id, project_id, summary, deleted_at) VALUES ($1, $2, 'Reporte fantasma', now())`, uuid.New(), project); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`INSERT INTO issues (id, project_id, summary) VALUES ($1, $2, 'Reporte vivo')`, uuid.New(), project); err != nil {
+		t.Fatal(err)
+	}
+
+	hits, err := NewSearchIndex(db).Search(ctx, admin, true, "reporte", 20)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(hits) != 1 || hits[0].Title != "Reporte vivo" {
+		t.Fatalf("hits = %+v, want only the live issue", hits)
 	}
 }

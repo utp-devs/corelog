@@ -53,7 +53,7 @@ func TestSprintRepositoryPostgres(t *testing.T) {
 			summary TEXT NOT NULL, status TEXT NOT NULL, priority TEXT NOT NULL DEFAULT 'medium',
 			rank VARCHAR(64) NOT NULL DEFAULT 'm', story_points DOUBLE PRECISION, closed_at TIMESTAMPTZ,
 			sprint_id UUID REFERENCES sprints (id) ON DELETE SET NULL,
-			updated_at TIMESTAMPTZ NOT NULL DEFAULT now())`,
+			updated_at TIMESTAMPTZ NOT NULL DEFAULT now(), deleted_at TIMESTAMPTZ)`,
 	} {
 		if _, err := db.Exec(statement); err != nil {
 			t.Fatal(err)
@@ -180,5 +180,28 @@ func TestSprintRepositoryPostgres(t *testing.T) {
 	var stillIn uuid.UUID
 	if err := db.Get(&stillIn, `SELECT sprint_id FROM issues WHERE id = $1`, goneIssue); err != nil || stillIn != goneSprint {
 		t.Fatalf("issue of deleted project moved: sprint = %v, err %v", stillIn, err)
+	}
+
+	// Soft-deleted issues behave as not found: they leave sprint reads, and cannot be assigned, moved or removed.
+	removed, removedSprint := uuid.New(), second.ID
+	if _, err := db.Exec(`INSERT INTO issues (id, project_id, summary, status, sprint_id, deleted_at) VALUES ($1, $2, 'x', 'open', $3, now())`,
+		removed, project, removedSprint); err != nil {
+		t.Fatal(err)
+	}
+	if refs, err := repo.ListIssues(ctx, removedSprint); err != nil || len(refs) != 0 {
+		t.Fatalf("ListIssues with a soft-deleted issue = %d, %v; want 0", len(refs), err)
+	}
+	if err := repo.SetIssueSprint(ctx, project, removed, &first.ID); !errors.Is(err, domain.ErrIssueNotInProject) {
+		t.Fatalf("assign soft-deleted issue = %v, want ErrIssueNotInProject", err)
+	}
+	if err := repo.RemoveIssueFromSprint(ctx, project, removedSprint, removed); !errors.Is(err, domain.ErrIssueNotInProject) {
+		t.Fatalf("remove soft-deleted issue = %v, want ErrIssueNotInProject", err)
+	}
+	if err := repo.MoveUnfinished(ctx, removedSprint, &first.ID); err != nil {
+		t.Fatalf("MoveUnfinished: %v", err)
+	}
+	var kept uuid.UUID
+	if err := db.Get(&kept, `SELECT sprint_id FROM issues WHERE id = $1`, removed); err != nil || kept != removedSprint {
+		t.Fatalf("soft-deleted issue moved: sprint = %v, err %v", kept, err)
 	}
 }

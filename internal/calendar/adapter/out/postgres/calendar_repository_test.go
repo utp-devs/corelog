@@ -37,7 +37,7 @@ func TestCalendarRepositoryEventsPostgres(t *testing.T) {
 	for _, statement := range []string{
 		`CREATE TABLE projects (id UUID PRIMARY KEY, deleted_at TIMESTAMPTZ)`,
 		`CREATE TABLE sprints (id UUID PRIMARY KEY, project_id UUID NOT NULL, name TEXT NOT NULL, start_date DATE, end_date DATE)`,
-		`CREATE TABLE issues (id UUID PRIMARY KEY, project_id UUID NOT NULL, summary TEXT NOT NULL, due_date TIMESTAMPTZ)`,
+		`CREATE TABLE issues (id UUID PRIMARY KEY, project_id UUID NOT NULL, summary TEXT NOT NULL, due_date TIMESTAMPTZ, deleted_at TIMESTAMPTZ)`,
 	} {
 		if _, err := db.Exec(statement); err != nil {
 			t.Fatal(err)
@@ -82,6 +82,18 @@ func TestCalendarRepositoryEventsPostgres(t *testing.T) {
 		if event.Kind == "issue_due" && (event.Date.Day() != 5 || event.Link != "/issues/"+issue.String()) {
 			t.Fatalf("issue due event = %+v", event)
 		}
+	}
+
+	// A soft-deleted issue has no due-date event; its live neighbour in the same project keeps its event.
+	if _, err := db.Exec(`INSERT INTO issues (id, project_id, summary, due_date, deleted_at) VALUES ($1, $2, 'Quitada', '2026-11-06 10:00:00+00', now())`, uuid.New(), project); err != nil {
+		t.Fatal(err)
+	}
+	afterDelete, err := NewCalendarRepository(db).Events(context.Background(), project, from, to)
+	if err != nil {
+		t.Fatalf("Events after soft delete: %v", err)
+	}
+	if len(afterDelete) != 3 {
+		t.Fatalf("soft-deleted issue produced an event: %d events, want 3", len(afterDelete))
 	}
 
 	// A soft-deleted project has no calendar events, even when its sprints and issues are still in the tables.

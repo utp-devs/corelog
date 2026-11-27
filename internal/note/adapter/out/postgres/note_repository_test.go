@@ -367,6 +367,18 @@ func TestLinkAccessFollowsProjectVisibility(t *testing.T) {
 	check("deleted project", ok, err, false)
 	ok, err = access.CanBrowseIssue(ctx, member, issueOpen)
 	check("issue of deleted project", ok, err, false)
+
+	// A soft-deleted issue is not browsable, while a live issue of a live project still is.
+	if _, err := db.Exec(`UPDATE projects SET deleted_at = NULL WHERE id = $1`, open); err != nil {
+		t.Fatal(err)
+	}
+	ok, err = access.CanBrowseIssue(ctx, member, issueOpen)
+	check("issue of restored project", ok, err, true)
+	if _, err := db.Exec(`UPDATE issues SET deleted_at = now() WHERE id = $1`, issueOpen); err != nil {
+		t.Fatal(err)
+	}
+	ok, err = access.CanBrowseIssue(ctx, member, issueOpen)
+	check("soft-deleted issue", ok, err, false)
 }
 
 func titles(notes []domain.Note) []string {
