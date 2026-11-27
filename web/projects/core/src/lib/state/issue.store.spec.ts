@@ -293,7 +293,7 @@ describe('IssueStore', () => {
       expect(store.issues().map((item) => item.id)).toEqual(['issue-2', 'issue-1']);
     });
 
-    it('applies status, metadata and rank updates to the list and the selected issue', () => {
+    it('applies transition, metadata and rank updates to the list and the selected issue', () => {
       store.fetchIssues();
       httpMock
         .expectOne(BASE)
@@ -301,9 +301,9 @@ describe('IssueStore', () => {
       store.fetchIssue('issue-1');
       httpMock.expectOne(`${BASE}/issue-1`).flush({ data: issueDto() });
 
-      store.updateStatus('issue-1', 'resolved').subscribe();
+      store.transition('issue-1', { transitionId: 'resolve' }).subscribe();
       httpMock
-        .expectOne(`${BASE}/issue-1/status`)
+        .expectOne(`${BASE}/issue-1/transitions`)
         .flush({ data: issueDto({ status: 'resolved' }) });
       expect(store.issues()[0]?.status).toBe('resolved');
       expect(store.selected.value()?.status).toBe('resolved');

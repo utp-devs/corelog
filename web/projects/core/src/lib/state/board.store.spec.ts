@@ -143,6 +143,43 @@ describe('BoardStore', () => {
     backend.verify();
   });
 
+  it('explains that the workflow has no transition to the column', () => {
+    const { store, backend } = setup();
+    loadBoard(store, backend);
+
+    store.move('issue-1', 'column-2');
+    backend
+      .expectOne(MOVE_URL)
+      .flush(
+        { error: { message: 'x', code: 'issue.transition_unavailable' } },
+        { status: 409, statusText: 'Conflict' },
+      );
+
+    expect(store.moveError()).toContain('no tiene una transición');
+    expect(store.pendingInput()).toBeNull();
+    expect(store.board.value()?.columns[0].cards).toHaveLength(2);
+    backend.verify();
+  });
+
+  it('keeps the move pending when the transition needs data from the person', () => {
+    const { store, backend } = setup();
+    loadBoard(store, backend);
+
+    store.move('issue-1', 'column-2');
+    backend
+      .expectOne(MOVE_URL)
+      .flush(
+        { error: { message: 'faltan datos', code: 'workflow.validation_failed' } },
+        { status: 422, statusText: 'Unprocessable' },
+      );
+
+    expect(store.moveError()).toBeNull();
+    expect(store.pendingInput()).toMatchObject({ cardId: 'issue-1', targetColumnId: 'column-2' });
+    store.clearPendingInput();
+    expect(store.pendingInput()).toBeNull();
+    backend.verify();
+  });
+
   it('explains a move forbidden by permissions and a generic failure', () => {
     const { store, backend } = setup();
     loadBoard(store, backend);

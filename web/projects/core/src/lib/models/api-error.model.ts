@@ -2,6 +2,15 @@
 export interface ApiErrorDetail {
   readonly field: string;
   readonly message: string;
+  /** Stable code of the problem, present on workflow validation details. */
+  readonly code?: string;
+}
+
+/** Removed workflow status that still holds issues and needs a target status. */
+export interface ApiMappingRequirement {
+  readonly statusId: string;
+  readonly name: string;
+  readonly issueCount: number;
 }
 
 /** Body returned by the CoreLog API on errors: { error: { message, code?, details? } }. */
@@ -9,7 +18,8 @@ export interface ErrorResponse {
   readonly error: {
     readonly message: string;
     readonly code?: string;
-    readonly details?: readonly ApiErrorDetail[];
+    readonly details?: readonly unknown[];
+    readonly mapping_required?: readonly unknown[];
   };
 }
 
@@ -23,4 +33,6 @@ export interface ApiError {
   readonly code: string;
   readonly message: string;
   readonly details: readonly ApiErrorDetail[];
+  /** Statuses that need a target when a workflow save removes them. */
+  readonly mappingRequired?: readonly ApiMappingRequirement[];
 }

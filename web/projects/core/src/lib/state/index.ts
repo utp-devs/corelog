@@ -18,3 +18,5 @@ export * from './dashboard.store';
 export * from './notification.store';
 export * from './search.store';
 export * from './notes.store';
+export * from './status-catalog.store';
+export * from './workflow.store';

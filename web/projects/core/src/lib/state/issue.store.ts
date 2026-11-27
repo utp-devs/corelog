@@ -11,7 +11,6 @@ import {
   IssueComment,
   IssueLink,
   IssueLinkKind,
-  IssueStatus,
   IssueWatcherState,
   ListIssuesFilter,
   Issue,
@@ -19,6 +18,11 @@ import {
   UpdateIssueDetailsInput,
   UpdateIssueMetadataInput,
 } from '../models/issue.model';
+import {
+  BulkTransitionResult,
+  IssueTransition,
+  RunTransitionInput,
+} from '../models/workflow.model';
 import { asApiError } from '../utils/api-error';
 import { AsyncState } from './async-state';
 import { resetOnLogout } from './session-scoped';
@@ -112,8 +116,28 @@ export class IssueStore {
     );
   }
 
-  updateStatus(id: string, status: IssueStatus): Observable<Issue> {
-    return this.api.updateStatus(id, status).pipe(tap((updated) => this.applyUpdate(updated)));
+  /** Available transitions of an issue (the caller's, evaluated by the server). */
+  listTransitions(id: string): Observable<IssueTransition[]> {
+    return this.api.listTransitions(id);
+  }
+
+  /** Runs a workflow transition and applies the updated issue to the list and the selection. */
+  transition(id: string, input: RunTransitionInput): Observable<Issue> {
+    return this.api.runTransition(id, input).pipe(
+      tap((updated) => this.applyUpdate(updated)),
+      catchError((error: unknown) => throwError(() => asApiError(error))),
+    );
+  }
+
+  /** Transitions several issues; the ones that changed are applied to the list. */
+  bulkTransition(
+    issueIds: readonly string[],
+    selector: { transitionId?: string; statusId?: string },
+  ): Observable<BulkTransitionResult> {
+    return this.api.bulkTransition(issueIds, selector).pipe(
+      tap((result) => result.succeeded.forEach((issue) => this.applyUpdate(issue))),
+      catchError((error: unknown) => throwError(() => asApiError(error))),
+    );
   }
 
   /**

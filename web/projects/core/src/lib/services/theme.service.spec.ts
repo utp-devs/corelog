@@ -85,3 +85,19 @@ describe('ThemeService', () => {
     });
   });
 });
+
+describe('ThemeService preference flag', () => {
+  beforeEach(() => localStorage.clear());
+
+  it('is false until a theme is chosen and true afterwards', () => {
+    const theme = TestBed.inject(ThemeService);
+    expect(theme.hasPreference()).toBe(false);
+    theme.setMode('dark');
+    expect(theme.hasPreference()).toBe(true);
+  });
+
+  it('is true when a theme was stored by an earlier visit', () => {
+    localStorage.setItem(THEME_STORAGE_KEY, 'light');
+    expect(TestBed.inject(ThemeService).hasPreference()).toBe(true);
+  });
+});

@@ -48,3 +48,27 @@ export function issueKeyOf(issue: IssueKeyRef): string {
 export function shortIssueKeyOf(issue: IssueKeyRef): string {
   return issue.key ? issue.key : `INC-${issue.id.slice(0, 6).toUpperCase()}`;
 }
+
+/** Visual category of a workflow category (the lozenge calls "in progress" `progress`). */
+export function workflowCategoryVisual(
+  category: 'todo' | 'in_progress' | 'done',
+): IssueStatusCategory {
+  return category === 'in_progress' ? 'progress' : category;
+}
+
+/** Status name and visual category of an issue: the workflow status when present, else the legacy value. */
+export function issueStatusView(issue: {
+  readonly status: IssueStatus;
+  readonly workflowStatus?: {
+    readonly name: string;
+    readonly category: 'todo' | 'in_progress' | 'done';
+  } | null;
+}): IssueStatusMeta {
+  if (issue.workflowStatus) {
+    return {
+      label: issue.workflowStatus.name,
+      category: workflowCategoryVisual(issue.workflowStatus.category),
+    };
+  }
+  return ISSUE_STATUS_META[issue.status];
+}

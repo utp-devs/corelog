@@ -15,3 +15,4 @@ export * from './dashboard.model';
 export * from './notification.model';
 export * from './search.model';
 export * from './note.model';
+export * from './workflow.model';

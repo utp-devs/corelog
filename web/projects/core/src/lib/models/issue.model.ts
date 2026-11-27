@@ -1,4 +1,5 @@
 import { IssueTypeRef, PriorityRef, ResolutionRef } from './catalog.model';
+import { WorkflowStatusRef } from './workflow.model';
 
 export type IssueStatus = 'open' | 'in_progress' | 'resolved' | 'closed';
 /** Legacy priority key, still used by the list filters and the board, backlog and sprint payloads. */
@@ -19,7 +20,10 @@ export interface Issue {
   readonly projectKey: string;
   readonly summary: string;
   readonly description: string;
+  /** Legacy mirror of the workflow status category (todo is open, in progress, done is closed). */
   readonly status: IssueStatus;
+  /** Workflow status of the issue. Absent only in payloads of older endpoints. */
+  readonly workflowStatus?: WorkflowStatusRef | null;
   readonly priority: PriorityRef;
   readonly projectId: string;
   readonly issueType: IssueTypeRef;
@@ -37,18 +41,6 @@ export interface Issue {
   readonly assigneeName: string | null;
   readonly createdAt: string;
   readonly updatedAt: string;
-}
-
-/** Transitions allowed by the issue workflow. */
-const ALLOWED_TRANSITIONS: Readonly<Record<IssueStatus, readonly IssueStatus[]>> = {
-  open: ['in_progress', 'closed'],
-  in_progress: ['resolved', 'closed'],
-  resolved: ['closed', 'in_progress'],
-  closed: [],
-};
-
-export function canTransitionTo(current: IssueStatus, next: IssueStatus): boolean {
-  return ALLOWED_TRANSITIONS[current].includes(next);
 }
 
 export interface IssueComment {

@@ -18,6 +18,12 @@ import {
   UpdateIssueMetadataInput,
 } from '../../models/issue.model';
 import { silentRequest } from '../../utils/silent-request';
+import {
+  BulkTransitionResult,
+  IssueTransition,
+  RunTransitionInput,
+  WorkflowCategory,
+} from '../../models/workflow.model';
 
 interface IssueTypeRefDto {
   id: string;
@@ -42,6 +48,7 @@ interface IssueDto {
   summary: string;
   description: string;
   status: IssueStatus;
+  workflow_status?: { id: string; name: string; category: WorkflowCategory } | null;
   priority: PriorityRefDto;
   issue_type: IssueTypeRefDto;
   resolution?: { id: string; name: string } | null;
@@ -57,6 +64,42 @@ interface IssueDto {
   assignee_name?: string | null;
   created_at: string;
   updated_at: string;
+}
+
+interface TransitionDto {
+  id: string;
+  name: string;
+  to_status: string;
+  to: { id: string; name: string; category: WorkflowCategory };
+  required_fields?: string[] | null;
+  requires_comment?: boolean;
+  requires_resolution?: boolean;
+  requires_assignee?: boolean;
+  needs_screen?: boolean;
+}
+
+interface AppliedTransitionDto {
+  id: string;
+  name: string;
+}
+
+interface BulkResponseDto {
+  succeeded: { issue: IssueDto }[];
+  failed: { issue: string; code: string; message: string }[];
+}
+
+function toTransition(dto: TransitionDto): IssueTransition {
+  return {
+    id: dto.id,
+    name: dto.name,
+    toStatus: dto.to_status,
+    to: { id: dto.to.id, name: dto.to.name, category: dto.to.category },
+    requiredFields: dto.required_fields ?? [],
+    requiresComment: dto.requires_comment === true,
+    requiresResolution: dto.requires_resolution === true,
+    requiresAssignee: dto.requires_assignee === true,
+    needsScreen: dto.needs_screen === true,
+  };
 }
 
 interface CommentDto {
@@ -98,7 +141,7 @@ interface PagedEnvelope<T> {
   meta: { page: number; page_size: number; total: number };
 }
 
-function toIssue(dto: IssueDto): Issue {
+export function toIssue(dto: IssueDto): Issue {
   return {
     id: dto.id,
     projectId: dto.project_id,
@@ -107,6 +150,13 @@ function toIssue(dto: IssueDto): Issue {
     summary: dto.summary,
     description: dto.description,
     status: dto.status,
+    workflowStatus: dto.workflow_status
+      ? {
+          id: dto.workflow_status.id,
+          name: dto.workflow_status.name,
+          category: dto.workflow_status.category,
+        }
+      : null,
     priority: {
       id: dto.priority.id,
       name: dto.priority.name,
@@ -234,10 +284,62 @@ export class IssueApiService {
       .pipe(map((body) => toIssue(body.data)));
   }
 
-  updateStatus(id: string, status: IssueStatus): Observable<Issue> {
+  /** Transitions the caller can run on the issue now, in workflow order. */
+  listTransitions(id: string): Observable<IssueTransition[]> {
     return this.http
-      .patch<Envelope<IssueDto>>(`${this.baseUrl}/${id}/status`, { status })
+      .get<Envelope<TransitionDto[]>>(`${this.baseUrl}/${id}/transitions`, {
+        context: silentRequest(),
+      })
+      .pipe(map((body) => body.data.map(toTransition)));
+  }
+
+  /** Runs a workflow transition. Failures come back as ApiError with the workflow codes. */
+  runTransition(id: string, input: RunTransitionInput): Observable<Issue> {
+    return this.http
+      .post<Envelope<IssueDto & { transition?: AppliedTransitionDto }>>(
+        `${this.baseUrl}/${id}/transitions`,
+        {
+          transition_id: input.transitionId,
+          fields: input.fields,
+          comment: input.comment,
+          resolution_id: input.resolutionId,
+          assignee_id: input.assigneeId,
+          expected_status_id: input.expectedStatusId,
+        },
+        { context: silentRequest() },
+      )
       .pipe(map((body) => toIssue(body.data)));
+  }
+
+  /** Transition several issues. Exactly one of the three selectors is sent. */
+  bulkTransition(
+    issueIds: readonly string[],
+    selector: { transitionId?: string; statusId?: string; status?: IssueStatus },
+  ): Observable<BulkTransitionResult> {
+    return this.http
+      .post<Envelope<BulkResponseDto>>(
+        `${this.baseUrl}/bulk`,
+        {
+          issue_ids: issueIds,
+          action: 'transition',
+          params: {
+            transition_id: selector.transitionId,
+            status_id: selector.statusId,
+            status: selector.status,
+          },
+        },
+        { context: silentRequest() },
+      )
+      .pipe(
+        map((body) => ({
+          succeeded: body.data.succeeded.map((entry) => toIssue(entry.issue)),
+          failed: body.data.failed.map((entry) => ({
+            issue: entry.issue,
+            code: entry.code,
+            message: entry.message,
+          })),
+        })),
+      );
   }
 
   /** Passing null clears the assignee (the issue becomes unassigned). */

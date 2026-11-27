@@ -1,7 +1,7 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { TimeoutError } from 'rxjs';
 
-import { ApiError, ApiErrorDetail, ErrorResponse } from '../models';
+import { ApiError, ApiErrorDetail, ApiMappingRequirement, ErrorResponse } from '../models';
 
 const MESSAGES_BY_STATUS: Readonly<Record<number, string>> = {
   400: 'La solicitud contiene datos inválidos.',
@@ -49,13 +49,35 @@ function fieldDetails(details: unknown): readonly ApiErrorDetail[] {
   if (!Array.isArray(details)) {
     return [];
   }
-  return details.filter(
-    (item): item is ApiErrorDetail =>
-      typeof item === 'object' &&
-      item !== null &&
-      typeof (item as ApiErrorDetail).field === 'string' &&
-      typeof (item as ApiErrorDetail).message === 'string',
-  );
+  const result: ApiErrorDetail[] = [];
+  for (const item of details as unknown[]) {
+    if (typeof item !== 'object' || item === null) continue;
+    const entry = item as { field?: unknown; path?: unknown; message?: unknown; code?: unknown };
+    const field = typeof entry.field === 'string' ? entry.field : entry.path;
+    if (typeof field !== 'string' || typeof entry.message !== 'string') continue;
+    result.push(
+      typeof entry.code === 'string'
+        ? { field, message: entry.message, code: entry.code }
+        : { field, message: entry.message },
+    );
+  }
+  return result;
+}
+
+function mappingRequirements(value: unknown): ApiMappingRequirement[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const result: ApiMappingRequirement[] = [];
+  for (const item of value as unknown[]) {
+    const entry = item as { status_id?: unknown; name?: unknown; issue_count?: unknown };
+    if (typeof entry?.status_id === 'string') {
+      result.push({
+        statusId: entry.status_id,
+        name: typeof entry.name === 'string' ? entry.name : '',
+        issueCount: typeof entry.issue_count === 'number' ? entry.issue_count : 0,
+      });
+    }
+  }
+  return result.length > 0 ? result : undefined;
 }
 
 function fromHttpError(error: HttpErrorResponse): ApiError {
@@ -69,6 +91,9 @@ function fromHttpError(error: HttpErrorResponse): ApiError {
       code: body.error.code ?? `http.${error.status}`,
       message: body.error.message,
       details: fieldDetails(body.error.details),
+      ...(mappingRequirements(body.error.mapping_required)
+        ? { mappingRequired: mappingRequirements(body.error.mapping_required) }
+        : {}),
     };
   }
   return {

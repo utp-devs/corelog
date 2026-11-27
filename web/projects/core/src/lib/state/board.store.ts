@@ -12,11 +12,24 @@ const EMPTY_FILTER: BoardFilter = { search: '', priority: null, onlyMine: false 
 const MESSAGE_MOVE_FORBIDDEN = 'No tienes permiso para mover incidencias en este proyecto.';
 const MESSAGE_MOVE_CONFLICT =
   'La columna destino alcanzó su límite WIP o el flujo no permite ese cambio.';
+const MESSAGE_MOVE_UNAVAILABLE =
+  'El flujo de trabajo no tiene una transición que lleve la incidencia a esa columna desde su estado actual.';
+const MESSAGE_MOVE_NOT_ALLOWED = 'No puedes ejecutar esa transición en esta incidencia.';
+const MESSAGE_MOVE_STALE =
+  'Otra persona cambió el estado de la incidencia. El tablero se actualizó; inténtalo de nuevo.';
 const MESSAGE_MOVE_FAILED = 'No se pudo mover la incidencia. Intenta de nuevo.';
 const MESSAGE_WIP_FORBIDDEN =
   'Solo el lead del proyecto o el administrador pueden cambiar el límite WIP.';
 const MESSAGE_WIP_FAILED = 'No se pudo guardar el límite WIP. Intenta de nuevo.';
 const MESSAGE_WIP_INVALID = 'El límite WIP debe ser un número entero mayor que 0.';
+
+/** A move that the workflow accepts only after the person provides data (fields, comment, resolution). */
+export interface BoardPendingInput {
+  readonly cardId: string;
+  readonly targetColumnId: string;
+  /** Legacy status of the target column, to pick the transition that leads there. */
+  readonly targetStatus: string | null;
+}
 
 /** A column offered as destination of a move, with whether it can take more cards. */
 export interface BoardMoveTarget {
@@ -38,10 +51,13 @@ export class BoardStore {
   private readonly filterState = signal<BoardFilter>(EMPTY_FILTER);
   private readonly moveErrorState = signal<string | null>(null);
   private readonly announcementState = signal('');
+  private readonly pendingInputState = signal<BoardPendingInput | null>(null);
 
   readonly board = new AsyncState<ProjectBoard>();
   readonly filter = this.filterState.asReadonly();
   readonly moveError = this.moveErrorState.asReadonly();
+  /** Move that waits for the person to fill in what the transition asks for. */
+  readonly pendingInput = this.pendingInputState.asReadonly();
   /** Text for the polite live region after a successful move. */
   readonly announcement = this.announcementState.asReadonly();
 
@@ -126,8 +142,27 @@ export class BoardStore {
         this.board.set(updated);
         this.announcementState.set(`Incidencia movida a ${target?.name ?? 'otra columna'}`);
       },
-      error: (error: unknown) => this.moveErrorState.set(moveErrorMessage(asApiError(error))),
+      error: (error: unknown) => {
+        const failure = asApiError(error);
+        if (failure.code === 'workflow.validation_failed') {
+          this.pendingInputState.set({
+            cardId,
+            targetColumnId,
+            targetStatus: target?.status ?? null,
+          });
+          return;
+        }
+        if (failure.code === 'issue.status_conflict') {
+          this.retry();
+        }
+        this.moveErrorState.set(moveErrorMessage(failure));
+      },
     });
+  }
+
+  /** The person finished or left the dialog of a pending move. */
+  clearPendingInput(): void {
+    this.pendingInputState.set(null);
   }
 
   /**
@@ -165,6 +200,7 @@ export class BoardStore {
     this.board.reset();
     this.filterState.set(EMPTY_FILTER);
     this.moveErrorState.set(null);
+    this.pendingInputState.set(null);
     this.announcementState.set('');
   }
 
@@ -187,7 +223,16 @@ export class BoardStore {
   }
 }
 
-function moveErrorMessage(error: { readonly status: number }): string {
+function moveErrorMessage(error: { readonly status: number; readonly code?: string }): string {
+  if (error.code === 'issue.transition_unavailable') {
+    return MESSAGE_MOVE_UNAVAILABLE;
+  }
+  if (error.code === 'workflow.transition_not_allowed') {
+    return MESSAGE_MOVE_NOT_ALLOWED;
+  }
+  if (error.code === 'issue.status_conflict') {
+    return MESSAGE_MOVE_STALE;
+  }
   if (error.status === 403) {
     return MESSAGE_MOVE_FORBIDDEN;
   }

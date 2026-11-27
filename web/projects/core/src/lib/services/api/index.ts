@@ -21,3 +21,4 @@ export * from './team-api.service';
 export * from './note-api.service';
 export * from './issue-api.service';
 export * from './user-directory-api.service';
+export * from './workflow-api.service';

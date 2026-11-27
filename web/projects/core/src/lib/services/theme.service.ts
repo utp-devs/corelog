@@ -31,8 +31,11 @@ export class ThemeService {
   private readonly modeState = signal<ThemeMode>(
     parseMode(this.storage.getItem(THEME_STORAGE_KEY)),
   );
+  private readonly preferenceState = signal(this.storage.getItem(THEME_STORAGE_KEY) !== null);
   private readonly systemDark = signal(this.systemQuery?.matches ?? false);
 
+  /** True once the person (or an earlier visit) chose a theme; screens may pick their own default before that. */
+  readonly hasPreference = this.preferenceState.asReadonly();
   /** The chosen mode: light, dark or system. */
   readonly mode = this.modeState.asReadonly();
   /** The theme in effect. Equals the mode unless the mode is `system`. */
@@ -53,6 +56,7 @@ export class ThemeService {
 
   setMode(mode: ThemeMode): void {
     this.modeState.set(mode);
+    this.preferenceState.set(true);
     this.storage.setItem(THEME_STORAGE_KEY, mode);
     this.apply();
   }

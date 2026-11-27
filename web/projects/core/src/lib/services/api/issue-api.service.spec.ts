@@ -5,7 +5,7 @@ import { provideHttpClient } from '@angular/common/http';
 
 import { SKIP_ERROR_NOTIFICATION } from '../../config/http-context';
 import { provideCorelogTesting } from '../../../testing';
-import { IssuePage } from '../../models/issue.model';
+import { Issue, IssuePage } from '../../models/issue.model';
 import { asApiError } from '../../utils/api-error';
 import { IssueApiService } from './issue-api.service';
 
@@ -163,13 +163,86 @@ describe('IssueApiService', () => {
     });
   });
 
-  describe('status and rank', () => {
-    it('patches the status of the issue', () => {
-      service.updateStatus(ISSUE_ID, 'in_progress').subscribe();
+  describe('transitions and rank', () => {
+    it('lists the available transitions with their requirements', () => {
+      let first: unknown;
+      service.listTransitions(ISSUE_ID).subscribe((items) => (first = items[0]));
 
-      const request = httpMock.expectOne(`/api/v1/issues/${ISSUE_ID}/status`);
-      expect(request.request.body).toEqual({ status: 'in_progress' });
-      request.flush({ data: issue });
+      const request = httpMock.expectOne(`/api/v1/issues/${ISSUE_ID}/transitions`);
+      expect(request.request.context.get(SKIP_ERROR_NOTIFICATION)).toBe(true);
+      request.flush({
+        data: [
+          {
+            id: 'close',
+            name: 'Cerrar',
+            to_status: 'closed',
+            to: { id: 's-done', name: 'Hecho', category: 'done' },
+            required_fields: ['due_date'],
+            requires_comment: true,
+            requires_resolution: false,
+            requires_assignee: false,
+            needs_screen: true,
+          },
+        ],
+      });
+
+      expect(first).toEqual({
+        id: 'close',
+        name: 'Cerrar',
+        toStatus: 'closed',
+        to: { id: 's-done', name: 'Hecho', category: 'done' },
+        requiredFields: ['due_date'],
+        requiresComment: true,
+        requiresResolution: false,
+        requiresAssignee: false,
+        needsScreen: true,
+      });
+    });
+
+    it('runs a transition with the snake_case body and maps the issue', () => {
+      let result: Issue | undefined;
+      service
+        .runTransition(ISSUE_ID, {
+          transitionId: 'close',
+          comment: 'Listo',
+          resolutionId: 'res-1',
+          expectedStatusId: 's-open',
+        })
+        .subscribe((item) => (result = item));
+
+      const request = httpMock.expectOne(`/api/v1/issues/${ISSUE_ID}/transitions`);
+      expect(request.request.method).toBe('POST');
+      expect(request.request.body).toEqual({
+        transition_id: 'close',
+        comment: 'Listo',
+        resolution_id: 'res-1',
+        expected_status_id: 's-open',
+      });
+      request.flush({
+        data: { ...issue, workflow_status: { id: 's-done', name: 'Hecho', category: 'done' } },
+      });
+      expect(result?.workflowStatus).toEqual({ id: 's-done', name: 'Hecho', category: 'done' });
+    });
+
+    it('sends exactly the selector of a bulk transition', () => {
+      let failed: unknown;
+      service
+        .bulkTransition([ISSUE_ID], { transitionId: 'close' })
+        .subscribe((r) => (failed = r.failed));
+
+      const request = httpMock.expectOne('/api/v1/issues/bulk');
+      expect(JSON.parse(JSON.stringify(request.request.body))).toEqual({
+        issue_ids: [ISSUE_ID],
+        action: 'transition',
+        params: { transition_id: 'close' },
+      });
+      request.flush({
+        data: {
+          succeeded: [],
+          failed: [{ issue: 'CORE-1', code: 'issue.status_conflict', message: 'x' }],
+        },
+      });
+      expect(failed).toEqual([{ issue: 'CORE-1', code: 'issue.status_conflict', message: 'x' }]);
     });
 
     it('patches the rank of the issue', () => {
@@ -342,17 +415,17 @@ describe('IssueApiService', () => {
     it('passes the API error code and field details through the caller', () => {
       let code: string | undefined;
       service
-        .updateStatus(ISSUE_ID, 'closed')
+        .runTransition(ISSUE_ID, { transitionId: 'close' })
         .subscribe({ error: (error: unknown) => (code = asApiError(error).code) });
 
       httpMock
-        .expectOne(`/api/v1/issues/${ISSUE_ID}/status`)
+        .expectOne(`/api/v1/issues/${ISSUE_ID}/transitions`)
         .flush(
-          { error: { message: 'Transición no válida', code: 'issue.invalid_transition' } },
+          { error: { message: 'Transición no válida', code: 'workflow.transition_not_allowed' } },
           { status: 409, statusText: 'Conflict' },
         );
 
-      expect(code).toBe('issue.invalid_transition');
+      expect(code).toBe('workflow.transition_not_allowed');
     });
   });
 
