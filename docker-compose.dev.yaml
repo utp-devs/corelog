@@ -1,32 +1,38 @@
 # Override de desarrollo: uso con docker-compose.local.yaml.
 #   docker compose -f docker-compose.local.yaml -f docker-compose.dev.yaml up -d
-# Solo cambia el servicio ui: el codigo de ui/ se monta como volumen y Vite recarga
-# el navegador al guardar. db, migrate y api siguen como en el archivo base.
+# Solo cambia el servicio ui: el codigo de web/ se monta como volumen y las tres aplicaciones
+# (portal en /, workspace en /workspace/, admin en /admin/) se recompilan al guardar, todas bajo un
+# mismo origen con /api redirigido al servicio api. db, migrate y api siguen como en el archivo base.
 # Los datos de PostgreSQL y los adjuntos viven en volumenes con nombre y no se pierden al bajar el stack.
 
 services:
   ui:
-    build:
-      context: .
-      dockerfile: docker/Dockerfile.ui.dev
+    build: !override
+      context: ./web
+      dockerfile: Dockerfile.dev
     restart: unless-stopped
     environment:
-      VITE_API_BASE_URL: http://localhost:${CORELOG_LOCAL_API_PORT:-8080}/api/v1
+      API_UPSTREAM: http://api:8080
+      # Aplicaciones vigiladas: all, o una lista separada por comas (portal,workspace,admin).
+      WATCH: ${CORELOG_WEB_WATCH:-all}
       # Docker Desktop en Windows no propaga los eventos de archivos: el sondeo asegura la recarga.
-      CHOKIDAR_USEPOLLING: "true"
-      CHOKIDAR_INTERVAL: "300"
+      POLL: "1000"
     volumes:
-      - ./ui:/app
-      # Evita que node_modules del host (binarios de Windows) sustituya a los del contenedor.
-      - ui_dev_node_modules:/app/node_modules
+      - ./web:/app
+      # Evita que node_modules y la cache del host (binarios de Windows) sustituyan a los del contenedor.
+      - web_dev_node_modules:/app/node_modules
+      - web_dev_angular_cache:/app/.angular
+      - web_dev_dist:/app/dist
     ports: !override
-      - "${CORELOG_LOCAL_UI_PORT:-5173}:5173"
+      - "${CORELOG_LOCAL_UI_PORT:-5173}:4300"
     healthcheck: !override
-      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:5173/ || exit 1"]
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:4300/ || exit 1"]
       interval: 10s
       timeout: 3s
-      retries: 5
-      start_period: 20s
+      retries: 10
+      start_period: 120s
 
 volumes:
-  ui_dev_node_modules:
+  web_dev_node_modules:
+  web_dev_angular_cache:
+  web_dev_dist:
