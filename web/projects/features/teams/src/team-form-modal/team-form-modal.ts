@@ -1,20 +1,16 @@
 import {
   ChangeDetectionStrategy,
   Component,
-  ElementRef,
   effect,
   input,
   model,
   output,
   signal,
   untracked,
-  viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { PrimeTemplate } from 'primeng/api';
 import { Button } from 'primeng/button';
-import { Dialog } from 'primeng/dialog';
 import { InputText } from 'primeng/inputtext';
 import { Textarea } from 'primeng/textarea';
 import {
@@ -28,6 +24,7 @@ import {
 } from '@corelog/core';
 import { ColorPicker } from '@corelog/ui/color-picker';
 import { ConfirmModal } from '@corelog/ui/confirm-modal';
+import { Dialog } from '@corelog/ui/dialog';
 
 import { messageOf } from '../shared/team-messages';
 import {
@@ -49,16 +46,7 @@ import {
  */
 @Component({
   selector: 'app-team-form-modal',
-  imports: [
-    ReactiveFormsModule,
-    Button,
-    ColorPicker,
-    ConfirmModal,
-    Dialog,
-    InputText,
-    PrimeTemplate,
-    Textarea,
-  ],
+  imports: [ReactiveFormsModule, Button, ColorPicker, ConfirmModal, Dialog, InputText, Textarea],
   templateUrl: './team-form-modal.html',
   styleUrl: './team-form-modal.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -92,8 +80,6 @@ export class TeamFormModal {
   protected readonly submitting = signal(false);
   protected readonly serverError = signal<string | null>(null);
   protected readonly discardOpen = signal(false);
-
-  private readonly nameInput = viewChild<ElementRef<HTMLInputElement>>('nameInput');
 
   constructor() {
     // A closed dialog never guards: the flag is cleared when it closes.
@@ -139,15 +125,6 @@ export class TeamFormModal {
   protected discard(): void {
     this.discardOpen.set(false);
     this.cancelled.emit();
-  }
-
-  /** Dialog reports a user close (close icon, Escape, backdrop) through its visibility. */
-  protected onVisibleChange(visible: boolean): void {
-    if (!visible) this.requestCancel();
-  }
-
-  protected onDialogShow(): void {
-    this.nameInput()?.nativeElement.focus();
   }
 
   protected async submit(): Promise<void> {

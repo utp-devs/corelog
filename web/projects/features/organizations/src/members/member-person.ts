@@ -29,6 +29,8 @@ export class OrgMemberPerson {
 
   readonly userId = input.required<string>();
   readonly name = input.required<string>();
+  /** Shown under the name when given. */
+  readonly email = input<string>();
   readonly hasAvatar = input(false, { transform: booleanAttribute });
   readonly isSelf = input(false, { transform: booleanAttribute });
 

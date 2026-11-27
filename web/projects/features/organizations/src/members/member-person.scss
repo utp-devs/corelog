@@ -1,18 +1,34 @@
-.person {
+@use '../../../../ui/styles/mixins' as m;
+
+:host {
   display: inline-flex;
-  align-items: center;
-  gap: var(--cl-space-2);
   min-width: 0;
+  max-width: 100%;
 }
 
-.person-name {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-weight: 600;
-}
+.member-person {
+  @include m.flex-row(3);
+  min-width: 0;
 
-.you-tag {
-  font-weight: 400;
-  color: var(--cl-text-subtle);
+  &__identity {
+    @include m.flex-column(0);
+    min-width: 0;
+  }
+
+  &__name {
+    @include m.truncate;
+    font-weight: var(--cl-weight-semibold);
+    color: var(--cl-text);
+  }
+
+  &__you {
+    font-weight: var(--cl-weight-regular);
+    color: var(--cl-text-subtle);
+  }
+
+  &__email {
+    @include m.truncate;
+    font-size: var(--cl-font-small);
+    color: var(--cl-text-subtle);
+  }
 }

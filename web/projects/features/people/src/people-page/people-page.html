@@ -2,7 +2,7 @@
   <app-page-header title="Personas" [subtitle]="subtitle()" />
 
   <app-toolbar>
-    <div appToolbarLeft>
+    <div appToolbarLeft class="people-page__search">
       <app-search-input
         [(value)]="query"
         [placeholder]="'Buscar por nombre o correo'"
@@ -14,66 +14,63 @@
   <app-data-table
     tableKey="people-directory"
     [fill]="true"
-    [columns]="columns"
-    [data]="visible()"
+    [columns]="columns()"
+    [data]="pageRows()"
     rowKey="userId"
     [loading]="loading()"
     [error]="errorMessage()"
+    [pagination]="pagination()"
+    [pageSizes]="pageSizes"
     (retry)="reload()"
+    (pageChange)="changePage($event)"
     [emptyState]="emptyTpl"
     [rowOpenable]="true"
     (rowOpen)="openPerson($event)"
     [mobileRender]="mobileTpl"
   >
     <ng-template appDataTableCell="name" let-member>
-      <span class="person">
-        <app-user-avatar
-          [id]="member.userId"
-          [name]="member.name"
-          [hasAvatar]="member.hasAvatar"
-          [size]="32"
-        />
-        <span class="person-name">{{ member.name }}</span>
-      </span>
+      <ng-container *ngTemplateOutlet="personTpl; context: { $implicit: member }" />
     </ng-template>
 
     <ng-template appDataTableCell="jobTitle" let-member>
-      @if (member.jobTitle) {
-        {{ member.jobTitle }}
-      } @else {
-        <span class="secondary">—</span>
-      }
+      <span class="people-page__text" [attr.title]="member.jobTitle || null">{{
+        member.jobTitle || '-'
+      }}</span>
     </ng-template>
 
     <ng-template appDataTableCell="role" let-member>
       <app-lozenge [tone]="toneOf(member.role)">{{ labelOf(member.role) }}</app-lozenge>
     </ng-template>
-
-    <ng-template appDataTableCell="email" let-member>
-      <span class="secondary">{{ member.email }}</span>
-    </ng-template>
   </app-data-table>
+
+  <ng-template #personTpl let-member>
+    <span class="people-page__person">
+      <app-user-avatar
+        [id]="member.userId"
+        [name]="member.name"
+        [hasAvatar]="member.hasAvatar"
+        [size]="32"
+      />
+      <span class="people-page__identity">
+        <span class="people-page__name" [attr.title]="member.name">{{ member.name }}</span>
+        <span class="people-page__email" [attr.title]="member.email">{{ member.email }}</span>
+      </span>
+    </span>
+  </ng-template>
 
   <ng-template #emptyTpl>
     <app-empty-state [title]="emptyTitle()" [description]="emptyDescription()" />
   </ng-template>
 
   <ng-template #mobileTpl let-member>
-    <div class="mobile-card">
-      <span class="person">
-        <app-user-avatar
-          [id]="member.userId"
-          [name]="member.name"
-          [hasAvatar]="member.hasAvatar"
-          [size]="32"
-        />
-        <span class="person-name">{{ member.name }}</span>
-      </span>
-      @if (member.jobTitle) {
-        <span>{{ member.jobTitle }}</span>
-      }
-      <app-lozenge [tone]="toneOf(member.role)">{{ labelOf(member.role) }}</app-lozenge>
-      <span class="secondary">{{ member.email }}</span>
+    <div class="people-page__card">
+      <ng-container *ngTemplateOutlet="personTpl; context: { $implicit: member }" />
+      <div class="people-page__card-meta">
+        <app-lozenge [tone]="toneOf(member.role)">{{ labelOf(member.role) }}</app-lozenge>
+        @if (member.jobTitle) {
+          <span class="people-page__text">{{ member.jobTitle }}</span>
+        }
+      </div>
     </div>
   </ng-template>
 </app-page-container>

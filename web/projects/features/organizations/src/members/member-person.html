@@ -1,7 +1,14 @@
-<span class="person">
+<span class="member-person">
   <app-avatar [id]="userId()" [name]="name()" [src]="src()" [size]="32" />
-  <span class="person-name">{{ name() }}</span>
-  @if (isSelf()) {
-    <span class="you-tag"> (tú)</span>
-  }
+  <span class="member-person__identity">
+    <span class="member-person__name" [attr.title]="name()">
+      {{ name() }}
+      @if (isSelf()) {
+        <span class="member-person__you"> (tú)</span>
+      }
+    </span>
+    @if (email()) {
+      <span class="member-person__email" [attr.title]="email()">{{ email() }}</span>
+    }
+  </span>
 </span>

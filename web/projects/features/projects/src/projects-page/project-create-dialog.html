@@ -1,28 +1,11 @@
-<p-dialog
-  header="Nuevo proyecto"
-  [visible]="open()"
-  (visibleChange)="open.set($event)"
-  [modal]="true"
-  [draggable]="false"
-  [resizable]="false"
-  styleClass="cl-project-create-dialog"
+<app-dialog
+  size="md"
+  heading="Nuevo proyecto"
+  subtitle="Organiza el trabajo de un equipo en un tablero propio."
+  [open]="open()"
+  (closeRequested)="cancel()"
 >
-  <form class="form" [formGroup]="form" novalidate>
-    <app-field-row
-      #keyRow
-      label="Clave"
-      [required]="true"
-      [error]="keyError() ?? serverError(form.controls.key)"
-    >
-      <input
-        pInputText
-        appFieldControl
-        formControlName="key"
-        placeholder="CORE"
-        autocomplete="off"
-      />
-    </app-field-row>
-
+  <form class="project-create-dialog__form" [formGroup]="form" novalidate>
     <app-field-row
       #nameRow
       label="Nombre"
@@ -32,9 +15,29 @@
       <input
         pInputText
         appFieldControl
+        data-autofocus
         formControlName="name"
         placeholder="Nombre del proyecto"
         autocomplete="off"
+      />
+    </app-field-row>
+
+    <app-field-row
+      #keyRow
+      label="Clave"
+      [required]="true"
+      helper="Prefijo de las incidencias, por ejemplo CORE-12. Se sugiere a partir del nombre."
+      [error]="keyError() ?? serverError(form.controls.key)"
+    >
+      <input
+        pInputText
+        appFieldControl
+        #keyField
+        formControlName="key"
+        placeholder="CORE"
+        autocomplete="off"
+        [attr.maxlength]="keyMaxLength"
+        (input)="onKeyInput(keyField.value)"
       />
     </app-field-row>
 
@@ -46,43 +49,64 @@
       <textarea pTextarea appFieldControl formControlName="description" rows="3"></textarea>
     </app-field-row>
 
-    <app-field-row
-      #typeRow
-      label="Tipo"
-      [required]="true"
-      [error]="serverError(form.controls.type)"
-    >
-      <p-select
-        formControlName="type"
-        [inputId]="typeRow.controlId"
-        [ariaLabelledBy]="typeRow.labelId"
-        [options]="typeOptions"
-        optionLabel="label"
-        optionValue="value"
-      />
-    </app-field-row>
+    <fieldset class="project-create-dialog__choices">
+      <legend class="project-create-dialog__legend">Tipo de proyecto</legend>
+      <div class="project-create-dialog__cards">
+        @for (option of typeOptions; track option.value) {
+          <label class="project-create-dialog__card" [attr.for]="radioId('type', option.value)">
+            <input
+              type="radio"
+              class="project-create-dialog__radio"
+              formControlName="type"
+              [id]="radioId('type', option.value)"
+              [value]="option.value"
+            />
+            <span class="project-create-dialog__card-title">{{ option.label }}</span>
+            <span class="project-create-dialog__card-text">{{ option.description }}</span>
+          </label>
+        }
+      </div>
+      @if (serverError(form.controls.type); as message) {
+        <p class="project-create-dialog__error" role="alert">{{ message }}</p>
+      }
+    </fieldset>
 
-    <app-field-row
-      #visibilityRow
-      label="Visibilidad"
-      [required]="true"
-      [error]="serverError(form.controls.visibility)"
-    >
-      <p-select
-        formControlName="visibility"
-        [inputId]="visibilityRow.controlId"
-        [ariaLabelledBy]="visibilityRow.labelId"
-        [options]="visibilityOptions"
-        optionLabel="label"
-        optionValue="value"
+    <fieldset class="project-create-dialog__choices">
+      <legend class="project-create-dialog__legend">Visibilidad</legend>
+      <div class="project-create-dialog__cards">
+        @for (option of visibilityOptions; track option.value) {
+          <label
+            class="project-create-dialog__card"
+            [attr.for]="radioId('visibility', option.value)"
+          >
+            <input
+              type="radio"
+              class="project-create-dialog__radio"
+              formControlName="visibility"
+              [id]="radioId('visibility', option.value)"
+              [value]="option.value"
+            />
+            <span class="project-create-dialog__card-title">{{ option.label }}</span>
+            <span class="project-create-dialog__card-text">{{ option.description }}</span>
+          </label>
+        }
+      </div>
+      @if (serverError(form.controls.visibility); as message) {
+        <p class="project-create-dialog__error" role="alert">{{ message }}</p>
+      }
+    </fieldset>
+
+    <app-field-row #leadRow label="Responsable" helper="Si lo dejas vacío, serás tú.">
+      <app-user-picker
+        ariaLabel="Responsable del proyecto"
+        placeholder="Yo (quien crea el proyecto)"
+        [users]="leadCandidates()"
+        [value]="form.controls.leadId.value"
+        (valueChange)="form.controls.leadId.setValue($event)"
       />
     </app-field-row>
   </form>
 
-  <ng-template pTemplate="footer">
-    <div class="actions">
-      <p-button label="Cancelar" severity="secondary" [outlined]="true" (onClick)="cancel()" />
-      <p-button label="Crear" [loading]="submitting()" (onClick)="submit()" />
-    </div>
-  </ng-template>
-</p-dialog>
+  <p-button dialogFooter label="Cancelar" severity="secondary" (onClick)="cancel()" />
+  <p-button dialogFooter label="Crear" [loading]="submitting()" (onClick)="submit()" />
+</app-dialog>

@@ -1,32 +1,50 @@
+@use '../../../../ui/styles/mixins' as m;
+
 :host {
   display: block;
   min-width: 0;
 }
 
-.person {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--cl-space-2);
-  min-width: 0;
-  max-width: 100%;
-}
+.people-page {
+  /* Wide enough that the search placeholder is never cut. */
+  &__search {
+    width: min(100%, 26rem);
+  }
 
-.person-name {
-  overflow: hidden;
-  font-weight: 600;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
+  &__person {
+    @include m.flex-row(3);
+    min-width: 0;
+    max-width: 100%;
+  }
 
-.secondary {
-  color: var(--cl-text-subtle);
-  overflow-wrap: anywhere;
-}
+  &__identity {
+    @include m.flex-column(0);
+    min-width: 0;
+  }
 
-.mobile-card {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: var(--cl-space-1);
-  min-width: 0;
+  &__name {
+    @include m.truncate;
+    font-weight: var(--cl-weight-semibold);
+    color: var(--cl-text);
+  }
+
+  &__email {
+    @include m.truncate;
+    font-size: var(--cl-font-small);
+    color: var(--cl-text-subtle);
+  }
+
+  &__text {
+    color: var(--cl-text);
+    overflow-wrap: anywhere;
+  }
+
+  &__card {
+    @include m.flex-column(2);
+    min-width: 0;
+  }
+
+  &__card-meta {
+    @include m.cluster(2);
+  }
 }

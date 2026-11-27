@@ -18,15 +18,21 @@
   <ng-template appDataTableCell="key" let-row>
     <app-issue-key
       [issueKey]="keyOf(row)"
-      [href]="pathOf(row)"
-      [summary]="row.title"
+      [displayKey]="shortKeyOf(row)"
       [type]="row.issueType"
       [resolved]="isResolved(row)"
+      [focusable]="false"
     />
   </ng-template>
 
   <ng-template appDataTableCell="summary" let-row>
-    <span class="summary" [title]="row.title">{{ row.title }}</span>
+    <a
+      class="ticket-list__title"
+      [class.ticket-list__title--resolved]="isResolved(row)"
+      [routerLink]="pathOf(row)"
+      tabindex="-1"
+      >{{ row.title }}</a
+    >
   </ng-template>
 
   <ng-template appDataTableCell="status" let-row>
@@ -34,7 +40,12 @@
   </ng-template>
 
   <ng-template appDataTableCell="priority" let-row>
-    <app-priority-tag [priority]="row.priority" />
+    <span
+      class="ticket-list__muted-wrap"
+      [class.ticket-list__muted-wrap--resolved]="isResolved(row)"
+    >
+      <app-priority-tag [priority]="row.priority" />
+    </span>
   </ng-template>
 
   <ng-template appDataTableCell="assignee" let-row>
@@ -42,9 +53,12 @@
   </ng-template>
 
   <ng-template appDataTableCell="updated" let-row>
-    <time [attr.datetime]="row.updatedAt" [attr.title]="row.updatedAt | date: 'dd/MM/yyyy HH:mm'">{{
-      row.updatedAt | date: 'dd/MM/yyyy HH:mm'
-    }}</time>
+    <time
+      class="ticket-list__time"
+      [attr.datetime]="row.updatedAt"
+      [appTooltip]="(row.updatedAt | date: 'dd/MM/yyyy HH:mm') ?? ''"
+      >{{ updatedText(row) }}</time
+    >
   </ng-template>
 </app-data-table>
 
@@ -52,14 +66,27 @@
   @if (row.assigneeId && row.assigneeName) {
     <app-user-chip [user]="{ id: row.assigneeId, name: row.assigneeName }" />
   } @else {
-    <span class="muted">Sin asignar</span>
+    <span class="ticket-list__unassigned">Sin asignar</span>
   }
 </ng-template>
 
 <ng-template #mobileTpl let-row>
-  <div class="card">
-    <span class="card-title">{{ row.title }}</span>
-    <div class="card-meta">
+  <div class="ticket-list__card">
+    <app-issue-key
+      [issueKey]="keyOf(row)"
+      [displayKey]="shortKeyOf(row)"
+      [type]="row.issueType"
+      [resolved]="isResolved(row)"
+      [focusable]="false"
+    />
+    <a
+      class="ticket-list__title ticket-list__title--wrap"
+      [class.ticket-list__title--resolved]="isResolved(row)"
+      [routerLink]="pathOf(row)"
+      tabindex="-1"
+      >{{ row.title }}</a
+    >
+    <div class="ticket-list__card-meta">
       <app-lozenge [category]="statusCategory(row)">{{ statusLabel(row) }}</app-lozenge>
       <app-priority-tag [priority]="row.priority" />
       <ng-container *ngTemplateOutlet="assigneeTpl; context: { $implicit: row }" />

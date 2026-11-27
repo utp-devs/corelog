@@ -1,77 +1,64 @@
-<p-dialog
-  styleClass="team-form-dialog"
-  [header]="title()"
-  [visible]="open()"
-  [modal]="true"
-  [dismissableMask]="true"
-  [draggable]="false"
-  [resizable]="false"
-  (visibleChange)="onVisibleChange($event)"
-  (onShow)="onDialogShow()"
+<app-dialog
+  size="md"
+  [heading]="title()"
+  subtitle="Los equipos agrupan a las personas que trabajan juntas."
+  [open]="open()"
+  (closeRequested)="requestCancel()"
 >
-  <div class="form" [formGroup]="form">
+  <div class="team-form-modal__form" [formGroup]="form">
     @if (serverError(); as message) {
-      <div class="alert" role="alert">{{ message }}</div>
+      <div class="team-form-modal__alert" role="alert">{{ message }}</div>
     }
 
-    <div class="field">
-      <label class="label" for="team-name">Nombre del equipo</label>
+    <div class="team-form-modal__field">
+      <label class="team-form-modal__label" for="team-name">Nombre del equipo</label>
       <input
-        #nameInput
+        data-autofocus
         pInputText
         id="team-name"
         type="text"
-        class="control"
+        class="team-form-modal__control"
         formControlName="name"
         aria-required="true"
         [attr.aria-invalid]="nameError() ? 'true' : null"
         aria-describedby="team-name-help"
       />
-      <p id="team-name-help" class="help" [class.error]="nameError() !== null">
+      <p
+        id="team-name-help"
+        class="team-form-modal__help"
+        [class.team-form-modal__help--error]="nameError() !== null"
+      >
         {{ nameError() ?? nameHelp }}
       </p>
     </div>
 
-    <div class="field">
-      <label class="label" for="team-description">Descripción</label>
+    <div class="team-form-modal__field">
+      <label class="team-form-modal__label" for="team-description">Descripción</label>
       <textarea
         pTextarea
         id="team-description"
-        class="control"
+        class="team-form-modal__control"
         rows="3"
         formControlName="description"
         [attr.aria-invalid]="descriptionError() ? 'true' : null"
         [attr.aria-describedby]="descriptionError() ? 'team-description-help' : null"
       ></textarea>
       @if (descriptionError(); as message) {
-        <p id="team-description-help" class="help error">{{ message }}</p>
+        <p id="team-description-help" class="team-form-modal__help team-form-modal__help--error">
+          {{ message }}
+        </p>
       }
     </div>
 
-    <div class="field">
-      <span class="label">Color del equipo</span>
+    <div class="team-form-modal__field">
+      <span class="team-form-modal__label">Color del equipo</span>
       <app-color-picker label="Color del equipo" formControlName="color" data-testid="team-color" />
     </div>
   </div>
 
-  <ng-template pTemplate="footer">
-    <div class="actions">
-      <p-button
-        label="Cancelar"
-        class="touch-target"
-        severity="secondary"
-        [outlined]="true"
-        (onClick)="requestCancel()"
-      />
-      <p-button
-        label="Guardar"
-        class="touch-target"
-        [loading]="submitting()"
-        (onClick)="submit()"
-      />
-    </div>
-  </ng-template>
-</p-dialog>
+  <p-button dialogFooter label="Cancelar" severity="secondary" (onClick)="requestCancel()" />
+  <p-button dialogFooter label="Guardar" [loading]="submitting()" (onClick)="submit()" />
+</app-dialog>
 
 <app-confirm-modal
   [open]="discardOpen()"

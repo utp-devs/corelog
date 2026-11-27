@@ -1,32 +1,62 @@
-.summary {
+@use '../../../../ui/styles/mixins' as m;
+
+:host {
   display: block;
-  overflow: hidden;
-  color: var(--cl-brand);
-  font-weight: 600;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.muted {
-  color: var(--cl-text-subtle);
-}
-
-.card {
-  display: flex;
-  flex-direction: column;
-  gap: var(--cl-space-2);
   min-width: 0;
 }
 
-.card-title {
-  color: var(--cl-brand);
-  font-weight: 600;
-  overflow-wrap: anywhere;
-}
+.ticket-list {
+  /* The title is the one link of the row: plain text color, underlined on hover. */
+  &__title {
+    @include m.truncate;
+    display: block;
+    color: var(--cl-text);
+    font-weight: var(--cl-weight-medium);
+    text-decoration: none;
 
-.card-meta {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--cl-space-2);
+    &:hover {
+      color: var(--cl-brand);
+      text-decoration: underline;
+    }
+
+    &:focus-visible {
+      outline: none;
+      border-radius: var(--cl-radius-sm);
+      box-shadow: var(--cl-shadow-focus);
+    }
+
+    /* Closed and resolved issues are muted, never struck through. */
+    &--resolved {
+      color: var(--cl-text-subtle);
+      font-weight: var(--cl-weight-regular);
+    }
+
+    &--wrap {
+      overflow: visible;
+      white-space: normal;
+      overflow-wrap: anywhere;
+    }
+  }
+
+  &__muted-wrap--resolved {
+    opacity: 0.75;
+  }
+
+  &__time {
+    color: var(--cl-text-subtle);
+    white-space: nowrap;
+  }
+
+  &__unassigned {
+    color: var(--cl-text-subtle);
+  }
+
+  &__card {
+    @include m.flex-column(2);
+    min-width: 0;
+  }
+
+  &__card-meta {
+    @include m.cluster(2);
+  }
 }

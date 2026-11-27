@@ -1,50 +1,57 @@
-.banner {
+@use '../../../../ui/styles/mixins' as m;
+
+:host {
   display: block;
-  margin-bottom: var(--cl-space-4);
-}
-
-.alert-body {
-  display: flex;
-  flex-direction: column;
-  gap: var(--cl-space-1);
-}
-
-.toolbar-left {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: var(--cl-space-2);
   min-width: 0;
 }
 
-.secondary {
-  color: var(--cl-text-subtle);
-  overflow-wrap: anywhere;
-}
+.org-members-page {
+  &__banner {
+    display: block;
+    margin-bottom: var(--cl-space-4);
+  }
 
-.role-static {
-  display: inline-flex;
-  cursor: help;
-}
+  &__alert-body {
+    @include m.flex-column(1);
+  }
 
-.mobile-card {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: var(--cl-space-1);
-  min-width: 0;
-}
+  &__filters {
+    @include m.cluster(2);
+    min-width: 0;
+  }
 
-:host ::ng-deep .role-select {
-  min-width: var(--cl-space-16);
-}
+  /* Wide enough that the search placeholder is never cut. */
+  &__search {
+    width: min(100%, 26rem);
+  }
 
-:host ::ng-deep .filter-select {
-  min-width: var(--cl-space-16);
-}
+  &__filter {
+    width: 12rem;
+    max-width: 100%;
+  }
 
-@media (max-width: 767.98px) {
-  .touch-target {
-    min-height: var(--cl-space-12);
+  &__text {
+    color: var(--cl-text);
+    overflow-wrap: anywhere;
+  }
+
+  /* The role of a row that cannot be edited is a lozenge; editable rows show a compact select. */
+  &__role-select {
+    width: 11rem;
+    max-width: 100%;
+  }
+
+  &__role-static {
+    display: inline-flex;
+    cursor: help;
+  }
+
+  &__card {
+    @include m.flex-column(2);
+    min-width: 0;
+  }
+
+  &__card-role {
+    @include m.flex-row(2);
   }
 }

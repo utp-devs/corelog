@@ -13,7 +13,6 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { Button } from 'primeng/button';
 import { DatePicker } from 'primeng/datepicker';
-import { Dialog } from 'primeng/dialog';
 import { InputText } from 'primeng/inputtext';
 import { Message } from 'primeng/message';
 import { Select } from 'primeng/select';
@@ -33,9 +32,11 @@ import {
   Ticket,
   TicketStore,
   ISSUES_PATH,
+  issueKeyOf,
   issuePath,
 } from '@corelog/core';
 import { DataTablePageChange, DataTablePagination, RowMenuItem } from '@corelog/ui/data-table';
+import { Dialog } from '@corelog/ui/dialog';
 import { EmptyState } from '@corelog/ui/empty-state';
 import { FilterBar, FilterDefinition } from '@corelog/ui/filter-bar';
 import { PageContainer } from '@corelog/ui/page-container';
@@ -218,6 +219,18 @@ export class TicketsListPage {
 
   protected readonly rowActions = (ticket: Ticket): RowMenuItem[] => [
     {
+      key: 'open',
+      label: 'Abrir incidencia',
+      icon: 'pi pi-external-link',
+      onClick: () => this.openIssue(ticket),
+    },
+    {
+      key: 'copy',
+      label: 'Copiar clave',
+      icon: 'pi pi-copy',
+      onClick: () => void this.copyKey(ticket),
+    },
+    {
       key: 'up',
       label: 'Mover arriba',
       icon: 'pi pi-arrow-up',
@@ -254,6 +267,15 @@ export class TicketsListPage {
 
   protected openIssue(ticket: Ticket): void {
     void this.router.navigateByUrl(issuePath(ticket.id));
+  }
+
+  private async copyKey(ticket: Ticket): Promise<void> {
+    try {
+      await navigator.clipboard.writeText(issueKeyOf(ticket.id));
+    } catch {
+      return;
+    }
+    this.notify.success('Clave copiada');
   }
 
   protected openNew(): void {

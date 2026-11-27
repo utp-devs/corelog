@@ -2,12 +2,14 @@ import { DatePipe, NgTemplateOutlet } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
+  LOCALE_ID,
   TemplateRef,
   computed,
   inject,
   input,
   output,
 } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import {
   BreakpointService,
   ISSUE_STATUS_META,
@@ -27,15 +29,18 @@ import {
 import { IssueKey } from '@corelog/ui/issue-key';
 import { Lozenge } from '@corelog/ui/lozenge';
 import { PriorityTag } from '@corelog/ui/priority-tag';
+import { AppTooltip } from '@corelog/ui/tooltip';
 import { UserChip } from '@corelog/ui/user-chip';
+
+import { relativeTime, shortIssueKey } from './relative-time';
 
 /** Below this width the updated-date column is left out so the remaining columns fit. */
 const NARROW_TABLE_QUERY = '(max-width: 1023.98px)';
 
 const ALL_COLUMNS: DataTableColumn[] = [
-  { key: 'key', title: 'Clave' },
-  { key: 'summary', title: 'Resumen' },
-  { key: 'status', title: 'Estado' },
+  { key: 'key', title: 'Clave', hideable: true },
+  { key: 'summary', title: 'Resumen', field: 'title', ellipsis: true },
+  { key: 'status', title: 'Estado', hideable: true },
   { key: 'priority', title: 'Prioridad', hideable: true },
   { key: 'assignee', title: 'Responsable', hideable: true },
   { key: 'updated', title: 'Actualizado', hideable: true },
@@ -47,11 +52,13 @@ const ALL_COLUMNS: DataTableColumn[] = [
   imports: [
     DataTable,
     DataTableCell,
+    AppTooltip,
     DatePipe,
     IssueKey,
     Lozenge,
     NgTemplateOutlet,
     PriorityTag,
+    RouterLink,
     UserChip,
   ],
   templateUrl: './ticket-list.html',
@@ -59,6 +66,7 @@ const ALL_COLUMNS: DataTableColumn[] = [
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class TicketList {
+  private readonly datePipe = new DatePipe(inject(LOCALE_ID));
   private readonly breakpoints = inject(BreakpointService);
   private readonly narrow = this.breakpoints.matches(NARROW_TABLE_QUERY);
 
@@ -85,6 +93,18 @@ export class TicketList {
 
   protected statusCategory(ticket: Ticket): IssueStatusCategory {
     return ISSUE_STATUS_META[ticket.status].category;
+  }
+
+  protected updatedText(ticket: Ticket): string {
+    return (
+      relativeTime(ticket.updatedAt) ??
+      this.datePipe.transform(ticket.updatedAt, 'dd/MM/yyyy') ??
+      ticket.updatedAt
+    );
+  }
+
+  protected shortKeyOf(ticket: Ticket): string {
+    return shortIssueKey(issueKeyOf(ticket.id));
   }
 
   protected keyOf(ticket: Ticket): string {

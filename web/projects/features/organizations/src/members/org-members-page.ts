@@ -5,6 +5,7 @@ import {
   computed,
   effect,
   inject,
+  linkedSignal,
   signal,
   untracked,
 } from '@angular/core';
@@ -33,7 +34,13 @@ import {
 } from '@corelog/core';
 import { BulkAction } from '@corelog/ui/bulk-bar';
 import type { LozengeTone } from '@corelog/ui/lozenge';
-import { DataTable, DataTableColumn, RowMenuItem } from '@corelog/ui/data-table';
+import {
+  DataTable,
+  DataTableColumn,
+  DataTablePageChange,
+  DataTablePagination,
+  RowMenuItem,
+} from '@corelog/ui/data-table';
 import { DataTableCell } from '@corelog/ui/data-table';
 import { EmptyState } from '@corelog/ui/empty-state';
 import { Lozenge } from '@corelog/ui/lozenge';
@@ -60,13 +67,12 @@ const ROLE_FILTER_OPTIONS: { label: string; value: RoleFilter }[] = [
   ...ORG_ROLES.map((role) => ({ value: role, label: ROLE_LABELS[role] })),
 ];
 
-const COLUMNS: DataTableColumn[] = [
-  { key: 'name', title: 'Persona', mobilePrimary: true },
-  { key: 'jobTitle', title: 'Cargo' },
-  { key: 'email', title: 'Correo' },
-  { key: 'role', title: 'Rol', mobilePrimary: true },
-  { key: 'joinedAt', title: 'Se unió' },
-];
+const DEFAULT_PAGE_SIZE = 25;
+
+const PERSON_COLUMN: DataTableColumn = { key: 'name', title: 'Persona', mobilePrimary: true };
+const JOB_TITLE_COLUMN: DataTableColumn = { key: 'jobTitle', title: 'Cargo' };
+const ROLE_COLUMN: DataTableColumn = { key: 'role', title: 'Rol', mobilePrimary: true };
+const JOINED_COLUMN: DataTableColumn = { key: 'joinedAt', title: 'Se unió' };
 
 function matchesQuery(member: OrganizationMember, query: string): boolean {
   const needle = query.trim().toLocaleLowerCase();
@@ -138,7 +144,6 @@ export class OrgMembersPage {
   protected readonly busy = signal(false);
 
   protected readonly roleFilterOptions = ROLE_FILTER_OPTIONS;
-  protected readonly columns = COLUMNS;
   protected readonly formatDate = formatOrgDate;
 
   protected readonly isSelf = (member: OrganizationMember): boolean =>
@@ -162,6 +167,35 @@ export class OrgMembersPage {
         matchesQuery(member, this.query()),
     ),
   );
+
+  protected readonly pageSize = signal(DEFAULT_PAGE_SIZE);
+  protected readonly pageSizes = [25, 50, 100];
+  /** Back to the first page whenever the filters or the page size change. */
+  private readonly page = linkedSignal<[string, RoleFilter, number], number>({
+    source: () => [this.query(), this.roleFilter(), this.pageSize()],
+    computation: () => 1,
+  });
+
+  protected readonly pageRows = computed(() => {
+    const start = (this.page() - 1) * this.pageSize();
+    return this.visible().slice(start, start + this.pageSize());
+  });
+
+  protected readonly pagination = computed<DataTablePagination | null>(() =>
+    this.visible().length > 0
+      ? { page: this.page(), pageSize: this.pageSize(), total: this.visible().length }
+      : null,
+  );
+
+  /** The job title column only appears when somebody in the list has one. */
+  protected readonly columns = computed<DataTableColumn[]>(() => {
+    const columns = [PERSON_COLUMN];
+    if (this.members().some((member) => !!member.jobTitle)) {
+      columns.push(JOB_TITLE_COLUMN);
+    }
+    columns.push(ROLE_COLUMN, JOINED_COLUMN);
+    return columns;
+  });
 
   protected readonly loading = computed(() => {
     const status = this.status();
@@ -192,6 +226,14 @@ export class OrgMembersPage {
       const view = this.canView();
       if (id && view) untracked(() => this.load());
     });
+  }
+
+  protected changePage(change: DataTablePageChange): void {
+    if (change.pageSize !== this.pageSize()) {
+      this.pageSize.set(change.pageSize);
+      return;
+    }
+    this.page.set(change.page);
   }
 
   protected load(): void {

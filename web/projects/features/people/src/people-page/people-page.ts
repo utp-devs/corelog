@@ -1,4 +1,12 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { NgTemplateOutlet } from '@angular/common';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+  linkedSignal,
+  signal,
+} from '@angular/core';
 import { rxResource } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import {
@@ -11,7 +19,13 @@ import {
   PeopleApiService,
   PeopleMember,
 } from '@corelog/core';
-import { DataTable, DataTableCell, DataTableColumn } from '@corelog/ui/data-table';
+import {
+  DataTable,
+  DataTableCell,
+  DataTableColumn,
+  DataTablePageChange,
+  DataTablePagination,
+} from '@corelog/ui/data-table';
 import { EmptyState } from '@corelog/ui/empty-state';
 import { Lozenge, LozengeTone } from '@corelog/ui/lozenge';
 import { PageContainer } from '@corelog/ui/page-container';
@@ -19,6 +33,8 @@ import { PageHeader } from '@corelog/ui/page-header';
 import { SearchInput } from '@corelog/ui/search-input';
 import { Toolbar, ToolbarLeft } from '@corelog/ui/toolbar';
 import { UserAvatar } from '@corelog/ui/user-avatar';
+
+const DEFAULT_PAGE_SIZE = 25;
 
 /** Directory of the members of the active organization. */
 @Component({
@@ -28,6 +44,7 @@ import { UserAvatar } from '@corelog/ui/user-avatar';
     DataTableCell,
     EmptyState,
     Lozenge,
+    NgTemplateOutlet,
     PageContainer,
     PageHeader,
     SearchInput,
@@ -52,6 +69,13 @@ export class PeoplePage {
   });
 
   protected readonly query = signal('');
+  protected readonly pageSize = signal(DEFAULT_PAGE_SIZE);
+  protected readonly pageSizes = [25, 50, 100];
+  /** Back to the first page whenever the search or the page size changes. */
+  private readonly page = linkedSignal<[string, number], number>({
+    source: () => [this.query(), this.pageSize()],
+    computation: () => 1,
+  });
 
   private readonly directory = rxResource({
     params: () => this.orgId() ?? undefined,
@@ -70,12 +94,30 @@ export class PeoplePage {
     return filterMembers(loaded, this.query());
   });
 
-  protected readonly columns: DataTableColumn[] = [
-    { key: 'name', title: 'Persona', mobilePrimary: true },
-    { key: 'jobTitle', title: 'Cargo' },
-    { key: 'role', title: 'Rol en la organización' },
-    { key: 'email', title: 'Correo' },
-  ];
+  protected readonly pageRows = computed<PeopleMember[]>(() => {
+    const start = (this.page() - 1) * this.pageSize();
+    return this.visible().slice(start, start + this.pageSize());
+  });
+
+  protected readonly pagination = computed<DataTablePagination | null>(() =>
+    this.visible().length > 0
+      ? { page: this.page(), pageSize: this.pageSize(), total: this.visible().length }
+      : null,
+  );
+
+  /** The job title column only appears when somebody in the directory has one. */
+  private readonly hasJobTitles = computed(() =>
+    this.visible().some((member) => !!member.jobTitle),
+  );
+
+  protected readonly columns = computed<DataTableColumn[]>(() => {
+    const columns: DataTableColumn[] = [{ key: 'name', title: 'Persona', mobilePrimary: true }];
+    if (this.hasJobTitles()) {
+      columns.push({ key: 'jobTitle', title: 'Cargo' });
+    }
+    columns.push({ key: 'role', title: 'Rol en la organización' });
+    return columns;
+  });
 
   protected toneOf(role: OrgRole): LozengeTone {
     return ORG_ROLE_TONES[role];
@@ -96,6 +138,14 @@ export class PeoplePage {
     return query
       ? `No hay personas que coincidan con "${query}".`
       : 'Invita a tus compañeros para verlos aquí.';
+  }
+
+  protected changePage(change: DataTablePageChange): void {
+    if (change.pageSize !== this.pageSize()) {
+      this.pageSize.set(change.pageSize);
+      return;
+    }
+    this.page.set(change.page);
   }
 
   protected reload(): void {

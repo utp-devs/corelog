@@ -11,19 +11,14 @@
     <app-page-header title="Miembros" [subtitle]="subtitle()">
       @if (canManage()) {
         <div appPageHeaderActions>
-          <p-button
-            label="Invitar personas"
-            type="button"
-            class="touch-target"
-            (onClick)="goToInvitations()"
-          />
+          <p-button label="Invitar personas" type="button" (onClick)="goToInvitations()" />
         </div>
       }
     </app-page-header>
 
     @if (role() === 'member') {
-      <p-message severity="info" [closable]="false" styleClass="banner">
-        <span class="alert-body">
+      <p-message severity="info" [closable]="false" class="org-members-page__banner">
+        <span class="org-members-page__alert-body">
           <strong>Solo lectura</strong>
           <span
             >Puedes ver a los miembros de la organización. Solo los administradores pueden cambiar
@@ -34,7 +29,7 @@
     }
 
     @if (roleError(); as message) {
-      <div role="alert" class="banner">
+      <div role="alert" class="org-members-page__banner">
         <p-message severity="error" [closable]="true" (onClose)="roleError.set(null)">{{
           message
         }}</p-message>
@@ -42,15 +37,17 @@
     }
 
     <app-toolbar>
-      <div appToolbarLeft class="toolbar-left">
+      <div appToolbarLeft class="org-members-page__filters">
         <app-search-input
+          class="org-members-page__search"
           [(value)]="query"
           [placeholder]="'Buscar por nombre o correo'"
           [ariaLabel]="'Buscar miembros'"
         />
         <p-select
           ariaLabel="Filtrar por rol"
-          styleClass="filter-select"
+          class="org-members-page__filter"
+          [fluid]="true"
           [options]="roleFilterOptions"
           optionLabel="label"
           optionValue="value"
@@ -63,8 +60,11 @@
     <app-data-table
       tableKey="org-members"
       [fill]="true"
-      [columns]="columns"
-      [data]="orgId() ? visible() : []"
+      [columns]="columns()"
+      [data]="orgId() ? pageRows() : []"
+      [pagination]="pagination()"
+      [pageSizes]="pageSizes"
+      (pageChange)="changePage($event)"
       rowKey="userId"
       [loading]="loading()"
       [error]="error()"
@@ -80,29 +80,30 @@
         <app-org-member-person
           [userId]="row.userId"
           [name]="row.name"
+          [email]="row.email"
           [hasAvatar]="row.hasAvatar"
           [isSelf]="isSelf(row)"
         />
       </ng-template>
       <ng-template appDataTableCell="jobTitle" let-row>
-        {{ row.jobTitle || '—' }}
-      </ng-template>
-      <ng-template appDataTableCell="email" let-row>
-        <span class="secondary">{{ row.email }}</span>
+        <span class="org-members-page__text" [attr.title]="row.jobTitle || null">{{
+          row.jobTitle || '-'
+        }}</span>
       </ng-template>
       <ng-template appDataTableCell="role" let-row>
-        <ng-container *ngTemplateOutlet="roleTpl; context: { $implicit: row }" />
+        <ng-container *ngTemplateOutlet="roleTpl; context: { $implicit: row, compact: true }" />
       </ng-template>
       <ng-template appDataTableCell="joinedAt" let-row>
         {{ formatDate(row.joinedAt) }}
       </ng-template>
     </app-data-table>
 
-    <ng-template #roleTpl let-member>
+    <ng-template #roleTpl let-member let-compact="compact">
       @if (canChangeRole(member)) {
         <p-select
-          size="small"
-          styleClass="role-select"
+          class="org-members-page__role-select"
+          [fluid]="true"
+          [size]="compact ? 'small' : undefined"
           [ariaLabel]="'Rol de ' + member.name"
           [formControl]="roleControl(member)"
           [options]="roleOptions(member)"
@@ -110,22 +111,26 @@
           optionValue="value"
         />
       } @else {
-        <span class="role-static" [pTooltip]="roleReason(member) ?? undefined">
+        <span class="org-members-page__role-static" [pTooltip]="roleReason(member) ?? undefined">
           <app-lozenge [tone]="roleTone(member.role)">{{ roleLabel(member.role) }}</app-lozenge>
         </span>
       }
     </ng-template>
 
     <ng-template #mobileTpl let-member>
-      <div class="mobile-card">
+      <div class="org-members-page__card">
         <app-org-member-person
           [userId]="member.userId"
           [name]="member.name"
+          [email]="member.email"
           [hasAvatar]="member.hasAvatar"
           [isSelf]="isSelf(member)"
         />
-        <span class="secondary">{{ member.email }}</span>
-        <ng-container *ngTemplateOutlet="roleTpl; context: { $implicit: member }" />
+        <div class="org-members-page__card-role">
+          <ng-container
+            *ngTemplateOutlet="roleTpl; context: { $implicit: member, compact: false }"
+          />
+        </div>
       </div>
     </ng-template>
 
@@ -141,12 +146,7 @@
           description="Invita a tus compañeros para empezar a colaborar."
         />
         @if (canManage()) {
-          <p-button
-            label="Invitar personas"
-            type="button"
-            class="touch-target"
-            (onClick)="goToInvitations()"
-          />
+          <p-button label="Invitar personas" type="button" (onClick)="goToInvitations()" />
         }
       }
     </ng-template>

@@ -1,11 +1,11 @@
 <app-page-container variant="wide" pageName="issues" [ready]="!loading()" [fill]="true">
   <app-page-header
     title="Incidencias"
-    subtitle="Consulta y administra los incidentes registrados."
+    subtitle="Consulta y administra las incidencias registradas."
   />
 
   <app-toolbar>
-    <div appToolbarLeft class="filters">
+    <div appToolbarLeft class="tickets-list-page__filters">
       <app-filter-bar
         searchPlaceholder="Buscar incidencia por título o descripción"
         [searchValue]="search()"
@@ -31,9 +31,9 @@
   </app-toolbar>
 
   @if (advancedVisible()) {
-    <div class="saved-row">
+    <div class="tickets-list-page__saved-row">
       <p-select
-        class="filter-select"
+        class="tickets-list-page__filter-select"
         [options]="savedFilterOptions()"
         optionLabel="label"
         optionValue="value"
@@ -76,7 +76,7 @@
   }
 
   @if (savedFilterError(); as message) {
-    <div role="alert" class="alert">
+    <div role="alert" class="tickets-list-page__alert">
       <p-message severity="error" [closable]="true" (onClose)="dismissSavedFilterError()">{{
         message
       }}</p-message>
@@ -98,19 +98,17 @@
     />
   </app-section>
 
-  <p-dialog
-    header="Guardar filtro"
-    [modal]="true"
-    [draggable]="false"
-    [resizable]="false"
-    [visible]="saveDialogOpen()"
-    (visibleChange)="saveDialogOpen.set($event)"
-    [style]="{ width: 'min(420px, 92vw)' }"
+  <app-dialog
+    size="sm"
+    heading="Guardar filtro"
+    subtitle="Ponle un nombre para volver a usarlo cuando quieras."
+    [open]="saveDialogOpen()"
+    (closeRequested)="closeSaveDialog()"
   >
     <input
       pInputText
-      class="name-input"
-      autofocus
+      class="tickets-list-page__name-input"
+      data-autofocus
       maxlength="80"
       aria-label="Nombre del filtro"
       placeholder="Nombre del filtro"
@@ -118,16 +116,14 @@
       (ngModelChange)="onSavedFilterName($event)"
       (keydown.enter)="saveCurrentFilter()"
     />
-    <ng-template #footer>
-      <p-button
-        label="Cancelar"
-        severity="secondary"
-        [outlined]="true"
-        (onClick)="closeSaveDialog()"
-      />
-      <p-button label="Guardar" [disabled]="!canSaveName()" (onClick)="saveCurrentFilter()" />
-    </ng-template>
-  </p-dialog>
+    <p-button dialogFooter label="Cancelar" severity="secondary" (onClick)="closeSaveDialog()" />
+    <p-button
+      dialogFooter
+      label="Guardar"
+      [disabled]="!canSaveName()"
+      (onClick)="saveCurrentFilter()"
+    />
+  </app-dialog>
 </app-page-container>
 
 <ng-template #emptyTpl>

@@ -91,7 +91,9 @@ describe('TicketsListPage saved filters', () => {
     await fixture.whenStable();
     expect(setup.savedFilterApi.list).toHaveBeenCalled();
 
-    const savedSelect = fixture.debugElement.query(By.css('.saved-row p-select'));
+    const savedSelect = fixture.debugElement.query(
+      By.css('.tickets-list-page__saved-row p-select'),
+    );
     savedSelect.triggerEventHandler('ngModelChange', SAVED_FILTER.id);
     fixture.detectChanges();
 
