@@ -1,0 +1,16 @@
+@if (visible()) {
+  <div class="archived-notice" role="status" data-testid="archived-notice">
+    <i class="pi pi-inbox archived-notice__icon" aria-hidden="true"></i>
+    <p class="archived-notice__text">Este proyecto está archivado y es de solo lectura</p>
+    @if (manager()) {
+      <p-button
+        label="Restaurar"
+        size="small"
+        severity="secondary"
+        [loading]="busy()"
+        data-testid="archived-notice-restore"
+        (onClick)="restore()"
+      />
+    }
+  </div>
+}

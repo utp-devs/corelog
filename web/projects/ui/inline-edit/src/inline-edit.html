@@ -57,8 +57,8 @@
       [class.inline-edit__trigger--warning]="tone() === 'warning'"
       [attr.aria-label]="'Editar ' + label() + ': ' + shownText()"
       [attr.aria-haspopup]="isSelectType() ? 'listbox' : null"
-      [attr.title]="disabled() ? disabledReason() : null"
-      [disabled]="pending() || disabled()"
+      [attr.title]="disabled() || locked() ? disabledReason() : null"
+      [disabled]="pending() || disabled() || locked()"
       (click)="startEdit()"
     >
       <span

@@ -84,6 +84,8 @@ export class InlineEdit implements ControlValueAccessor {
   readonly appearance = input<InlineEditAppearance>('text');
   /** Color of the `lozenge` appearance. */
   readonly tone = input<InlineEditTone>('neutral');
+  /** Locks the field from the outside (for example a read-only project); the value stays readable. */
+  readonly locked = input(false);
   /** Why the field cannot be edited. Shown as its tooltip while it is disabled. */
   readonly disabledReason = input<string>();
   /** Saves the new value. If it throws or rejects, its message is shown (or a generic one) and the previous value is kept. */

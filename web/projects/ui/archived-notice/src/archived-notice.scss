@@ -1,0 +1,26 @@
+@use '../../styles/mixins' as m;
+
+:host {
+  display: block;
+}
+
+.archived-notice {
+  @include m.flex-row(3);
+  align-items: center;
+  flex-wrap: wrap;
+  padding: var(--cl-space-2) var(--cl-space-4);
+  border: 1px solid var(--cl-warning);
+  border-radius: var(--cl-radius-md);
+  background: var(--cl-warning-bg);
+  color: var(--cl-warning-text);
+
+  &__icon {
+    flex: none;
+  }
+
+  &__text {
+    flex: 1 1 12rem;
+    margin: 0;
+    font-weight: var(--cl-weight-medium);
+  }
+}
