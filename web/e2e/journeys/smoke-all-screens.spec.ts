@@ -197,10 +197,14 @@ async function smokeIds(client: APIRequestContext, orgId: string): Promise<Ids> 
       (await (
         await client.get('issues', { params: { organization_id: orgId, project_id: projectId } })
       ).json()) as {
-        data: Array<{ id: string }>;
+        data: Array<{ id: string; project_id?: string }>;
       }
     ).data;
-  let issues = projectId === missing ? [] : await listIssues();
+  // Only issues of the chosen project: the list may still hold issues of projects that were deleted.
+  let issues =
+    projectId === missing
+      ? []
+      : (await listIssues()).filter((issue) => !issue.project_id || issue.project_id === projectId);
   if (issues.length === 0 && projectId !== missing) {
     const created = await client.post('issues', {
       data: {
