@@ -1,124 +1,186 @@
+@use '../../../../ui/styles/mixins' as m;
+
 :host {
   display: block;
   min-width: 0;
 }
 
-/*
- * Panels wrap in a row. Every panel stretches to the row height, so no card has empty space under
- * its content. A last row with fewer panels grows to the full width, so no empty block is left beside it.
- */
-.panels {
-  display: flex;
+.dashboard {
+  @include m.flex-column(6);
   flex: 1 1 auto;
-  flex-direction: column;
-  gap: var(--cl-space-4);
-  min-height: 0;
-  width: 100%;
-}
-
-.row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: stretch;
-  gap: var(--cl-space-4);
-  width: 100%;
-}
-
-.row > * {
-  flex: 1 1 320px;
   min-width: 0;
-}
 
-/* The chart card fills the height of its panel row. */
-.row > app-chart-card {
-  display: flex;
-  flex-direction: column;
-}
+  // Four tiles on the page gutter: 2x2 on tablets and phones, one column only on very narrow screens.
+  &__tiles {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: var(--cl-space-4);
 
-.subtle {
-  color: var(--cl-text-subtle);
-}
+    @include m.respond-down(992px) {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
 
-/* Empty-state copy: one block per step with its own vertical rhythm, so the lines never share a box. */
-.steps {
-  display: flex;
-  flex-direction: column;
-  gap: var(--cl-space-3);
-  margin: 0;
-  padding-inline-start: var(--cl-space-5);
-}
-
-.step {
-  display: block;
-  line-height: 1.5;
-  min-width: 0;
-  overflow-wrap: anywhere;
-}
-
-.list {
-  display: grid;
-  gap: var(--cl-space-2);
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.list-item {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--cl-space-3);
-  min-width: 0;
-  padding: var(--cl-space-2) var(--cl-space-3);
-  border: 1px solid var(--cl-border);
-  border-radius: var(--cl-radius-md);
-}
-
-.project-item {
-  justify-content: flex-start;
-}
-
-.item-text {
-  min-width: 0;
-  overflow-wrap: anywhere;
-}
-
-.item-link {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.meta {
-  flex-shrink: 0;
-  font-size: var(--cl-font-small);
-  overflow-wrap: anywhere;
-}
-
-/* Stacked layout below 768 px: one column, full-width panels. */
-@media (max-width: 767px) {
-  .row {
-    flex-direction: column;
+    @include m.respond-down(340px) {
+      grid-template-columns: minmax(0, 1fr);
+    }
   }
 
-  .row > * {
-    flex: none;
-    width: 100%;
-  }
-}
+  // Cards of a row stretch to the same height; one column on tablets and phones.
+  &__panels {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: stretch;
+    gap: var(--cl-space-4);
+    min-width: 0;
 
-/* Phones: links are at least 44 px tall and wrap instead of overflowing the panel. */
-@media (max-width: 767.98px) {
-  .item-link,
-  .empty-link,
-  .step a {
-    display: inline-flex;
-    align-items: center;
-    min-height: 44px;
-    max-width: 100%;
-    white-space: normal;
+    @include m.respond-down(992px) {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+
+  &__subtle {
+    margin: 0;
+    color: var(--cl-text-subtle);
+  }
+
+  // Explicit link colors: the browser visited color never shows, in light or dark.
+  &__link {
+    color: var(--cl-brand);
+    text-decoration: none;
+
+    &:visited {
+      color: var(--cl-brand);
+    }
+
+    &:hover {
+      color: var(--cl-brand-hover);
+      text-decoration: underline;
+    }
+
+    &:focus-visible {
+      outline: none;
+      border-radius: var(--cl-radius-sm);
+      box-shadow: var(--cl-shadow-focus);
+    }
+
+    &--title {
+      @include m.truncate;
+      display: block;
+      font-weight: var(--cl-weight-medium);
+
+      @include m.respond-down(480px) {
+        white-space: normal;
+        overflow-wrap: anywhere;
+      }
+    }
+
+    &--secondary {
+      flex-shrink: 0;
+      font-size: var(--cl-font-small);
+    }
+
+    @media (pointer: coarse) {
+      display: inline-flex;
+      align-items: center;
+      min-height: var(--cl-control-h-lg);
+    }
+  }
+
+  &__steps-progress {
+    margin-bottom: var(--cl-space-4);
+  }
+
+  &__steps {
+    @include m.flex-column(3);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  &__step {
+    @include m.flex-row(3, flex-start);
+    min-width: 0;
+    line-height: var(--cl-lh-body);
+
+    &--done &-icon {
+      color: var(--cl-success);
+    }
+  }
+
+  &__step-icon {
+    flex-shrink: 0;
+    margin-top: var(--cl-space-1);
+    color: var(--cl-text-subtle);
+  }
+
+  &__step-text {
+    min-width: 0;
     overflow-wrap: anywhere;
+  }
+
+  &__list {
+    @include m.flex-column(2);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  &__item {
+    @include m.flex-row(3);
+    min-width: 0;
+    min-height: var(--cl-control-h-lg);
+    padding: var(--cl-space-2) var(--cl-space-3);
+    border: 1px solid var(--cl-divider);
+    border-radius: var(--cl-radius-md);
+
+    // Phones: tags drop under the title so long titles wrap instead of being cut.
+    @include m.respond-down(480px) {
+      flex-wrap: wrap;
+    }
+  }
+
+  &__item-main {
+    @include m.flex-column(0);
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  &__item-text {
+    overflow-wrap: anywhere;
+    color: var(--cl-text);
+  }
+
+  &__item-tags {
+    @include m.cluster(2);
+    flex-shrink: 0;
+
+    @include m.respond-down(480px) {
+      flex-basis: 100%;
+    }
+  }
+
+  &__key {
+    flex-shrink: 0;
+    padding: 0 var(--cl-space-2);
+    border-radius: var(--cl-radius-sm);
+    background: var(--cl-bg-sunken);
+    font-size: var(--cl-font-small);
+    font-weight: var(--cl-weight-semibold);
+    line-height: var(--cl-space-6);
+    color: var(--cl-text);
+  }
+
+  &__meta {
+    font-size: var(--cl-font-small);
+    color: var(--cl-text-subtle);
+
+    &--overdue {
+      font-weight: var(--cl-weight-medium);
+      color: var(--cl-danger);
+    }
+  }
+
+  &__sr-only {
+    @include m.visually-hidden;
   }
 }

@@ -177,7 +177,13 @@ describe('MyDashboardPage', () => {
     expectNoConsoleOutput();
   });
 
-  it('does not show the getting-started card to users with assigned work', () => {
+  it('hides the getting-started card when every step is already done', () => {
+    window.localStorage.setItem(
+      RECENT_STORAGE_KEY,
+      JSON.stringify([
+        { kind: 'project', id: 'p-1', title: 'CoreLog', subtitle: 'CORE', link: '/projects/p-1' },
+      ]),
+    );
     const fixture = create();
 
     expect(sectionOf(fixture, 'Primeros pasos')).toBeUndefined();
@@ -270,21 +276,80 @@ describe('MyDashboardPage', () => {
     expectNoConsoleOutput();
   });
 
-  it('stacks the panels in one column on mobile', () => {
-    restoreViewport = installViewport(390);
+  it('shows the four figures, including the active sprints, in one tile group', () => {
     const fixture = create();
 
-    expect(list(fixture, 'Mis proyectos')).not.toBeNull();
-    expect(el(fixture).querySelector('.panels')?.getAttribute('data-layout')).toBe('stacked');
-    expectNoConsoleOutput();
+    const group = el(fixture).querySelector('[role="group"][aria-label="Cifras principales"]');
+    expect(group?.querySelectorAll('app-stat-tile')).toHaveLength(4);
+    expect(group?.textContent).toContain('Sprints activos');
   });
 
-  it('keeps the panel grid on desktop', () => {
-    restoreViewport = installViewport(1440);
+  it('greets the user with the date', () => {
     const fixture = create();
 
-    expect(list(fixture, 'Mis proyectos')).not.toBeNull();
-    expect(el(fixture).querySelector('.panels')?.getAttribute('data-layout')).toBe('grid');
-    expectNoConsoleOutput();
+    expect(el(fixture).querySelector('h1')?.textContent).toContain('Mi resumen');
+    expect(textOf(fixture)).toMatch(/Hola.* Hoy es /);
+  });
+
+  it('lists assigned issues with key, status and priority', () => {
+    const fixture = create();
+
+    const item = list(fixture, 'Incidencias urgentes')?.querySelector('li');
+    expect(item?.textContent).toContain('CORE');
+    expect(item?.textContent).toContain('Revisar exportacion');
+    expect(item?.querySelector('app-status-tag')).not.toBeNull();
+    expect(item?.querySelector('app-priority-tag')).not.toBeNull();
+    expect(item?.textContent).toContain('Vence el 25 nov');
+  });
+
+  it('draws the status bars with the status category colors and no inline colors', () => {
+    const fixture = create();
+
+    const fills = Array.from(
+      el(fixture).querySelectorAll<HTMLElement>('.chart-card__progress-fill'),
+    );
+    expect(fills.map((fill) => fill.style.getPropertyValue('--cl-bar-color'))).toEqual([
+      'var(--cl-cat-todo)',
+      'var(--cl-cat-progress)',
+    ]);
+    expect(el(fixture).querySelector('[style*="background"]')).toBeNull();
+  });
+
+  it('offers an action to start when nothing is assigned', () => {
+    dashboardApi.me.mockReturnValue(of(idleSummary));
+    const fixture = create();
+
+    const card = el(fixture).querySelector('app-chart-card');
+    expect(card?.textContent).toContain('Cuando te asignen incidencias');
+    expect(card?.querySelector('a')?.getAttribute('href')).toBe('/projects');
+  });
+
+  it('shows the checklist progress from real data and marks done steps', () => {
+    dashboardApi.me.mockReturnValue(of(idleSummary));
+    const fixture = create();
+
+    const bar = byRole(fixture, 'progressbar');
+    expect(bar?.getAttribute('aria-valuenow')).toBe('33');
+    expect(el(fixture).querySelectorAll('.pi-check-circle')).toHaveLength(1);
+    expect(textOf(fixture)).toContain('(completado)');
+  });
+
+  it('hides the checklist once every step is done', () => {
+    window.localStorage.setItem(
+      RECENT_STORAGE_KEY,
+      JSON.stringify([
+        { kind: 'project', id: 'p-1', title: 'CoreLog', subtitle: 'CORE', link: '/projects/p-1' },
+      ]),
+    );
+    dashboardApi.me.mockReturnValue(of({ ...idleSummary, assignedOpen: 1 }));
+    const fixture = create();
+
+    expect(sectionOf(fixture, 'Primeros pasos')).toBeUndefined();
+  });
+
+  it('keeps visited links on the brand color', () => {
+    const fixture = create();
+
+    expect(el(fixture).querySelector('a.dashboard__link')).not.toBeNull();
   });
 });
