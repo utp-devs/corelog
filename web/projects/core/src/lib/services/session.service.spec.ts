@@ -6,7 +6,7 @@ import { AUTH_TOKEN_KEY, SessionService } from './session.service';
 describe('SessionService', () => {
   beforeEach(() => localStorage.clear());
 
-  it('stores the token under the key shared with the React app', () => {
+  it('stores the token under the session storage key', () => {
     TestBed.configureTestingModule({ providers: [provideCorelogTesting()] });
     const session = TestBed.inject(SessionService);
     session.startSession('token-1');

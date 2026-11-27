@@ -3,7 +3,7 @@ import { DOCUMENT, Injectable, computed, inject, signal } from '@angular/core';
 import { LOCATION_ASSIGN, LOGIN_URL } from '../config/navigation';
 import { StorageService } from './storage.service';
 
-/** Same key as the React app (ui/src/adapters/out/storage/token-storage.ts), so both share the session. */
+/** Storage key of the session token. Kept stable so a session survives a reload and is shared by all tabs. */
 export const AUTH_TOKEN_KEY = 'corelog.auth.token';
 
 /** Owns the bearer token. The token lives in localStorage, shared by every CoreLog app on the origin. */
@@ -19,7 +19,7 @@ export class SessionService {
   readonly isAuthenticated = computed(() => this.tokenState() !== null);
 
   constructor() {
-    // Another tab (or the React app) may sign in or out while this app is open.
+    // Another tab may sign in or out while this app is open.
     this.document.defaultView?.addEventListener('storage', (event: StorageEvent) => {
       if (event.key === AUTH_TOKEN_KEY || event.key === null) {
         this.tokenState.set(this.storage.getItem(AUTH_TOKEN_KEY));

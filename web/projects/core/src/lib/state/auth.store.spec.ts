@@ -272,4 +272,18 @@ describe('AuthStore', () => {
     expect(store.displayName()).toBeNull();
     expect(store.isPlatformAdmin()).toBe(false);
   });
+
+  it('replaces the signed-in account in place when the profile changes', async () => {
+    const http = setup();
+    const store = await signIn(http);
+
+    const current = store.user();
+    if (!current) throw new Error('expected a signed-in user');
+    store.setUser({ ...current, name: 'Ada Lovelace', avatarKey: 'k-2' });
+
+    expect(store.displayName()).toBe('Ada Lovelace');
+    expect(store.user()?.avatarKey).toBe('k-2');
+    expect(store.isAuthenticated()).toBe(true);
+    http.verify();
+  });
 });

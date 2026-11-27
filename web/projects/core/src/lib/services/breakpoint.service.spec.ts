@@ -62,8 +62,8 @@ describe('BreakpointService.matches', () => {
 
   it('returns false when matchMedia is unavailable (SSR-like environment)', () => {
     const original = window.matchMedia;
-    // @ts-expect-error simulating an environment without matchMedia
-    window.matchMedia = undefined;
+    // Simulates an environment without matchMedia.
+    (window as unknown as { matchMedia: unknown }).matchMedia = undefined;
     try {
       const matches = TestBed.inject(BreakpointService).matches('(min-width: 1px)');
       expect(matches()).toBe(false);

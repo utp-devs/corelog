@@ -35,8 +35,10 @@ export class AvatarUrlService implements OnDestroy {
     const key = `${userId}|${version}`;
     let entry = this.entries.get(key);
     if (!entry) {
-      entry = this.load(key, userId);
+      entry = { url: signal<string | null>(null), refs: 0, objectUrl: null };
+      // Registered before the request starts, so a synchronous source can still deliver its blob.
       this.entries.set(key, entry);
+      this.load(key, userId, entry);
     }
     const current = entry;
     current.refs += 1;
@@ -58,8 +60,7 @@ export class AvatarUrlService implements OnDestroy {
     this.entries.clear();
   }
 
-  private load(key: string, userId: string): CacheEntry {
-    const entry: CacheEntry = { url: signal<string | null>(null), refs: 0, objectUrl: null };
+  private load(key: string, userId: string, entry: CacheEntry): void {
     this.avatars.getAvatar(userId).subscribe({
       next: (blob) => {
         // Released before the blob arrived: nobody will show it, so no URL is created.
@@ -69,7 +70,6 @@ export class AvatarUrlService implements OnDestroy {
       },
       error: () => undefined,
     });
-    return entry;
   }
 
   private release(key: string, entry: CacheEntry): void {

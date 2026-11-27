@@ -15,7 +15,7 @@ import { setOrgIdProvider } from '../utils/org-context';
 import { AsyncState } from './async-state';
 import { resetOnLogout } from './session-scoped';
 
-/** Persisted id of the active organization. Same key as the React app, so both share the selection. */
+/** Persisted id of the active organization, so the selection survives a reload. */
 export const CURRENT_ORG_STORAGE_KEY = 'corelog.currentOrg';
 
 /**

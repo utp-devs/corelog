@@ -188,6 +188,19 @@ describe('SprintStore', () => {
     backend.verify({ ignoreCancelled: true });
   });
 
+  it('clears the error of the last action on request', () => {
+    const { store, backend } = setup();
+    loadProject(store, backend);
+    store.setDraft({ name: '   ' });
+    store.create();
+    expect(store.actionError()).toBe('El nombre del sprint es obligatorio.');
+
+    store.clearActionError();
+
+    expect(store.actionError()).toBeNull();
+    backend.verify();
+  });
+
   it('requires a name before planning a sprint', () => {
     const { store, backend } = setup();
     loadProject(store, backend);

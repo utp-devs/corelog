@@ -41,10 +41,22 @@ export class ProjectStore {
   /** Last failure of a project list or member operation. Null after a successful call. */
   readonly error = signal<ApiError | null>(null);
 
+  private readonly projectRead = new AsyncState<Project>();
+  private readonly projectIdRead = signal<string | null>(null);
+
   readonly projects = computed(() => this.projectsRead.value() ?? []);
   readonly members = computed(() => this.membersRead.value() ?? []);
   readonly labels = computed(() => this.labelsRead.value() ?? []);
   readonly components = computed(() => this.componentsRead.value() ?? []);
+
+  /** The project read by `loadOne`. Null while loading, on failure, or when another project was requested. */
+  readonly project = computed<Project | null>(() => {
+    const project = this.projectRead.value();
+    return project && project.id === this.projectIdRead() ? project : null;
+  });
+  /** Failure of the last `loadOne` read (access or network). Null while the read succeeds or is pending. */
+  readonly projectError = this.projectRead.error;
+  readonly projectLoading = this.projectRead.loading;
 
   readonly status = computed<ProjectStoreStatus>(() => {
     if (this.projectsRead.loading() || this.membersRead.loading()) return 'loading';
@@ -97,6 +109,12 @@ export class ProjectStore {
       }),
       catchError((error: unknown) => this.fail(error, 'No se pudo actualizar el proyecto')),
     );
+  }
+
+  /** Reads one project for the access check and the header of the project pages. */
+  loadOne(projectId: string): void {
+    this.projectIdRead.set(projectId);
+    this.projectRead.load(this.api.get(projectId));
   }
 
   fetchMembers(projectId: string): void {
@@ -196,6 +214,8 @@ export class ProjectStore {
   }
 
   reset(): void {
+    this.projectRead.reset();
+    this.projectIdRead.set(null);
     this.projectsRead.reset();
     this.membersRead.reset();
     this.labelsRead.reset();

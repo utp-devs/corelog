@@ -47,13 +47,14 @@ function pathOf(state: RouterStateSnapshot): string {
  * Blocks in-app navigation away from a dirty form and asks whether to leave or keep editing.
  * Navigation within the same path (query or fragment changes) is not blocked.
  */
-export const unsavedChangesGuard: CanDeactivateFn<UnsavedChangesAware> = (
+export const unsavedChangesGuard: CanDeactivateFn<UnsavedChangesAware | null> = (
   component,
   _route,
   currentState,
   nextState,
 ) => {
-  if (!component.dirty()) return true;
+  // A route without a routed component has no unsaved edits to protect.
+  if (!component?.dirty()) return true;
   if (nextState && pathOf(nextState) === pathOf(currentState)) return true;
   return inject(UNSAVED_CHANGES_PROMPT)({
     title: UNSAVED_TITLE,

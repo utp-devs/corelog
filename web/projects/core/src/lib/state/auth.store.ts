@@ -84,6 +84,11 @@ export class AuthStore {
     this.sessionChecked.set(true);
   }
 
+  /** Replaces the signed-in account in place, so the shell reflects profile or avatar edits without a reload. */
+  setUser(user: User): void {
+    this.account.set(user);
+  }
+
   async updateProfile(payload: UpdateProfilePayload): Promise<void> {
     this.account.set(await firstValueFrom(this.api.updateProfile(payload)));
   }

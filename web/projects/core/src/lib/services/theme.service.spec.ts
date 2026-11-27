@@ -16,7 +16,7 @@ describe('ThemeService', () => {
     expect(document.documentElement.dataset['theme']).toBe('light');
   });
 
-  it('restores the dark theme stored by the React app', () => {
+  it('restores the dark theme from storage', () => {
     localStorage.setItem(THEME_STORAGE_KEY, 'dark');
     const theme = TestBed.inject(ThemeService);
     expect(theme.isDark()).toBe(true);

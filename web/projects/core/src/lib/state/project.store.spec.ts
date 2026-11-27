@@ -56,6 +56,37 @@ describe('ProjectStore', () => {
 
   afterEach(() => backend.verify());
 
+  it('reads one project and exposes it only for the requested id', () => {
+    store.loadOne('project-1');
+    backend
+      .expectOne(`${BASE}/projects/project-1`)
+      .flush({ data: projectDto('project-1', 'Core') });
+
+    expect(store.project()?.name).toBe('Core');
+    expect(store.projectError()).toBeNull();
+
+    store.loadOne('project-2');
+    expect(store.project()).toBeNull();
+    backend
+      .expectOne(`${BASE}/projects/project-2`)
+      .flush({ data: projectDto('project-2', 'Otro') });
+    expect(store.project()?.name).toBe('Otro');
+  });
+
+  it('keeps the access failure of a single project read', () => {
+    store.loadOne('project-3');
+    flushApiError(
+      backend.expectOne(`${BASE}/projects/project-3`),
+      403,
+      'project.forbidden',
+      'Sin acceso',
+    );
+
+    expect(store.project()).toBeNull();
+    expect(store.projectError()?.status).toBe(403);
+    expect(store.projectLoading()).toBe(false);
+  });
+
   it('creates a project in the current organization without sending a lead', async () => {
     const created = firstValueFrom(
       store.createProject({

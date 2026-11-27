@@ -231,6 +231,11 @@ export class SprintStore {
     this.run(this.sprintApi.removeIssue(projectId, sprintId, issueId), () => sprintId);
   }
 
+  /** Dismisses the error of the last action (the banner was closed). */
+  clearActionError(): void {
+    this.actionErrorState.set(null);
+  }
+
   reset(): void {
     this.projectId = null;
     this.selectedState.set(undefined);

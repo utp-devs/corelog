@@ -1,6 +1,9 @@
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
+import { of } from 'rxjs';
+
+import { AvatarApiService } from './api/avatar-api.service';
 
 import { provideCorelogTesting } from '../../testing';
 import { errorInterceptor } from '../interceptors/error.interceptor';
@@ -151,6 +154,21 @@ describe('AvatarUrlService', () => {
 
     expect(URL.revokeObjectURL).not.toHaveBeenCalled();
     expect(keep.url()).toBe('blob:avatar-1');
+  });
+
+  it('shows the URL when the source answers synchronously', () => {
+    const getAvatar = vi.fn(() => of(png()));
+    TestBed.configureTestingModule({
+      providers: [provideCorelogTesting(), { provide: AvatarApiService, useValue: { getAvatar } }],
+    });
+    const service = TestBed.inject(AvatarUrlService);
+
+    const watch = service.watch('user-sync', true, 'v1');
+
+    expect(getAvatar).toHaveBeenCalledWith('user-sync');
+    expect(watch.url()).toBe('blob:avatar-1');
+    watch.release();
+    expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:avatar-1');
   });
 
   it('revokes the remaining object URLs when the service is destroyed', () => {

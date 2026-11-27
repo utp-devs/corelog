@@ -4,7 +4,7 @@ import { StorageService } from './storage.service';
 
 export type ThemeMode = 'light' | 'dark';
 
-/** Same key and plain-string format as the React app (ui/src/adapters/out/storage/theme-storage.ts). */
+/** Storage key of the theme choice, stored as a plain string. */
 export const THEME_STORAGE_KEY = 'corelog.theme';
 
 function parseMode(value: string | null): ThemeMode {
