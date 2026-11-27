@@ -32,6 +32,10 @@ const VALIDATION: ToastCopy = {
   summary: 'Revisa los datos',
   detail: 'Algunos datos no son válidos. Revísalos e inténtalo de nuevo.',
 };
+const ARCHIVED: ToastCopy = {
+  summary: 'Proyecto archivado',
+  detail: 'Este proyecto está archivado y es de solo lectura. Restáuralo para hacer cambios.',
+};
 const RATE_LIMIT: ToastCopy = {
   summary: 'Demasiadas solicitudes',
   detail: 'Hiciste demasiadas solicitudes seguidas. Espera un momento e inténtalo de nuevo.',
@@ -59,6 +63,7 @@ function copyForStatus(status: number): ToastCopy | null {
 }
 
 function copyForCode(code: string): ToastCopy | null {
+  if (code === 'project.archived') return ARCHIVED;
   if (/forbidden|permission|not_allowed/i.test(code)) return FORBIDDEN;
   if (/not_found/i.test(code)) return NOT_FOUND;
   if (/^network\./i.test(code)) return NETWORK;

@@ -20,6 +20,7 @@ import {
   OrgRole,
 } from '../../models/organization.model';
 import { asApiError } from '../../utils/api-error';
+import { silentRequest } from '../../utils/silent-request';
 
 interface SettingsDto {
   readonly who_can_create_projects: OrganizationSettings['whoCanCreateProjects'];
@@ -306,9 +307,14 @@ export class OrganizationApiService {
     return this.http.delete<void>(`${this.orgUrl(organizationId)}/logo`);
   }
 
-  listMembers(organizationId: string): Observable<OrganizationMember[]> {
+  listMembers(
+    organizationId: string,
+    options: { readonly silent?: boolean } = {},
+  ): Observable<OrganizationMember[]> {
     return this.http
-      .get<{ data: OrganizationMemberDto[] }>(`${this.orgUrl(organizationId)}/members`)
+      .get<{ data: OrganizationMemberDto[] }>(`${this.orgUrl(organizationId)}/members`, {
+        context: options.silent ? silentRequest() : undefined,
+      })
       .pipe(map((response) => response.data.map(toMember)));
   }
 

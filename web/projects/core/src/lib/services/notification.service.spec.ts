@@ -106,6 +106,12 @@ describe('toastCopyOf', () => {
     expect(toastCopyOf(api(422, 'issue.validation_failed')).summary).toBe('Revisa los datos');
   });
 
+  it('explains in Spanish that an archived project is read-only', () => {
+    const copy = toastCopyOf(api(409, 'project.archived', 'el proyecto esta archivado'));
+    expect(copy.summary).toBe('Proyecto archivado');
+    expect(copy.detail).toContain('solo lectura');
+  });
+
   it('maps by error code before the status', () => {
     expect(toastCopyOf(api(400, 'project.forbidden')).summary).toBe('Sin permiso');
   });
