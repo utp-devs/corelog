@@ -13,7 +13,16 @@
     </button>
   }
 
-  <a class="brand" [routerLink]="brand().homePath" [attr.aria-label]="brand().ariaLabel">
+  @if (brand().external) {
+    <a class="brand" [href]="brand().homePath" [attr.aria-label]="brand().ariaLabel">
+      <ng-container *ngTemplateOutlet="brandContent" />
+    </a>
+  } @else {
+    <a class="brand" [routerLink]="brand().homePath" [attr.aria-label]="brand().ariaLabel">
+      <ng-container *ngTemplateOutlet="brandContent" />
+    </a>
+  }
+  <ng-template #brandContent>
     @if (isMobile()) {
       <img
         class="brand-icon"
@@ -34,7 +43,7 @@
         width="128"
       />
     }
-  </a>
+  </ng-template>
 
   @if (!collapsedNav()) {
     <nav aria-label="Principal" class="nav">

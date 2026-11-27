@@ -2,6 +2,8 @@
 export interface ShellBrand {
   /** Route of the logo link. */
   readonly homePath: string;
+  /** Home is in another application of the origin: the logo is a plain link (full-page load). */
+  readonly external?: boolean;
   readonly ariaLabel: string;
   readonly iconSrc: string;
   readonly iconSrcset: string;

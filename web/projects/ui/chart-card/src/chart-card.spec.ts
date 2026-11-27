@@ -21,6 +21,7 @@ const table: ChartTable = {
       [isEmpty]="isEmpty()"
       [labels]="labels()"
       [series]="series()"
+      [chartType]="chartType()"
     />
   `,
 })
@@ -30,6 +31,7 @@ class Host {
   readonly isEmpty = signal(false);
   readonly labels = signal<string[]>(['Abiertas', 'Cerradas']);
   readonly series = signal([{ label: 'Incidencias', data: [12, 5] }]);
+  readonly chartType = signal<'bar' | 'progress'>('bar');
 }
 
 function create(): ComponentFixture<Host> {
@@ -102,6 +104,32 @@ describe('ChartCard', () => {
     expect(el.querySelector('.empty')?.textContent).toBe('Sin datos para mostrar');
     expect(el.querySelector('canvas')).toBeNull();
     expect(toggleButton(el)).toBeUndefined();
+  });
+
+  it('draws progress bars scaled to the largest value without a canvas', () => {
+    const fixture = create();
+    fixture.componentInstance.chartType.set('progress');
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+
+    expect(el.querySelector('canvas')).toBeNull();
+    const fills = Array.from(el.querySelectorAll<HTMLElement>('.progress-fill'));
+    expect(fills).toHaveLength(2);
+    expect(fills[0].style.width).toBe('100%');
+    expect(parseFloat(fills[1].style.width)).toBeCloseTo(41.6667, 3);
+    expect(el.querySelector('.progress')?.getAttribute('aria-hidden')).toBe('true');
+    expect(el.querySelector('th[scope="row"]')?.textContent).toBe('Abiertas');
+  });
+
+  it('shows zero-width bars when every value is zero', () => {
+    const fixture = create();
+    fixture.componentInstance.chartType.set('progress');
+    fixture.componentInstance.series.set([{ label: 'Incidencias', data: [0, 0] }]);
+    fixture.detectChanges();
+    const fills = Array.from(
+      (fixture.nativeElement as HTMLElement).querySelectorAll<HTMLElement>('.progress-fill'),
+    );
+    expect(fills.map((fill) => fill.style.width)).toEqual(['0%', '0%']);
   });
 
   it('redraws the chart when the theme changes', async () => {

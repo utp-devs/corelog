@@ -3,6 +3,7 @@ import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute, Routes, provideRouter } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import {
+  LOCATION_ASSIGN,
   AuthStore,
   AvatarApiService,
   NotificationStore,
@@ -122,6 +123,7 @@ function routesFor(host: Type<unknown>): Routes {
 
 interface Fakes {
   auth: { user: ReturnType<typeof signal<User | null>>; logout: ReturnType<typeof vi.fn> };
+  assign: ReturnType<typeof vi.fn>;
   projects: {
     projects: ReturnType<typeof signal<Project[]>>;
     fetchProjects: ReturnType<typeof vi.fn>;
@@ -138,6 +140,7 @@ async function render(
       user: signal<User | null>(options.user === undefined ? adminUser : options.user),
       logout: vi.fn(),
     },
+    assign: vi.fn(),
     projects: {
       projects: signal<Project[]>(options.projects ?? [demoProject]),
       fetchProjects: vi.fn(),
@@ -147,6 +150,7 @@ async function render(
     providers: [
       provideRouter(routesFor(options.host ?? PlainHost)),
       { provide: AuthStore, useValue: fakes.auth },
+      { provide: LOCATION_ASSIGN, useValue: fakes.assign },
       { provide: ProjectStore, useValue: fakes.projects },
       {
         provide: NotificationStore,
@@ -303,14 +307,19 @@ describe('AppShell user menu and shortcuts', () => {
     harness.fixture.detectChanges();
   }
 
-  it('calls the store logout and goes to /login', async () => {
+  it('calls the store logout and moves the browser to the login page', async () => {
     const { root, fakes, harness } = await render('/issues');
     openUserMenu(root, harness);
     clickMenuItem('Cerrar sesión');
     expect(fakes.auth.logout).toHaveBeenCalledTimes(1);
-    await harness.fixture.whenStable();
-    harness.fixture.detectChanges();
-    expect(harness.fixture.nativeElement.textContent).toContain('Pantalla de acceso');
+    expect(fakes.assign).toHaveBeenCalledWith('/login');
+  });
+
+  it('opens the profile with a full-page move to the workspace', async () => {
+    const { root, fakes, harness } = await render('/issues');
+    openUserMenu(root, harness);
+    clickMenuItem('Mi perfil');
+    expect(fakes.assign).toHaveBeenCalledWith('/workspace/profile');
   });
 
   it('calls the theme toggle from the user menu', async () => {

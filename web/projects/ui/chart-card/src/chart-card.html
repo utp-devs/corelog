@@ -22,9 +22,27 @@
   @if (isEmpty()) {
     <p class="empty">{{ emptyText() }}</p>
   } @else {
-    <div class="body">
-      <canvas #canvas aria-hidden="true"></canvas>
-    </div>
+    @if (isProgress()) {
+      <ul class="progress" aria-hidden="true">
+        @for (row of progressRows(); track $index) {
+          <li class="progress-row">
+            <span class="progress-label">{{ row.label }}</span>
+            <span class="progress-track">
+              <span
+                class="progress-fill"
+                [style.width.%]="row.percent"
+                [style.background-color]="progressColor"
+              ></span>
+            </span>
+            <span class="progress-value">{{ row.value }}</span>
+          </li>
+        }
+      </ul>
+    } @else {
+      <div class="body">
+        <canvas #canvas aria-hidden="true"></canvas>
+      </div>
+    }
     <table
       [id]="tableId"
       class="table"

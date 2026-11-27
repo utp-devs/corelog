@@ -44,6 +44,33 @@ describe('UserPicker', () => {
     expect(el.textContent).toContain('Elegir responsable');
   });
 
+  it('shows the email next to the name in the options when the user has one', () => {
+    TestBed.configureTestingModule({});
+    const fixture = TestBed.createComponent(UserPicker);
+    fixture.componentRef.setInput('users', [
+      { id: 'u1', name: 'Ana Torres', email: 'ana@example.test' },
+      { id: 'u2', name: 'Luis Gómez' },
+    ]);
+    fixture.detectChanges();
+    const component = fixture.componentInstance;
+
+    expect(component['options']().map((option) => option.label)).toEqual([
+      'Ana Torres (ana@example.test)',
+      'Luis Gómez',
+    ]);
+  });
+
+  it('disables the control when the disabled input is set', () => {
+    TestBed.configureTestingModule({});
+    const fixture = TestBed.createComponent(UserPicker);
+    fixture.componentRef.setInput('users', users);
+    fixture.componentRef.setInput('disabled', true);
+    fixture.detectChanges();
+
+    const select = (fixture.nativeElement as HTMLElement).querySelector('.p-select');
+    expect(select?.classList.contains('p-disabled')).toBe(true);
+  });
+
   it('accepts a search callback without calling it on render', () => {
     const onSearch = vi.fn();
     create({ users, onSearch });

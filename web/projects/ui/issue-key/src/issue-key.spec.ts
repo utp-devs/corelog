@@ -1,10 +1,21 @@
-import { TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
+import { RouterLink, provideRouter } from '@angular/router';
 import { NotificationService } from '@corelog/core';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { IssueKey } from './issue-key';
 
 const notifications = { success: vi.fn(), info: vi.fn(), error: vi.fn() };
+
+let lastFixture: ComponentFixture<IssueKey> | null = null;
+
+/** The router link directive of the last rendered key, or null when the key is a plain link. */
+function routerLinkOf(): RouterLink | null {
+  return (
+    lastFixture?.debugElement.query(By.directive(RouterLink))?.injector.get(RouterLink) ?? null
+  );
+}
 
 function create(inputs: {
   issueKey: string;
@@ -15,9 +26,10 @@ function create(inputs: {
   testId?: string;
 }): HTMLElement {
   TestBed.configureTestingModule({
-    providers: [{ provide: NotificationService, useValue: notifications }],
+    providers: [provideRouter([]), { provide: NotificationService, useValue: notifications }],
   });
   const fixture = TestBed.createComponent(IssueKey);
+  lastFixture = fixture;
   fixture.componentRef.setInput('issueKey', inputs.issueKey);
   fixture.componentRef.setInput('href', inputs.href);
   if (inputs.summary !== undefined) {
@@ -49,6 +61,20 @@ describe('IssueKey', () => {
     expect(link?.getAttribute('href')).toBe('/incidencias/CL-120');
     expect(link?.textContent?.trim()).toBe('CL-120');
     expect(el.querySelector('[title="Error"]')).not.toBeNull();
+  });
+
+  it('navigates in-app paths through the router without a full page load', () => {
+    const el = create({ issueKey: 'CL-11', href: '/incidencias/CL-11' });
+    expect(el.querySelector('a')?.getAttribute('href')).toBe('/incidencias/CL-11');
+    expect(routerLinkOf()).not.toBeNull();
+  });
+
+  it('keeps a plain link for absolute URLs', () => {
+    const el = create({ issueKey: 'CL-12', href: 'https://example.test/incidencias/CL-12' });
+    expect(el.querySelector('a')?.getAttribute('href')).toBe(
+      'https://example.test/incidencias/CL-12',
+    );
+    expect(routerLinkOf()).toBeNull();
   });
 
   it('marks resolved issues with a struck-through key', () => {

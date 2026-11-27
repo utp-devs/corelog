@@ -10,7 +10,7 @@ import {
   signal,
 } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
-import { BreakpointService } from '@corelog/core';
+import { BreakpointService, LOCATION_ASSIGN } from '@corelog/core';
 import type { MenuItem } from 'primeng/api';
 import { Menu } from 'primeng/menu';
 
@@ -47,6 +47,7 @@ import { UserMenu } from './user-menu';
 export class TopBar {
   private readonly breakpoints = inject(BreakpointService);
   private readonly router = inject(Router);
+  private readonly assign = inject(LOCATION_ASSIGN);
 
   readonly menus = input.required<readonly NavMenu[]>();
   readonly canCreate = input(false);
@@ -77,7 +78,11 @@ export class TopBar {
     return this.menuModels().get(menu.key) ?? [];
   }
 
-  protected go(path: string): void {
+  protected go(path: string, external = false): void {
+    if (external) {
+      this.assign(path);
+      return;
+    }
     void this.router.navigateByUrl(path);
   }
 
@@ -86,10 +91,10 @@ export class TopBar {
       { label: 'Recientes', disabled: true, styleClass: 'menu-group' },
       { label: 'Sin elementos recientes', disabled: true },
       { separator: true },
-      { label: VIEW_ALL_LABEL, command: () => this.go(menu.path) },
+      { label: VIEW_ALL_LABEL, command: () => this.go(menu.path, menu.external) },
       ...(menu.extras ?? []).map((link) => ({
         label: link.label,
-        command: () => this.go(link.path),
+        command: () => this.go(link.path, link.external),
       })),
     ];
   }

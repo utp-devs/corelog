@@ -1,10 +1,12 @@
 :host {
-  display: block;
+  display: flex;
+  flex-direction: column;
   min-width: 0;
 }
 
 .card {
   display: flex;
+  flex: 1 1 auto;
   flex-direction: column;
   gap: var(--cl-space-3);
   min-width: 0;
@@ -54,6 +56,46 @@
 .body {
   height: 240px;
   min-width: 0;
+}
+
+.progress {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cl-space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.progress-row {
+  display: grid;
+  grid-template-columns: minmax(96px, max-content) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--cl-space-3);
+  font-size: var(--cl-font-small);
+  color: var(--cl-text);
+}
+
+.progress-label {
+  overflow-wrap: anywhere;
+}
+
+.progress-track {
+  height: 10px;
+  overflow: hidden;
+  border-radius: var(--cl-radius-sm);
+  background: var(--cl-bg-muted);
+}
+
+.progress-fill {
+  display: block;
+  height: 100%;
+  border-radius: var(--cl-radius-sm);
+}
+
+.progress-value {
+  font-variant-numeric: tabular-nums;
+  color: var(--cl-text-subtle);
 }
 
 .empty {

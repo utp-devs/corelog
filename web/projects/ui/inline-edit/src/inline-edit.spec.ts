@@ -118,6 +118,35 @@ describe('InlineEdit', () => {
     expect(onSave).not.toHaveBeenCalled();
   });
 
+  it('shows the message of the error thrown by the save', async () => {
+    const onSave = vi.fn(() =>
+      Promise.reject(new Error('Ya existe una incidencia con ese título.')),
+    );
+    const setup = create({ label: 'Título', value: 'Viejo', onSave });
+    openEditor(setup, 'Título', 'Viejo');
+    const input = editor(setup, 'Título');
+    type(setup, input, 'Nuevo');
+    keydown(setup, input, 'Enter');
+    await settle(setup);
+
+    const alert = setup.el.querySelector('[role="alert"]') as HTMLElement;
+    expect(alert.textContent).toContain('Ya existe una incidencia con ese título.');
+    expect(alert.textContent).not.toContain(INLINE_EDIT_SAVE_ERROR);
+  });
+
+  it('shows the Spanish fallback when the error has no message', async () => {
+    const onSave = vi.fn(() => Promise.reject(new Error('')));
+    const setup = create({ label: 'Título', value: 'Viejo', onSave });
+    openEditor(setup, 'Título', 'Viejo');
+    const input = editor(setup, 'Título');
+    type(setup, input, 'Nuevo');
+    keydown(setup, input, 'Enter');
+    await settle(setup);
+
+    const alert = setup.el.querySelector('[role="alert"]') as HTMLElement;
+    expect(alert.textContent).toContain(INLINE_EDIT_SAVE_ERROR);
+  });
+
   it('shows a pending state while saving and the Spanish error when saving fails', async () => {
     let reject: (reason: Error) => void = () => {};
     const onSave = vi.fn(
@@ -136,7 +165,7 @@ describe('InlineEdit', () => {
     expect(status.textContent).toContain('Guardando');
     expect((setup.el.querySelector('button.trigger') as HTMLButtonElement).disabled).toBe(true);
 
-    reject(new Error('network'));
+    reject(new Error(''));
     await settle(setup);
     const alert = setup.el.querySelector('[role="alert"]') as HTMLElement;
     expect(alert.textContent).toContain(INLINE_EDIT_SAVE_ERROR);

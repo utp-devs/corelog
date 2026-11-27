@@ -1,7 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { Router } from '@angular/router';
 import { provideCorelogTesting } from '@corelog/core/testing';
 import {
+  LOCATION_ASSIGN,
   CURRENT_ORG_STORAGE_KEY,
   Organization,
   OrganizationApiService,
@@ -41,9 +41,10 @@ let orgs: Organization[] = [];
 function setup(currentId: string): {
   fixture: ComponentFixture<OrgSwitcher>;
   store: OrganizationStore;
-  navigate: ReturnType<typeof vi.fn>;
+  assign: ReturnType<typeof vi.fn>;
 } {
   localStorage.clear();
+  const assign = vi.fn();
   TestBed.configureTestingModule({
     providers: [
       provideCorelogTesting(),
@@ -51,17 +52,16 @@ function setup(currentId: string): {
         provide: OrganizationApiService,
         useValue: { list: () => of(orgs), fetchLogoBlob: () => of(null) },
       },
+      { provide: LOCATION_ASSIGN, useValue: assign },
     ],
   });
   const store = TestBed.inject(OrganizationStore);
   TestBed.flushEffects();
   store.fetchOrgs();
   store.setCurrentOrg(currentId);
-  const router = TestBed.inject(Router);
-  const navigate = vi.spyOn(router, 'navigate').mockResolvedValue(true);
   const fixture = TestBed.createComponent(OrgSwitcher);
   fixture.detectChanges();
-  return { fixture, store, navigate };
+  return { fixture, store, assign };
 }
 
 function openMenu(fixture: ComponentFixture<OrgSwitcher>): HTMLElement {
@@ -105,26 +105,26 @@ describe('OrgSwitcher', () => {
   });
 
   it('switches the organization and goes to projects', () => {
-    const { fixture, store, navigate } = setup('a');
+    const { fixture, store, assign } = setup('a');
     const menu = openMenu(fixture);
     clickItem(menuItem(menu, /Beta/));
     expect(store.currentOrgId()).toBe('b');
     expect(localStorage.getItem(CURRENT_ORG_STORAGE_KEY)).toBe('b');
-    expect(navigate).toHaveBeenCalledWith(['/projects']);
+    expect(assign).toHaveBeenCalledWith('/workspace/projects');
   });
 
   it('opens the wizard at the organization step from "Crear organización"', () => {
-    const { fixture, navigate } = setup('a');
+    const { fixture, assign } = setup('a');
     const menu = openMenu(fixture);
     clickItem(menuItem(menu, /Crear organización/));
-    expect(navigate).toHaveBeenCalledWith(['/onboarding'], { queryParams: { new: '1' } });
+    expect(assign).toHaveBeenCalledWith('/onboarding?new=1');
   });
 
   it('shows organization settings to an owner or admin', () => {
-    const { fixture, navigate } = setup('a');
+    const { fixture, assign } = setup('a');
     const menu = openMenu(fixture);
     clickItem(menuItem(menu, /Configuración de la organización/));
-    expect(navigate).toHaveBeenCalledWith(['/organization/settings']);
+    expect(assign).toHaveBeenCalledWith('/admin/organization/settings');
   });
 
   it('hides organization settings from a member', () => {

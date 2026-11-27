@@ -6,14 +6,25 @@
   @if (type(); as kind) {
     <app-issue-type-icon [type]="kind" />
   }
-  <a
-    class="link"
-    [class.resolved]="resolved()"
-    [attr.href]="href()"
-    [pTooltip]="summary()"
-    tooltipPosition="top"
-    >{{ issueKey() }}</a
-  >
+  @if (isAppPath()) {
+    <a
+      class="link"
+      [class.resolved]="resolved()"
+      [routerLink]="href()"
+      [pTooltip]="summary()"
+      tooltipPosition="top"
+      >{{ issueKey() }}</a
+    >
+  } @else {
+    <a
+      class="link"
+      [class.resolved]="resolved()"
+      [attr.href]="href()"
+      [pTooltip]="summary()"
+      tooltipPosition="top"
+      >{{ issueKey() }}</a
+    >
+  }
   <span class="copy-wrap">
     <button type="button" class="copy-button" aria-label="Copiar clave" (click)="copy()">
       <i class="pi pi-copy" aria-hidden="true"></i>

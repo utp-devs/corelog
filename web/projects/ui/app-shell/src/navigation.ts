@@ -25,6 +25,8 @@ export interface NavItem {
   readonly path: string;
   readonly icon: ShellIconName;
   readonly permission?: Permission;
+  /** Another application of the origin: opened with a full-page navigation. */
+  readonly external?: boolean;
 }
 
 /** Entry listed under a top menu, after "Ver todos". */
@@ -32,6 +34,8 @@ export interface NavLink {
   readonly key: string;
   readonly label: string;
   readonly path: string;
+  /** Another application of the origin: opened with a full-page navigation. */
+  readonly external?: boolean;
 }
 
 /** Top bar dropdown. `path` is the target of "Ver todos" and of the drawer link. */
@@ -39,6 +43,8 @@ export interface NavMenu {
   readonly key: string;
   readonly label: string;
   readonly path: string;
+  /** Another application of the origin: "Ver todos" opens it with a full-page navigation. */
+  readonly external?: boolean;
   readonly extras?: readonly NavLink[];
 }
 

@@ -12,6 +12,8 @@ export interface PickableUser {
 interface PickerOption {
   id: string;
   name: string;
+  /** Name followed by the email in parentheses when the user has one. */
+  label: string;
   initials: string;
   searchText: string;
 }
@@ -36,11 +38,13 @@ export class UserPicker {
   readonly loading = input(false);
   readonly placeholder = input('Buscar persona');
   readonly allowClear = input(true);
+  readonly disabled = input(false);
 
   protected readonly options = computed<PickerOption[]>(() =>
     this.users().map((user) => ({
       id: user.id,
       name: user.name,
+      label: user.email ? `${user.name} (${user.email})` : user.name,
       initials: initialsOf(user.name),
       searchText: [user.name, user.email ?? ''].join(' '),
     })),

@@ -45,7 +45,7 @@ describe('ShortcutsDialog', () => {
 
   it('calls onClose from the dialog close button', () => {
     const { fixture, el } = create({ open: true, hotkeys });
-    el.querySelector<HTMLButtonElement>('button[aria-label="Close"]')?.click();
+    el.querySelector<HTMLButtonElement>('button[aria-label="Cerrar"]')?.click();
     fixture.detectChanges();
     expect(fixture.componentInstance.open()).toBe(false);
   });

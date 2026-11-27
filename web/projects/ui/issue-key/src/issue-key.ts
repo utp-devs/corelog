@@ -1,4 +1,5 @@
-import { ChangeDetectionStrategy, Component, inject, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { IssueType, NotificationService } from '@corelog/core';
 import { IssueTypeIcon } from '@corelog/ui/issue-type-icon';
 import { Tooltip } from 'primeng/tooltip';
@@ -6,7 +7,7 @@ import { Tooltip } from 'primeng/tooltip';
 /** Issue key with type icon, summary tooltip and copy-to-clipboard button. */
 @Component({
   selector: 'app-issue-key',
-  imports: [IssueTypeIcon, Tooltip],
+  imports: [IssueTypeIcon, RouterLink, Tooltip],
   templateUrl: './issue-key.html',
   styleUrl: './issue-key.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -23,6 +24,12 @@ export class IssueKey {
   /** Resolved or closed: the key is struck through. */
   readonly resolved = input(false);
   readonly dataTestId = input<string | undefined>(undefined, { alias: 'data-testid' });
+
+  /** In-app paths navigate through the router; absolute URLs stay plain links. */
+  protected readonly isAppPath = computed(() => {
+    const href = this.href();
+    return href.startsWith('/') && !href.startsWith('//');
+  });
 
   protected async copy(): Promise<void> {
     try {

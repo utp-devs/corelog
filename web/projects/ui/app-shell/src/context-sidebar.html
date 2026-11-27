@@ -24,19 +24,35 @@
     <ul class="list">
       @for (item of items(); track item.key) {
         <li>
-          <a
-            class="link"
-            [class.active]="isActive(item)"
-            [routerLink]="item.path"
-            [attr.aria-label]="item.label"
-            [attr.aria-current]="isActive(item) ? 'page' : null"
-            [attr.title]="collapsed() ? item.label : null"
-          >
-            <app-shell-icon [name]="item.icon" />
-            @if (!collapsed()) {
-              <span class="label">{{ item.label }}</span>
-            }
-          </a>
+          @if (item.external) {
+            <a
+              class="link"
+              [class.active]="isActive(item)"
+              [href]="item.path"
+              [attr.aria-label]="item.label"
+              [attr.aria-current]="isActive(item) ? 'page' : null"
+              [attr.title]="collapsed() ? item.label : null"
+            >
+              <app-shell-icon [name]="item.icon" />
+              @if (!collapsed()) {
+                <span class="label">{{ item.label }}</span>
+              }
+            </a>
+          } @else {
+            <a
+              class="link"
+              [class.active]="isActive(item)"
+              [routerLink]="item.path"
+              [attr.aria-label]="item.label"
+              [attr.aria-current]="isActive(item) ? 'page' : null"
+              [attr.title]="collapsed() ? item.label : null"
+            >
+              <app-shell-icon [name]="item.icon" />
+              @if (!collapsed()) {
+                <span class="label">{{ item.label }}</span>
+              }
+            </a>
+          }
         </li>
       }
     </ul>

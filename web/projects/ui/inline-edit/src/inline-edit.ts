@@ -26,6 +26,12 @@ export const INLINE_EDIT_SAVE_ERROR =
   'No se pudo guardar. Revisa tu conexión e inténtalo de nuevo.';
 const EMPTY_TEXT = 'Sin valor';
 
+/** Message of the error thrown by the save, or the generic message when it carries none. */
+function saveErrorMessage(error: unknown): string {
+  const message = (error as { readonly message?: unknown } | null)?.message;
+  return typeof message === 'string' && message.trim() !== '' ? message : INLINE_EDIT_SAVE_ERROR;
+}
+
 /**
  * Inline editable field. Enter saves, Escape cancels, leaving the field saves.
  * While saving it shows a pending indicator; if saving fails it keeps the previous value and shows a message.
@@ -54,7 +60,7 @@ export class InlineEdit implements ControlValueAccessor {
   /** Options for select and user (user: value = id, label = name). */
   readonly options = input<InlineEditOption[]>([]);
   readonly placeholder = input(EMPTY_TEXT);
-  /** Saves the new value. If it throws or rejects, the error message is shown and the previous value is kept. */
+  /** Saves the new value. If it throws or rejects, its message is shown (or a generic one) and the previous value is kept. */
   readonly onSave = input<(next: string | null) => void | Promise<void>>(() => {});
 
   protected readonly editing = signal(false);
@@ -167,8 +173,8 @@ export class InlineEdit implements ControlValueAccessor {
       await this.onSave()(next);
       this.value.set(next);
       this.onChangeFn(next);
-    } catch {
-      this.error.set(INLINE_EDIT_SAVE_ERROR);
+    } catch (error) {
+      this.error.set(saveErrorMessage(error));
     } finally {
       this.pendingValue.set(undefined);
     }

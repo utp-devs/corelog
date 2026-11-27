@@ -105,6 +105,8 @@ export class RichTextEditor implements ControlValueAccessor, OnInit {
   readonly draftKey = input<string>();
   /** Enables the Ctrl+Enter submit shortcut and its hint. */
   readonly submittable = input(false);
+  /** Blocks every edit and action (for example while the owning form is submitting). */
+  readonly disabled = input(false);
   /** Emitted on Ctrl+Enter (or Cmd+Enter) when submittable. The saved draft is cleared first. */
   readonly submitted = output<void>();
 
@@ -118,7 +120,9 @@ export class RichTextEditor implements ControlValueAccessor, OnInit {
   protected readonly listboxId = `${this.id}-listbox`;
 
   protected readonly value = signal('');
-  protected readonly disabled = signal(false);
+  /** Disabled state written by the form control (ControlValueAccessor). */
+  private readonly formDisabled = signal(false);
+  protected readonly isDisabled = computed(() => this.disabled() || this.formDisabled());
   protected readonly mode = signal<'write' | 'preview'>('write');
   protected readonly popup = signal<PopupState | null>(null);
   protected readonly results = signal<PickerResults | null>(null);
@@ -216,7 +220,7 @@ export class RichTextEditor implements ControlValueAccessor, OnInit {
   }
 
   setDisabledState(isDisabled: boolean): void {
-    this.disabled.set(isDisabled);
+    this.formDisabled.set(isDisabled);
   }
 
   protected setMode(mode: 'write' | 'preview'): void {
@@ -287,7 +291,7 @@ export class RichTextEditor implements ControlValueAccessor, OnInit {
     }
     if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
       event.preventDefault();
-      if (this.submittable() && !this.disabled()) {
+      if (this.submittable() && !this.isDisabled()) {
         this.submit();
       }
     }

@@ -24,16 +24,29 @@ export type ChartTable = {
   rows: Array<Array<string | number>>;
 };
 
-export type ChartCardType = 'bar' | 'line' | 'doughnut';
+/** Chart.js types, plus `progress`: horizontal bars drawn with tokens (no canvas). */
+export type ChartCardType = 'bar' | 'line' | 'doughnut' | 'progress';
+
+export type ChartJsType = Exclude<ChartCardType, 'progress'>;
+
+export interface ProgressRow {
+  readonly label: string;
+  readonly value: number;
+  /** Share of the largest value, 0 to 100. */
+  readonly percent: number;
+}
 
 export type ChartCardSeries = {
   readonly label: string;
   readonly data: readonly number[];
+  /** Draws the series with a dashed stroke (for example an ideal or target line). */
+  readonly dashed?: boolean;
 };
 
 type ThemeMode = 'light' | 'dark';
 
 let nextCardId = 0;
+const DASHED_PATTERN = [6, 4];
 
 function readThemeMode(document: Document): ThemeMode {
   return document.documentElement.dataset['theme'] === 'dark' ? 'dark' : 'light';
@@ -73,9 +86,24 @@ export class ChartCard {
   private readonly canvas = viewChild<ElementRef<HTMLCanvasElement>>('canvas');
   private readonly themeMode = signal<ThemeMode>(readThemeMode(this.document));
 
-  private readonly chartConfig = computed<ChartConfiguration>(() =>
-    this.buildConfig(this.chartType(), this.labels(), this.series(), this.themeMode()),
-  );
+  /** Progress bars have no canvas, so they have no chart configuration. */
+  private readonly chartConfig = computed<ChartConfiguration | null>(() => {
+    const type = this.chartType();
+    if (type === 'progress') return null;
+    return this.buildConfig(type, this.labels(), this.series(), this.themeMode());
+  });
+
+  protected readonly isProgress = computed(() => this.chartType() === 'progress');
+  /** Rows of the progress mode: the first series against the labels, scaled to the largest value. */
+  protected readonly progressRows = computed<ProgressRow[]>(() => {
+    const values = this.series()[0]?.data ?? [];
+    const max = Math.max(0, ...values);
+    return this.labels().map((label, index) => {
+      const value = values[index] ?? 0;
+      return { label, value, percent: max > 0 ? (value / max) * 100 : 0 };
+    });
+  });
+  protected readonly progressColor = seriesColor(0);
 
   constructor() {
     if (typeof MutationObserver === 'function') {
@@ -90,7 +118,7 @@ export class ChartCard {
     effect((onCleanup) => {
       const element = this.canvas()?.nativeElement;
       const config = this.chartConfig();
-      if (!element || this.isEmpty() || !isPlatformBrowser(this.platformId)) return;
+      if (!element || !config || this.isEmpty() || !isPlatformBrowser(this.platformId)) return;
       const chart = new Chart(element, config);
       onCleanup(() => chart.destroy());
     });
@@ -101,7 +129,7 @@ export class ChartCard {
   }
 
   private buildConfig(
-    type: ChartCardType,
+    type: ChartJsType,
     labels: readonly string[],
     series: readonly ChartCardSeries[],
     // The mode is part of the input so that a theme change rebuilds the colors.
@@ -132,6 +160,7 @@ export class ChartCard {
             data: [...entry.data],
             backgroundColor: seriesToken,
             borderColor: seriesToken,
+            borderDash: entry.dashed ? DASHED_PATTERN : [],
           };
         }),
       },

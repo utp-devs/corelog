@@ -1,9 +1,8 @@
 import { ChangeDetectionStrategy, Component, computed, inject, viewChild } from '@angular/core';
-import { Router } from '@angular/router';
 import { MenuItem, PrimeTemplate } from 'primeng/api';
 import { Menu } from 'primeng/menu';
 
-import { OrganizationStore, canManageOrg } from '@corelog/core';
+import { LOCATION_ASSIGN, OrganizationStore, canManageOrg } from '@corelog/core';
 import { OrgLogo } from '@corelog/ui/org-logo';
 
 /** Menu entry with a flag for the organization that is active. */
@@ -24,7 +23,8 @@ export interface OrgSwitcherItem extends MenuItem {
 })
 export class OrgSwitcher {
   private readonly store = inject(OrganizationStore);
-  private readonly router = inject(Router);
+  /** The organization pages live in other applications: each move is a full-page navigation. */
+  private readonly assign = inject(LOCATION_ASSIGN);
 
   private readonly menu = viewChild.required<Menu>('menu');
 
@@ -61,7 +61,7 @@ export class OrgSwitcher {
         id: 'create',
         label: 'Crear organización',
         icon: 'pi pi-plus',
-        command: () => void this.router.navigate(['/onboarding'], { queryParams: { new: '1' } }),
+        command: () => this.assign('/onboarding?new=1'),
       },
     ];
     if (canManageOrg(this.role())) {
@@ -69,7 +69,7 @@ export class OrgSwitcher {
         id: 'settings',
         label: 'Configuración de la organización',
         icon: 'pi pi-cog',
-        command: () => void this.router.navigate(['/organization/settings']),
+        command: () => this.assign('/admin/organization/settings'),
       });
     }
     return entries;
@@ -84,6 +84,6 @@ export class OrgSwitcher {
       return;
     }
     this.store.setCurrentOrg(id);
-    void this.router.navigate(['/projects']);
+    this.assign('/workspace/projects');
   }
 }

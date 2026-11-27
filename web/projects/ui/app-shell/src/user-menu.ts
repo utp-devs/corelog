@@ -4,13 +4,15 @@ import {
   computed,
   effect,
   inject,
+  input,
   signal,
   viewChild,
 } from '@angular/core';
-import { Router } from '@angular/router';
 import {
   AuthStore,
   AvatarUrlService,
+  LOCATION_ASSIGN,
+  LOGIN_URL,
   type AvatarUrlWatch,
   ThemeService,
   UiPreferencesService,
@@ -35,13 +37,17 @@ const ROLE_LABELS: Readonly<Record<AppRole, string>> = {
 })
 export class UserMenu {
   private readonly auth = inject(AuthStore);
-  private readonly router = inject(Router);
+  private readonly assign = inject(LOCATION_ASSIGN);
+  private readonly loginUrl = inject(LOGIN_URL);
   private readonly theme = inject(ThemeService);
   private readonly preferences = inject(UiPreferencesService);
   private readonly avatars = inject(AvatarUrlService);
 
   private readonly menu = viewChild.required<Menu>('menu');
   private readonly avatarWatch = signal<AvatarUrlWatch | null>(null);
+
+  /** Profile lives in the workspace application: opened with a full-page navigation. */
+  readonly profileUrl = input('/workspace/profile');
 
   protected readonly user = this.auth.user;
   protected readonly photo = computed(() => this.avatarWatch()?.url() ?? null);
@@ -58,7 +64,7 @@ export class UserMenu {
         styleClass: 'identity-meta',
       },
       { separator: true },
-      { label: 'Mi perfil', command: () => this.go('/profile') },
+      { label: 'Mi perfil', command: () => this.assign(this.profileUrl()) },
       {
         label: this.theme.isDark() ? 'Usar tema claro' : 'Usar tema oscuro',
         command: () => this.theme.toggle(),
@@ -73,7 +79,7 @@ export class UserMenu {
         styleClass: 'danger',
         command: () => {
           this.auth.logout();
-          this.go('/login');
+          this.assign(this.loginUrl);
         },
       },
     ];
@@ -93,9 +99,5 @@ export class UserMenu {
 
   protected toggle(event: Event): void {
     this.menu().toggle(event);
-  }
-
-  private go(path: string): void {
-    void this.router.navigateByUrl(path);
   }
 }

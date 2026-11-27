@@ -14,7 +14,7 @@
             class="tool-button"
             [attr.aria-label]="btn.label"
             [title]="btn.label"
-            [disabled]="disabled()"
+            [disabled]="isDisabled()"
             (click)="runToolbar(btn.action)"
           >
             <i [class]="btn.icon" aria-hidden="true"></i>
@@ -25,7 +25,7 @@
           class="tool-button"
           aria-label="Mencionar persona"
           title="Mencionar persona"
-          [disabled]="disabled()"
+          [disabled]="isDisabled()"
           (click)="insertMentionTrigger()"
         >
           <i class="pi pi-at" aria-hidden="true"></i>
@@ -35,7 +35,7 @@
           class="tool-button"
           aria-label="Enlazar incidencia"
           title="Enlazar incidencia"
-          [disabled]="disabled()"
+          [disabled]="isDisabled()"
           (click)="insertIssueTrigger()"
         >
           <i class="pi pi-hashtag" aria-hidden="true"></i>
@@ -46,7 +46,7 @@
             class="tool-button"
             aria-label="Subir imagen"
             title="Subir imagen"
-            [disabled]="disabled() || uploading()"
+            [disabled]="isDisabled() || uploading()"
             (click)="openFilePicker()"
           >
             <i class="pi pi-image" aria-hidden="true"></i>
@@ -94,7 +94,7 @@
         [attr.rows]="minRows()"
         [value]="value()"
         [placeholder]="placeholder()"
-        [disabled]="disabled()"
+        [disabled]="isDisabled()"
         [attr.aria-label]="ariaLabel()"
         aria-multiline="true"
         [attr.aria-keyshortcuts]="submittable() ? 'Control+Enter' : null"
