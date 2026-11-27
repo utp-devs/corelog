@@ -20,8 +20,10 @@ const issue = {
   summary: 'Error al exportar',
   description: 'Detalle',
   status: 'open',
-  priority: 'high',
-  issue_type: 'bug',
+  priority: { id: 'prio-high', name: 'Alta', icon: 'arrow-up', color: 'orange' },
+  issue_type: { id: 'type-bug', name: 'Error', icon: 'bug', color: 'red', hierarchy_level: 0 },
+  resolution: null,
+  resolved_at: null,
   parent_id: null,
   due_date: null,
   story_points: null,
@@ -67,7 +69,30 @@ describe('IssueApiService', () => {
         key: 'CORE-12',
         summary: 'Error al exportar',
         status: 'open',
+        priority: { id: 'prio-high', name: 'Alta', icon: 'arrow-up', color: 'orange' },
+        issueType: { id: 'type-bug', name: 'Error', icon: 'bug', color: 'red', hierarchyLevel: 0 },
+        resolution: null,
+        resolvedAt: null,
       });
+    });
+
+    it('maps the resolution of a finished issue', () => {
+      let resolved: { resolution: unknown; resolvedAt: string | null } | undefined;
+      service.list().subscribe((page) => (resolved = page.items[0]));
+      httpMock
+        .expectOne((req) => req.url === '/api/v1/issues')
+        .flush({
+          data: [
+            {
+              ...issue,
+              resolution: { id: 'res-done', name: 'Hecho' },
+              resolved_at: '2026-11-25T10:00:00Z',
+            },
+          ],
+          meta: { page: 1, page_size: 20, total: 1 },
+        });
+      expect(resolved?.resolution).toEqual({ id: 'res-done', name: 'Hecho' });
+      expect(resolved?.resolvedAt).toBe('2026-11-25T10:00:00Z');
     });
 
     it('sends the pagination parameters to the issues endpoint', () => {
@@ -162,8 +187,8 @@ describe('IssueApiService', () => {
         .updateDetails(ISSUE_ID, {
           summary: 'Nuevo',
           description: 'Texto',
-          priority: 'low',
-          issueType: 'story',
+          priorityId: 'prio-low',
+          issueTypeId: 'type-story',
           storyPoints: 3,
         })
         .subscribe();
@@ -172,8 +197,8 @@ describe('IssueApiService', () => {
       expect(request.request.body).toEqual({
         summary: 'Nuevo',
         description: 'Texto',
-        priority: 'low',
-        issue_type: 'story',
+        priority_id: 'prio-low',
+        issue_type_id: 'type-story',
         parent_id: undefined,
         due_date: undefined,
         story_points: 3,
@@ -182,17 +207,31 @@ describe('IssueApiService', () => {
     });
 
     it('maps the metadata body and the created issue', () => {
-      service.updateMetadata(ISSUE_ID, { issueType: 'epic', dueDate: '2026-12-01' }).subscribe();
+      service
+        .updateMetadata(ISSUE_ID, { issueTypeId: 'type-epic', dueDate: '2026-12-01' })
+        .subscribe();
       const metadata = httpMock.expectOne(`/api/v1/issues/${ISSUE_ID}/metadata`);
-      expect(metadata.request.body).toMatchObject({ issue_type: 'epic', due_date: '2026-12-01' });
+      expect(metadata.request.body).toMatchObject({
+        issue_type_id: 'type-epic',
+        due_date: '2026-12-01',
+      });
       metadata.flush({ data: issue });
 
       let created: { summary: string } | undefined;
       service
-        .create({ summary: 'Nueva', description: '', priority: 'medium', issueType: 'task' })
+        .create({
+          summary: 'Nueva',
+          description: '',
+          priorityId: 'prio-medium',
+          issueTypeId: 'type-task',
+        })
         .subscribe((issue) => (created = issue));
       const post = httpMock.expectOne('/api/v1/issues');
-      expect(post.request.body).toMatchObject({ summary: 'Nueva', issue_type: 'task' });
+      expect(post.request.body).toMatchObject({
+        summary: 'Nueva',
+        issue_type_id: 'type-task',
+        priority_id: 'prio-medium',
+      });
       post.flush({ data: { ...issue, summary: 'Nueva' } });
       expect(created?.summary).toBe('Nueva');
     });

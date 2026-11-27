@@ -3,15 +3,14 @@ import { Injectable, inject } from '@angular/core';
 import { Observable, map } from 'rxjs';
 
 import { API_URL } from '../../config/api.config';
+import { HierarchyLevel } from '../../models/catalog.model';
 import {
   CreateIssueInput,
   IssueActivity,
   IssueComment,
   IssueLink,
   IssueLinkKind,
-  IssuePriority,
   IssueStatus,
-  IssueType,
   ListIssuesFilter,
   Issue,
   IssuePage,
@@ -19,6 +18,21 @@ import {
   UpdateIssueMetadataInput,
 } from '../../models/issue.model';
 import { silentRequest } from '../../utils/silent-request';
+
+interface IssueTypeRefDto {
+  id: string;
+  name: string;
+  icon: string;
+  color: string;
+  hierarchy_level: HierarchyLevel;
+}
+
+interface PriorityRefDto {
+  id: string;
+  name: string;
+  icon: string;
+  color: string;
+}
 
 interface IssueDto {
   id: string;
@@ -28,8 +42,10 @@ interface IssueDto {
   summary: string;
   description: string;
   status: IssueStatus;
-  priority: IssuePriority;
-  issue_type: IssueType;
+  priority: PriorityRefDto;
+  issue_type: IssueTypeRefDto;
+  resolution?: { id: string; name: string } | null;
+  resolved_at?: string | null;
   parent_id: string | null;
   due_date: string | null;
   story_points: number | null;
@@ -91,8 +107,21 @@ function toIssue(dto: IssueDto): Issue {
     summary: dto.summary,
     description: dto.description,
     status: dto.status,
-    priority: dto.priority,
-    issueType: dto.issue_type,
+    priority: {
+      id: dto.priority.id,
+      name: dto.priority.name,
+      icon: dto.priority.icon,
+      color: dto.priority.color,
+    },
+    issueType: {
+      id: dto.issue_type.id,
+      name: dto.issue_type.name,
+      icon: dto.issue_type.icon,
+      color: dto.issue_type.color,
+      hierarchyLevel: dto.issue_type.hierarchy_level,
+    },
+    resolution: dto.resolution ? { id: dto.resolution.id, name: dto.resolution.name } : null,
+    resolvedAt: dto.resolved_at ?? null,
     parentId: dto.parent_id,
     dueDate: dto.due_date,
     storyPoints: dto.story_points,
@@ -196,8 +225,8 @@ export class IssueApiService {
         project_id: input.projectId,
         summary: input.summary,
         description: input.description,
-        priority: input.priority,
-        issue_type: input.issueType,
+        priority_id: input.priorityId,
+        issue_type_id: input.issueTypeId,
         parent_id: input.parentId,
         due_date: input.dueDate,
         story_points: input.storyPoints,
@@ -221,7 +250,7 @@ export class IssueApiService {
   updateMetadata(id: string, input: UpdateIssueMetadataInput): Observable<Issue> {
     return this.http
       .patch<Envelope<IssueDto>>(`${this.baseUrl}/${id}/metadata`, {
-        issue_type: input.issueType,
+        issue_type_id: input.issueTypeId,
         parent_id: input.parentId,
         due_date: input.dueDate,
         story_points: input.storyPoints,
@@ -234,8 +263,8 @@ export class IssueApiService {
       .patch<Envelope<IssueDto>>(`${this.baseUrl}/${id}/details`, {
         summary: input.summary,
         description: input.description,
-        priority: input.priority,
-        issue_type: input.issueType,
+        priority_id: input.priorityId,
+        issue_type_id: input.issueTypeId,
         parent_id: input.parentId,
         due_date: input.dueDate,
         story_points: input.storyPoints,

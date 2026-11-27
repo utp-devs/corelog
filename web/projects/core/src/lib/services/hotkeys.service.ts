@@ -23,6 +23,8 @@ export type GlobalShortcutOptions = {
   onHelp?: () => void;
   /** Opens the quick create-issue dialog ('c'). Without it the shortcut opens the new-issue page. */
   onCreate?: () => void;
+  /** Opens the personal scratchpad ('n'). Without it the shortcut is listed as coming soon. */
+  onNotes?: () => void;
   /** Project in context: 'g b' opens its board. */
   projectId?: string | null;
   /**
@@ -82,7 +84,7 @@ export class HotkeysService {
 
   /** Shell shortcuts: c, ?, g i, g d, g p, g b and n (coming soon). '/' belongs to the command palette. */
   registerGlobalShortcuts(options: GlobalShortcutOptions = {}): () => void {
-    const { onHelp, onCreate, projectId, workPages = true } = options;
+    const { onHelp, onCreate, onNotes, projectId, workPages = true } = options;
     const boardPath = projectId ? `/projects/${encodeURIComponent(projectId)}/board` : '/projects';
     const go = (path: string) => () => {
       void this.router.navigateByUrl(path);
@@ -101,7 +103,13 @@ export class HotkeysService {
         description: 'Mostrar atajos de teclado',
         run: () => onHelp?.(),
       },
-      { keys: 'n', group: 'General', description: 'Notas rápidas', comingSoon: true },
+      {
+        keys: 'n',
+        group: 'General',
+        description: 'Notas rápidas',
+        comingSoon: !onNotes,
+        run: onNotes ? () => onNotes() : undefined,
+      },
       { keys: 'g i', group: 'Navegación', description: 'Ir a Incidencias', run: go('/issues') },
       { keys: 'g d', group: 'Navegación', description: 'Ir a Mi resumen', run: go('/dashboard') },
       { keys: 'g p', group: 'Navegación', description: 'Ir a Proyectos', run: go('/projects') },

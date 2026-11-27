@@ -79,6 +79,23 @@ const ISSUE_CODE_COPY: Readonly<Record<string, ToastCopy>> = {
   },
 };
 
+/** Copy of the personal note failures. */
+const NOTE_CODE_COPY: Readonly<Record<string, ToastCopy>> = {
+  'note.not_found': {
+    summary: 'Nota no encontrada',
+    detail: 'La nota ya no existe. Puede que la hayas eliminado en otra pestaña.',
+  },
+  'note.link_forbidden': {
+    summary: 'No se puede vincular',
+    detail: 'No encontramos esa incidencia o no tienes acceso a ella.',
+  },
+  'note.invalid': {
+    summary: 'Revisa la nota',
+    detail:
+      'Máximo 120 caracteres en el título, 10 etiquetas de 30 caracteres y 20 000 en el texto.',
+  },
+};
+
 function copyForStatus(status: number): ToastCopy | null {
   if (status === 0) return NETWORK;
   if (status === 403) return FORBIDDEN;
@@ -89,7 +106,7 @@ function copyForStatus(status: number): ToastCopy | null {
 
 function copyForCode(code: string): ToastCopy | null {
   if (code === 'project.archived') return ARCHIVED;
-  const issueCopy = ISSUE_CODE_COPY[code];
+  const issueCopy = ISSUE_CODE_COPY[code] ?? NOTE_CODE_COPY[code];
   if (issueCopy) return issueCopy;
   if (/forbidden|permission|not_allowed/i.test(code)) return FORBIDDEN;
   if (/not_found/i.test(code)) return NOT_FOUND;

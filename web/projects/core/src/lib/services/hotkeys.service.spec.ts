@@ -93,6 +93,18 @@ describe('HotkeysService', () => {
     );
   });
 
+  it('opens the scratchpad with n when the shell provides it', () => {
+    const hotkeys = setup();
+    const onNotes = vi.fn();
+    const unregister = hotkeys.registerGlobalShortcuts({ onNotes });
+    press('n');
+    expect(onNotes).toHaveBeenCalledTimes(1);
+    expect(hotkeys.registered()).toContainEqual(
+      expect.objectContaining({ keys: 'n', comingSoon: false }),
+    );
+    unregister();
+  });
+
   it('leaves the work-page shortcuts out in an app that does not mount them', () => {
     const hotkeys = setup();
     const unregister = hotkeys.registerGlobalShortcuts({ workPages: false });

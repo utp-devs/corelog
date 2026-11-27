@@ -1,5 +1,9 @@
+import { IssueTypeRef, PriorityRef, ResolutionRef } from './catalog.model';
+
 export type IssueStatus = 'open' | 'in_progress' | 'resolved' | 'closed';
+/** Legacy priority key, still used by the list filters and the board, backlog and sprint payloads. */
 export type IssuePriority = 'low' | 'medium' | 'high' | 'critical';
+/** Legacy issue type key, still used by the list filters and the board, backlog and sprint payloads. */
 export type IssueType = 'task' | 'bug' | 'story' | 'epic' | 'subtask';
 export type IssueLinkKind = 'blocks' | 'relates' | 'duplicates';
 
@@ -16,14 +20,17 @@ export interface Issue {
   readonly summary: string;
   readonly description: string;
   readonly status: IssueStatus;
-  readonly priority: IssuePriority;
+  readonly priority: PriorityRef;
   readonly projectId: string;
-  readonly issueType: IssueType;
+  readonly issueType: IssueTypeRef;
   readonly parentId: string | null;
   readonly dueDate: string | null;
   readonly storyPoints: number | null;
   readonly rank: string;
   readonly closedAt: string | null;
+  /** Set when the issue is done; null while it is open. */
+  readonly resolution: ResolutionRef | null;
+  readonly resolvedAt: string | null;
   readonly reporterId: string;
   readonly reporterName: string;
   readonly assigneeId: string | null;
@@ -138,15 +145,17 @@ export interface CreateIssueInput {
   readonly projectId?: string;
   readonly summary: string;
   readonly description: string;
-  readonly priority: IssuePriority;
-  readonly issueType?: IssueType;
+  /** Catalog priority id. Without it the server uses the default priority. */
+  readonly priorityId?: string;
+  /** Catalog issue type id. Without it the server uses the default type. */
+  readonly issueTypeId?: string;
   readonly parentId?: string;
   readonly dueDate?: string;
   readonly storyPoints?: number;
 }
 
 export interface UpdateIssueMetadataInput {
-  readonly issueType: IssueType;
+  readonly issueTypeId: string;
   readonly parentId?: string;
   readonly dueDate?: string;
   readonly storyPoints?: number;
@@ -155,5 +164,5 @@ export interface UpdateIssueMetadataInput {
 export interface UpdateIssueDetailsInput extends UpdateIssueMetadataInput {
   readonly summary: string;
   readonly description: string;
-  readonly priority: IssuePriority;
+  readonly priorityId: string;
 }

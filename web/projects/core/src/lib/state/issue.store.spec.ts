@@ -23,9 +23,11 @@ function issue(overrides: Partial<Issue> = {}): Issue {
     summary: 'Error',
     description: '',
     status: 'open',
-    priority: 'high',
+    priority: { id: 'prio-high', name: 'Alta', icon: 'arrow-up', color: 'orange' },
     projectId: 'project-1',
-    issueType: 'bug',
+    issueType: { id: 'type-bug', name: 'Error', icon: 'bug', color: 'red', hierarchyLevel: 0 },
+    resolution: null,
+    resolvedAt: null,
     parentId: null,
     dueDate: null,
     storyPoints: null,
@@ -51,8 +53,10 @@ function issueDto(overrides: Record<string, unknown> = {}): Record<string, unkno
     summary: 'Error',
     description: '',
     status: 'open',
-    priority: 'high',
-    issue_type: 'bug',
+    priority: { id: 'prio-high', name: 'Alta', icon: 'arrow-up', color: 'orange' },
+    issue_type: { id: 'type-bug', name: 'Error', icon: 'bug', color: 'red', hierarchy_level: 0 },
+    resolution: null,
+    resolved_at: null,
     parent_id: null,
     due_date: null,
     story_points: null,
@@ -281,7 +285,7 @@ describe('IssueStore', () => {
 
       let created: Issue | undefined;
       store
-        .createIssue({ summary: 'Nueva', description: '', priority: 'low' })
+        .createIssue({ summary: 'Nueva', description: '', priorityId: 'prio-low' })
         .subscribe((item) => (created = item));
       httpMock.expectOne(BASE).flush({ data: issueDto({ id: 'issue-2', summary: 'Nueva' }) });
 
@@ -308,11 +312,19 @@ describe('IssueStore', () => {
       httpMock.expectOne(`${BASE}/issue-1/rank`).flush({ data: issueDto({ rank: 'z' }) });
       expect(store.selected.value()?.rank).toBe('z');
 
-      store.updateMetadata('issue-1', { issueType: 'task' }).subscribe();
-      httpMock
-        .expectOne(`${BASE}/issue-1/metadata`)
-        .flush({ data: issueDto({ issue_type: 'task' }) });
-      expect(store.issues()[0]?.issueType).toBe('task');
+      store.updateMetadata('issue-1', { issueTypeId: 'type-task' }).subscribe();
+      httpMock.expectOne(`${BASE}/issue-1/metadata`).flush({
+        data: issueDto({
+          issue_type: {
+            id: 'type-task',
+            name: 'Tarea',
+            icon: 'task',
+            color: 'blue',
+            hierarchy_level: 0,
+          },
+        }),
+      });
+      expect(store.issues()[0]?.issueType.name).toBe('Tarea');
     });
   });
 
