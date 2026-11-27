@@ -1,0 +1,156 @@
+.page {
+  min-height: 100vh;
+  background: var(--cl-bg-page);
+}
+
+.wizard {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  width: min(880px, 100%);
+  min-height: 0;
+  margin: 0 auto;
+  padding: var(--cl-space-6) 0 var(--cl-space-12);
+}
+
+/* The step fills the rest of the wizard, so the page has no bare band under a short step. */
+.step-body {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.step-body > * {
+  flex: 1 1 auto;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  margin-bottom: var(--cl-space-6);
+}
+
+.logo {
+  display: block;
+  width: auto;
+  height: var(--cl-space-8);
+}
+
+.steps-nav {
+  margin-bottom: var(--cl-space-8);
+}
+
+.steps {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--cl-space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.step {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--cl-space-2);
+  min-width: 0;
+  color: var(--cl-text-subtle);
+  font-size: var(--cl-font-small);
+  text-align: center;
+}
+
+.step::before {
+  content: '';
+  order: -1;
+  width: 100%;
+  height: 2px;
+  border-radius: var(--cl-radius-full);
+  background: var(--cl-border);
+}
+
+.step[data-state='done']::before,
+.step[data-state='current']::before {
+  background: var(--cl-brand);
+}
+
+.step-number {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--cl-radius-full);
+  border: 1px solid var(--cl-border-strong);
+  background: var(--cl-bg-surface);
+  color: var(--cl-text-subtle);
+  font-weight: 600;
+}
+
+.step[data-state='done'] .step-number {
+  border-color: var(--cl-brand);
+  background: var(--cl-brand);
+  color: var(--cl-bg-surface);
+}
+
+.step[data-state='current'] .step-number {
+  border-color: var(--cl-brand);
+  color: var(--cl-brand);
+  box-shadow: var(--cl-shadow-focus);
+}
+
+.step[data-state='current'] .step-title {
+  color: var(--cl-text);
+  font-weight: 600;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.panel {
+  padding: var(--cl-space-6);
+  border: 1px solid var(--cl-border);
+  border-radius: var(--cl-radius-lg);
+  background: var(--cl-bg-surface);
+}
+
+.panel-title {
+  margin: 0 0 var(--cl-space-4);
+  font-size: var(--cl-font-h2);
+  color: var(--cl-text);
+}
+
+@media (max-width: 767.98px) {
+  .steps {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--cl-space-3);
+  }
+
+  .step {
+    flex-direction: row;
+    text-align: left;
+    padding: var(--cl-space-2) var(--cl-space-3);
+    border: 1px solid var(--cl-border);
+    border-radius: var(--cl-radius-md);
+    background: var(--cl-bg-surface);
+  }
+
+  .step::before {
+    display: none;
+  }
+
+  .touch-target {
+    min-height: var(--cl-space-12);
+  }
+}

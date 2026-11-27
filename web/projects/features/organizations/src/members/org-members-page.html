@@ -1,0 +1,190 @@
+@if (org() && !canView()) {
+  <app-page-container variant="wide" pageName="org-members" [ready]="true">
+    <app-page-header title="Miembros" [subtitle]="subtitle()" />
+    <app-empty-state
+      title="No tienes permiso para ver esto"
+      description="Pide acceso a un administrador de la organización."
+    />
+  </app-page-container>
+} @else {
+  <app-page-container variant="wide" pageName="org-members" [ready]="!loading()" [fill]="true">
+    <app-page-header title="Miembros" [subtitle]="subtitle()">
+      @if (canManage()) {
+        <div appPageHeaderActions>
+          <p-button
+            label="Invitar personas"
+            type="button"
+            class="touch-target"
+            (onClick)="goToInvitations()"
+          />
+        </div>
+      }
+    </app-page-header>
+
+    @if (role() === 'member') {
+      <p-message severity="info" [closable]="false" styleClass="banner">
+        <span class="alert-body">
+          <strong>Solo lectura</strong>
+          <span
+            >Puedes ver a los miembros de la organización. Solo los administradores pueden cambiar
+            roles o invitar personas.</span
+          >
+        </span>
+      </p-message>
+    }
+
+    @if (roleError(); as message) {
+      <div role="alert" class="banner">
+        <p-message severity="error" [closable]="true" (onClose)="roleError.set(null)">{{
+          message
+        }}</p-message>
+      </div>
+    }
+
+    <app-toolbar>
+      <div appToolbarLeft class="toolbar-left">
+        <app-search-input
+          [(value)]="query"
+          placeholder="Buscar por nombre o correo"
+          ariaLabel="Buscar miembros"
+        />
+        <p-select
+          ariaLabel="Filtrar por rol"
+          styleClass="filter-select"
+          [options]="roleFilterOptions"
+          optionLabel="label"
+          optionValue="value"
+          [ngModel]="roleFilter()"
+          (ngModelChange)="roleFilter.set($event)"
+        />
+      </div>
+    </app-toolbar>
+
+    <app-data-table
+      tableKey="org-members"
+      [fill]="true"
+      [columns]="columns"
+      [data]="orgId() ? visible() : []"
+      rowKey="userId"
+      [loading]="loading()"
+      [error]="error()"
+      (retry)="load()"
+      [emptyState]="emptyTpl"
+      [selectable]="selectable()"
+      [(selectedKeys)]="selected"
+      [bulkActions]="bulkActions"
+      [rowActions]="rowActionsFor"
+      [mobileRender]="mobileTpl"
+    >
+      <ng-template appDataTableCell="name" let-row>
+        <app-org-member-person
+          [userId]="row.userId"
+          [name]="row.name"
+          [hasAvatar]="row.hasAvatar"
+          [isSelf]="isSelf(row)"
+        />
+      </ng-template>
+      <ng-template appDataTableCell="jobTitle" let-row>
+        {{ row.jobTitle || '—' }}
+      </ng-template>
+      <ng-template appDataTableCell="email" let-row>
+        <span class="secondary">{{ row.email }}</span>
+      </ng-template>
+      <ng-template appDataTableCell="role" let-row>
+        <ng-container *ngTemplateOutlet="roleTpl; context: { $implicit: row }" />
+      </ng-template>
+      <ng-template appDataTableCell="joinedAt" let-row>
+        {{ formatDate(row.joinedAt) }}
+      </ng-template>
+    </app-data-table>
+
+    <ng-template #roleTpl let-member>
+      @if (canChangeRole(member)) {
+        <p-select
+          size="small"
+          styleClass="role-select"
+          [ariaLabel]="'Rol de ' + member.name"
+          [formControl]="roleControl(member)"
+          [options]="roleOptions(member)"
+          optionLabel="label"
+          optionValue="value"
+        />
+      } @else {
+        <span class="role-static" [pTooltip]="roleReason(member) ?? undefined">
+          <app-lozenge [tone]="roleTone(member.role)">{{ roleLabel(member.role) }}</app-lozenge>
+        </span>
+      }
+    </ng-template>
+
+    <ng-template #mobileTpl let-member>
+      <div class="mobile-card">
+        <app-org-member-person
+          [userId]="member.userId"
+          [name]="member.name"
+          [hasAvatar]="member.hasAvatar"
+          [isSelf]="isSelf(member)"
+        />
+        <span class="secondary">{{ member.email }}</span>
+        <ng-container *ngTemplateOutlet="roleTpl; context: { $implicit: member }" />
+      </div>
+    </ng-template>
+
+    <ng-template #emptyTpl>
+      @if (query().trim() || roleFilter() !== 'all') {
+        <app-empty-state
+          title="Sin resultados"
+          description="No hay miembros que coincidan con los filtros."
+        />
+      } @else {
+        <app-empty-state
+          title="Aún no hay miembros"
+          description="Invita a tus compañeros para empezar a colaborar."
+        />
+        @if (canManage()) {
+          <p-button
+            label="Invitar personas"
+            type="button"
+            class="touch-target"
+            (onClick)="goToInvitations()"
+          />
+        }
+      }
+    </ng-template>
+  </app-page-container>
+
+  <app-confirm-modal
+    [open]="pendingRole() !== null"
+    title="Cambiar rol"
+    [description]="roleChangeText()"
+    confirmText="Cambiar rol"
+    [loading]="busy()"
+    (confirmed)="changeRole()"
+    (cancelled)="cancelRoleChange()"
+  />
+
+  <app-confirm-danger-modal
+    [open]="removing() !== null"
+    title="Quitar de la organización"
+    [description]="
+      removing()
+        ? removing()!.name + ' perderá el acceso a los proyectos y equipos de la organización.'
+        : undefined
+    "
+    [confirmation]="removing()?.email ?? ''"
+    confirmText="Quitar"
+    [loading]="busy()"
+    (confirmed)="removeOne()"
+    (cancelled)="removing.set(null)"
+  />
+
+  <app-confirm-modal
+    [open]="bulkOpen()"
+    [title]="'¿Quitar ' + selectedRemovable().length + ' miembros?'"
+    description="Perderán el acceso a los proyectos y equipos de la organización."
+    confirmText="Quitar miembros"
+    [danger]="true"
+    [loading]="busy()"
+    (confirmed)="removeSelected()"
+    (cancelled)="bulkOpen.set(false)"
+  />
+}

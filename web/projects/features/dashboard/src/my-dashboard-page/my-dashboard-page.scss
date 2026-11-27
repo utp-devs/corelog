@@ -1,0 +1,115 @@
+:host {
+  display: block;
+  min-width: 0;
+}
+
+/*
+ * Panels wrap in a row. Every panel stretches to the row height, so no card has empty space under
+ * its content. A last row with fewer panels grows to the full width, so no empty block is left beside it.
+ */
+.panels {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: var(--cl-space-4);
+  width: 100%;
+}
+
+.panels > * {
+  flex: 1 1 320px;
+  min-width: 0;
+}
+
+/* The chart card fills the height of its panel row. */
+.panels > app-chart-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.subtle {
+  color: var(--cl-text-subtle);
+}
+
+/* Empty-state copy: one block per step with its own vertical rhythm, so the lines never share a box. */
+.steps {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cl-space-3);
+  margin: 0;
+  padding-inline-start: var(--cl-space-5);
+}
+
+.step {
+  display: block;
+  line-height: 1.5;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.list {
+  display: grid;
+  gap: var(--cl-space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.list-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--cl-space-3);
+  min-width: 0;
+  padding: var(--cl-space-2) var(--cl-space-3);
+  border: 1px solid var(--cl-border);
+  border-radius: var(--cl-radius-md);
+}
+
+.project-item {
+  justify-content: flex-start;
+}
+
+.item-text {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.item-link {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.meta {
+  flex-shrink: 0;
+  font-size: var(--cl-font-small);
+  overflow-wrap: anywhere;
+}
+
+/* Stacked layout below 768 px: one column, full-width panels. */
+@media (max-width: 767px) {
+  .panels {
+    flex-direction: column;
+  }
+
+  .panels > * {
+    flex: none;
+    width: 100%;
+  }
+}
+
+/* Phones: links are at least 44 px tall and wrap instead of overflowing the panel. */
+@media (max-width: 767.98px) {
+  .item-link,
+  .empty-link,
+  .step a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    max-width: 100%;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+}

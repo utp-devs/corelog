@@ -1,0 +1,50 @@
+<div class="logo-field">
+  <div class="logo-preview" [attr.aria-hidden]="logoUrl() ? null : 'true'">
+    @if (logoUrl(); as url) {
+      <img class="logo-image" [src]="url" [alt]="'Logo de ' + organizationName()" />
+    } @else {
+      <span class="muted">Sin logo</span>
+    }
+  </div>
+  <div class="logo-actions">
+    <span class="muted">PNG, JPEG o WebP de hasta 2 MB.</span>
+    <div class="button-row">
+      <p-button
+        label="Subir logo"
+        severity="secondary"
+        [outlined]="true"
+        type="button"
+        class="touch-target"
+        [disabled]="!canEdit() || busy()"
+        [loading]="busy()"
+        [attr.title]="
+          canEdit() ? null : 'Solo propietarios y administradores pueden cambiar el logo.'
+        "
+        (onClick)="chooseFile()"
+      />
+      @if (logoUrl()) {
+        <p-button
+          label="Quitar logo"
+          severity="danger"
+          [text]="true"
+          type="button"
+          class="touch-target"
+          [disabled]="!canEdit() || busy()"
+          (onClick)="removeLogo()"
+        />
+      }
+    </div>
+    <input
+      #fileInput
+      type="file"
+      class="hidden-input"
+      [attr.accept]="accept"
+      aria-label="Elegir archivo de logo"
+      [disabled]="!canEdit()"
+      (change)="onFileChosen($event)"
+    />
+    @if (clientError(); as message) {
+      <p class="error" role="alert">{{ message }}</p>
+    }
+  </div>
+</div>

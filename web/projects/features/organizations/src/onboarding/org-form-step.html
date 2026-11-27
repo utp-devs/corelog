@@ -1,0 +1,65 @@
+<form
+  class="form-grid"
+  aria-label="Datos de la organización"
+  novalidate
+  (submit)="$event.preventDefault(); submit()"
+>
+  <app-field-row
+    #nameRow
+    label="Nombre de la organización"
+    class="half"
+    [error]="errorOf(form.controls.name)"
+  >
+    <input
+      pInputText
+      type="text"
+      autocomplete="organization"
+      aria-label="Nombre de la organización"
+      [formControl]="form.controls.name"
+      [attr.id]="nameRow.controlId"
+      [attr.aria-invalid]="errorOf(form.controls.name) ? 'true' : null"
+    />
+  </app-field-row>
+
+  <app-field-row
+    #slugRow
+    label="Identificador (slug)"
+    class="half"
+    [error]="errorOf(form.controls.slug)"
+    [helper]="slugRule"
+  >
+    <input
+      pInputText
+      type="text"
+      aria-label="Identificador de la organización"
+      [formControl]="form.controls.slug"
+      [attr.id]="slugRow.controlId"
+      [attr.aria-invalid]="errorOf(form.controls.slug) ? 'true' : null"
+    />
+  </app-field-row>
+
+  @if (formError(); as message) {
+    <div class="full" role="alert">
+      <p-message severity="error" [closable]="false">{{ message }}</p-message>
+    </div>
+  }
+
+  <div class="full actions">
+    <p-button
+      label="Atrás"
+      severity="secondary"
+      [outlined]="true"
+      size="large"
+      type="button"
+      class="touch-target"
+      (onClick)="back.emit()"
+    />
+    <p-button
+      label="Crear organización"
+      size="large"
+      type="submit"
+      class="touch-target"
+      [loading]="submitting()"
+    />
+  </div>
+</form>

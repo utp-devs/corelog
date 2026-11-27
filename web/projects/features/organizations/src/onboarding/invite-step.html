@@ -1,0 +1,129 @@
+@if (created(); as list) {
+  <div>
+    <p class="intro">
+      Hemos creado {{ list.length === 1 ? 'una invitación' : list.length + ' invitaciones' }}. No
+      enviamos correos: comparte cada enlace con la persona invitada. Caduca en 7 días.
+    </p>
+    <ul aria-label="Enlaces de invitación" class="invite-list">
+      @for (invitation of list; track invitation.id) {
+        <li class="invite-item">
+          <span>{{ invitation.email }}</span>
+          <span class="muted">{{ roleLabel(invitation.role) }}</span>
+          <button
+            type="button"
+            class="link-button touch-target"
+            [attr.aria-label]="'Copiar enlace de ' + invitation.email"
+            (click)="copyLink(invitation.acceptUrl)"
+          >
+            Copiar enlace
+          </button>
+        </li>
+      }
+    </ul>
+    <div class="actions">
+      <p-button
+        label="Continuar"
+        size="large"
+        type="button"
+        class="touch-target"
+        (onClick)="continued.emit()"
+      />
+    </div>
+  </div>
+} @else {
+  <form aria-label="Invitar a tu equipo" class="invite-form" novalidate (submit)="onSubmit($event)">
+    <p class="intro">
+      Añade los correos de tu equipo. Es opcional: puedes invitar a más personas después desde la
+      configuración.
+    </p>
+
+    @for (row of rows(); track row.id; let index = $index) {
+      <div class="row">
+        <app-field-row
+          [label]="'Correo ' + (index + 1)"
+          [error]="rowErrors()[row.id]"
+          class="email-field"
+        >
+          <input
+            type="text"
+            inputmode="email"
+            autocomplete="off"
+            class="text-input"
+            [value]="row.email"
+            [attr.aria-label]="'Correo del invitado ' + (index + 1)"
+            [attr.aria-invalid]="rowErrors()[row.id] ? 'true' : null"
+            (input)="onEmailInput(row.id, $event)"
+          />
+        </app-field-row>
+        <app-field-row [label]="'Rol'" class="role-field">
+          <p-select
+            [ngModel]="row.role"
+            [ngModelOptions]="{ standalone: true }"
+            (ngModelChange)="updateRow(row.id, { role: $event })"
+            [options]="roleOptions"
+            optionLabel="label"
+            optionValue="value"
+            [ariaLabel]="'Rol del invitado ' + (index + 1)"
+          />
+        </app-field-row>
+        <button
+          type="button"
+          class="icon-button touch-target"
+          [attr.aria-label]="'Quitar invitado ' + (index + 1)"
+          [disabled]="rows().length === 1"
+          (click)="removeRow(row.id)"
+        >
+          <i class="pi pi-trash" aria-hidden="true"></i>
+        </button>
+      </div>
+    }
+
+    <div class="actions">
+      <p-button
+        label="Añadir otro correo"
+        icon="pi pi-plus"
+        severity="secondary"
+        [outlined]="true"
+        type="button"
+        class="touch-target"
+        (onClick)="addRow()"
+      />
+    </div>
+
+    @if (serverError(); as message) {
+      <div role="alert">
+        <p-message severity="error" [closable]="false">{{ message }}</p-message>
+      </div>
+    }
+
+    <div class="actions">
+      @if (showBack()) {
+        <p-button
+          label="Atrás"
+          severity="secondary"
+          [outlined]="true"
+          size="large"
+          type="button"
+          class="touch-target"
+          (onClick)="back.emit()"
+        />
+      }
+      <p-button
+        label="Omitir este paso"
+        severity="secondary"
+        [outlined]="true"
+        size="large"
+        type="button"
+        class="touch-target"
+        (onClick)="continued.emit()"
+      />
+      <p-button
+        label="Crear invitaciones"
+        size="large"
+        type="submit"
+        class="touch-target"
+        [loading]="submitting()"
+      />
+    </div>
+  </form>
+}

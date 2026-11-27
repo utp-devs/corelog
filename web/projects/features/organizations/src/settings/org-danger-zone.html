@@ -1,0 +1,109 @@
+<div id="org-danger" class="danger">
+  <app-section
+    title="Zona de peligro"
+    description="Estas acciones afectan a toda la organización."
+    ariaLabel="Zona de peligro"
+  >
+    <div class="danger-row">
+      <div class="danger-copy">
+        <strong>Salir de la organización</strong>
+        <p class="hint">
+          Perderás el acceso a sus proyectos y equipos. No puedes salir si eres el último
+          propietario.
+        </p>
+      </div>
+      <p-button
+        label="Salir de la organización"
+        severity="danger"
+        class="touch-target"
+        type="button"
+        (onClick)="leaveOpen.set(true)"
+      />
+    </div>
+
+    @if (isOwner()) {
+      <div class="danger-row">
+        <div class="danger-copy">
+          <strong>Transferir la propiedad</strong>
+          <p class="hint">
+            El miembro elegido pasa a ser propietario y tú pasas a ser administrador.
+          </p>
+          <p-select
+            ariaLabel="Nuevo propietario"
+            placeholder="Elige un miembro"
+            styleClass="transfer-select"
+            [options]="transferOptions()"
+            optionLabel="label"
+            optionValue="value"
+            [ngModel]="transferTarget()"
+            (ngModelChange)="transferTarget.set($event)"
+          />
+        </div>
+        <p-button
+          label="Transferir propiedad"
+          severity="danger"
+          class="touch-target"
+          type="button"
+          [disabled]="!selectedTarget() || busy()"
+          (onClick)="transferOpen.set(true)"
+        />
+      </div>
+      <div class="danger-row">
+        <div class="danger-copy">
+          <strong>Eliminar la organización</strong>
+          <p class="hint">
+            Los proyectos, equipos e incidencias dejan de estar disponibles. El identificador queda
+            reservado.
+          </p>
+        </div>
+        <p-button
+          label="Eliminar organización"
+          severity="danger"
+          class="touch-target"
+          type="button"
+          (onClick)="deleteOpen.set(true)"
+        />
+      </div>
+    } @else {
+      <p class="hint">
+        Solo el propietario puede transferir la propiedad o eliminar la organización.
+      </p>
+    }
+  </app-section>
+
+  <app-confirm-modal
+    [open]="leaveOpen()"
+    title="¿Salir de la organización?"
+    [description]="'Perderás el acceso a ' + org().name + '.'"
+    confirmText="Salir"
+    [danger]="true"
+    [loading]="busy()"
+    (confirmed)="leave()"
+    (cancelled)="leaveOpen.set(false)"
+  />
+
+  <app-confirm-danger-modal
+    [open]="transferOpen()"
+    title="Transferir la propiedad"
+    [description]="
+      selectedTarget()
+        ? selectedTarget()!.name + ' será el nuevo propietario y tú pasarás a ser administrador.'
+        : undefined
+    "
+    [confirmation]="selectedTarget()?.email ?? ''"
+    confirmText="Transferir"
+    [loading]="busy()"
+    (confirmed)="transfer()"
+    (cancelled)="transferOpen.set(false)"
+  />
+
+  <app-confirm-danger-modal
+    [open]="deleteOpen()"
+    title="Eliminar la organización"
+    description="Esta acción no se puede deshacer. Escribe el identificador de la organización para confirmar."
+    [confirmation]="org().slug"
+    [loading]="busy()"
+    (confirmed)="remove()"
+    (cancelled)="deleteOpen.set(false)"
+  />
+</div>

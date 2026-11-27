@@ -1,0 +1,76 @@
+<main class="page">
+  <app-page-container variant="reading" pageName="onboarding" [ready]="true" [fill]="true">
+    <div class="wizard">
+      <header class="header">
+        <img
+          src="/brand/corelog-banner-480.png"
+          alt="CoreLog"
+          width="128"
+          height="32"
+          class="logo"
+        />
+      </header>
+
+      <nav aria-label="Pasos del asistente" class="steps-nav">
+        <ol class="steps">
+          @for (title of stepTitles; track title; let index = $index) {
+            <li
+              class="step"
+              [attr.data-state]="stateOf(index)"
+              [attr.aria-current]="index === step() ? 'step' : null"
+            >
+              <span class="step-number" aria-hidden="true">{{ index + 1 }}</span>
+              <span class="step-title">
+                {{ title }}
+                @if (stateOf(index) === 'done') {
+                  <span class="sr-only"> (completado)</span>
+                }
+              </span>
+            </li>
+          }
+        </ol>
+      </nav>
+
+      <div class="step-body">
+        @if (step() === 0) {
+          <app-choose-step (create)="step.set(1)" />
+        }
+
+        @if (step() === 1) {
+          <section class="panel" aria-labelledby="onboarding-org-title">
+            <h2 id="onboarding-org-title" class="panel-title">Datos de la organización</h2>
+            <app-org-form-step (back)="step.set(0)" (created)="step.set(2)" />
+          </section>
+        }
+
+        @if (step() === 2) {
+          <section class="panel" aria-labelledby="onboarding-invite-title">
+            <h2 id="onboarding-invite-title" class="panel-title">Invita a tu equipo</h2>
+            @if (org(); as current) {
+              <app-invite-step [orgId]="current.id" (continued)="step.set(3)" />
+            } @else {
+              <p>No hay una organización activa. Vuelve al paso anterior.</p>
+            }
+          </section>
+        }
+
+        @if (step() === 3) {
+          <section class="panel" aria-labelledby="onboarding-finish-title">
+            <h2 id="onboarding-finish-title" class="panel-title">Todo listo</h2>
+            <p>
+              {{ orgName() ? orgName() + ' está preparada.' : 'Tu cuenta está preparada.' }} Empieza
+              creando tu primer proyecto.
+            </p>
+            <p-button
+              label="Ir a proyectos"
+              size="large"
+              type="button"
+              class="touch-target"
+              (onClick)="finish()"
+            />
+          </section>
+        }
+      </div>
+    </div>
+  </app-page-container>
+</main>

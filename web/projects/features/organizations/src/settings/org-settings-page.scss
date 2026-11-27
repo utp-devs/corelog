@@ -1,0 +1,101 @@
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cl-space-6);
+  min-width: 0;
+}
+
+/* Sections take the whole column; their children may shrink so long labels wrap instead of clipping. */
+.form > * {
+  min-width: 0;
+}
+
+.banner {
+  margin-bottom: var(--cl-space-4);
+}
+
+.alert-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cl-space-1);
+}
+
+.section-nav {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cl-space-1);
+  position: sticky;
+  top: var(--cl-space-6);
+}
+
+.section-link {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: var(--cl-text-subtle);
+  padding: var(--cl-space-1) var(--cl-space-2);
+  border-radius: var(--cl-radius-sm);
+}
+
+.section-link:hover {
+  color: var(--cl-text);
+  background: var(--cl-bg-sunken);
+}
+
+.section-link:focus-visible {
+  outline: none;
+  box-shadow: var(--cl-shadow-focus);
+}
+
+.code {
+  overflow-wrap: anywhere;
+}
+
+.muted {
+  color: var(--cl-text-subtle);
+}
+
+.info-row {
+  display: flex;
+  align-items: center;
+  gap: var(--cl-space-3);
+  flex-wrap: wrap;
+  padding: var(--cl-space-2) 0;
+}
+
+.info-label {
+  min-width: 0;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--cl-space-2);
+  flex-wrap: wrap;
+}
+
+:host ::ng-deep .number-input {
+  width: var(--cl-space-16);
+  max-width: 100%;
+}
+
+@media (max-width: 767.98px) {
+  .actions > * {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .touch-target {
+    min-height: var(--cl-space-12);
+  }
+}
+
+/* Phones: section links are 48 px tap targets. */
+@media (max-width: 767.98px) {
+  .section-link {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--cl-space-12);
+  }
+}

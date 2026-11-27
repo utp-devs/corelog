@@ -1,0 +1,166 @@
+@if (org() && !canManage()) {
+  <app-page-container variant="wide" pageName="org-invitations" [ready]="true">
+    <app-page-header title="Invitaciones" [subtitle]="subtitle()" />
+    <p-message severity="info" [closable]="false" styleClass="banner">
+      <span class="alert-body">
+        <strong>Solo lectura</strong>
+        <span
+          >Solo los propietarios y administradores pueden invitar personas y gestionar las
+          invitaciones.</span
+        >
+      </span>
+    </p-message>
+    <app-empty-state
+      title="No tienes permiso para ver esto"
+      description="Pide acceso a un administrador de la organización."
+    />
+  </app-page-container>
+} @else {
+  <app-page-container variant="wide" pageName="org-invitations" [ready]="!loading()" [fill]="true">
+    <app-page-header title="Invitaciones" [subtitle]="subtitle()" />
+
+    <app-section
+      title="Invitar personas"
+      [description]="
+        'Puedes escribir hasta ' +
+        maxInvitations +
+        ' correos separados por comas o saltos de línea.'
+      "
+    >
+      <form
+        aria-label="Invitar personas"
+        novalidate
+        class="form"
+        [formGroup]="form"
+        (ngSubmit)="submit()"
+      >
+        <app-field-row
+          #emailsRow
+          label="Correos electrónicos"
+          [required]="true"
+          [error]="emailsError()"
+          [helper]="emailsHelper()"
+        >
+          <textarea
+            #emailsField
+            pTextarea
+            appFieldControl
+            formControlName="emails"
+            rows="3"
+            placeholder="ana@empresa.com, luis@empresa.com"
+          ></textarea>
+        </app-field-row>
+        <app-field-row #roleRow label="Rol para todos" [required]="true">
+          <p-select
+            formControlName="role"
+            [inputId]="roleRow.controlId"
+            [options]="roleOptions()"
+            optionLabel="label"
+            optionValue="value"
+            styleClass="role-select"
+          />
+        </app-field-row>
+        @if (submitError(); as message) {
+          <div role="alert">
+            <p-message severity="error" [closable]="false">{{ message }}</p-message>
+          </div>
+        }
+        <div class="form-actions">
+          <p-button
+            label="Enviar invitaciones"
+            type="submit"
+            class="touch-target"
+            [loading]="busy()"
+            [disabled]="!canManage()"
+          />
+        </div>
+      </form>
+    </app-section>
+
+    @if (created().length > 0) {
+      <app-invite-links-panel [invitations]="created()" (dismissed)="dismissLinks()" />
+    }
+
+    <div class="toolbar" role="group" aria-label="Mostrar invitaciones">
+      <p-selectbutton
+        [options]="scopeOptions"
+        optionLabel="label"
+        optionValue="value"
+        [ngModel]="scope()"
+        (ngModelChange)="onScope($event)"
+      />
+    </div>
+
+    <app-data-table
+      tableKey="org-invitations"
+      [fill]="true"
+      [columns]="columns"
+      [data]="orgId() ? invitations() : []"
+      rowKey="id"
+      [loading]="loading()"
+      [error]="error()"
+      (retry)="load()"
+      [emptyState]="emptyTpl"
+      [rowActions]="rowActionsFor"
+      [mobileRender]="mobileTpl"
+    >
+      <ng-template appDataTableCell="email" let-row>
+        <span class="email">{{ row.email }}</span>
+      </ng-template>
+      <ng-template appDataTableCell="role" let-row>
+        <app-lozenge tone="neutral">{{ roleLabel(row.role) }}</app-lozenge>
+      </ng-template>
+      <ng-template appDataTableCell="status" let-row>
+        <app-lozenge [tone]="statusTone(row.status)">{{ statusLabel(row.status) }}</app-lozenge>
+      </ng-template>
+      <ng-template appDataTableCell="expiresAt" let-row>
+        {{ row.status === 'pending' ? formatDate(row.expiresAt) : '—' }}
+      </ng-template>
+      <ng-template appDataTableCell="invitedBy" let-row>
+        {{ invitedByName(row.invitedBy) }}
+      </ng-template>
+    </app-data-table>
+
+    <ng-template #mobileTpl let-row>
+      <div class="mobile-card">
+        <span class="email">{{ row.email }}</span>
+        <app-lozenge [tone]="statusTone(row.status)">{{ statusLabel(row.status) }}</app-lozenge>
+        <span class="muted">{{ roleLabel(row.role) }}</span>
+      </div>
+    </ng-template>
+
+    <ng-template #emptyTpl>
+      <app-empty-state
+        [title]="
+          scope() === 'pending' ? 'No hay invitaciones pendientes' : 'Aún no has invitado a nadie'
+        "
+        description="Escribe uno o varios correos arriba y elige su rol para enviar las invitaciones."
+      />
+      @if (canManage()) {
+        <p-button
+          label="Invitar personas"
+          severity="secondary"
+          [outlined]="true"
+          type="button"
+          class="touch-target"
+          (onClick)="focusInvite()"
+        />
+      }
+    </ng-template>
+  </app-page-container>
+
+  <app-confirm-modal
+    [open]="revoking() !== null"
+    title="¿Revocar la invitación?"
+    [description]="
+      revoking()
+        ? 'El enlace enviado a ' + revoking()!.email + ' dejará de funcionar de inmediato.'
+        : undefined
+    "
+    confirmText="Revocar"
+    [danger]="true"
+    [loading]="busy()"
+    (confirmed)="revoke()"
+    (cancelled)="revoking.set(null)"
+  />
+}

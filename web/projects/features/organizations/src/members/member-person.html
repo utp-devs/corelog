@@ -1,0 +1,7 @@
+<span class="person">
+  <app-avatar [id]="userId()" [name]="name()" [src]="src()" [size]="32" />
+  <span class="person-name">{{ name() }}</span>
+  @if (isSelf()) {
+    <span class="you-tag"> (tú)</span>
+  }
+</span>

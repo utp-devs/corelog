@@ -1,0 +1,197 @@
+@if (org(); as current) {
+  <app-page-container variant="reading" pageName="org-settings" [ready]="true">
+    <nav appPageSidebar aria-label="Secciones de configuración" class="section-nav">
+      @for (link of sectionLinks; track link.href) {
+        <a class="section-link" [href]="link.href">{{ link.label }}</a>
+      }
+    </nav>
+
+    <app-page-header title="Configuración de la organización" [subtitle]="current.name" />
+
+    @if (!canEdit()) {
+      <p-message severity="info" [closable]="false" styleClass="banner">
+        <span class="alert-body">
+          <strong>Solo lectura</strong>
+          <span
+            >Solo los propietarios y administradores pueden cambiar la configuración. Puedes ver los
+            valores actuales.</span
+          >
+        </span>
+      </p-message>
+    }
+
+    <form
+      class="form"
+      aria-label="Configuración de la organización"
+      novalidate
+      [formGroup]="form"
+      (ngSubmit)="save()"
+    >
+      <div id="org-general">
+        <app-section title="General" ariaLabel="General">
+          <app-field-row
+            #nameRow
+            label="Nombre"
+            [required]="true"
+            [error]="errorOf(form.controls.name)"
+          >
+            <input pInputText appFieldControl formControlName="name" maxlength="120" />
+          </app-field-row>
+          <app-field-row label="Identificador" helper="Se usa en las URL y no puede cambiarse.">
+            <span class="code">{{ current.slug }}</span>
+          </app-field-row>
+          <app-field-row label="Descripción" [error]="errorOf(form.controls.description)">
+            <textarea
+              pTextarea
+              appFieldControl
+              formControlName="description"
+              rows="3"
+              maxlength="500"
+            ></textarea>
+          </app-field-row>
+          <app-field-row label="Logo">
+            <app-org-logo-field
+              [organizationId]="current.id"
+              [organizationName]="current.name"
+              [canEdit]="canEdit()"
+            />
+          </app-field-row>
+        </app-section>
+      </div>
+
+      <div id="org-policies">
+        <app-section
+          title="Políticas"
+          description="Quién puede crear proyectos y equipos, y la visibilidad por defecto."
+          ariaLabel="Políticas"
+        >
+          <app-field-row
+            #projectsRow
+            label="Quién puede crear proyectos"
+            [error]="errorOf(form.controls.whoCanCreateProjects)"
+          >
+            <p-select
+              formControlName="whoCanCreateProjects"
+              [inputId]="projectsRow.controlId"
+              [options]="whoOptions"
+              optionLabel="label"
+              optionValue="value"
+            />
+          </app-field-row>
+          <app-field-row
+            #teamsRow
+            label="Quién puede crear equipos"
+            [error]="errorOf(form.controls.whoCanCreateTeams)"
+          >
+            <p-select
+              formControlName="whoCanCreateTeams"
+              [inputId]="teamsRow.controlId"
+              [options]="whoOptions"
+              optionLabel="label"
+              optionValue="value"
+            />
+          </app-field-row>
+          <app-field-row
+            #visibilityRow
+            label="Visibilidad por defecto de los proyectos"
+            [error]="errorOf(form.controls.defaultProjectVisibility)"
+          >
+            <p-select
+              formControlName="defaultProjectVisibility"
+              [inputId]="visibilityRow.controlId"
+              [options]="visibilityOptions"
+              optionLabel="label"
+              optionValue="value"
+            />
+          </app-field-row>
+          <div class="info-row">
+            <span class="info-label">Exigir verificación en dos pasos</span>
+            <app-lozenge tone="neutral">Desactivado</app-lozenge>
+            <span class="muted">Disponible próximamente</span>
+          </div>
+        </app-section>
+      </div>
+
+      <div id="org-time">
+        <app-section
+          title="Tiempo"
+          description="Jornada de referencia para estimaciones y calendario."
+          ariaLabel="Tiempo"
+        >
+          <app-field-row
+            #hoursRow
+            label="Horas por día"
+            [required]="true"
+            [error]="errorOf(form.controls.hoursPerDay)"
+          >
+            <p-inputnumber
+              formControlName="hoursPerDay"
+              [inputId]="hoursRow.controlId"
+              [min]="1"
+              [max]="24"
+              styleClass="number-input"
+            />
+          </app-field-row>
+          <app-field-row
+            #daysRow
+            label="Días por semana"
+            [required]="true"
+            [error]="errorOf(form.controls.daysPerWeek)"
+          >
+            <p-inputnumber
+              formControlName="daysPerWeek"
+              [inputId]="daysRow.controlId"
+              [min]="1"
+              [max]="7"
+              [maxFractionDigits]="0"
+              styleClass="number-input"
+            />
+          </app-field-row>
+          <app-field-row
+            #zoneRow
+            label="Zona horaria"
+            [required]="true"
+            [error]="errorOf(form.controls.timezone)"
+          >
+            <p-select
+              formControlName="timezone"
+              [inputId]="zoneRow.controlId"
+              [options]="timezones()"
+              optionLabel="label"
+              optionValue="value"
+              [filter]="true"
+            />
+          </app-field-row>
+        </app-section>
+      </div>
+
+      <div class="actions">
+        <p-button
+          label="Descartar cambios"
+          severity="secondary"
+          [outlined]="true"
+          type="button"
+          class="touch-target"
+          [disabled]="!dirtyAndEditable() || saving()"
+          (onClick)="discard()"
+        />
+        <p-button
+          label="Guardar cambios"
+          type="submit"
+          class="touch-target"
+          [loading]="saving()"
+          [disabled]="!dirtyAndEditable()"
+        />
+      </div>
+    </form>
+
+    <app-org-danger-zone [org]="current" [role]="role()" [members]="members()" />
+  </app-page-container>
+} @else {
+  <app-page-container variant="reading" pageName="org-settings" [ready]="true">
+    <app-empty-state
+      title="Elige una organización"
+      description="La configuración corresponde a la organización activa."
+    />
+  </app-page-container>
+}

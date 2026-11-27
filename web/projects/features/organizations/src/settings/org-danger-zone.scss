@@ -1,0 +1,48 @@
+.danger {
+  margin-top: var(--cl-space-6);
+}
+
+.danger-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--cl-space-4);
+  flex-wrap: wrap;
+  padding: var(--cl-space-3) 0;
+  border-bottom: 1px solid var(--cl-border);
+}
+
+.danger-row:last-child {
+  border-bottom: none;
+}
+
+.danger-copy {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cl-space-1);
+  min-width: 0;
+  flex: 1 1 280px;
+}
+
+.hint {
+  margin: var(--cl-space-1) 0 0;
+  color: var(--cl-text-subtle);
+  overflow-wrap: anywhere;
+}
+
+:host ::ng-deep .transfer-select {
+  width: 100%;
+  max-width: min(100%, var(--cl-content-max));
+  margin-top: var(--cl-space-2);
+}
+
+@media (max-width: 767.98px) {
+  .danger-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .touch-target {
+    min-height: var(--cl-space-12);
+  }
+}

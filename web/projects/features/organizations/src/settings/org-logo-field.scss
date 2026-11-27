@@ -1,0 +1,58 @@
+.logo-field {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--cl-space-4);
+  flex-wrap: wrap;
+}
+
+.logo-preview {
+  width: var(--cl-space-16);
+  height: var(--cl-space-16);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  overflow: hidden;
+  border: 1px solid var(--cl-border);
+  border-radius: var(--cl-radius-md);
+  background: var(--cl-bg-sunken);
+}
+
+.logo-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.logo-actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cl-space-2);
+  min-width: 0;
+}
+
+.button-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--cl-space-2);
+}
+
+.hidden-input {
+  display: none;
+}
+
+.muted {
+  color: var(--cl-text-subtle);
+}
+
+.error {
+  margin: 0;
+  color: var(--cl-danger);
+}
+
+/* Phones: buttons keep a 48 px tap target. */
+@media (max-width: 767.98px) {
+  .touch-target {
+    min-height: var(--cl-space-12);
+  }
+}

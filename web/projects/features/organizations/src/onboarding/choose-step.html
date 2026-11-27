@@ -1,0 +1,39 @@
+<div class="choices">
+  <section class="choice" aria-labelledby="onboarding-create-title">
+    <h3 id="onboarding-create-title">Crear organización</h3>
+    <p>Crea un espacio nuevo para tus proyectos, equipos e incidencias. Serás su propietario.</p>
+    <div>
+      <p-button
+        label="Crear organización"
+        size="large"
+        type="button"
+        class="touch-target"
+        (onClick)="create.emit()"
+      />
+    </div>
+  </section>
+
+  <section class="choice" aria-labelledby="onboarding-join-title">
+    <h3 id="onboarding-join-title">Unirme con invitación</h3>
+    <p>Pega el enlace que te han enviado para unirte a una organización existente.</p>
+    <form class="join-form" (submit)="$event.preventDefault(); join()">
+      <div class="join-field">
+        <input
+          pInputText
+          type="text"
+          placeholder="https://.../invite/..."
+          aria-label="Enlace o código de invitación"
+          [ngModel]="link()"
+          [ngModelOptions]="{ standalone: true }"
+          (ngModelChange)="onLinkInput($event)"
+          [attr.aria-invalid]="error() ? 'true' : null"
+          [attr.aria-describedby]="error() ? 'onboarding-join-error' : null"
+        />
+        @if (error(); as message) {
+          <p id="onboarding-join-error" class="field-error">{{ message }}</p>
+        }
+      </div>
+      <p-button label="Continuar" type="submit" size="large" class="touch-target join-button" />
+    </form>
+  </section>
+</div>
