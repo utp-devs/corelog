@@ -4,6 +4,7 @@ import localeEsPe from '@angular/common/locales/es-PE';
 import {
   EnvironmentProviders,
   LOCALE_ID,
+  inject,
   Provider,
   makeEnvironmentProviders,
   provideBrowserGlobalErrorListeners,
@@ -16,9 +17,14 @@ import {
   withComponentInputBinding,
   withInMemoryScrolling,
 } from '@angular/router';
+import { map } from 'rxjs';
 import { MessageService } from 'primeng/api';
 import { providePrimeNG } from 'primeng/config';
 
+import { OrganizationApiService } from '../services/api/organization-api.service';
+import { MEMBER_NAMES_SOURCE } from '../state/ticket.store';
+import { ORGANIZATION_ID_PROVIDER } from '../utils/org-id-provider';
+import { getOrgId } from '../utils/org-context';
 import { authInterceptor } from '../interceptors/auth.interceptor';
 import { errorInterceptor } from '../interceptors/error.interceptor';
 import { loadingInterceptor } from '../interceptors/loading.interceptor';
@@ -33,6 +39,29 @@ export interface CorelogOptions {
   readonly apiUrl: string;
   /** Routes of the application. */
   readonly routes: Routes;
+}
+
+/** Wires the domain stores to the active organization and to the organization member list. */
+export function provideCorelogDomain(): Provider[] {
+  return [
+    { provide: ORGANIZATION_ID_PROVIDER, useValue: getOrgId },
+    {
+      provide: MEMBER_NAMES_SOURCE,
+      useFactory: () => {
+        const api = inject(OrganizationApiService);
+        return {
+          listMembers: (organizationId: string) =>
+            api
+              .listMembers(organizationId)
+              .pipe(
+                map((members) =>
+                  members.map((m) => ({ userId: m.userId, name: m.displayName || m.name })),
+                ),
+              ),
+        };
+      },
+    },
+  ];
 }
 
 /** Application-wide providers shared by portal, workspace and admin. */
@@ -62,6 +91,7 @@ export function provideCorelog(options: CorelogOptions): EnvironmentProviders {
       },
     }),
     MessageService,
+    ...provideCorelogDomain(),
   ];
   return makeEnvironmentProviders(providers);
 }
