@@ -104,15 +104,19 @@ func TestProjectCreationProvisionsDefaultBoardPostgres(t *testing.T) {
 		t.Fatalf("failed project creation left project=%d boards=%d workflows=%d", projectCount, boardCount, remainingWorkflows)
 	}
 
+	// Deleting is a soft delete: the project disappears from reads and its rows stay for the purge job.
 	if err := repository.Delete(ctx, uuid.MustParse(defaultOrganizationID), created.ID); err != nil {
 		t.Fatal(err)
+	}
+	if _, err := repository.FindByID(ctx, created.ID); err == nil {
+		t.Fatal("soft deleted project is still readable")
 	}
 	var remainingColumns int
 	if err := db.Get(&remainingColumns, `SELECT count(*) FROM board_columns c JOIN boards b ON b.id=c.board_id WHERE b.project_id=$1`, created.ID); err != nil {
 		t.Fatal(err)
 	}
-	if remainingColumns != 0 {
-		t.Fatalf("deleting project left %d board columns", remainingColumns)
+	if remainingColumns == 0 {
+		t.Fatal("soft delete must keep the project rows until the purge job runs")
 	}
 }
 

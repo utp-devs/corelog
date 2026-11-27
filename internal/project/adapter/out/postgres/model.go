@@ -13,21 +13,28 @@ import (
 const storedOpen = "open"
 
 type projectRow struct {
-	ID             uuid.UUID  `db:"id"`
-	OrganizationID uuid.UUID  `db:"organization_id"`
-	Key            string     `db:"key"`
-	Name           string     `db:"name"`
-	Description    string     `db:"description"`
-	Type           string     `db:"type"`
-	LeadID         uuid.UUID  `db:"lead_id"`
-	Visibility     string     `db:"visibility"`
-	ArchivedAt     *time.Time `db:"archived_at"`
-	CreatedAt      time.Time  `db:"created_at"`
-	UpdatedAt      time.Time  `db:"updated_at"`
+	ID                    uuid.UUID  `db:"id"`
+	OrganizationID        uuid.UUID  `db:"organization_id"`
+	Key                   string     `db:"key"`
+	Name                  string     `db:"name"`
+	Description           string     `db:"description"`
+	Type                  string     `db:"type"`
+	Template              string     `db:"template"`
+	LeadID                uuid.UUID  `db:"lead_id"`
+	Visibility            string     `db:"visibility"`
+	Color                 string     `db:"color"`
+	Icon                  string     `db:"icon"`
+	DefaultAssigneePolicy string     `db:"default_assignee_policy"`
+	NextIssueNumber       int        `db:"next_issue_number"`
+	ArchivedAt            *time.Time `db:"archived_at"`
+	DeletedAt             *time.Time `db:"deleted_at"`
+	CreatedAt             time.Time  `db:"created_at"`
+	UpdatedAt             time.Time  `db:"updated_at"`
 }
 
 // projectColumns is the explicit column list of every project read (no SELECT *).
-const projectColumns = `id, organization_id, key, name, description, type, lead_id, visibility, archived_at, created_at, updated_at`
+const projectColumns = `id, organization_id, key, name, description, type, template, lead_id, visibility,
+	color, icon, default_assignee_policy, next_issue_number, archived_at, deleted_at, created_at, updated_at`
 
 func (r projectRow) toDomain() *domain.Project {
 	visibility := domain.Visibility(r.Visibility)
@@ -36,8 +43,12 @@ func (r projectRow) toDomain() *domain.Project {
 	}
 	return &domain.Project{
 		ID: r.ID, OrganizationID: r.OrganizationID, Key: r.Key, Name: r.Name, Description: r.Description,
-		Type: domain.ProjectType(r.Type), LeadID: r.LeadID, Visibility: visibility,
-		ArchivedAt: r.ArchivedAt, CreatedAt: r.CreatedAt, UpdatedAt: r.UpdatedAt,
+		Type: domain.ProjectType(r.Type), Template: domain.Template(r.Template),
+		LeadID: r.LeadID, Visibility: visibility,
+		Color: r.Color, Icon: r.Icon, DefaultAssigneePolicy: domain.AssigneePolicy(r.DefaultAssigneePolicy),
+		NextIssueNumber: r.NextIssueNumber,
+		ArchivedAt:      r.ArchivedAt, DeletedAt: r.DeletedAt,
+		CreatedAt: r.CreatedAt, UpdatedAt: r.UpdatedAt,
 	}
 }
 
@@ -48,7 +59,11 @@ func fromDomain(p *domain.Project) projectRow {
 	}
 	return projectRow{
 		ID: p.ID, OrganizationID: p.OrganizationID, Key: p.Key, Name: p.Name, Description: p.Description,
-		Type: string(p.Type), LeadID: p.LeadID, Visibility: visibility,
-		ArchivedAt: p.ArchivedAt, CreatedAt: p.CreatedAt, UpdatedAt: p.UpdatedAt,
+		Type: string(p.Type), Template: string(p.Template),
+		LeadID: p.LeadID, Visibility: visibility,
+		Color: p.Color, Icon: p.Icon, DefaultAssigneePolicy: string(p.DefaultAssigneePolicy),
+		NextIssueNumber: p.NextIssueNumber,
+		ArchivedAt:      p.ArchivedAt, DeletedAt: p.DeletedAt,
+		CreatedAt: p.CreatedAt, UpdatedAt: p.UpdatedAt,
 	}
 }

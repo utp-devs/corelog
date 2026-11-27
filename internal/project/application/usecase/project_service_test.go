@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"sort"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 
@@ -15,12 +16,17 @@ import (
 
 // memProjects guarda proyectos y membresias en memoria.
 type memProjects struct {
-	projects map[uuid.UUID]*domain.Project
-	members  map[uuid.UUID]map[uuid.UUID]port.Member // project -> user -> member
+	projects   map[uuid.UUID]*domain.Project
+	members    map[uuid.UUID]map[uuid.UUID]port.Member // project -> user -> member
+	teamGrants map[uuid.UUID][]uuid.UUID
 }
 
 func newMemProjects() *memProjects {
-	return &memProjects{projects: map[uuid.UUID]*domain.Project{}, members: map[uuid.UUID]map[uuid.UUID]port.Member{}}
+	return &memProjects{
+		projects:   map[uuid.UUID]*domain.Project{},
+		members:    map[uuid.UUID]map[uuid.UUID]port.Member{},
+		teamGrants: map[uuid.UUID][]uuid.UUID{},
+	}
 }
 
 func (m *memProjects) Save(_ context.Context, p *domain.Project) error {
@@ -31,7 +37,7 @@ func (m *memProjects) Save(_ context.Context, p *domain.Project) error {
 
 func (m *memProjects) FindByID(_ context.Context, id uuid.UUID) (*domain.Project, error) {
 	p, ok := m.projects[id]
-	if !ok {
+	if !ok || p.IsDeleted() {
 		return nil, domain.ErrProjectNotFound
 	}
 	return p, nil
@@ -39,7 +45,7 @@ func (m *memProjects) FindByID(_ context.Context, id uuid.UUID) (*domain.Project
 
 func (m *memProjects) FindByKey(_ context.Context, orgID uuid.UUID, key string) (*domain.Project, error) {
 	for _, p := range m.projects {
-		if p.OrganizationID == orgID && p.Key == key {
+		if p.OrganizationID == orgID && p.Key == key && !p.IsDeleted() {
 			return p, nil
 		}
 	}
@@ -49,7 +55,7 @@ func (m *memProjects) FindByKey(_ context.Context, orgID uuid.UUID, key string) 
 func (m *memProjects) FindByOrganization(_ context.Context, orgID uuid.UUID, scope port.VisibilityScope) ([]*domain.Project, error) {
 	out := []*domain.Project{}
 	for _, p := range m.projects {
-		if p.OrganizationID != orgID {
+		if p.OrganizationID != orgID || p.IsDeleted() {
 			continue
 		}
 		_, explicit := m.members[p.ID][scope.UserID]
@@ -60,16 +66,55 @@ func (m *memProjects) FindByOrganization(_ context.Context, orgID uuid.UUID, sco
 	return out, nil
 }
 
+func (m *memProjects) ListPage(_ context.Context, filter port.ProjectFilter) (port.ProjectPage, error) {
+	all, _ := m.FindByOrganization(context.Background(), filter.OrganizationID, filter.Scope)
+	var items []*domain.Project
+	for _, p := range all {
+		if filter.Archived == port.ArchiveFilterExclude && p.IsArchived() {
+			continue
+		}
+		if filter.Archived == port.ArchiveFilterOnly && !p.IsArchived() {
+			continue
+		}
+		if filter.Template != "" && p.Template != filter.Template {
+			continue
+		}
+		items = append(items, p)
+	}
+	return port.ProjectPage{Items: items, Total: len(items)}, nil
+}
+
 func (m *memProjects) Update(_ context.Context, p *domain.Project) error {
 	m.projects[p.ID] = p
 	return nil
 }
 
+// Delete soft deletes: the project stays stored but every read stops seeing it.
 func (m *memProjects) Delete(_ context.Context, orgID, id uuid.UUID) error {
-	if p, ok := m.projects[id]; ok && p.OrganizationID == orgID {
-		delete(m.projects, id)
+	if p, ok := m.projects[id]; ok && p.OrganizationID == orgID && !p.IsDeleted() {
+		now := time.Now().UTC()
+		p.DeletedAt = &now
 	}
 	return nil
+}
+
+func (m *memProjects) KeyAvailable(_ context.Context, orgID uuid.UUID, key string) (bool, error) {
+	for _, p := range m.projects {
+		if p.OrganizationID == orgID && p.Key == key && !p.IsDeleted() {
+			return false, nil
+		}
+	}
+	return true, nil
+}
+
+func (m *memProjects) AllocateIssueNumber(_ context.Context, projectID uuid.UUID) (int, error) {
+	p, ok := m.projects[projectID]
+	if !ok || p.IsDeleted() {
+		return 0, domain.ErrProjectNotFound
+	}
+	number := p.NextIssueNumber
+	p.NextIssueNumber++
+	return number, nil
 }
 
 func (m *memProjects) FindRole(_ context.Context, projectID, userID uuid.UUID) (*string, error) {
@@ -446,4 +491,30 @@ func TestGetMissingProjectIsNotFound(t *testing.T) {
 	f := newFixture(t)
 	_, err := f.svc.Get(f.ctx, f.owner, "requester", uuid.New())
 	wantError(t, err, apperror.KindNotFound, "project.not_found")
+}
+
+// CreateWithMembers stores the project and its initial relations, like the transactional adapter.
+func (m *memProjects) CreateWithMembers(ctx context.Context, p *domain.Project, lead port.Member, members []port.Member, teamIDs []uuid.UUID) error {
+	if err := m.Save(ctx, p); err != nil {
+		return err
+	}
+	lead.ProjectID = p.ID
+	if err := m.Add(ctx, lead); err != nil {
+		return err
+	}
+	for _, member := range members {
+		member.ProjectID = p.ID
+		if err := m.Add(ctx, member); err != nil {
+			return err
+		}
+	}
+	if len(teamIDs) > 0 {
+		m.teamGrants[p.ID] = teamIDs
+	}
+	return nil
+}
+
+// CreateWithDefaults is the creation path without initial relations.
+func (m *memProjects) CreateWithDefaults(ctx context.Context, p *domain.Project, lead port.Member) error {
+	return m.CreateWithMembers(ctx, p, lead, nil, nil)
 }

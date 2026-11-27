@@ -2,7 +2,6 @@ package usecase
 
 import (
 	"context"
-	"errors"
 	"time"
 
 	"github.com/google/uuid"
@@ -21,6 +20,13 @@ type ProjectService struct {
 	catalogRepo port.CatalogRepository
 	orgs        port.OrgDirectory
 	authorizer  port.ProjectAuthorizer
+	events      port.EventPublisher
+	tx          txRunner
+}
+
+// txRunner runs fn inside a transaction. It matches database.TxManager without importing it here.
+type txRunner interface {
+	InTx(ctx context.Context, fn func(ctx context.Context) error) error
 }
 
 func NewProjectService(repo port.Repository, memberRepo port.MemberRepository, orgs port.OrgDirectory, catalogRepo ...port.CatalogRepository) *ProjectService {
@@ -37,57 +43,36 @@ func (s *ProjectService) WithAuthorizer(authorizer port.ProjectAuthorizer) *Proj
 	return s
 }
 
-var _ port.Service = (*ProjectService)(nil)
+// WithEvents conecta el publicador de eventos de proyecto. Sin el, las acciones no publican eventos.
+func (s *ProjectService) WithEvents(events port.EventPublisher) *ProjectService {
+	s.events = events
+	return s
+}
 
-// Create crea un proyecto en la organizacion. El actor debe pertenecer a ella y la politica
-// de la organizacion debe permitirselo; el creador queda como lider del proyecto.
+// WithTransactions conecta el gestor de transacciones. Sin el, cada escritura va sin transaccion
+// envolvente.
+func (s *ProjectService) WithTransactions(tx txRunner) *ProjectService {
+	s.tx = tx
+	return s
+}
+
+var (
+	_ port.Service        = (*ProjectService)(nil)
+	_ port.ProjectManager = (*ProjectService)(nil)
+)
+
+// Create crea un proyecto de tipo legado (kanban o scrum) en la organizacion.
 func (s *ProjectService) Create(ctx context.Context, actorID, orgID uuid.UUID, key, name, description string, projectType domain.ProjectType, visibility domain.Visibility) (*domain.Project, error) {
-	orgRole, err := s.orgRoleOf(ctx, orgID, actorID)
-	if err != nil {
-		return nil, err
+	if projectType != domain.ProjectTypeKanban && projectType != domain.ProjectTypeScrum {
+		return nil, domain.ErrInvalidProject
 	}
-	if orgRole == "" {
-		return nil, domain.ErrOrganizationNotFound
-	}
-	policy, defaultVisibility, err := s.orgs.ProjectCreationPolicy(ctx, orgID)
-	if err != nil {
-		return nil, apperror.Wrap(apperror.KindInternal, "failed to read organization project policy", err)
-	}
-	if !domain.CanCreateProject(orgRole, policy) {
-		return nil, domain.ErrProjectCreationNotAllowed
-	}
-	if visibility == "" {
-		visibility = domain.DefaultVisibility(defaultVisibility)
-	}
-	project, err := domain.NewProject(orgID, key, name, description, projectType, visibility, actorID)
-	if err != nil {
-		return nil, err
-	}
-	if _, err := s.repo.FindByKey(ctx, orgID, project.Key); err == nil {
-		return nil, domain.ErrProjectKeyTaken
-	} else if !errors.Is(err, domain.ErrProjectNotFound) {
-		return nil, err
-	}
-	// El ID del proyecto lo asigna la BD al persistirlo; el lider se vincula despues.
-	lead := port.Member{
-		UserID:    actorID,
-		Role:      string(authorization.ProjectRoleLead),
-		CreatedAt: time.Now().UTC(),
-	}
-	if creator, ok := s.repo.(port.ProjectCreationRepository); ok {
-		if err := creator.CreateWithDefaults(ctx, project, lead); err != nil {
-			return nil, err
-		}
-	} else {
-		if err := s.repo.Save(ctx, project); err != nil {
-			return nil, err
-		}
-		lead.ProjectID = project.ID
-		if err := s.memberRepo.Add(ctx, lead); err != nil {
-			return nil, err
-		}
-	}
-	return project, nil
+	return s.CreateProject(ctx, actorID, orgID, port.CreateInput{
+		Key:         key,
+		Name:        name,
+		Description: description,
+		Template:    domain.TemplateFromProjectType(projectType),
+		Visibility:  visibility,
+	})
 }
 
 func (s *ProjectService) Get(ctx context.Context, actorID uuid.UUID, globalRole string, id uuid.UUID) (*domain.Project, error) {
@@ -104,12 +89,7 @@ func (s *ProjectService) List(ctx context.Context, actorID uuid.UUID, globalRole
 	if orgRole == "" && globalRole != platformAdmin {
 		return nil, domain.ErrOrganizationNotFound
 	}
-	scope := port.VisibilityScope{
-		UserID: actorID,
-		All:    globalRole == platformAdmin || isOrgManager(orgRole),
-		Open:   orgRole == domain.OrgRoleMember,
-	}
-	return s.repo.FindByOrganization(ctx, orgID, scope)
+	return s.repo.FindByOrganization(ctx, orgID, s.scopeFor(actorID, globalRole, orgRole))
 }
 
 func (s *ProjectService) Update(ctx context.Context, actorID uuid.UUID, globalRole string, id uuid.UUID, input domain.UpdateInput) (*domain.Project, error) {
@@ -129,7 +109,8 @@ func (s *ProjectService) Update(ctx context.Context, actorID uuid.UUID, globalRo
 	return project, nil
 }
 
-// Delete: lider del proyecto o owner/admin de la organizacion (mismo permiso de edicion).
+// Delete es la entrada legada: borra logicamente sin confirmacion escrita. Los llamadores nuevos
+// usan DeleteProject.
 func (s *ProjectService) Delete(ctx context.Context, actorID uuid.UUID, globalRole string, id uuid.UUID) error {
 	project, orgRole, err := s.loadVisible(ctx, actorID, globalRole, id)
 	if err != nil {
@@ -138,7 +119,7 @@ func (s *ProjectService) Delete(ctx context.Context, actorID uuid.UUID, globalRo
 	if err := s.requireManage(ctx, port.ActionEditProject, project, actorID, globalRole, orgRole); err != nil {
 		return err
 	}
-	return s.repo.Delete(ctx, project.OrganizationID, project.ID)
+	return s.softDelete(ctx, project, actorID)
 }
 
 func (s *ProjectService) ListMembers(ctx context.Context, actorID uuid.UUID, globalRole string, projectID uuid.UUID) ([]port.Member, error) {
@@ -294,6 +275,16 @@ func (s *ProjectService) DeleteComponent(ctx context.Context, actorID uuid.UUID,
 		return domain.ErrInvalidProject
 	}
 	return s.catalogRepo.DeleteComponent(ctx, projectID, componentID)
+}
+
+// scopeFor builds the listing scope of an actor: platform admins and org owners/admins see every
+// project; org members also see open projects; everyone else sees explicit memberships only.
+func (s *ProjectService) scopeFor(actorID uuid.UUID, globalRole, orgRole string) port.VisibilityScope {
+	return port.VisibilityScope{
+		UserID: actorID,
+		All:    globalRole == platformAdmin || isOrgManager(orgRole),
+		Open:   orgRole == domain.OrgRoleMember,
+	}
 }
 
 // orgRoleOf devuelve el rol del actor en la organizacion, o "" si no pertenece a ella.

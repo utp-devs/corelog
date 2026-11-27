@@ -13,6 +13,8 @@ type Service interface {
 	Get(ctx context.Context, actorID uuid.UUID, globalRole string, id uuid.UUID) (*domain.Project, error)
 	List(ctx context.Context, actorID uuid.UUID, globalRole string, orgID uuid.UUID) ([]*domain.Project, error)
 	Update(ctx context.Context, actorID uuid.UUID, globalRole string, id uuid.UUID, input domain.UpdateInput) (*domain.Project, error)
+	// Delete is the legacy entry point: it soft deletes without the typed confirmation. New callers
+	// use ProjectManager.DeleteProject.
 	Delete(ctx context.Context, actorID uuid.UUID, globalRole string, id uuid.UUID) error
 	ListMembers(ctx context.Context, actorID uuid.UUID, globalRole string, projectID uuid.UUID) ([]Member, error)
 	AddMember(ctx context.Context, actorID uuid.UUID, globalRole string, projectID, userID uuid.UUID, role string) (*Member, error)
@@ -24,4 +26,36 @@ type Service interface {
 	ListComponents(ctx context.Context, actorID uuid.UUID, globalRole string, projectID uuid.UUID) ([]domain.Component, error)
 	CreateComponent(ctx context.Context, actorID uuid.UUID, globalRole string, projectID uuid.UUID, name, description string) (*domain.Component, error)
 	DeleteComponent(ctx context.Context, actorID uuid.UUID, globalRole string, projectID, componentID uuid.UUID) error
+}
+
+// CreateInput is the input of a project created from a template.
+type CreateInput struct {
+	Key                   string
+	Name                  string
+	Description           string
+	Template              domain.Template
+	Visibility            domain.Visibility
+	Color                 string
+	Icon                  string
+	DefaultAssigneePolicy domain.AssigneePolicy
+	// MemberIDs are added with the contributor role; the creator is always lead.
+	MemberIDs []uuid.UUID
+	// TeamIDs are granted the contributor role on the project.
+	TeamIDs []uuid.UUID
+}
+
+// ProjectManager holds the project model v2 operations. The HTTP layer calls them in a later step.
+type ProjectManager interface {
+	// CreateProject creates a project from a template. Key conflicts return project.key_taken.
+	CreateProject(ctx context.Context, actorID, orgID uuid.UUID, input CreateInput) (*domain.Project, error)
+	// ListProjects returns one page of the projects visible to the actor.
+	ListProjects(ctx context.Context, actorID uuid.UUID, globalRole string, orgID uuid.UUID, filter ProjectFilter) (ProjectPage, error)
+	// Archive makes the project read-only.
+	Archive(ctx context.Context, actorID uuid.UUID, globalRole string, id uuid.UUID) (*domain.Project, error)
+	// Restore reverts Archive.
+	Restore(ctx context.Context, actorID uuid.UUID, globalRole string, id uuid.UUID) (*domain.Project, error)
+	// DeleteProject soft deletes the project. confirmation must equal the project name.
+	DeleteProject(ctx context.Context, actorID uuid.UUID, globalRole string, id uuid.UUID, confirmation string) error
+	// KeyAvailable reports whether a project key is valid and free in the organization.
+	KeyAvailable(ctx context.Context, actorID uuid.UUID, globalRole string, orgID uuid.UUID, key string) (bool, error)
 }
