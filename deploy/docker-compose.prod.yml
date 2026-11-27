@@ -57,10 +57,12 @@ services:
   ui:
     image: ghcr.io/utp-devs/corelog-ui:${IMAGE_TAG:-latest}
     restart: unless-stopped
+    environment:
+      API_UPSTREAM: http://api:8080
     depends_on:
       - api
     ports:
-      - "127.0.0.1:18081:80"     # reachable only by nginx on the host
+      - "127.0.0.1:18081:8080"    # reachable only by nginx on the host
 
 volumes:
   corelog_db_data:

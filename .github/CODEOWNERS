@@ -10,7 +10,7 @@
 /migrations/ @jhonsferg @eltiton0-0
 
 # Frontend: React application.
-/ui/ @jhonsferg @DalethCorreaAngeles
+/web/ @jhonsferg @DalethCorreaAngeles
 
 # Deployment and local setup.
 /docker/ @jhonsferg @tk27jp

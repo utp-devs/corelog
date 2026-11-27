@@ -47,11 +47,11 @@ jobs:
       - name: Build & push UI
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
-          context: .
-          file: docker/Dockerfile.ui
+          context: web
+          file: web/Dockerfile
           push: true
           build-args: |
-            VITE_API_BASE_URL=${{ vars.VITE_API_BASE_URL }}
+            BUILD_CONFIGURATION=${{ vars.WEB_BUILD_CONFIGURATION || 'production' }}
           tags: |
             ${{ env.IMAGE_UI }}:${{ github.sha }}
             ${{ env.IMAGE_UI }}:latest

@@ -1,4 +1,0 @@
-{
-  "note": "Violations allowed per file while pages are migrated (the file is expected to shrink to empty as the screens are fixed). Regenerate only with: node scripts/check-no-hex.mjs --write-baseline",
-  "files": {}
-}
