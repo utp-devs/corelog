@@ -2443,7 +2443,122 @@ paths:
       operationId: getIssue
       responses:
         '200':
-          description: The requested issue
+          description: >-
+            Vista completa de la incidencia: los campos de Issue mas permissions (permisos efectivos de quien consulta
+            sobre esta incidencia), available_transitions, counts y breadcrumb.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/IssueView'
+              example:
+                data:
+                  id: 3f0c9b3e-6a53-4d0c-9a4e-2c1f5a7d8e90
+                  key: CORE-12
+                  summary: Corregir el login
+                  status: open
+                  start_date: '2026-12-01'
+                  due_date: '2026-12-15'
+                  story_points: 3
+                  original_estimate_seconds: 28800
+                  remaining_estimate_seconds: 14400
+                  flagged: false
+                  permissions: [edit_issue, assign_issue, transition_issue, comment_issue, delete_issue]
+                  available_transitions:
+                    - {id: in_progress, name: En progreso, to_status: in_progress}
+                    - {id: closed, name: Cerrada, to_status: closed}
+                  counts: {comments: 2, attachments: 0, children: 3, links: 0, watchers: 2, votes: 0}
+                  breadcrumb:
+                    project: {id: 00000000-0000-4000-8000-000000000001, key: CORE, name: CoreLog}
+                    parent: {id: 7a1b2c3d-0000-4000-8000-000000000099, key: CORE-3, summary: Autenticacion, type: epic}
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+    patch:
+      tags: [issues]
+      summary: Partially update an issue
+      description: >-
+        Cambia solo los campos presentes en el cuerpo; un null explicito borra los campos que lo admiten (descripcion,
+        padre, persona asignada, estimaciones, fechas, puntos). summary, tipo, prioridad y flagged no admiten null
+        (issue.field_not_clearable). Un campo desconocido responde 422 validation.failed. Permisos por campo: el resto
+        de campos requieren edit_issue (o edit_own_issue si quien llama es el reporter) y assignee_id requiere
+        assign_issue; el estado tiene su propio endpoint. Quien no ve la incidencia recibe 404; quien la ve sin permiso, 403.
+        Todos los cambios de una peticion forman un lote de actividades (batch_id) y emiten un unico evento issue.updated con
+        changes[]. Si se envia expected_updated_at y difiere del actual se responde 409 issue.stale. Reglas de jerarquia:
+        una epica no tiene padre, una subtarea exige un padre que no sea epica ni subtarea del mismo proyecto, una incidencia
+        estandar solo puede tener una epica como padre, sin ciclos (issue.hierarchy_*). Un cambio sin diferencias no escribe nada.
+      operationId: patchIssue
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchIssueRequest'
+            example:
+              summary: Corregir el login con SSO
+              assignee_id: null
+              due_date: '2026-12-20'
+              expected_updated_at: '2026-11-27T10:00:00.123456Z'
+      responses:
+        '200':
+          description: La incidencia actualizada y los cambios aplicados.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/PatchIssueResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+    delete:
+      tags: [issues]
+      summary: Delete an issue (soft delete)
+      description: >-
+        Elimina la incidencia de forma logica: deja de aparecer en listas, busqueda, tablero, panel y calendario. Requiere
+        delete_issue. Emite issue.deleted. Un proyecto archivado responde 409 project.archived.
+      operationId: deleteIssue
+      responses:
+        '204':
+          description: Incidencia eliminada
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /issues/{id}/restore:
+    parameters:
+      - $ref: '#/components/parameters/IssueRef'
+    post:
+      tags: [issues]
+      summary: Restore a deleted issue
+      description: >-
+        Restaura una incidencia eliminada. Requiere delete_issue (lider del proyecto y administradores de la organizacion).
+        Debe indicarse el UUID, porque una incidencia eliminada no se resuelve por clave.
+      operationId: restoreIssue
+      responses:
+        '200':
+          description: Incidencia restaurada
           content:
             application/json:
               schema:
@@ -2459,8 +2574,6 @@ paths:
           $ref: '#/components/responses/NotFound'
         '409':
           $ref: '#/components/responses/Conflict'
-        '422':
-          $ref: '#/components/responses/ValidationError'
   /issues/{id}/status:
     parameters:
       - $ref: '#/components/parameters/IssueRef'
@@ -2934,6 +3047,10 @@ paths:
     patch:
       tags: [issues]
       summary: Update complete issue details
+      description: >-
+        Alias heredado de PATCH /issues/{id} con semantica de reemplazo: summary y description son obligatorios y los campos
+        opcionales omitidos (padre, vencimiento, puntos) se borran. Aplica las mismas reglas de jerarquia, permisos y
+        registro de cambios que PATCH. Para actualizaciones parciales usa PATCH /issues/{id}.
       security:
         - bearerAuth: []
       requestBody:
@@ -6190,10 +6307,12 @@ components:
         summary:
           type: string
           minLength: 3
-          maxLength: 200
+          maxLength: 255
         description:
           type: string
           minLength: 3
+          maxLength: 100000
+          description: Descripcion en markdown (hasta 100000 caracteres).
         priority_id:
           type: string
           format: uuid
@@ -6221,12 +6340,34 @@ components:
           nullable: true
         due_date:
           type: string
-          format: date-time
+          format: date
           nullable: true
+          description: Fecha de vencimiento (YYYY-MM-DD). Se acepta tambien un timestamp RFC 3339, del que se conserva la fecha UTC.
         story_points:
           type: number
           format: double
           nullable: true
+          description: Puntos de historia de 0 a 999.5 en pasos de 0.5 (issue.invalid_story_points).
+        start_date:
+          type: string
+          format: date
+          nullable: true
+          description: Fecha de inicio (YYYY-MM-DD); no puede ser posterior al vencimiento (issue.invalid_dates).
+        original_estimate_seconds:
+          type: integer
+          format: int64
+          minimum: 0
+          nullable: true
+        remaining_estimate_seconds:
+          type: integer
+          format: int64
+          minimum: 0
+          nullable: true
+        assignee_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: Persona asignada (requiere assign_issue). Si se omite se aplica la politica del proyecto (default_assignee_policy). El resto de campos del esquema del proyecto marcados como obligatorios en la disposicion se validan (422 validation.failed con details).
     UpdateIssueStatusRequest:
       type: object
       required: [status]
@@ -6253,10 +6394,12 @@ components:
         summary:
           type: string
           minLength: 3
-          maxLength: 200
+          maxLength: 255
         description:
           type: string
           minLength: 3
+          maxLength: 100000
+          description: Descripcion en markdown (hasta 100000 caracteres).
         priority_id:
           type: string
           format: uuid
@@ -6279,12 +6422,103 @@ components:
           nullable: true
         due_date:
           type: string
-          format: date-time
+          format: date
           nullable: true
+          description: Fecha de vencimiento (YYYY-MM-DD). Se acepta tambien un timestamp RFC 3339, del que se conserva la fecha UTC.
         story_points:
           type: number
           format: double
           nullable: true
+    PatchIssueRequest:
+      type: object
+      description: Todos los campos son opcionales; solo cambian los presentes. Los campos no listados se rechazan con 422.
+      properties:
+        summary: {type: string, maxLength: 255}
+        description: {type: string, nullable: true, maxLength: 100000}
+        issue_type_id: {type: string, format: uuid}
+        issue_type: {$ref: '#/components/schemas/IssueType'}
+        priority_id: {type: string, format: uuid}
+        priority: {$ref: '#/components/schemas/IssuePriority'}
+        parent_id: {type: string, format: uuid, nullable: true}
+        assignee_id: {type: string, format: uuid, nullable: true}
+        story_points: {type: number, format: double, nullable: true, minimum: 0, maximum: 999.5, multipleOf: 0.5}
+        original_estimate_seconds: {type: integer, format: int64, nullable: true, minimum: 0}
+        remaining_estimate_seconds: {type: integer, format: int64, nullable: true, minimum: 0}
+        start_date: {type: string, format: date, nullable: true}
+        due_date: {type: string, format: date, nullable: true}
+        flagged: {type: boolean}
+        custom:
+          type: object
+          additionalProperties: true
+        expected_updated_at:
+          type: string
+          format: date-time
+          description: Precondicion de concurrencia; si difiere del updated_at actual la respuesta es 409 issue.stale.
+    IssueChange:
+      type: object
+      properties:
+        field: {type: string, description: Nombre del campo o id del campo personalizado., example: due_date}
+        from: {type: string, nullable: true}
+        to: {type: string, nullable: true}
+    PatchIssueResponse:
+      allOf:
+        - $ref: '#/components/schemas/Issue'
+        - type: object
+          properties:
+            batch_id: {type: string, format: uuid, description: Lote de actividades; ausente si no hubo cambios.}
+            changes:
+              type: array
+              items:
+                $ref: '#/components/schemas/IssueChange'
+    IssueTransition:
+      type: object
+      properties:
+        id: {type: string, example: in_progress}
+        name: {type: string, example: En progreso}
+        to_status: {$ref: '#/components/schemas/IssueStatus'}
+    IssueCounts:
+      type: object
+      properties:
+        comments: {type: integer}
+        attachments: {type: integer}
+        children: {type: integer}
+        links: {type: integer}
+        watchers: {type: integer}
+        votes: {type: integer}
+    IssueBreadcrumb:
+      type: object
+      properties:
+        project:
+          type: object
+          properties:
+            id: {type: string, format: uuid}
+            key: {type: string}
+            name: {type: string}
+        parent:
+          type: object
+          nullable: true
+          properties:
+            id: {type: string, format: uuid}
+            key: {type: string}
+            summary: {type: string}
+            type: {type: string}
+    IssueView:
+      allOf:
+        - $ref: '#/components/schemas/Issue'
+        - type: object
+          properties:
+            permissions:
+              type: array
+              description: Permisos efectivos de quien consulta sobre esta incidencia (edit_issue incluye edit_own_issue del reporter).
+              items: {type: string}
+            available_transitions:
+              type: array
+              items:
+                $ref: '#/components/schemas/IssueTransition'
+            counts:
+              $ref: '#/components/schemas/IssueCounts'
+            breadcrumb:
+              $ref: '#/components/schemas/IssueBreadcrumb'
     UpdateIssueRankRequest:
       type: object
       required: [rank]
@@ -6310,8 +6544,9 @@ components:
           nullable: true
         due_date:
           type: string
-          format: date-time
+          format: date
           nullable: true
+          description: Fecha de vencimiento (YYYY-MM-DD). Se acepta tambien un timestamp RFC 3339, del que se conserva la fecha UTC.
         story_points:
           type: number
           format: double
@@ -6531,14 +6766,28 @@ components:
           type: string
           format: uuid
           nullable: true
+        start_date:
+          type: string
+          format: date
+          nullable: true
         due_date:
           type: string
-          format: date-time
+          format: date
           nullable: true
         story_points:
           type: number
           format: double
           nullable: true
+        original_estimate_seconds:
+          type: integer
+          format: int64
+          nullable: true
+        remaining_estimate_seconds:
+          type: integer
+          format: int64
+          nullable: true
+        flagged:
+          type: boolean
         rank:
           type: string
         closed_at:

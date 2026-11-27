@@ -80,5 +80,23 @@ type Activity struct {
 	FieldName *string
 	OldValue  *string
 	NewValue  *string
+	// BatchID groups the activities written by one patch.
+	BatchID   *uuid.UUID
 	CreatedAt time.Time
+}
+
+// NewFieldActivity records one field change of a patch. Every activity of one patch shares batchID. For custom
+// fields the field name is the field id.
+func NewFieldActivity(issueID, actorID, batchID uuid.UUID, change Change, at time.Time) *Activity {
+	field := change.Field
+	return &Activity{
+		IssueID:   issueID,
+		ActorID:   actorID,
+		BatchID:   &batchID,
+		Action:    "field_changed",
+		FieldName: &field,
+		OldValue:  change.From,
+		NewValue:  change.To,
+		CreatedAt: at,
+	}
 }

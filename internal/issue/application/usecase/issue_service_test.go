@@ -717,19 +717,20 @@ func TestIssueService_WatchIssueRequiresProjectVisibility(t *testing.T) {
 	actor := uuid.New()
 
 	state, err := svc.GetWatcherState(ctx, issue.ID, actor, "requester")
-	if err != nil || state.IsWatching || state.Count != 0 {
+	// The reporter follows the issue from creation.
+	if err != nil || state.IsWatching || state.Count != 1 {
 		t.Fatalf("initial watcher state=%+v err=%v", state, err)
 	}
 	state, err = svc.WatchIssue(ctx, issue.ID, actor, "requester")
-	if err != nil || !state.IsWatching || state.Count != 1 {
+	if err != nil || !state.IsWatching || state.Count != 2 {
 		t.Fatalf("watch state=%+v err=%v", state, err)
 	}
 	state, err = svc.WatchIssue(ctx, issue.ID, actor, "requester")
-	if err != nil || !state.IsWatching || state.Count != 1 {
+	if err != nil || !state.IsWatching || state.Count != 2 {
 		t.Fatalf("duplicate watch should be idempotent: state=%+v err=%v", state, err)
 	}
 	state, err = svc.UnwatchIssue(ctx, issue.ID, actor, "requester")
-	if err != nil || state.IsWatching || state.Count != 0 {
+	if err != nil || state.IsWatching || state.Count != 1 {
 		t.Fatalf("unwatch state=%+v err=%v", state, err)
 	}
 

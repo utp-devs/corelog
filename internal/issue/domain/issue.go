@@ -43,6 +43,15 @@ type Issue struct {
 	AssigneeID *uuid.UUID
 	CreatedAt  time.Time
 	UpdatedAt  time.Time
+	// OriginalEstimateSeconds and RemainingEstimateSeconds are time estimates in seconds.
+	OriginalEstimateSeconds  *int64
+	RemainingEstimateSeconds *int64
+	// StartDate and DueDate are calendar dates: only the UTC date part is meaningful.
+	StartDate *time.Time
+	Flagged   bool
+	VoteCount int
+	// DeletedAt marks a soft-deleted issue. Every read excludes issues that carry it.
+	DeletedAt *time.Time
 }
 
 type IssueType string

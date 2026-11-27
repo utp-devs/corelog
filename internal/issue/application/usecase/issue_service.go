@@ -11,7 +11,9 @@ import (
 	"github.com/jhonsferg/corelog/internal/issue/application/port"
 	"github.com/jhonsferg/corelog/internal/issue/domain"
 	"github.com/jhonsferg/corelog/internal/platform/apperror"
+	"github.com/jhonsferg/corelog/internal/platform/clock"
 	"github.com/jhonsferg/corelog/internal/platform/database"
+	"github.com/jhonsferg/corelog/internal/platform/events"
 )
 
 // noTxManager ejecuta fn sin transaccion. Es el valor por defecto del servicio; el composition root
@@ -39,6 +41,17 @@ type IssueService struct {
 	catalog       port.IssueCatalog
 	customScope   port.CustomFieldScopeReader
 	browse        port.ProjectBrowseChecker
+
+	clock          clock.Clock
+	events         events.Publisher
+	perms          port.IssuePermissionChecker
+	transitions    port.TransitionProvider
+	requiredFields port.RequiredFieldReader
+	defaults       port.ProjectDefaults
+	viewReader     port.ViewReader
+	hierarchy      port.HierarchyReader
+	lifecycle      port.IssueLifecycle
+	activityBatch  port.ActivityBatchWriter
 }
 
 func NewIssueService(repo port.Repository, directory port.UserDirectory, repositories ...any) *IssueService {
@@ -76,7 +89,26 @@ func NewIssueService(repo port.Repository, directory port.UserDirectory, reposit
 			savedFilters = typed
 		}
 	}
-	return &IssueService{tx: noTxManager{}, repo: repo, directory: directory, collaboration: collaboration, issueLinks: issueLinks, workflows: workflows, projectRoles: projectRoles, authorizer: authorizer, watchers: watchers, assigneeWatch: assigneeWatch, savedFilters: savedFilters, backlog: backlog}
+	service := &IssueService{tx: noTxManager{}, clock: clock.RealClock{}, repo: repo, directory: directory, collaboration: collaboration, issueLinks: issueLinks, workflows: workflows, projectRoles: projectRoles, authorizer: authorizer, watchers: watchers, assigneeWatch: assigneeWatch, savedFilters: savedFilters, backlog: backlog}
+	// The optional ports may be implemented by the repository or by any of the other adapters.
+	for _, candidate := range append([]any{repo}, repositories...) {
+		if typed, ok := candidate.(port.ViewReader); ok {
+			service.viewReader = typed
+		}
+		if typed, ok := candidate.(port.HierarchyReader); ok {
+			service.hierarchy = typed
+		}
+		if typed, ok := candidate.(port.IssueLifecycle); ok {
+			service.lifecycle = typed
+		}
+		if typed, ok := candidate.(port.ProjectDefaults); ok {
+			service.defaults = typed
+		}
+		if typed, ok := candidate.(port.ActivityBatchWriter); ok {
+			service.activityBatch = typed
+		}
+	}
+	return service
 }
 
 var _ port.Service = (*IssueService)(nil)
@@ -107,6 +139,12 @@ func (s *IssueService) Create(ctx context.Context, in port.CreateInput) (*domain
 	if err != nil {
 		return nil, err
 	}
+	if issue.Summary, err = domain.NormalizeSummary(issue.Summary); err != nil {
+		return nil, err
+	}
+	if issue.Description, err = domain.NormalizeDescription(issue.Description); err != nil {
+		return nil, err
+	}
 	issue.ProjectID = domain.DefaultProjectID
 	if in.ProjectID != nil {
 		issue.ProjectID = *in.ProjectID
@@ -126,12 +164,7 @@ func (s *IssueService) Create(ctx context.Context, in port.CreateInput) (*domain
 	if err := s.applyCustom(ctx, issue, true, uuid.Nil, in.Custom); err != nil {
 		return nil, err
 	}
-
-	if err := s.repo.Save(ctx, issue); err != nil {
-		return nil, err
-	}
-
-	return issue, nil
+	return s.finishCreate(ctx, issue, in)
 }
 
 // ResolveKey resolves a human key among the issues the actor can see. One visible candidate is returned,
@@ -430,66 +463,57 @@ func sameAssignee(a, b *uuid.UUID) bool {
 	return *a == *b
 }
 
+// UpdateMetadata is the legacy full-replace of type, parent, due date and story points. It runs through Patch,
+// so it gets hierarchy rules, change tracking and the stale-free write of every other update.
 func (s *IssueService) UpdateMetadata(ctx context.Context, id, actorID uuid.UUID, globalRole string, input port.UpdateMetadataInput) (*domain.Issue, error) {
-	issue, err := s.repo.FindByID(ctx, id)
+	patch := port.PatchInput{
+		ParentID:    optionalField(input.ParentID),
+		DueDate:     optionalField(input.DueDate),
+		StoryPoints: optionalField(input.StoryPoints),
+	}
+	setLegacyType(&patch, input.IssueType, input.IssueTypeID)
+	result, err := s.Patch(ctx, id, actorID, globalRole, patch)
 	if err != nil {
 		return nil, err
 	}
-	if err := s.requireIssueEdit(ctx, issue.ProjectID, actorID, globalRole); err != nil {
-		return nil, err
-	}
-	previousType := issue.IssueTypeID
-	issueType := input.IssueType
-	if s.catalog != nil {
-		if err := s.resolveTypeInto(ctx, issue, input.IssueTypeID, input.IssueType); err != nil {
-			return nil, err
-		}
-		issueType = issue.IssueType
-	}
-	if err := issue.UpdateMetadata(issueType, input.ParentID, input.DueDate, input.StoryPoints); err != nil {
-		return nil, err
-	}
-	if err := s.applyCustom(ctx, issue, false, previousType, nil); err != nil {
-		return nil, err
-	}
-	if err := s.repo.Update(ctx, issue); err != nil {
-		return nil, err
-	}
-	return issue, nil
+	return result.Issue, nil
 }
 
+// UpdateDetails is the legacy full-replace of the editable fields. It runs through Patch.
 func (s *IssueService) UpdateDetails(ctx context.Context, id, actorID uuid.UUID, globalRole string, input port.UpdateDetailsInput) (*domain.Issue, error) {
-	issue, err := s.repo.FindByID(ctx, id)
+	patch := port.PatchInput{
+		Summary:     port.Some(input.Summary),
+		Description: port.Some(input.Description),
+		ParentID:    optionalField(input.ParentID),
+		DueDate:     optionalField(input.DueDate),
+		StoryPoints: optionalField(input.StoryPoints),
+		Custom:      input.Custom,
+	}
+	if input.PriorityID != nil {
+		patch.PriorityID = port.Some(*input.PriorityID)
+	} else if input.Priority != "" {
+		patch.Priority = port.Some(input.Priority)
+	}
+	setLegacyType(&patch, input.IssueType, input.IssueTypeID)
+	result, err := s.Patch(ctx, id, actorID, globalRole, patch)
 	if err != nil {
 		return nil, err
 	}
-	if err := s.requireIssueEdit(ctx, issue.ProjectID, actorID, globalRole); err != nil {
-		return nil, err
+	return result.Issue, nil
+}
+
+// optionalField turns a legacy optional value into a set field: an absent value clears the field.
+func optionalField[T any](v *T) port.Field[T] {
+	return port.Field[T]{Set: true, Value: v}
+}
+
+func setLegacyType(patch *port.PatchInput, legacy domain.IssueType, id *uuid.UUID) {
+	switch {
+	case id != nil:
+		patch.IssueTypeID = port.Some(*id)
+	case legacy != "":
+		patch.IssueType = port.Some(legacy)
 	}
-	previousType := issue.IssueTypeID
-	priority, issueType := input.Priority, input.IssueType
-	if s.catalog != nil {
-		if err := s.resolvePriorityInto(ctx, issue, input.PriorityID, input.Priority); err != nil {
-			return nil, err
-		}
-		if err := s.resolveTypeInto(ctx, issue, input.IssueTypeID, input.IssueType); err != nil {
-			return nil, err
-		}
-		priority, issueType = issue.Priority, issue.IssueType
-	}
-	if err := issue.UpdateDetails(input.Summary, input.Description, priority); err != nil {
-		return nil, err
-	}
-	if err := issue.UpdateMetadata(issueType, input.ParentID, input.DueDate, input.StoryPoints); err != nil {
-		return nil, err
-	}
-	if err := s.applyCustom(ctx, issue, false, previousType, input.Custom); err != nil {
-		return nil, err
-	}
-	if err := s.repo.Update(ctx, issue); err != nil {
-		return nil, err
-	}
-	return issue, nil
 }
 
 func extractMentionNames(body string) []string {

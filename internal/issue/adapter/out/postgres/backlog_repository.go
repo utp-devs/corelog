@@ -18,7 +18,7 @@ func (r *IssueRepository) ListBacklog(ctx context.Context, projectID uuid.UUID) 
 	if err := r.db.SelectContext(ctx, &rows, `
 		SELECT `+issueColumns+`
 		FROM issues
-		WHERE project_id = $1
+		WHERE project_id = $1 AND deleted_at IS NULL
 		  AND EXISTS (SELECT 1 FROM projects p WHERE p.id = issues.project_id AND p.deleted_at IS NULL)
 		ORDER BY rank ASC, id ASC`,
 		projectID,
@@ -40,7 +40,7 @@ func (r *IssueRepository) SaveRanks(ctx context.Context, projectID uuid.UUID, ra
 	}
 	defer func() { _ = tx.Rollback() }()
 	for id, rank := range ranks {
-		if _, err := tx.ExecContext(ctx, `UPDATE issues SET rank = $3, updated_at = now() WHERE id = $1 AND project_id = $2 AND EXISTS (SELECT 1 FROM projects p WHERE p.id = issues.project_id AND p.deleted_at IS NULL)`, id, projectID, rank); err != nil {
+		if _, err := tx.ExecContext(ctx, `UPDATE issues SET rank = $3, updated_at = now() WHERE id = $1 AND project_id = $2 AND deleted_at IS NULL AND EXISTS (SELECT 1 FROM projects p WHERE p.id = issues.project_id AND p.deleted_at IS NULL)`, id, projectID, rank); err != nil {
 			return apperror.Wrap(apperror.KindInternal, "failed to save backlog order", err)
 		}
 	}

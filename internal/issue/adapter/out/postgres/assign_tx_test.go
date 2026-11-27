@@ -98,6 +98,7 @@ func newAssignTxDB(t *testing.T) *sqlx.DB {
 			field_name VARCHAR(40),
 			old_value TEXT,
 			new_value TEXT,
+			batch_id UUID,
 			created_at TIMESTAMPTZ NOT NULL
 		)`,
 	} {
@@ -189,8 +190,8 @@ func TestAssignAndUnassignAreAtomicWithHistoryPostgres(t *testing.T) {
 		if err := db.GetContext(ctx, &watching, `SELECT count(*) FROM watchers WHERE issue_id = $1`, issue.ID); err != nil {
 			t.Fatal(err)
 		}
-		if watching != 0 {
-			t.Errorf("watchers = %d after rollback, want 0", watching)
+		if watching != 1 {
+			t.Errorf("watchers = %d after rollback, want 1 (the reporter only)", watching)
 		}
 	})
 

@@ -15,6 +15,7 @@ const issueColumns = `id, project_id, summary, description, status, priority, is
 		       due_date, story_points, rank, closed_at, reporter_id, assignee_id, key_number,
 		       (SELECT p.key FROM projects p WHERE p.id = issues.project_id) AS project_key, created_at, updated_at,
 		       issue_type_id, priority_id, resolution_id, resolved_at, custom,
+		       original_estimate_seconds, remaining_estimate_seconds, start_date, flagged, vote_count, deleted_at,
 		       (SELECT it.name FROM issue_types it WHERE it.id = issues.issue_type_id) AS issue_type_name,
 		       (SELECT it.icon FROM issue_types it WHERE it.id = issues.issue_type_id) AS issue_type_icon,
 		       (SELECT it.color FROM issue_types it WHERE it.id = issues.issue_type_id) AS issue_type_color,
@@ -57,6 +58,13 @@ type issueRow struct {
 	PriorityIcon   *string    `db:"priority_icon"`
 	PriorityColor  *string    `db:"priority_color"`
 	ResolutionName *string    `db:"resolution_name"`
+
+	OriginalEstimateSeconds  *int64     `db:"original_estimate_seconds"`
+	RemainingEstimateSeconds *int64     `db:"remaining_estimate_seconds"`
+	StartDate                *time.Time `db:"start_date"`
+	Flagged                  bool       `db:"flagged"`
+	VoteCount                int        `db:"vote_count"`
+	DeletedAt                *time.Time `db:"deleted_at"`
 }
 
 func (r issueRow) toDomain() *domain.Issue {
@@ -84,6 +92,13 @@ func (r issueRow) toDomain() *domain.Issue {
 		ResolutionID: r.ResolutionID,
 		ResolvedAt:   r.ResolvedAt,
 		Custom:       decodeCustom(r.Custom),
+
+		OriginalEstimateSeconds:  r.OriginalEstimateSeconds,
+		RemainingEstimateSeconds: r.RemainingEstimateSeconds,
+		StartDate:                r.StartDate,
+		Flagged:                  r.Flagged,
+		VoteCount:                r.VoteCount,
+		DeletedAt:                r.DeletedAt,
 	}
 	if r.IssueTypeName != nil {
 		issue.IssueTypeRef = &domain.CatalogRef{
@@ -127,6 +142,13 @@ func fromDomain(t *domain.Issue) issueRow {
 		ResolutionID: t.ResolutionID,
 		ResolvedAt:   t.ResolvedAt,
 		Custom:       encodeCustom(t.Custom),
+
+		OriginalEstimateSeconds:  t.OriginalEstimateSeconds,
+		RemainingEstimateSeconds: t.RemainingEstimateSeconds,
+		StartDate:                t.StartDate,
+		Flagged:                  t.Flagged,
+		VoteCount:                t.VoteCount,
+		DeletedAt:                t.DeletedAt,
 	}
 }
 

@@ -27,36 +27,41 @@ func toSavedFilterResponse(filter *domain.SavedFilter) savedFilterResponse {
 }
 
 type createIssueRequest struct {
-	Summary     string                     `json:"summary" validate:"required,min=3,max=200"`
-	Description string                     `json:"description" validate:"required,min=3"`
-	Priority    string                     `json:"priority" validate:"omitempty,oneof=low medium high critical"`
-	PriorityID  string                     `json:"priority_id" validate:"omitempty,uuid"`
-	ProjectID   string                     `json:"project_id" validate:"omitempty,uuid"`
-	IssueType   string                     `json:"issue_type" validate:"omitempty,oneof=task bug story epic subtask"`
-	IssueTypeID string                     `json:"issue_type_id" validate:"omitempty,uuid"`
-	ParentID    string                     `json:"parent_id" validate:"omitempty,uuid4"`
-	DueDate     *time.Time                 `json:"due_date"`
-	StoryPoints *float64                   `json:"story_points"`
-	Custom      map[string]json.RawMessage `json:"custom"`
+	Summary     string   `json:"summary" validate:"required,min=3,max=255"`
+	Description string   `json:"description" validate:"required,min=3,max=100000"`
+	Priority    string   `json:"priority" validate:"omitempty,oneof=low medium high critical"`
+	PriorityID  string   `json:"priority_id" validate:"omitempty,uuid"`
+	ProjectID   string   `json:"project_id" validate:"omitempty,uuid"`
+	IssueType   string   `json:"issue_type" validate:"omitempty,oneof=task bug story epic subtask"`
+	IssueTypeID string   `json:"issue_type_id" validate:"omitempty,uuid"`
+	ParentID    string   `json:"parent_id" validate:"omitempty,uuid4"`
+	DueDate     *apiDate `json:"due_date"`
+	StoryPoints *float64 `json:"story_points"`
+	StartDate   *apiDate `json:"start_date"`
+	AssigneeID  string   `json:"assignee_id" validate:"omitempty,uuid"`
+
+	OriginalEstimateSeconds  *int64                     `json:"original_estimate_seconds"`
+	RemainingEstimateSeconds *int64                     `json:"remaining_estimate_seconds"`
+	Custom                   map[string]json.RawMessage `json:"custom"`
 }
 
 type updateMetadataRequest struct {
-	IssueType   string     `json:"issue_type" validate:"omitempty,oneof=task bug story epic subtask"`
-	IssueTypeID string     `json:"issue_type_id" validate:"omitempty,uuid"`
-	ParentID    string     `json:"parent_id" validate:"omitempty,uuid4"`
-	DueDate     *time.Time `json:"due_date"`
-	StoryPoints *float64   `json:"story_points"`
+	IssueType   string   `json:"issue_type" validate:"omitempty,oneof=task bug story epic subtask"`
+	IssueTypeID string   `json:"issue_type_id" validate:"omitempty,uuid"`
+	ParentID    string   `json:"parent_id" validate:"omitempty,uuid4"`
+	DueDate     *apiDate `json:"due_date"`
+	StoryPoints *float64 `json:"story_points"`
 }
 
 type updateDetailsRequest struct {
-	Summary     string                     `json:"summary" validate:"required,min=3,max=200"`
-	Description string                     `json:"description" validate:"required,min=3"`
+	Summary     string                     `json:"summary" validate:"required,min=3,max=255"`
+	Description string                     `json:"description" validate:"required,min=3,max=100000"`
 	Priority    string                     `json:"priority" validate:"omitempty,oneof=low medium high critical"`
 	PriorityID  string                     `json:"priority_id" validate:"omitempty,uuid"`
 	IssueType   string                     `json:"issue_type" validate:"omitempty,oneof=task bug story epic subtask"`
 	IssueTypeID string                     `json:"issue_type_id" validate:"omitempty,uuid"`
 	ParentID    string                     `json:"parent_id" validate:"omitempty,uuid4"`
-	DueDate     *time.Time                 `json:"due_date"`
+	DueDate     *apiDate                   `json:"due_date"`
 	StoryPoints *float64                   `json:"story_points"`
 	Custom      map[string]json.RawMessage `json:"custom"`
 }
@@ -150,54 +155,64 @@ type assignedUserValidation struct {
 }
 
 type issueResponse struct {
-	ID           string                     `json:"id"`
-	Key          string                     `json:"key"`
-	ProjectID    string                     `json:"project_id"`
-	ProjectKey   string                     `json:"project_key"`
-	Summary      string                     `json:"summary"`
-	Description  string                     `json:"description"`
-	Status       string                     `json:"status"`
-	IssueType    *issueTypeRef              `json:"issue_type"`
-	Priority     *priorityRef               `json:"priority"`
-	Resolution   *resolutionRef             `json:"resolution"`
-	ResolvedAt   *time.Time                 `json:"resolved_at"`
-	ParentID     *string                    `json:"parent_id,omitempty"`
-	DueDate      *time.Time                 `json:"due_date,omitempty"`
-	StoryPoints  *float64                   `json:"story_points,omitempty"`
-	Rank         string                     `json:"rank"`
-	ClosedAt     *time.Time                 `json:"closed_at,omitempty"`
-	ReporterID   string                     `json:"reporter_id"`
-	ReporterName string                     `json:"reporter_name"`
-	AssigneeID   *string                    `json:"assignee_id,omitempty"`
-	AssigneeName *string                    `json:"assignee_name,omitempty"`
-	CreatedAt    time.Time                  `json:"created_at"`
-	Custom       map[string]any             `json:"custom"`
-	CustomFields []issueCustomFieldResponse `json:"custom_fields"`
-	UpdatedAt    time.Time                  `json:"updated_at"`
+	ID          string         `json:"id"`
+	Key         string         `json:"key"`
+	ProjectID   string         `json:"project_id"`
+	ProjectKey  string         `json:"project_key"`
+	Summary     string         `json:"summary"`
+	Description string         `json:"description"`
+	Status      string         `json:"status"`
+	IssueType   *issueTypeRef  `json:"issue_type"`
+	Priority    *priorityRef   `json:"priority"`
+	Resolution  *resolutionRef `json:"resolution"`
+	ResolvedAt  *time.Time     `json:"resolved_at"`
+	ParentID    *string        `json:"parent_id,omitempty"`
+	StartDate   *string        `json:"start_date"`
+	DueDate     *string        `json:"due_date"`
+	StoryPoints *float64       `json:"story_points"`
+
+	OriginalEstimateSeconds  *int64                     `json:"original_estimate_seconds"`
+	RemainingEstimateSeconds *int64                     `json:"remaining_estimate_seconds"`
+	Flagged                  bool                       `json:"flagged"`
+	Rank                     string                     `json:"rank"`
+	ClosedAt                 *time.Time                 `json:"closed_at,omitempty"`
+	ReporterID               string                     `json:"reporter_id"`
+	ReporterName             string                     `json:"reporter_name"`
+	AssigneeID               *string                    `json:"assignee_id,omitempty"`
+	AssigneeName             *string                    `json:"assignee_name,omitempty"`
+	CreatedAt                time.Time                  `json:"created_at"`
+	Custom                   map[string]any             `json:"custom"`
+	CustomFields             []issueCustomFieldResponse `json:"custom_fields"`
+	UpdatedAt                time.Time                  `json:"updated_at"`
 }
 
 // toIssueResponse arma la respuesta de una incidencia. names contiene el nombre de cada persona implicada.
 func toIssueResponse(t *domain.Issue, names map[uuid.UUID]string) issueResponse {
 	resp := issueResponse{
-		ID:           t.ID.String(),
-		Key:          t.Key(),
-		ProjectID:    t.ProjectID.String(),
-		ProjectKey:   t.ProjectKey,
-		Summary:      t.Summary,
-		Description:  t.Description,
-		Status:       string(t.Status),
-		IssueType:    toIssueTypeRef(t.IssueTypeRef),
-		Priority:     toPriorityRef(t.PriorityRef),
-		Resolution:   toResolutionRef(t.ResolutionRef),
-		ResolvedAt:   t.ResolvedAt,
-		DueDate:      t.DueDate,
-		StoryPoints:  t.StoryPoints,
-		Rank:         t.Rank,
-		ClosedAt:     t.ClosedAt,
-		ReporterID:   t.ReporterID.String(),
-		ReporterName: names[t.ReporterID],
-		CreatedAt:    t.CreatedAt,
-		UpdatedAt:    t.UpdatedAt,
+		ID:          t.ID.String(),
+		Key:         t.Key(),
+		ProjectID:   t.ProjectID.String(),
+		ProjectKey:  t.ProjectKey,
+		Summary:     t.Summary,
+		Description: t.Description,
+		Status:      string(t.Status),
+		IssueType:   toIssueTypeRef(t.IssueTypeRef),
+		Priority:    toPriorityRef(t.PriorityRef),
+		Resolution:  toResolutionRef(t.ResolutionRef),
+		ResolvedAt:  t.ResolvedAt,
+		StartDate:   dateString(t.StartDate),
+		DueDate:     dateString(t.DueDate),
+		StoryPoints: t.StoryPoints,
+
+		OriginalEstimateSeconds:  t.OriginalEstimateSeconds,
+		RemainingEstimateSeconds: t.RemainingEstimateSeconds,
+		Flagged:                  t.Flagged,
+		Rank:                     t.Rank,
+		ClosedAt:                 t.ClosedAt,
+		ReporterID:               t.ReporterID.String(),
+		ReporterName:             names[t.ReporterID],
+		CreatedAt:                t.CreatedAt,
+		UpdatedAt:                t.UpdatedAt,
 	}
 	if t.AssigneeID != nil {
 		id := t.AssigneeID.String()
@@ -319,4 +334,41 @@ func toResolutionRef(ref *domain.CatalogRef) *resolutionRef {
 		return nil
 	}
 	return &resolutionRef{ID: ref.ID.String(), Name: ref.Name}
+}
+
+// apiDate is a calendar date in a request. It accepts YYYY-MM-DD and, for older clients, an RFC 3339 timestamp
+// whose UTC date is kept.
+type apiDate struct{ time.Time }
+
+func (d *apiDate) UnmarshalJSON(data []byte) error {
+	var text string
+	if err := json.Unmarshal(data, &text); err != nil {
+		return err
+	}
+	if parsed, err := time.Parse("2006-01-02", text); err == nil {
+		d.Time = parsed
+		return nil
+	}
+	parsed, err := time.Parse(time.RFC3339, text)
+	if err != nil {
+		return err
+	}
+	d.Time = domain.DateOnly(parsed)
+	return nil
+}
+
+func (d *apiDate) value() *time.Time {
+	if d == nil {
+		return nil
+	}
+	v := d.Time
+	return &v
+}
+
+func dateString(t *time.Time) *string {
+	if t == nil {
+		return nil
+	}
+	s := domain.FormatDate(t)
+	return &s
 }

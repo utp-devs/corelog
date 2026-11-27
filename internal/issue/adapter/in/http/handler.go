@@ -2,6 +2,7 @@ package http
 
 import (
 	"encoding/json"
+	"io"
 	"net/http"
 	"strconv"
 	"time"
@@ -48,10 +49,17 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req createIssueRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	raw, err := io.ReadAll(http.MaxBytesReader(w, r.Body, maxIssueBody))
+	if err != nil {
 		httpresponse.Error(w, apperror.New(apperror.KindValidation, "invalid request body"))
 		return
 	}
+	if err := json.Unmarshal(raw, &req); err != nil {
+		httpresponse.Error(w, apperror.New(apperror.KindValidation, "invalid request body"))
+		return
+	}
+	var sent map[string]json.RawMessage
+	_ = json.Unmarshal(raw, &sent)
 	if err := validation.Struct(req); err != nil {
 		httpresponse.Error(w, validation.Failed(req, err))
 		return
@@ -69,9 +77,15 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		IssueTypeID: parseOptionalUUID(req.IssueTypeID),
 		PriorityID:  parseOptionalUUID(req.PriorityID),
 		ParentID:    parseOptionalUUID(req.ParentID),
-		DueDate:     req.DueDate,
+		DueDate:     req.DueDate.value(),
 		StoryPoints: req.StoryPoints,
-		Custom:      req.Custom,
+		AssigneeID:  parseOptionalUUID(req.AssigneeID),
+		StartDate:   req.StartDate.value(),
+
+		OriginalEstimateSeconds:  req.OriginalEstimateSeconds,
+		RemainingEstimateSeconds: req.RemainingEstimateSeconds,
+		Provided:                 providedSystemFields(sent),
+		Custom:                   req.Custom,
 	})
 	if err != nil {
 		httpresponse.Error(w, err)
@@ -83,10 +97,19 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 
 // writeIssue responde con una incidencia incluyendo el nombre de su solicitante y responsable.
 func (h *Handler) writeIssue(w http.ResponseWriter, r *http.Request, status int, issue *domain.Issue) {
-	names, err := h.service.UserNames(r.Context(), personIDs(issue))
+	resp, err := h.buildIssueResponse(r, issue)
 	if err != nil {
 		httpresponse.Error(w, err)
 		return
+	}
+	httpresponse.JSON(w, status, resp)
+}
+
+// buildIssueResponse builds the response of one issue with person names and its custom fields.
+func (h *Handler) buildIssueResponse(r *http.Request, issue *domain.Issue) (issueResponse, error) {
+	names, err := h.service.UserNames(r.Context(), personIDs(issue))
+	if err != nil {
+		return issueResponse{}, err
 	}
 	resp := toIssueResponse(issue, names)
 	resp.Custom = issue.Custom
@@ -97,12 +120,11 @@ func (h *Handler) writeIssue(w http.ResponseWriter, r *http.Request, status int,
 	if h.fieldScope != nil {
 		scope, err := h.fieldScope.ScopeFor(r.Context(), issue.ProjectID, issue.IssueTypeID)
 		if err != nil {
-			httpresponse.Error(w, err)
-			return
+			return issueResponse{}, err
 		}
 		resp.CustomFields = toIssueCustomFields(scope)
 	}
-	httpresponse.JSON(w, status, resp)
+	return resp, nil
 }
 
 func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
@@ -118,13 +140,17 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	issue, err := h.service.Get(r.Context(), id, actorID, globalRole)
+	view, err := h.service.GetView(r.Context(), id, actorID, globalRole)
 	if err != nil {
 		httpresponse.Error(w, err)
 		return
 	}
-
-	h.writeIssue(w, r, http.StatusOK, issue)
+	resp, err := h.buildIssueResponse(r, view.Issue)
+	if err != nil {
+		httpresponse.Error(w, err)
+		return
+	}
+	httpresponse.JSON(w, http.StatusOK, toIssueViewResponse(resp, view))
 }
 
 // unassignedFilterValue is the assignee_id query value that lists issues without an assignee.
@@ -367,7 +393,7 @@ func (h *Handler) UpdateMetadata(w http.ResponseWriter, r *http.Request) {
 		IssueType:   domain.IssueType(req.IssueType),
 		IssueTypeID: parseOptionalUUID(req.IssueTypeID),
 		ParentID:    parseOptionalUUID(req.ParentID),
-		DueDate:     req.DueDate,
+		DueDate:     req.DueDate.value(),
 		StoryPoints: req.StoryPoints,
 	})
 	if err != nil {
@@ -406,7 +432,7 @@ func (h *Handler) UpdateDetails(w http.ResponseWriter, r *http.Request) {
 		IssueType:   domain.IssueType(req.IssueType),
 		IssueTypeID: parseOptionalUUID(req.IssueTypeID),
 		ParentID:    parseOptionalUUID(req.ParentID),
-		DueDate:     req.DueDate,
+		DueDate:     req.DueDate.value(),
 		StoryPoints: req.StoryPoints,
 		Custom:      req.Custom,
 	})

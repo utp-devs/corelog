@@ -42,10 +42,13 @@ func newAssignTxFixture(t *testing.T, collab port.CollaborationRepository, tx *d
 	dir.userTeams[assigner] = &team
 	dir.userTeams[assignee] = &team
 	svc := NewIssueService(repo, dir, contributorRoleResolver(), newFakeWatcherRepository(), collab).WithTxManager(tx)
+	failBegin := tx.FailBegin
+	tx.FailBegin = false
 	issue, err := svc.Create(ctx, port.CreateInput{Summary: "Asignar", Description: "Desc", Priority: domain.PriorityLow, ReporterID: assigner})
 	if err != nil {
 		t.Fatal(err)
 	}
+	tx.FailBegin = failBegin
 	tx.Calls = 0
 	mem, _ := collab.(*memCollab)
 	if mem != nil {

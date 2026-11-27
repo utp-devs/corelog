@@ -24,6 +24,13 @@ type CreateInput struct {
 	ParentID    *uuid.UUID
 	DueDate     *time.Time
 	StoryPoints *float64
+	AssigneeID  *uuid.UUID
+	StartDate   *time.Time
+	// OriginalEstimateSeconds and RemainingEstimateSeconds are optional estimates.
+	OriginalEstimateSeconds  *int64
+	RemainingEstimateSeconds *int64
+	// Provided lists the system fields the request sent, so required-field checks tell absent from empty.
+	Provided map[string]bool
 	// Custom is the raw "custom" object of the request (field id to value). Nil when absent.
 	Custom map[string]json.RawMessage
 }
@@ -115,4 +122,12 @@ type Service interface {
 	CreateIssueLink(ctx context.Context, sourceIssueID, targetIssueID, createdBy uuid.UUID, globalRole string, kind domain.IssueLinkKind) (*domain.IssueLink, error)
 	DeleteIssueLink(ctx context.Context, issueID, linkID, actorID uuid.UUID, globalRole string) error
 	UpdateRank(ctx context.Context, id, actorID uuid.UUID, globalRole, rank string) (*domain.Issue, error)
+	// GetView returns the full view model of an issue for the caller.
+	GetView(ctx context.Context, id, actorID uuid.UUID, globalRole string) (*IssueView, error)
+	// Patch applies a partial update, records one activity batch and emits one issue.updated event.
+	Patch(ctx context.Context, id, actorID uuid.UUID, globalRole string, input PatchInput) (*PatchResult, error)
+	// Delete soft-deletes an issue (delete_issue).
+	Delete(ctx context.Context, id, actorID uuid.UUID, globalRole string) error
+	// Restore brings back a soft-deleted issue. It needs delete_issue on the project.
+	Restore(ctx context.Context, id, actorID uuid.UUID, globalRole string) (*domain.Issue, error)
 }

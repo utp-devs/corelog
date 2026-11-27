@@ -27,14 +27,15 @@ type commentRow struct {
 }
 
 type activityRow struct {
-	ID        uuid.UUID `db:"id"`
-	IssueID   uuid.UUID `db:"issue_id"`
-	ActorID   uuid.UUID `db:"actor_id"`
-	Action    string    `db:"action"`
-	FieldName *string   `db:"field_name"`
-	OldValue  *string   `db:"old_value"`
-	NewValue  *string   `db:"new_value"`
-	CreatedAt time.Time `db:"created_at"`
+	ID        uuid.UUID  `db:"id"`
+	IssueID   uuid.UUID  `db:"issue_id"`
+	ActorID   uuid.UUID  `db:"actor_id"`
+	Action    string     `db:"action"`
+	FieldName *string    `db:"field_name"`
+	OldValue  *string    `db:"old_value"`
+	NewValue  *string    `db:"new_value"`
+	BatchID   *uuid.UUID `db:"batch_id"`
+	CreatedAt time.Time  `db:"created_at"`
 }
 
 type CollaborationRepository struct {
@@ -46,6 +47,7 @@ func NewCollaborationRepository(db *sqlx.DB) *CollaborationRepository {
 }
 
 var _ port.CollaborationRepository = (*CollaborationRepository)(nil)
+var _ port.ActivityBatchWriter = (*CollaborationRepository)(nil)
 
 func (r *CollaborationRepository) FindComment(ctx context.Context, commentID uuid.UUID) (*domain.Comment, error) {
 	var row commentRow
@@ -164,11 +166,11 @@ func (r *CollaborationRepository) DeleteComment(ctx context.Context, comment *do
 
 func (r *CollaborationRepository) SaveActivity(ctx context.Context, activity *domain.Activity) error {
 	err := database.Executor(ctx, r.db).QueryRowxContext(ctx, `
-		INSERT INTO activities (issue_id, actor_id, action, field_name, old_value, new_value, created_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		INSERT INTO activities (issue_id, actor_id, action, field_name, old_value, new_value, created_at, batch_id)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 		RETURNING id`,
 		activity.IssueID, activity.ActorID, activity.Action,
-		activity.FieldName, activity.OldValue, activity.NewValue, activity.CreatedAt,
+		activity.FieldName, activity.OldValue, activity.NewValue, activity.CreatedAt, activity.BatchID,
 	).Scan(&activity.ID)
 	if err != nil {
 		return apperror.Wrap(apperror.KindInternal, "failed to save activity", err)
@@ -176,10 +178,20 @@ func (r *CollaborationRepository) SaveActivity(ctx context.Context, activity *do
 	return nil
 }
 
+// SaveActivities writes the activities of one patch, in order.
+func (r *CollaborationRepository) SaveActivities(ctx context.Context, activities []*domain.Activity) error {
+	for _, activity := range activities {
+		if err := r.SaveActivity(ctx, activity); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (r *CollaborationRepository) FindActivities(ctx context.Context, issueID uuid.UUID) ([]*domain.Activity, error) {
 	var rows []activityRow
 	if err := r.db.SelectContext(ctx, &rows, `
-		SELECT id, issue_id, actor_id, action, field_name, old_value, new_value, created_at
+		SELECT id, issue_id, actor_id, action, field_name, old_value, new_value, batch_id, created_at
 		FROM activities
 		WHERE issue_id = $1
 		ORDER BY created_at ASC`,
@@ -192,7 +204,7 @@ func (r *CollaborationRepository) FindActivities(ctx context.Context, issueID uu
 		activities = append(activities, &domain.Activity{
 			ID: row.ID, IssueID: row.IssueID, ActorID: row.ActorID, Action: row.Action,
 			FieldName: row.FieldName, OldValue: row.OldValue, NewValue: row.NewValue,
-			CreatedAt: row.CreatedAt,
+			BatchID: row.BatchID, CreatedAt: row.CreatedAt,
 		})
 	}
 	return activities, nil
@@ -216,7 +228,7 @@ func (r *CollaborationRepository) FindMentionIDs(ctx context.Context, issueID uu
 		SELECT DISTINCT u.id
 		FROM users u
 		JOIN project_members pm ON pm.user_id = u.id
-		JOIN issues i ON i.project_id = pm.project_id
+		JOIN issues i ON i.project_id = pm.project_id AND i.deleted_at IS NULL
 		JOIN projects p ON p.id = i.project_id AND p.deleted_at IS NULL
 		WHERE i.id = $1 AND (` + strings.Join(patterns, " OR ") + `)`
 	if err := r.db.SelectContext(ctx, &ids, query, args...); err != nil {

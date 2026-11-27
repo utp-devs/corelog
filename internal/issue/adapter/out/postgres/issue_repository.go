@@ -85,13 +85,15 @@ func (r *IssueRepository) save(ctx context.Context, t *domain.Issue) error {
 		INSERT INTO issues (
 			project_id, summary, description, status, priority, issue_type, parent_id,
 			due_date, story_points, rank, closed_at, reporter_id, assignee_id, key_number, created_at, updated_at,
-			issue_type_id, priority_id, resolution_id, resolved_at, custom
+			issue_type_id, priority_id, resolution_id, resolved_at, custom,
+			original_estimate_seconds, remaining_estimate_seconds, start_date, flagged
 		)
 		VALUES (
 			:project_id, :summary, :description, :status, :priority,
 			:issue_type, :parent_id, :due_date, :story_points, :rank, :closed_at,
 			:reporter_id, :assignee_id, :key_number, :created_at, :updated_at,
-			:issue_type_id, :priority_id, :resolution_id, :resolved_at, CAST(:custom AS JSONB)
+			:issue_type_id, :priority_id, :resolution_id, :resolved_at, CAST(:custom AS JSONB),
+			:original_estimate_seconds, :remaining_estimate_seconds, :start_date, :flagged
 		)
 		RETURNING id`
 
@@ -143,7 +145,7 @@ func (r *IssueRepository) FindKeyCandidates(ctx context.Context, projectKey stri
 	if err := sqlx.SelectContext(ctx, database.Executor(ctx, r.db), &rows, `
 		SELECT `+issueColumns+`
 		FROM issues
-		WHERE key_number = $2
+		WHERE key_number = $2 AND deleted_at IS NULL
 		  AND EXISTS (
 		      SELECT 1 FROM projects p
 		      WHERE p.id = issues.project_id AND p.key = $1 AND p.deleted_at IS NULL
@@ -173,9 +175,9 @@ func (r *IssueRepository) FindByID(ctx context.Context, id uuid.UUID) (*domain.I
 
 	const query = `
 		SELECT ` + issueColumns + `
-		FROM issues WHERE id = $1 AND EXISTS (SELECT 1 FROM projects p WHERE p.id = issues.project_id AND p.deleted_at IS NULL)`
+		FROM issues WHERE id = $1 AND deleted_at IS NULL AND EXISTS (SELECT 1 FROM projects p WHERE p.id = issues.project_id AND p.deleted_at IS NULL)`
 
-	if err := r.db.GetContext(ctx, &row, query, id); err != nil {
+	if err := sqlx.GetContext(ctx, database.Executor(ctx, r.db), &row, query, id); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, domain.ErrIssueNotFound
 		}
@@ -188,7 +190,7 @@ func (r *IssueRepository) FindByID(ctx context.Context, id uuid.UUID) (*domain.I
 // listWhere arma la clausula WHERE compartida por la consulta de datos y el conteo,
 // para que ambas devuelvan exactamente el mismo conjunto de issues.
 func listWhere(filter port.ListFilter) (string, []any) {
-	query := " WHERE 1 = 1 AND EXISTS (SELECT 1 FROM projects p WHERE p.id = issues.project_id AND p.deleted_at IS NULL)"
+	query := " WHERE 1 = 1 AND deleted_at IS NULL AND EXISTS (SELECT 1 FROM projects p WHERE p.id = issues.project_id AND p.deleted_at IS NULL)"
 	args := []any{}
 	if len(filter.ProjectIDs) > 0 {
 		placeholders := make([]string, 0, len(filter.ProjectIDs))
@@ -284,8 +286,10 @@ func (r *IssueRepository) Update(ctx context.Context, t *domain.Issue) error {
 		    assignee_id = :assignee_id, updated_at = :updated_at,
 		    issue_type_id = :issue_type_id, priority_id = :priority_id,
 		    resolution_id = :resolution_id, resolved_at = :resolved_at,
-		    custom = CAST(:custom AS JSONB)
-		WHERE id = :id AND EXISTS (SELECT 1 FROM projects p WHERE p.id = issues.project_id AND p.deleted_at IS NULL)`
+		    custom = CAST(:custom AS JSONB),
+		    original_estimate_seconds = :original_estimate_seconds, remaining_estimate_seconds = :remaining_estimate_seconds,
+		    start_date = :start_date, flagged = :flagged
+		WHERE id = :id AND deleted_at IS NULL AND EXISTS (SELECT 1 FROM projects p WHERE p.id = issues.project_id AND p.deleted_at IS NULL)`
 
 	result, err := sqlx.NamedExecContext(ctx, database.Executor(ctx, r.db), query, row)
 	if err != nil {
@@ -325,8 +329,10 @@ func (r *IssueRepository) updateAndWatchAssignee(ctx context.Context, t *domain.
 		    assignee_id = :assignee_id, updated_at = :updated_at,
 		    issue_type_id = :issue_type_id, priority_id = :priority_id,
 		    resolution_id = :resolution_id, resolved_at = :resolved_at,
-		    custom = CAST(:custom AS JSONB)
-		WHERE id = :id AND EXISTS (SELECT 1 FROM projects p WHERE p.id = issues.project_id AND p.deleted_at IS NULL)`
+		    custom = CAST(:custom AS JSONB),
+		    original_estimate_seconds = :original_estimate_seconds, remaining_estimate_seconds = :remaining_estimate_seconds,
+		    start_date = :start_date, flagged = :flagged
+		WHERE id = :id AND deleted_at IS NULL AND EXISTS (SELECT 1 FROM projects p WHERE p.id = issues.project_id AND p.deleted_at IS NULL)`
 	result, err := sqlx.NamedExecContext(ctx, exec, query, row)
 	if err != nil {
 		if isForeignKeyViolation(err) {

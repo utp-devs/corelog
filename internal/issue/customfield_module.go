@@ -18,6 +18,9 @@ type CustomFieldModule struct {
 // ignore the "custom" input.
 func (m *Module) WithCustomFields(scope port.CustomFieldScopeReader, browse port.ProjectBrowseChecker) *Module {
 	m.service.WithCustomFields(scope, browse)
+	if required, ok := scope.(port.RequiredFieldReader); ok {
+		m.service.WithRequiredFields(required)
+	}
 	return m
 }
 

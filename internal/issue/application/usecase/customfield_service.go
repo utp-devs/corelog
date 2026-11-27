@@ -352,3 +352,18 @@ func (s *CustomFieldService) resolve(ctx context.Context, projectID, issueTypeID
 	}
 	return stored, configured, domain.BuildScope(fields, layoutRequired, projectID, issueTypeID), nil
 }
+
+// RequiredSystemFields lists the built-in fields that the project layout marks as required for the issue type.
+func (s *CustomFieldService) RequiredSystemFields(ctx context.Context, projectID, issueTypeID uuid.UUID) ([]string, error) {
+	stored, _, scope, err := s.resolve(ctx, projectID, issueTypeID)
+	if err != nil {
+		return nil, err
+	}
+	var required []string
+	for _, item := range domain.ResolveLayout(stored, scope) {
+		if item.Kind == domain.LayoutSystem && item.Required {
+			required = append(required, item.Key)
+		}
+	}
+	return required, nil
+}

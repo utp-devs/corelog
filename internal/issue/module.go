@@ -4,7 +4,9 @@ import (
 	httpadapter "github.com/jhonsferg/corelog/internal/issue/adapter/in/http"
 	"github.com/jhonsferg/corelog/internal/issue/application/port"
 	"github.com/jhonsferg/corelog/internal/issue/application/usecase"
+	"github.com/jhonsferg/corelog/internal/platform/clock"
 	"github.com/jhonsferg/corelog/internal/platform/database"
+	"github.com/jhonsferg/corelog/internal/platform/events"
 )
 
 type Module struct {
@@ -35,5 +37,30 @@ func NewModule(repo port.Repository, directory port.UserDirectory, collaboration
 // Sin esta llamada las escrituras se ejecutan sin transaccion.
 func (m *Module) WithTxManager(tx database.TxManager) *Module {
 	m.service.WithTxManager(tx)
+	return m
+}
+
+// WithPermissions makes field edits check individual permissions (edit_issue, edit_own_issue, assign_issue,
+// delete_issue) and fills the permissions of the issue view.
+func (m *Module) WithPermissions(p port.IssuePermissionChecker) *Module {
+	m.service.WithPermissions(p)
+	return m
+}
+
+// WithEvents makes issue changes publish domain events inside their transaction.
+func (m *Module) WithEvents(p events.Publisher) *Module {
+	m.service.WithEvents(p)
+	return m
+}
+
+// WithClock fixes the time source of the use cases.
+func (m *Module) WithClock(c clock.Clock) *Module {
+	m.service.WithClock(c)
+	return m
+}
+
+// WithTransitions replaces the legacy transition provider of the issue view.
+func (m *Module) WithTransitions(p port.TransitionProvider) *Module {
+	m.service.WithTransitions(p)
 	return m
 }
