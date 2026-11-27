@@ -23,6 +23,8 @@ tags:
     description: Notas personales privadas del usuario
   - name: issues
     description: Gestion de incidencias (issues) con clave legible por proyecto
+  - name: workflows
+    description: Flujo de trabajo por proyecto, plantillas y catalogo de estados de la organizacion
   - name: health
     description: Service liveness
 paths:
@@ -1771,6 +1773,327 @@ paths:
           description: Incidencia no encontrada en el proyecto
         '422':
           $ref: '#/components/responses/ValidationError'
+  /workflow-templates:
+    get:
+      tags: [workflows]
+      summary: Listar plantillas de flujo de trabajo
+      description: >-
+        Devuelve las cuatro plantillas (scrum, kanban, task_tracking, bug_tracking) con nombre y descripcion en espanol
+        y su definicion en el formato de edicion: los estados se nombran por ref y las transiciones usan esos refs.
+        Cualquier usuario autenticado puede leerlas.
+      operationId: listWorkflowTemplates
+      responses:
+        '200':
+          description: Plantillas disponibles
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: {$ref: '#/components/schemas/WorkflowTemplate'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+  /projects/{id}/workflow:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: Identificador del proyecto (UUID o clave). Los no visibles reciben 404.
+        schema: {type: string}
+    get:
+      tags: [workflows]
+      summary: Leer el flujo de trabajo del proyecto
+      description: >-
+        Devuelve los estados (con su numero de incidencias), el estado inicial, las transiciones y la version del flujo.
+        Visible para cualquiera que pueda ver el proyecto. Un proyecto sin flujo recibe el de su plantilla.
+      operationId: getProjectWorkflow
+      responses:
+        '200':
+          description: Flujo de trabajo del proyecto
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: {$ref: '#/components/schemas/WorkflowView'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+    put:
+      tags: [workflows]
+      summary: Reemplazar el flujo de trabajo del proyecto
+      description: >-
+        Valida y guarda el flujo en una sola transaccion. Exige expected_version (la version que se edita). Los estados
+        nuevos se crean en la organizacion cuando no existe otro con el mismo nombre. Si un estado que se elimina tiene
+        incidencias, status_mapping debe indicar a que estado pasan; si falta, responde 422 workflow.status_mapping_required
+        con la lista. Solo gestores del flujo (lead u org_admin); los proyectos archivados son de solo lectura.
+        Errores: 409 workflow.version_conflict si la version no coincide, 422 workflow.invalid con un detalle por ruta.
+      operationId: replaceProjectWorkflow
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/WorkflowDefinitionRequest'}
+            example:
+              expected_version: 3
+              initial_ref: todo
+              statuses:
+                - {ref: todo, id: 7d2f7b8e-3f1a-4c1e-9a55-2d0e6b1f0a01}
+                - {ref: blocked, name: Bloqueado, category: in_progress}
+                - {ref: done, id: 9b1c4e2a-5d6f-4a7b-8c9d-0e1f2a3b4c5d}
+              transitions:
+                - {id: block, name: Bloquear, from: [todo], to: blocked, conditions: [], validators: [], post_functions: [], required_fields: []}
+                - {id: complete, name: Completar, from: [todo, blocked], to: done, conditions: [], validators: [], post_functions: [{type: set_resolution, params: {resolution: done}}], required_fields: []}
+              status_mapping: {}
+      responses:
+        '200':
+          description: Flujo guardado con las advertencias del cambio
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: {$ref: '#/components/schemas/WorkflowSaveResponse'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+  /projects/{id}/workflow/validate:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: Identificador del proyecto (UUID o clave). Los no visibles reciben 404.
+        schema: {type: string}
+    post:
+      tags: [workflows]
+      summary: Validar un flujo sin guardarlo
+      description: >-
+        Prueba dry run: no escribe nada. Responde 200 con valid, errores por ruta (errors), advertencias (warnings) y los
+        estados que necesitan status_mapping (mapping_required) con sus incidencias.
+      operationId: validateProjectWorkflow
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/WorkflowDefinitionRequest'}
+      responses:
+        '200':
+          description: Resultado de la validacion
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: {$ref: '#/components/schemas/WorkflowValidation'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+  /projects/{id}/workflow/reset:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: Identificador del proyecto (UUID o clave). Los no visibles reciben 404.
+        schema: {type: string}
+    post:
+      tags: [workflows]
+      summary: Aplicar la plantilla de un flujo de trabajo
+      description: >-
+        Sustituye el flujo del proyecto por la plantilla indicada, con las mismas reglas que el reemplazo (version,
+        status_mapping y advertencias).
+      operationId: resetProjectWorkflow
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/WorkflowResetRequest'}
+            example: {template: kanban, expected_version: 3, status_mapping: {}}
+      responses:
+        '200':
+          description: Flujo aplicado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: {$ref: '#/components/schemas/WorkflowSaveResponse'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+  /projects/{id}/workflow/migrate-issues:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: Identificador del proyecto (UUID o clave). Los no visibles reciben 404.
+        schema: {type: string}
+    post:
+      tags: [workflows]
+      summary: Mover incidencias entre estados
+      description: >-
+        Mueve las incidencias del proyecto de un estado a otro, por ejemplo antes de eliminar un estado. El destino debe
+        estar en el flujo del proyecto. Cada incidencia movida recibe su fila de historial y su actividad.
+      operationId: migrateProjectIssues
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/WorkflowMigrationRequest'}
+            example:
+              status_mapping: {9b1c4e2a-5d6f-4a7b-8c9d-0e1f2a3b4c5d: 7d2f7b8e-3f1a-4c1e-9a55-2d0e6b1f0a01}
+      responses:
+        '200':
+          description: Incidencias movidas
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: {$ref: '#/components/schemas/WorkflowMigrationResult'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+  /organizations/{org}/statuses:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationId'
+    get:
+      tags: [workflows]
+      summary: Listar el catalogo de estados de la organizacion
+      description: Devuelve los estados en orden de posicion. Cualquier miembro puede leerlos.
+      operationId: listOrganizationStatuses
+      responses:
+        '200':
+          description: Catalogo de estados
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: {$ref: '#/components/schemas/OrganizationStatus'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+    post:
+      tags: [workflows]
+      summary: Crear un estado
+      description: Anade un estado al final del catalogo. Solo propietarios y administradores. El nombre es unico sin distinguir mayusculas.
+      operationId: createOrganizationStatus
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/OrganizationStatusCreateRequest'}
+      responses:
+        '201':
+          description: Estado creado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: {$ref: '#/components/schemas/OrganizationStatus'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+  /organizations/{org}/statuses/reorder:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationId'
+    put:
+      tags: [workflows]
+      summary: Reordenar el catalogo de estados
+      description: status_ids debe contener cada estado de la organizacion exactamente una vez. Solo administradores.
+      operationId: reorderOrganizationStatuses
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/OrganizationStatusReorderRequest'}
+      responses:
+        '200':
+          description: Catalogo reordenado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: {$ref: '#/components/schemas/OrganizationStatus'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+  /organizations/{org}/statuses/{id}:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationId'
+      - name: id
+        in: path
+        required: true
+        description: Identificador del estado.
+        schema: {type: string, format: uuid}
+    patch:
+      tags: [workflows]
+      summary: Renombrar o cambiar la categoria de un estado
+      description: >-
+        Los cambios se aplican a los flujos que usan el estado. Un cambio de categoria que deje un flujo invalido se
+        rechaza con 409 workflow.category_in_use. Solo administradores.
+      operationId: updateOrganizationStatus
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/OrganizationStatusPatchRequest'}
+      responses:
+        '200':
+          description: Estado actualizado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: {$ref: '#/components/schemas/OrganizationStatus'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+    delete:
+      tags: [workflows]
+      summary: Eliminar un estado
+      description: >-
+        Sin reassign_to el estado debe estar sin uso (incidencias, historial ni flujos); si no, 409 workflow.status_in_use.
+        Con reassign_to las incidencias, el historial y los flujos pasan a ese estado. Solo administradores.
+      operationId: deleteOrganizationStatus
+      parameters:
+        - name: reassign_to
+          in: query
+          required: false
+          description: Estado de la misma organizacion que recibe las incidencias.
+          schema: {type: string, format: uuid}
+      responses:
+        '200':
+          description: Estado eliminado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: {$ref: '#/components/schemas/OrganizationStatusDeleteResponse'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '422': {$ref: '#/components/responses/ValidationError'}
   /sprints:
     get:
       tags: [issues]
@@ -6155,6 +6478,167 @@ components:
           type: string
           description: Nombre exacto del proyecto. Debe coincidir con el nombre guardado.
           example: Plataforma Core
+    WorkflowStatus:
+      type: object
+      properties:
+        id: {type: string, format: uuid, description: Identificador del estado de la organizacion.}
+        name: {type: string, example: En curso}
+        category: {type: string, enum: [todo, in_progress, done]}
+        position: {type: integer, minimum: 0, description: Posicion del estado en el flujo.}
+        issue_count: {type: integer, minimum: 0, description: Incidencias del proyecto que estan en este estado.}
+    WorkflowRule:
+      type: object
+      required: [type]
+      properties:
+        type: {type: string, example: set_resolution, description: Tipo de regla del motor de transiciones.}
+        params: {type: object, description: Parametros de la regla.}
+    WorkflowTransition:
+      type: object
+      description: >-
+        Transicion en el formato de definicion del motor. En las respuestas from y to son identificadores de estado;
+        en las peticiones son refs de los estados de la misma peticion.
+      properties:
+        id: {type: string, example: complete}
+        name: {type: string, example: Completar}
+        from: {type: array, items: {type: string}, description: Vacio significa desde cualquier estado distinto de to.}
+        to: {type: string}
+        conditions: {type: array, items: {$ref: '#/components/schemas/WorkflowRule'}}
+        validators: {type: array, items: {$ref: '#/components/schemas/WorkflowRule'}}
+        post_functions: {type: array, items: {$ref: '#/components/schemas/WorkflowRule'}}
+        required_fields: {type: array, items: {type: string}}
+    WorkflowView:
+      type: object
+      properties:
+        statuses: {type: array, items: {$ref: '#/components/schemas/WorkflowStatus'}}
+        initial_status_id: {type: string, format: uuid}
+        transitions: {type: array, items: {$ref: '#/components/schemas/WorkflowTransition'}}
+        version: {type: integer, minimum: 1}
+        updated_at: {type: string, format: date-time}
+        is_template_default: {type: boolean, description: Indica si el flujo es igual al de su plantilla.}
+    WorkflowIssue:
+      type: object
+      properties:
+        path: {type: string, example: 'transitions[3].to'}
+        code: {type: string, example: workflow.unknown_status}
+        message: {type: string, description: Mensaje en espanol.}
+    WorkflowMappingRequirement:
+      type: object
+      properties:
+        status_id: {type: string, format: uuid}
+        name: {type: string}
+        issue_count: {type: integer, minimum: 1}
+    WorkflowWarning:
+      allOf:
+        - $ref: '#/components/schemas/WorkflowIssue'
+    WorkflowSaveResponse:
+      allOf:
+        - $ref: '#/components/schemas/WorkflowView'
+        - type: object
+          properties:
+            warnings: {type: array, items: {$ref: '#/components/schemas/WorkflowWarning'}}
+    WorkflowValidation:
+      type: object
+      properties:
+        valid: {type: boolean}
+        errors: {type: array, items: {$ref: '#/components/schemas/WorkflowIssue'}}
+        warnings: {type: array, items: {$ref: '#/components/schemas/WorkflowWarning'}}
+        mapping_required: {type: array, items: {$ref: '#/components/schemas/WorkflowMappingRequirement'}}
+    WorkflowStatusInput:
+      type: object
+      required: [ref]
+      properties:
+        ref: {type: string, maxLength: 64, description: Nombre local del estado dentro de la peticion; las transiciones lo usan.}
+        id: {type: string, format: uuid, description: Estado existente de la organizacion. Sin id se busca por nombre o se crea.}
+        name: {type: string, maxLength: 60, description: Obligatorio para estados nuevos.}
+        category: {type: string, enum: [todo, in_progress, done]}
+    WorkflowDefinitionRequest:
+      type: object
+      required: [expected_version, statuses, transitions]
+      properties:
+        expected_version: {type: integer, minimum: 1, description: Version del flujo que se edita (no aplica a validate).}
+        initial_ref: {type: string, description: Ref del estado inicial.}
+        statuses: {type: array, items: {$ref: '#/components/schemas/WorkflowStatusInput'}}
+        transitions: {type: array, items: {$ref: '#/components/schemas/WorkflowTransition'}}
+        status_mapping:
+          type: object
+          additionalProperties: {type: string, format: uuid}
+          description: Mapa de estado eliminado a estado destino, con identificadores UUID.
+    WorkflowResetRequest:
+      type: object
+      required: [template, expected_version]
+      properties:
+        template: {type: string, enum: [scrum, kanban, task_tracking, bug_tracking]}
+        expected_version: {type: integer, minimum: 1}
+        status_mapping:
+          type: object
+          additionalProperties: {type: string, format: uuid}
+    WorkflowMigrationRequest:
+      type: object
+      required: [status_mapping]
+      properties:
+        status_mapping:
+          type: object
+          additionalProperties: {type: string, format: uuid}
+          description: Mapa de estado origen a estado destino. El destino debe estar en el flujo del proyecto.
+    WorkflowMigrationResult:
+      type: object
+      properties:
+        moved: {type: integer, minimum: 0}
+        moves:
+          type: array
+          items:
+            type: object
+            properties:
+              from_status_id: {type: string, format: uuid}
+              to_status_id: {type: string, format: uuid}
+              issue_count: {type: integer, minimum: 0}
+    WorkflowTemplate:
+      type: object
+      properties:
+        id: {type: string, enum: [scrum, kanban, task_tracking, bug_tracking]}
+        name: {type: string, example: Seguimiento de tareas}
+        description: {type: string}
+        definition:
+          type: object
+          properties:
+            initial_ref: {type: string, example: todo}
+            statuses:
+              type: array
+              items:
+                type: object
+                properties:
+                  ref: {type: string}
+                  name: {type: string}
+                  category: {type: string, enum: [todo, in_progress, done]}
+            transitions: {type: array, items: {$ref: '#/components/schemas/WorkflowTransition'}}
+    OrganizationStatus:
+      type: object
+      properties:
+        id: {type: string, format: uuid}
+        name: {type: string, example: Bloqueado}
+        category: {type: string, enum: [todo, in_progress, done]}
+        position: {type: integer, minimum: 0}
+    OrganizationStatusCreateRequest:
+      type: object
+      required: [name, category]
+      properties:
+        name: {type: string, maxLength: 60}
+        category: {type: string, enum: [todo, in_progress, done]}
+    OrganizationStatusPatchRequest:
+      type: object
+      properties:
+        name: {type: string, maxLength: 60}
+        category: {type: string, enum: [todo, in_progress, done]}
+    OrganizationStatusReorderRequest:
+      type: object
+      required: [status_ids]
+      properties:
+        status_ids: {type: array, items: {type: string, format: uuid}}
+    OrganizationStatusDeleteResponse:
+      type: object
+      properties:
+        id: {type: string, format: uuid}
+        reassigned_issues: {type: integer, minimum: 0}
     ProjectBoard:
       type: object
       required: [id, project_id, name, type, columns]

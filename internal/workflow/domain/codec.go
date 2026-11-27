@@ -161,15 +161,8 @@ func Encode(w Workflow) ([]byte, error) {
 		dto.Statuses = append(dto.Statuses, statusDTO(s))
 	}
 	for _, t := range w.Transitions {
-		td := transitionDTO{ID: t.ID, Name: t.Name, From: nonNil(t.From), To: t.To, RequiredFields: nonNil(t.RequiredFields)}
-		var err error
-		if td.Conditions, err = encodeRules(t.Conditions); err != nil {
-			return nil, err
-		}
-		if td.Validators, err = encodeRules(t.Validators); err != nil {
-			return nil, err
-		}
-		if td.PostFunctions, err = encodeRules(t.PostFunctions); err != nil {
+		td, err := encodeTransition(t)
+		if err != nil {
 			return nil, err
 		}
 		dto.Transitions = append(dto.Transitions, td)
@@ -197,33 +190,9 @@ func Decode(data []byte) (Workflow, error) {
 		w.Statuses = append(w.Statuses, Status(s))
 	}
 	for _, td := range dto.Transitions {
-		t := Transition{ID: td.ID, Name: td.Name, From: td.From, To: td.To, RequiredFields: td.RequiredFields}
-		if len(t.From) == 0 {
-			t.From = nil
-		}
-		if len(t.RequiredFields) == 0 {
-			t.RequiredFields = nil
-		}
-		for _, r := range td.Conditions {
-			c, err := DecodeCondition(r.Type, r.Params)
-			if err != nil {
-				return Workflow{}, err
-			}
-			t.Conditions = append(t.Conditions, c)
-		}
-		for _, r := range td.Validators {
-			v, err := DecodeValidator(r.Type, r.Params)
-			if err != nil {
-				return Workflow{}, err
-			}
-			t.Validators = append(t.Validators, v)
-		}
-		for _, r := range td.PostFunctions {
-			p, err := DecodePostFunction(r.Type, r.Params)
-			if err != nil {
-				return Workflow{}, err
-			}
-			t.PostFunctions = append(t.PostFunctions, p)
+		t, err := decodeTransition(td)
+		if err != nil {
+			return Workflow{}, err
 		}
 		w.Transitions = append(w.Transitions, t)
 	}

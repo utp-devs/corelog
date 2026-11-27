@@ -114,6 +114,13 @@ func buildRouter(cfg *config.Config, db *sqlx.DB, log *slog.Logger) (chi.Router,
 	}
 	fileStorage := issuefilesystem.New(attachmentRoot)
 	workflowModule := workflow.NewModule(workflowpostgres.NewRepository(db), clock.RealClock{})
+	workflowAdmin := workflow.NewManagementModule(workflowpostgres.NewRepository(db), clock.RealClock{}, workflow.Dependencies{
+		Authorizer:  projectAuthorizer,
+		OrgRoles:    orgCatalogRoleChecker{svc: orgModule.Service},
+		Transaction: database.NewTxManager(db),
+		Projects:    projectKeyResolver{projects: projectModule.Service.(projectport.ProjectManager)},
+		JWTSecret:   cfg.Auth.JWTSecret,
+	})
 	notificationModule := notification.NewModule(notificationpostgres.NewNotificationRepository(db), cfg.Auth.JWTSecret)
 	issueModule := issue.NewModule(issueRepo, userDirectory, collaborationRepo, issueLinkRepo, watcherRepo, savedFilterRepo, cfg.Auth.JWTSecret, projectAuthorizer, notificationModule.Service, projectMemberRepo).WithTxManager(database.NewTxManager(db))
 	searchModule := search.NewModule(searchpostgres.NewSearchIndex(db), cfg.Auth.JWTSecret)
@@ -148,7 +155,7 @@ func buildRouter(cfg *config.Config, db *sqlx.DB, log *slog.Logger) (chi.Router,
 		logo.RegisterRoutes(r)
 		catalogModule.Handler.RegisterCatalogRoutes(r)
 		customFieldModule.Handler.RegisterCustomFieldRoutes(r)
-		httpserver.Mount(r, userModule.Handler, teamModule.Handler, projectModule.Handler, boardModule.Handler, issueModule.Handler, sprintModule.Handler, notificationModule.Handler, calendarModule.Handler, searchModule.Handler, dashboardModule.Handler, favoriteModule.Handler, noteModule.Handler, orgModule.Handler)
+		httpserver.Mount(r, userModule.Handler, teamModule.Handler, projectModule.Handler, boardModule.Handler, issueModule.Handler, sprintModule.Handler, notificationModule.Handler, calendarModule.Handler, searchModule.Handler, dashboardModule.Handler, favoriteModule.Handler, noteModule.Handler, orgModule.Handler, workflowAdmin.Handler)
 	})
 	return router, nil
 }
