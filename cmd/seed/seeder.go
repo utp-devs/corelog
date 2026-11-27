@@ -65,7 +65,7 @@ var errNotEmpty = errors.New("la base de datos ya tiene usuarios; usa --force-re
 
 // appTables lists every application table, children before parents. schema_migrations is never touched.
 var appTables = []string{
-	"domain_events", "event_cursors",
+	"domain_events", "event_cursors", "favorites", "recent_items", "project_permissions", "project_team_roles",
 	"notification_preferences", "notifications", "user_sessions",
 	"comment_mentions", "comments", "activities", "watchers", "issue_links", "attachments",
 	"issue_labels", "issue_components", "saved_filters", "issues", "sprints",

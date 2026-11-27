@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
 )
 
@@ -105,34 +106,36 @@ func e2eAcmeSpec() orgSpec {
 		projects: []projectSpec{
 			{
 				key: "SCRUM", name: "Proyecto Scrum", description: "Proyecto de prueba con sprint activo",
-				kind: "scrum", visibility: "open", lead: e2eLead,
+				kind: "scrum", template: "scrum", color: "palette-3", visibility: "open", lead: e2eLead,
 				members: []member{
 					{e2eLead, "lead"}, {e2eAdmin, "contributor"}, {e2eOwner, "contributor"}, {e2eOrgAdmin, "contributor"},
 					{e2eMember, "contributor"}, {e2eAgent, "contributor"}, {e2eViewer, "viewer"},
 					{e2eRequester, "viewer"}, {e2eAna, "viewer"},
 				},
+				teamRoles:  []teamRoleSpec{{"Design", "viewer"}},
 				labels:     []labelSpec{{"bug", "red"}, {"feature", "green"}, {"docs", "gray"}},
 				components: []componentSpec{{"API", "Endpoints REST del backend"}, {"Frontend", "Interfaz React del panel"}},
 			},
 			{
 				key: "KAN", name: "Proyecto Kanban", description: "Proyecto de prueba de flujo continuo",
-				kind: "kanban", visibility: "open", lead: e2eOwner,
+				kind: "kanban", template: "kanban", color: "palette-5", visibility: "open", lead: e2eOwner,
 				members: []member{
 					{e2eOwner, "lead"}, {e2eAdmin, "contributor"}, {e2eMember, "contributor"}, {e2eAgent, "contributor"},
 					{e2eGuest, "viewer"}, {e2eRequester, "viewer"}, {e2eAna, "viewer"},
 				},
+				teamRoles:  []teamRoleSpec{{"Platform", "contributor"}},
 				labels:     []labelSpec{{"bug", "red"}, {"infra", "purple"}},
 				components: []componentSpec{{"Operaciones", "Hosts, certificados y respaldos"}},
 			},
 			{
 				key: "SEC", name: "Seguridad", description: "Proyecto privado: el miembro comun no tiene acceso",
-				kind: "scrum", visibility: "private", lead: e2eOwner,
+				kind: "kanban", template: "kanban", color: "palette-9", visibility: "private", lead: e2eOwner,
 				members: []member{{e2eOwner, "lead"}, {e2eOrgAdmin, "contributor"}},
 				labels:  []labelSpec{{"bug", "red"}},
 			},
 			{
 				key: "EMP", name: "Proyecto vacio", description: "Proyecto sin incidencias, para estados vacios",
-				kind: "kanban", visibility: "open", lead: e2eOwner,
+				kind: "kanban", template: "task_tracking", color: "palette-11", visibility: "open", lead: e2eOwner,
 				members: []member{{e2eOwner, "lead"}},
 			},
 		},
@@ -276,8 +279,19 @@ func buildE2E(passwordHash string) *dataset {
 		recs = append(recs, rec)
 	}
 	emitIssues(ds, recs)
+	syncIssueCounters(ds, recs)
 	addE2EFilterAndNotifications(ds, org, recs)
+	addE2EFavoritesAndRecents(ds, users, org.projects)
 	return ds
+}
+
+// addE2EFavoritesAndRecents stars one project and records one recent view for the
+// e2e member, so the favorites and recents lists are not empty in the suite.
+func addE2EFavoritesAndRecents(ds *dataset, users []uuid.UUID, projects []projectModel) {
+	favorites := ds.table("favorites", "user_id", "entity_type", "entity_id", "created_at")
+	favorites.add(users[e2eMember], "project", projects[0].id, daysFromBase(-3))
+	recents := ds.table("recent_items", "user_id", "entity_type", "entity_id", "viewed_at")
+	recents.add(users[e2eMember], "project", projects[1].id, daysFromBase(-1))
 }
 
 func addE2EFilterAndNotifications(ds *dataset, org orgModel, recs []issueRec) {

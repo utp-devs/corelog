@@ -35,10 +35,17 @@ type teamSpec struct {
 
 type projectSpec struct {
 	key, name, description, kind, visibility string
-	lead                                     int // index into the people list; must also be a lead member
+	template, color                          string // template defaults to kind; color defaults to "blue"
+	lead                                     int    // index into the people list; must also be a lead member
 	members                                  []member
+	teamRoles                                []teamRoleSpec
 	labels                                   []labelSpec
 	components                               []componentSpec
+}
+
+// teamRoleSpec grants a project role to every member of a team of the organization.
+type teamRoleSpec struct {
+	team, role string
 }
 
 type orgSpec struct {
@@ -69,6 +76,14 @@ var (
 	projCreated    = daysFromBase(-110)
 	catalogCreated = daysFromBase(-100)
 )
+
+// templateIcons maps a project template to the PrimeIcons class the web client shows for it.
+var templateIcons = map[string]string{
+	"scrum":         "pi pi-sync",
+	"kanban":        "pi pi-table",
+	"task_tracking": "pi pi-check-square",
+	"bug_tracking":  "pi pi-exclamation-triangle",
+}
 
 var standardColumns = []struct {
 	name, status string
@@ -168,8 +183,10 @@ func buildOrg(ds *dataset, spec orgSpec, users []uuid.UUID) orgModel {
 		}
 	}
 
-	projects := ds.table("projects", "id", "organization_id", "key", "name", "description", "type", "lead_id", "visibility", "archived_at", "created_at", "updated_at")
+	projects := ds.table("projects", "id", "organization_id", "key", "name", "description", "type", "template",
+		"color", "icon", "lead_id", "visibility", "default_assignee_policy", "next_issue_number", "archived_at", "created_at", "updated_at")
 	projectMembers := ds.table("project_members", "project_id", "user_id", "role", "created_at")
+	projectTeamRoles := ds.table("project_team_roles", "project_id", "team_id", "role", "created_at")
 	labels := ds.table("labels", "id", "project_id", "name", "color", "created_at", "updated_at")
 	components := ds.table("components", "id", "project_id", "name", "description", "created_at", "updated_at")
 	workflows := ds.table("workflows", "id", "project_id", "name", "is_default", "created_at", "updated_at")
@@ -177,11 +194,24 @@ func buildOrg(ds *dataset, spec orgSpec, users []uuid.UUID) orgModel {
 
 	for _, ps := range spec.projects {
 		pid := projectID(ps.key)
-		projects.add(pid, spec.id, ps.key, ps.name, ps.description, ps.kind, users[ps.lead], ps.visibility, nil, projCreated, projCreated)
+		template := ps.template
+		if template == "" {
+			template = ps.kind
+		}
+		color := ps.color
+		if color == "" {
+			color = "blue"
+		}
+		// next_issue_number starts at 1; syncIssueCounters moves it past the seeded issues.
+		projects.add(pid, spec.id, ps.key, ps.name, ps.description, ps.kind, template, color, templateIcons[template],
+			users[ps.lead], ps.visibility, "unassigned", 1, nil, projCreated, projCreated)
 
 		pm := projectModel{id: pid, key: ps.key}
 		for _, m := range ps.members {
 			projectMembers.add(pid, users[m.person], m.role, projCreated)
+		}
+		for _, tr := range ps.teamRoles {
+			projectTeamRoles.add(pid, idFor("team", spec.slug, tr.team), tr.role, projCreated)
 		}
 
 		for _, l := range ps.labels {

@@ -129,7 +129,7 @@ func demoProjects() []projectSpec {
 		},
 		{
 			key: "SEC", name: "Seguridad", description: "Hallazgos de seguridad y cumplimiento",
-			kind: "scrum", visibility: "private", lead: 2, labels: commonLabels,
+			kind: "scrum", template: "scrum", color: "palette-9", visibility: "private", lead: 2, labels: commonLabels,
 			components: []componentSpec{{"Autenticacion", "Login, sesiones y JWT"}, {"Auditoria", "Trazabilidad de cambios"}, {"Politicas", "Politicas de acceso y contrasenas"}},
 		},
 		{
@@ -163,6 +163,7 @@ func buildDemo(passwordHash string) *dataset {
 	recs := generateIssues(rng, org, demoIssueCount)
 	assignDemoSprints(recs, core.id, sprint11, sprint12)
 	emitIssues(ds, recs)
+	syncIssueCounters(ds, recs)
 	addDemoLinks(ds, rng, recs, org.users[0])
 	addDemoFilters(ds)
 	addDemoNotifications(ds, recs)

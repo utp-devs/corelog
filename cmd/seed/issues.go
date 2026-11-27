@@ -215,6 +215,30 @@ func minTime(a, b time.Time) time.Time {
 	return a
 }
 
+// syncIssueCounters sets next_issue_number of every project to one more than its seeded issues,
+// so issues created after seeding continue the numbering without collisions.
+func syncIssueCounters(ds *dataset, recs []issueRec) {
+	projects := ds.byName["projects"]
+	idIdx, counterIdx := columnIndex(projects, "id"), columnIndex(projects, "next_issue_number")
+	counts := map[uuid.UUID]int{}
+	for _, r := range recs {
+		counts[r.projectID]++
+	}
+	for _, row := range projects.rows {
+		row[counterIdx] = counts[row[idIdx].(uuid.UUID)] + 1
+	}
+}
+
+// columnIndex returns the position of a column of a table, panicking when it is missing.
+func columnIndex(t *table, column string) int {
+	for i, c := range t.cols {
+		if c == column {
+			return i
+		}
+	}
+	panic(fmt.Sprintf("seed: table %s has no column %s", t.name, column))
+}
+
 // emitIssues writes issues and their relations. Parents must come before
 // children in recs, which generateIssues guarantees.
 func emitIssues(ds *dataset, recs []issueRec) {
