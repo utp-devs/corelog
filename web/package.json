@@ -1,5 +1,6 @@
 {
   "name": "corelog-web",
+  "type": "module",
   "version": "0.0.0",
   "description": "Aplicaciones web de CoreLog: portal, espacio de trabajo y administración",
   "scripts": {
