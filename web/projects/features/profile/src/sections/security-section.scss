@@ -1,97 +1,80 @@
-@use '../shared/profile' as *;
+@use '../../../../ui/styles/mixins' as m;
 
 :host {
   display: block;
   min-width: 0;
 }
 
-.section {
-  @include section-root;
-}
-
-.section-title {
-  @include section-title;
-}
-
-.card {
-  @include card;
-}
-
-.card-danger {
-  border-color: var(--cl-danger);
-}
-
-.card-title {
-  @include card-title;
-}
-
-.row {
-  @include row-between;
-}
-
-.row-text {
-  display: flex;
-  flex-direction: column;
-  gap: var(--cl-space-1);
+.security-section {
+  @include m.flex-column(6);
   min-width: 0;
-}
 
-.row-title {
-  font-weight: 600;
-  overflow-wrap: anywhere;
-}
+  &__sessions {
+    @include m.flex-column(0);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
 
-.row-end {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: var(--cl-space-3);
-}
+  &__session {
+    @include m.flex-row(3);
+    min-width: 0;
+    padding-block: var(--cl-space-3);
 
-.hint {
-  @include hint;
-}
+    & + & {
+      border-top: 1px solid var(--cl-divider);
+    }
 
-.session-list {
-  display: flex;
-  flex-direction: column;
-  gap: var(--cl-space-3);
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
+    @include m.respond-down(768px) {
+      flex-wrap: wrap;
+    }
+  }
 
-.session-item {
-  padding-block: var(--cl-space-2);
-  min-width: 0;
-}
+  &__device {
+    flex: none;
+    color: var(--cl-text-subtle);
+    font-size: var(--cl-font-h3);
+  }
 
-.session-agent {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: var(--cl-space-2);
-}
+  &__session-text {
+    @include m.flex-column(1);
+    flex: 1 1 14rem;
+    min-width: 0;
+  }
 
-.alert {
-  padding: var(--cl-space-2) var(--cl-space-3);
-  border-radius: var(--cl-radius-sm);
-  background: var(--cl-danger-bg);
-  color: var(--cl-danger-text);
-  overflow-wrap: anywhere;
-}
+  &__agent {
+    @include m.cluster(2);
+    font-weight: var(--cl-weight-semibold);
+    overflow-wrap: anywhere;
+  }
 
-.touch-target {
-  @include touch-target;
-}
+  &__hint {
+    margin: 0;
+    color: var(--cl-text-subtle);
+    font-size: var(--cl-font-small);
+    overflow-wrap: anywhere;
+  }
 
-.dialog-text {
-  margin: 0 0 var(--cl-space-3);
-}
+  &__more {
+    display: block;
+    margin-block-start: var(--cl-space-2);
+  }
 
-.dialog-actions {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: var(--cl-space-2);
+  &__alert {
+    padding: var(--cl-space-2) var(--cl-space-3);
+    border-radius: var(--cl-radius-md);
+    background: var(--cl-danger-bg);
+    color: var(--cl-danger-text);
+    overflow-wrap: anywhere;
+  }
+
+  &__danger-row {
+    @include m.flex-row(4, center, space-between);
+    flex-wrap: wrap;
+    min-width: 0;
+  }
+
+  &__dialog-text {
+    margin: 0 0 var(--cl-space-3);
+  }
 }

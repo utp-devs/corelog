@@ -1,89 +1,27 @@
 @if (user(); as user) {
   <app-page-container variant="reading" pageName="profile" [ready]="true" [fill]="true">
-    <div class="page">
-      <section class="summary" aria-label="Resumen de la cuenta">
-        <div class="summary-main">
-          <app-user-avatar
-            [id]="user.id"
-            [name]="shownName()"
-            [avatarKey]="user.avatarKey"
-            [size]="64"
-          />
-          <div class="identity">
-            <h2 class="name">{{ shownName() }}</h2>
-            <span class="email">{{ user.email }}</span>
-          </div>
-        </div>
-        <div class="tags">
-          <app-tone-tag [label]="roleLabel(user.role)" tone="blue" />
-          @if (memberSince(); as since) {
-            <app-tone-tag [label]="'Miembro desde ' + since" tone="neutral" />
-          }
-        </div>
-      </section>
+    <div class="profile-page">
+      <app-page-header [title]="meta().title" [subtitle]="meta().description" />
 
-      <div class="layout">
-        <nav class="side-nav" aria-label="Secciones de la cuenta">
-          @if (isDesktop()) {
-            <ul class="menu">
-              @for (item of sections; track item.key) {
-                <li>
-                  <a
-                    class="menu-item"
-                    [routerLink]="linkTo(item.key)"
-                    [class.active]="isActive(item.key)"
-                    [attr.aria-current]="isActive(item.key) ? 'page' : null"
-                  >
-                    <i [class]="item.icon" aria-hidden="true"></i>
-                    <span>{{ item.label }}</span>
-                  </a>
-                </li>
-              }
-            </ul>
-          } @else {
-            <div class="tabs-scroll" data-scroll-x="">
-              <ul class="tabs">
-                @for (item of sections; track item.key) {
-                  <li>
-                    <a
-                      class="tab"
-                      [routerLink]="linkTo(item.key)"
-                      [class.active]="isActive(item.key)"
-                      [attr.aria-current]="isActive(item.key) ? 'page' : null"
-                    >
-                      <i [class]="item.icon" aria-hidden="true"></i>
-                      <span>{{ item.label }}</span>
-                    </a>
-                  </li>
-                }
-              </ul>
-            </div>
+      <div class="profile-page__content">
+        @switch (section()) {
+          @case ('general') {
+            <app-profile-general-section
+              [user]="user"
+              (userChange)="onUserChange($event)"
+              [(dirty)]="generalDirty"
+            />
           }
-        </nav>
-
-        <div class="sections">
-          @switch (section()) {
-            @case ('general') {
-              <app-profile-general-section
-                [user]="user"
-                (userChange)="onUserChange($event)"
-                [(dirty)]="generalDirty"
-              />
-            }
-            @case ('security') {
-              <app-profile-security-section />
-            }
-            @case ('notifications') {
-              <app-profile-notifications-section />
-            }
-            @case ('tokens') {
-              <app-profile-tokens-section />
-            }
-            @case ('appearance') {
-              <app-profile-appearance-section />
-            }
+          @case ('security') {
+            <app-profile-security-section />
           }
-        </div>
+          @case ('notifications') {
+            <app-profile-notifications-section />
+          }
+          @case ('appearance') {
+            <app-profile-appearance-section />
+          }
+        }
       </div>
     </div>
   </app-page-container>

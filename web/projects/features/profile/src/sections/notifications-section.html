@@ -1,44 +1,33 @@
-<section id="perfil-notificaciones" aria-labelledby="perfil-notificaciones-title" class="section">
-  <h2 id="perfil-notificaciones-title" class="section-title">Notificaciones</h2>
-
-  <section class="card" aria-labelledby="perfil-avisos-title">
-    <h3 id="perfil-avisos-title" class="card-title">
-      <i class="pi pi-bell" aria-hidden="true"></i> Avisos
-    </h3>
-
-    <div class="stack">
-      <div class="row">
-        <span>Avisos en la aplicación</span>
-        <div class="row-end">
-          @if (loading()) {
-            <span class="loading" role="status">
-              <i class="pi pi-spin pi-spinner" aria-hidden="true"></i>
-              Cargando preferencias…
-            </span>
-          }
-          <p-toggleswitch
-            ariaLabel="Avisos en la aplicación"
-            [ngModel]="inAppEnabled() ?? false"
-            [disabled]="loading() || inAppEnabled() === null"
-            (onChange)="toggleInApp($event.checked)"
-          />
-        </div>
-      </div>
-
-      <div class="row">
-        <span>Correo electrónico</span>
-        <div class="row-end">
-          <app-tone-tag label="Próximamente" tone="neutral" />
-          <p-toggleswitch ariaLabel="Correo electrónico" [disabled]="true" />
-        </div>
-      </div>
-
-      @if (status(); as message) {
-        <p class="status" role="status">{{ message }}</p>
-      }
-      @if (error(); as message) {
-        <p class="error" role="alert">{{ message }}</p>
-      }
+<app-section title="Avisos" description="Los avisos aparecen en la campana de la barra superior.">
+  <div class="notifications-section__row">
+    <div class="notifications-section__text">
+      <span class="notifications-section__title" id="notifications-in-app-label">
+        Avisos en la aplicación
+      </span>
+      <p class="notifications-section__hint">
+        Recibe un aviso cuando te asignen una incidencia o te mencionen.
+      </p>
     </div>
-  </section>
-</section>
+    <div class="notifications-section__control">
+      @if (loading()) {
+        <span class="notifications-section__loading" role="status">
+          <i class="pi pi-spin pi-spinner" aria-hidden="true"></i>
+          Cargando preferencias...
+        </span>
+      }
+      <p-toggleswitch
+        ariaLabel="Avisos en la aplicación"
+        [ngModel]="inAppEnabled() ?? false"
+        [disabled]="loading() || inAppEnabled() === null"
+        (onChange)="toggleInApp($event.checked)"
+      />
+    </div>
+  </div>
+
+  @if (status(); as message) {
+    <p class="notifications-section__status" role="status">{{ message }}</p>
+  }
+  @if (error(); as message) {
+    <p class="notifications-section__error" role="alert">{{ message }}</p>
+  }
+</app-section>

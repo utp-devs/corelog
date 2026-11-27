@@ -1,84 +1,83 @@
-<section id="perfil-seguridad" aria-labelledby="perfil-seguridad-title" class="section">
-  <h2 id="perfil-seguridad-title" class="section-title">Seguridad</h2>
-
-  <section class="card" aria-labelledby="perfil-clave-title">
-    <h3 id="perfil-clave-title" class="card-title">Contraseña</h3>
+<div class="security-section">
+  <app-section
+    title="Contraseña"
+    description="Cámbiala si crees que otra persona la conoce. Las demás sesiones seguirán abiertas."
+  >
     <app-profile-password-form [isSubmitting]="savingPassword()" [save]="changePassword" />
-  </section>
+  </app-section>
 
-  <section class="card" aria-label="Verificación en dos pasos">
-    <div class="row">
-      <div class="row-text">
-        <span class="row-title">Verificación en dos pasos</span>
-        <p class="hint">Añade una capa extra de seguridad al iniciar sesión.</p>
-      </div>
-      <div class="row-end">
-        <app-tone-tag label="Próximamente" tone="neutral" />
-        <p-toggleswitch ariaLabel="Verificación en dos pasos" [disabled]="true" />
-      </div>
-    </div>
-  </section>
-
-  <section class="card" aria-labelledby="perfil-sesiones-title">
-    <h3 id="perfil-sesiones-title" class="card-title">Sesiones y accesos</h3>
+  <app-section
+    title="Sesiones y accesos"
+    description="Dispositivos donde tu cuenta tiene la sesión abierta."
+  >
+    @if (hasOtherSessions()) {
+      <p-button
+        appSectionActions
+        label="Cerrar las demás sesiones"
+        severity="secondary"
+        [outlined]="true"
+        [loading]="savingSessions()"
+        (onClick)="confirmOthersOpen.set(true)"
+      />
+    }
 
     @if (sessionsError(); as message) {
-      <div class="alert" role="alert">{{ message }}</div>
+      <div class="security-section__alert" role="alert">{{ message }}</div>
     } @else if (sessions() === null) {
       <app-loading-skeleton [rows]="2" />
     } @else {
-      <ul class="session-list">
-        @for (session of sessions(); track session.id) {
-          <li class="session-item">
-            <div class="row">
-              <div class="row-text">
-                <span class="row-title session-agent">
-                  {{ describeAgent(session.userAgent) }}
-                  @if (session.current) {
-                    <app-tone-tag label="Esta sesión" tone="green" />
-                  }
-                </span>
-                <p class="hint">
-                  Iniciada {{ session.createdAt | date: 'dd/MM/yyyy HH:mm' }} · Última actividad
-                  {{ session.lastSeenAt | date: 'dd/MM/yyyy HH:mm' }}
-                </p>
-              </div>
-              @if (!session.current) {
-                <p-button
-                  label="Cerrar"
-                  severity="secondary"
-                  [outlined]="true"
-                  class="touch-target"
-                  [loading]="savingSessions()"
-                  (onClick)="revokeSession(session.id)"
-                />
-              }
+      <ul class="security-section__sessions">
+        @for (session of visibleSessions(); track session.id) {
+          <li class="security-section__session">
+            <i
+              class="pi security-section__device"
+              [class.pi-desktop]="!isMobile(session.userAgent)"
+              [class.pi-mobile]="isMobile(session.userAgent)"
+              aria-hidden="true"
+            ></i>
+            <div class="security-section__session-text">
+              <span class="security-section__agent">
+                {{ describeAgent(session.userAgent) }}
+                @if (session.current) {
+                  <app-tone-tag label="Esta sesión" tone="green" />
+                }
+              </span>
+              <p class="security-section__hint">
+                Iniciada {{ session.createdAt | date: 'dd/MM/yyyy HH:mm' }} · Última actividad
+                {{ session.lastSeenAt | date: 'dd/MM/yyyy HH:mm' }}
+              </p>
             </div>
+            @if (!session.current) {
+              <p-button
+                label="Cerrar"
+                severity="secondary"
+                [outlined]="true"
+                [ariaLabel]="'Cerrar la sesión de ' + describeAgent(session.userAgent)"
+                [loading]="savingSessions()"
+                (onClick)="revokeSession(session.id)"
+              />
+            }
           </li>
         }
       </ul>
-    }
 
-    @if (hasOtherSessions()) {
-      <div class="row">
-        <p class="hint">Cierra las sesiones que no reconozcas.</p>
+      @if (hiddenCount() > 0) {
         <p-button
-          label="Cerrar otras sesiones"
+          class="security-section__more"
+          [label]="moreLabel()"
           severity="secondary"
-          class="touch-target"
-          [loading]="savingSessions()"
-          (onClick)="confirmOthersOpen.set(true)"
+          [text]="true"
+          (onClick)="showAll.set(true)"
         />
-      </div>
+      }
     }
-  </section>
+  </app-section>
 
-  <section class="card card-danger" aria-labelledby="perfil-peligro-title">
-    <h3 id="perfil-peligro-title" class="card-title">Zona de peligro</h3>
-    <div class="row">
-      <div class="row-text">
-        <span class="row-title">Eliminar mi cuenta</span>
-        <p class="hint">
+  <app-section title="Zona de peligro" description="Acciones que no se pueden deshacer.">
+    <div class="security-section__danger-row">
+      <div class="security-section__session-text">
+        <span class="security-section__agent">Eliminar mi cuenta</span>
+        <p class="security-section__hint">
           Tu cuenta quedará desactivada y no podrás volver a entrar. Tus incidencias se conservan
           con tu nombre de solicitante.
         </p>
@@ -87,12 +86,11 @@
         label="Eliminar cuenta"
         icon="pi pi-trash"
         severity="danger"
-        class="touch-target"
         (onClick)="openDeactivate()"
       />
     </div>
-  </section>
-</section>
+  </app-section>
+</div>
 
 <app-confirm-modal
   title="¿Cerrar las demás sesiones?"
@@ -105,15 +103,13 @@
   (cancelled)="confirmOthersOpen.set(false)"
 />
 
-<p-dialog
-  header="Eliminar mi cuenta"
-  [visible]="deactivateOpen()"
-  [modal]="true"
-  [draggable]="false"
-  [resizable]="false"
-  (visibleChange)="$event ? null : closeDeactivate()"
+<app-dialog
+  size="sm"
+  heading="Eliminar mi cuenta"
+  [open]="deactivateOpen()"
+  (closeRequested)="closeDeactivate()"
 >
-  <p class="dialog-text">
+  <p class="security-section__dialog-text">
     Se cerrarán todas tus sesiones. Para confirmar, escribe tu contraseña actual.
   </p>
 
@@ -125,23 +121,13 @@
     />
   </app-field-row>
 
-  <ng-template pTemplate="footer">
-    <div class="dialog-actions">
-      <p-button
-        label="Cancelar"
-        severity="secondary"
-        [outlined]="true"
-        class="touch-target"
-        (onClick)="closeDeactivate()"
-      />
-      <p-button
-        label="Eliminar cuenta"
-        severity="danger"
-        class="touch-target"
-        [disabled]="!canDeactivate()"
-        [loading]="deactivating()"
-        (onClick)="deactivate()"
-      />
-    </div>
-  </ng-template>
-</p-dialog>
+  <p-button dialogFooter label="Cancelar" severity="secondary" (onClick)="closeDeactivate()" />
+  <p-button
+    dialogFooter
+    label="Eliminar cuenta"
+    severity="danger"
+    [disabled]="!canDeactivate()"
+    [loading]="deactivating()"
+    (onClick)="deactivate()"
+  />
+</app-dialog>

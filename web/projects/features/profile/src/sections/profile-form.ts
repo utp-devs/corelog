@@ -2,6 +2,7 @@ import {
   ChangeDetectionStrategy,
   ChangeDetectorRef,
   Component,
+  computed,
   effect,
   inject,
   input,
@@ -18,9 +19,9 @@ import {
 } from '@angular/forms';
 import { ProfileUpdate, profileFieldErrors, User } from '@corelog/core';
 import { FieldControl, FieldRow } from '@corelog/ui/field-row';
+import { SelectField, SelectFieldOption } from '@corelog/ui/select-field';
 import { Button } from 'primeng/button';
 import { InputText } from 'primeng/inputtext';
-import { Select } from 'primeng/select';
 
 const MAX_TEXT_LENGTH = 120;
 const NAME_MIN_LENGTH = 2;
@@ -59,7 +60,7 @@ function valuesOf(user: User): ProfileValues {
 /** Personal data form. Saves through the `save` callback and maps server field errors to the fields. */
 @Component({
   selector: 'app-profile-form',
-  imports: [Button, FieldControl, FieldRow, InputText, ReactiveFormsModule, Select],
+  imports: [Button, FieldControl, FieldRow, InputText, ReactiveFormsModule, SelectField],
   templateUrl: './profile-form.html',
   styleUrl: './profile-form.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -83,6 +84,9 @@ export class ProfileForm {
     timezone: new FormControl('', { nonNullable: true, validators: [timezoneRequired] }),
   });
 
+  protected readonly timezoneOptions = computed<SelectFieldOption[]>(() =>
+    this.timezones().map((zone) => ({ value: zone, label: zone })),
+  );
   protected readonly submitted = signal(false);
   private appliedValues = '';
 

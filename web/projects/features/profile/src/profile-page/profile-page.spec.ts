@@ -78,7 +78,7 @@ interface Mocks {
     updatePreferences: ReturnType<typeof vi.fn>;
   };
   readonly theme: {
-    mode: ReturnType<typeof signal<'light' | 'dark'>>;
+    mode: ReturnType<typeof signal<'light' | 'dark' | 'system'>>;
     setMode: ReturnType<typeof vi.fn>;
   };
 }
@@ -113,7 +113,7 @@ function setup(): Mocks {
       getPreferences: vi.fn(() => of({ inApp: true })),
       updatePreferences: vi.fn((inApp: boolean) => of({ inApp })),
     },
-    theme: { mode: signal<'light' | 'dark'>('dark'), setMode: vi.fn() },
+    theme: { mode: signal<'light' | 'dark' | 'system'>('dark'), setMode: vi.fn() },
   };
   TestBed.configureTestingModule({
     providers: [
@@ -203,10 +203,13 @@ function switchNamed(harness: RouterTestingHarness, name: string): HTMLElement |
   return root(harness).querySelector(`[role="switch"][aria-label="${name}"]`);
 }
 
-function navLink(harness: RouterTestingHarness, href: string): HTMLAnchorElement {
-  const link = root(harness).querySelector(`nav a[href="${href}"]`);
-  if (!(link instanceof HTMLAnchorElement)) throw new Error(`no link to ${href}`);
-  return link;
+function radioNamed(harness: RouterTestingHarness, name: string): HTMLInputElement {
+  const label = Array.from(root(harness).querySelectorAll('label.choice')).find((element) =>
+    (element.textContent ?? '').includes(name),
+  );
+  const radio = label?.querySelector('input[type="radio"]');
+  if (!(radio instanceof HTMLInputElement)) throw new Error(`no radio for ${name}`);
+  return radio;
 }
 
 describe('ProfilePage', () => {
@@ -302,7 +305,7 @@ describe('ProfilePage', () => {
       await expectText(harness, 'Ana Torres');
 
       typeInto(harness, /^Nombre para mostrar/, 'Ana T.');
-      navLink(harness, '/profile/notifications').click();
+      void harness.navigateByUrl('/profile/notifications');
 
       await vi.waitFor(() =>
         expect(mocks.prompt).toHaveBeenCalledWith(
@@ -321,7 +324,7 @@ describe('ProfilePage', () => {
       await expectText(harness, 'Ana Torres');
 
       typeInto(harness, /^Nombre para mostrar/, 'Ana T.');
-      navLink(harness, '/profile/notifications').click();
+      void harness.navigateByUrl('/profile/notifications');
 
       await vi.waitFor(() => {
         harness.detectChanges();
@@ -350,7 +353,7 @@ describe('ProfilePage', () => {
       buttonNamed(harness, 'Eliminar cuenta')?.click();
       await expectText(harness, 'Se cerrarán todas tus sesiones');
 
-      const dialog = root(harness).querySelector('.p-dialog') as HTMLElement;
+      const dialog = root(harness).querySelector('[role="dialog"]') as HTMLElement;
       const confirm = Array.from(
         dialog.querySelectorAll('button') as NodeListOf<HTMLButtonElement>,
       ).find((button) => button.textContent?.trim() === 'Eliminar cuenta');
@@ -390,28 +393,91 @@ describe('ProfilePage', () => {
       const harness = await render('/profile/appearance');
       await expectText(harness, 'Apariencia');
 
-      buttonNamed(harness, 'Claro')?.click();
-
+      radioNamed(harness, 'Claro').click();
       expect(mocks.theme.setMode).toHaveBeenCalledWith('light');
+
+      radioNamed(harness, 'Sistema').click();
+      expect(mocks.theme.setMode).toHaveBeenCalledWith('system');
     });
 
-    it('shows the placeholder for tokens', async () => {
+    it('marks the active theme as the selected radio card', async () => {
+      setup();
+      const harness = await render('/profile/appearance');
+      await expectText(harness, 'Apariencia');
+
+      expect(radioNamed(harness, 'Oscuro').checked).toBe(true);
+      expect(radioNamed(harness, 'Claro').checked).toBe(false);
+    });
+
+    it('does not offer unavailable features: no two-step stub and no tokens section', async () => {
+      setup();
+      const harness = await render('/profile/security');
+      await expectText(harness, 'Movil de prueba');
+      expect(root(harness).textContent).not.toContain('Próximamente');
+      expect(root(harness).textContent).not.toContain('dos pasos');
+    });
+
+    it('shows the general section for the removed tokens address', async () => {
       setup();
       const harness = await render('/profile/tokens');
-      await expectText(harness, 'Próximamente');
+      await expectText(harness, 'Datos personales');
+    });
 
-      const heading = Array.from(root(harness).querySelectorAll('h2')).find(
-        (h) => h.textContent?.trim() === 'Tokens',
+    it('offers to close the other sessions and confirms before doing it', async () => {
+      const mocks = setup();
+      const harness = await render('/profile/security');
+      await expectText(harness, 'Movil de prueba');
+
+      buttonNamed(harness, 'Cerrar las demás sesiones')?.click();
+      await expectText(harness, '¿Cerrar las demás sesiones?');
+      buttonNamed(harness, 'Sí, cerrar')?.click();
+
+      await vi.waitFor(() => expect(mocks.security.revokeOtherSessions).toHaveBeenCalled());
+    });
+
+    it('shows five sessions first and the rest on request', async () => {
+      const mocks = setup();
+      mocks.security.listSessions.mockReturnValue(
+        of(
+          Array.from({ length: 7 }, (_, index) => ({
+            id: `s-${index}`,
+            userAgent: `Equipo ${index}`,
+            createdAt: '2026-11-21T08:00:00Z',
+            lastSeenAt: '2026-11-21T09:00:00Z',
+            current: index === 0,
+          })),
+        ),
       );
-      expect(heading).toBeDefined();
+      const harness = await render('/profile/security');
+      await expectText(harness, 'Equipo 4');
+      expect(root(harness).textContent).not.toContain('Equipo 5');
+
+      buttonNamed(harness, 'Mostrar 2 sesiones más')?.click();
+      await expectText(harness, 'Equipo 6');
+    });
+
+    it('shows the strength of the new password while typing', async () => {
+      setup();
+      const harness = await render('/profile/security');
+      await expectText(harness, 'Nueva contraseña');
+
+      const field = fieldLabelled(root(harness), /^Nueva contraseña/);
+      field.value = 'Cl4ve-segura-2026!';
+      field.dispatchEvent(new Event('input'));
+      harness.detectChanges();
+
+      expect(root(harness).querySelector('app-password-strength [data-level]')).not.toBeNull();
+      expect(root(harness).textContent).toContain('Seguridad de la contraseña');
     });
   });
 
-  it('shows the account summary with the role label', async () => {
+  it('shows one account summary with the role label and no section navigation of its own', async () => {
     setup();
     const harness = await render('/profile');
     await expectText(harness, 'Usuario');
 
     expect(root(harness).querySelector('[aria-label="Resumen de la cuenta"]')).not.toBeNull();
+    expect(root(harness).querySelectorAll('app-user-avatar').length).toBe(1);
+    expect(root(harness).querySelector('nav')).toBeNull();
   });
 });

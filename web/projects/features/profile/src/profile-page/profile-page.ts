@@ -1,73 +1,57 @@
-import { formatDate } from '@angular/common';
-import {
-  ChangeDetectionStrategy,
-  Component,
-  computed,
-  inject,
-  LOCALE_ID,
-  signal,
-} from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { ActivatedRoute, RouterLink } from '@angular/router';
-import {
-  AppRole,
-  AuthStore,
-  BreakpointService,
-  breakpointQuery,
-  User,
-  warnBeforeUnload,
-} from '@corelog/core';
+import { ActivatedRoute } from '@angular/router';
+import { AuthStore, User, warnBeforeUnload } from '@corelog/core';
 import { PageContainer } from '@corelog/ui/page-container';
-import { ToneTag } from '@corelog/ui/tone-tag';
-import { UserAvatar } from '@corelog/ui/user-avatar';
+import { PageHeader } from '@corelog/ui/page-header';
 import { map } from 'rxjs';
 
 import { ProfileAppearanceSection } from '../sections/appearance-section';
 import { ProfileGeneralSection } from '../sections/general-section';
 import { ProfileNotificationsSection } from '../sections/notifications-section';
 import { ProfileSecuritySection } from '../sections/security-section';
-import { ProfileTokensSection } from '../sections/tokens-section';
 
-type SectionKey = 'general' | 'security' | 'notifications' | 'tokens' | 'appearance';
+type SectionKey = 'general' | 'security' | 'notifications' | 'appearance';
 
-interface SectionItem {
-  readonly key: SectionKey;
-  readonly label: string;
-  readonly icon: string;
+interface SectionMeta {
+  readonly title: string;
+  readonly description: string;
 }
 
-const SECTIONS: readonly SectionItem[] = [
-  { key: 'general', label: 'General', icon: 'pi pi-user' },
-  { key: 'security', label: 'Seguridad', icon: 'pi pi-lock' },
-  { key: 'notifications', label: 'Notificaciones', icon: 'pi pi-bell' },
-  { key: 'tokens', label: 'Tokens', icon: 'pi pi-key' },
-  { key: 'appearance', label: 'Apariencia', icon: 'pi pi-palette' },
-];
-
-const ROLE_LABELS: Readonly<Record<AppRole, string>> = {
-  admin: 'Administrador',
-  user: 'Usuario',
+/** Title and description shown above each section. The shell sidebar is the navigation between them. */
+const SECTIONS: Readonly<Record<SectionKey, SectionMeta>> = {
+  general: {
+    title: 'General',
+    description: 'Tu foto, tus datos personales y tu zona horaria.',
+  },
+  security: {
+    title: 'Seguridad',
+    description: 'Contraseña, sesiones abiertas y eliminación de la cuenta.',
+  },
+  notifications: {
+    title: 'Notificaciones',
+    description: 'Elige cómo quieres recibir los avisos.',
+  },
+  appearance: {
+    title: 'Apariencia',
+    description: 'Tema y densidad de la interfaz en este navegador.',
+  },
 };
 
-const MEMBER_SINCE_PATTERN = 'dd/MM/yyyy';
-
 function sectionOf(value: string | null): SectionKey {
-  return SECTIONS.some((section) => section.key === value) ? (value as SectionKey) : 'general';
+  return value !== null && Object.hasOwn(SECTIONS, value) ? (value as SectionKey) : 'general';
 }
 
-/** Profile page: section navigation under /profile/:section (general when no section is given). */
+/** Profile page: shows the section of /profile/:section (general when no section is given). */
 @Component({
   selector: 'app-profile-page',
   imports: [
     PageContainer,
+    PageHeader,
     ProfileAppearanceSection,
     ProfileGeneralSection,
     ProfileNotificationsSection,
     ProfileSecuritySection,
-    ProfileTokensSection,
-    RouterLink,
-    ToneTag,
-    UserAvatar,
   ],
   templateUrl: './profile-page.html',
   styleUrl: './profile-page.scss',
@@ -76,8 +60,6 @@ function sectionOf(value: string | null): SectionKey {
 export class ProfilePage {
   private readonly auth = inject(AuthStore);
   private readonly route = inject(ActivatedRoute);
-  private readonly breakpoints = inject(BreakpointService);
-  private readonly locale = inject(LOCALE_ID);
 
   /** Section parameter of the route; null when the route has none (the general section). */
   private readonly sectionParam = toSignal(
@@ -85,20 +67,9 @@ export class ProfilePage {
     { initialValue: this.route.snapshot.paramMap.get('section') },
   );
 
-  protected readonly sections = SECTIONS;
   protected readonly section = computed(() => sectionOf(this.sectionParam()));
-  /** Desktop shows the vertical menu; narrower screens show a horizontal row of tabs. */
-  protected readonly isDesktop = this.breakpoints.matches(breakpointQuery('lg'));
-
+  protected readonly meta = computed(() => SECTIONS[this.section()]);
   protected readonly user = this.auth.user;
-  protected readonly shownName = computed(() => {
-    const user = this.user();
-    return user ? user.displayName || user.name : '';
-  });
-  protected readonly memberSince = computed(() => {
-    const user = this.user();
-    return user?.createdAt ? formatDate(user.createdAt, MEMBER_SINCE_PATTERN, this.locale) : null;
-  });
 
   /** Unsaved edits in the general section. Only relevant while that section is shown. */
   protected readonly generalDirty = signal(false);
@@ -109,21 +80,8 @@ export class ProfilePage {
     warnBeforeUnload(this.dirty);
   }
 
-  protected roleLabel(role: AppRole): string {
-    return ROLE_LABELS[role];
-  }
-
   /** A section saved the profile or the photo: the signed-in account is updated in the store. */
   protected onUserChange(user: User): void {
     this.auth.setUser(user);
-  }
-
-  /** Links keep the current mount: the section route is a sibling of the route without a section. */
-  protected linkTo(key: SectionKey): string[] {
-    return this.sectionParam() === null ? [key] : ['..', key];
-  }
-
-  protected isActive(key: SectionKey): boolean {
-    return this.section() === key;
   }
 }

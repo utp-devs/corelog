@@ -1,26 +1,32 @@
-@use '../shared/profile' as *;
+@use '../../../../ui/styles/mixins' as m;
 
 :host {
   display: block;
   min-width: 0;
 }
 
-.section {
-  @include section-root;
-}
+.general-section {
+  @include m.flex-column(6);
+  min-width: 0;
 
-.section-title {
-  @include section-title;
-}
+  &__identity {
+    @include m.flex-column(1);
+    min-width: 0;
+  }
 
-.card {
-  @include card;
-}
+  &__name {
+    font-size: var(--cl-font-body-strong);
+    font-weight: var(--cl-weight-semibold);
+    overflow-wrap: anywhere;
+  }
 
-.card-title {
-  @include card-title;
-}
+  &__email {
+    color: var(--cl-text-subtle);
+    overflow-wrap: anywhere;
+  }
 
-.hint {
-  @include hint;
+  &__tags {
+    @include m.cluster(2);
+    margin-block-start: var(--cl-space-2);
+  }
 }

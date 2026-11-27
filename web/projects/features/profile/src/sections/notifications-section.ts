@@ -2,15 +2,15 @@ import { ChangeDetectionStrategy, Component, DestroyRef, inject, signal } from '
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { NotificationApiService } from '@corelog/core';
-import { ToneTag } from '@corelog/ui/tone-tag';
+import { Section } from '@corelog/ui/section';
 import { ToggleSwitch } from 'primeng/toggleswitch';
 
 import { messageOr } from '../shared/feature-error';
 
-/** In-app notification preference (live). The email channel is not available yet. */
+/** In-app notification preference. */
 @Component({
   selector: 'app-profile-notifications-section',
-  imports: [FormsModule, ToggleSwitch, ToneTag],
+  imports: [FormsModule, Section, ToggleSwitch],
   templateUrl: './notifications-section.html',
   styleUrl: './notifications-section.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

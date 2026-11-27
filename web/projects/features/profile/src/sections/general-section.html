@@ -1,14 +1,26 @@
-<section id="perfil-general" aria-labelledby="perfil-general-title" class="section">
-  <h2 id="perfil-general-title" class="section-title">General</h2>
+<div class="general-section">
+  <app-section
+    title="Foto de perfil"
+    description="Así te ven tus compañeros en incidencias y menciones."
+  >
+    <app-profile-avatar-uploader [user]="user()" (userChange)="userChange.emit($event)">
+      <div class="general-section__identity" aria-label="Resumen de la cuenta" role="group">
+        <span class="general-section__name">{{ shownName() }}</span>
+        <span class="general-section__email">{{ user().email }}</span>
+        <div class="general-section__tags">
+          <app-tone-tag [label]="roleLabel()" tone="blue" />
+          @if (memberSince(); as since) {
+            <app-tone-tag [label]="'Miembro desde ' + since" tone="neutral" />
+          }
+        </div>
+      </div>
+    </app-profile-avatar-uploader>
+  </app-section>
 
-  <section class="card" aria-labelledby="perfil-foto-title">
-    <h3 id="perfil-foto-title" class="card-title">Foto de perfil</h3>
-    <app-profile-avatar-uploader [user]="user()" (userChange)="userChange.emit($event)" />
-  </section>
-
-  <section class="card" aria-labelledby="perfil-datos-title">
-    <h3 id="perfil-datos-title" class="card-title">Datos personales</h3>
-    <p class="hint">Tu nombre y tu correo son los que ven tus compañeros en las incidencias.</p>
+  <app-section
+    title="Datos personales"
+    description="Tu nombre y tu cargo son los que ven tus compañeros."
+  >
     <app-profile-form
       [user]="user()"
       [timezones]="timezones()"
@@ -16,5 +28,5 @@
       [save]="save"
       [(dirty)]="dirty"
     />
-  </section>
-</section>
+  </app-section>
+</div>

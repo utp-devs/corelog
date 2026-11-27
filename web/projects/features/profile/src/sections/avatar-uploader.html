@@ -1,5 +1,5 @@
-<div class="root">
-  <div class="figure">
+<div class="avatar-uploader">
+  <div class="avatar-uploader__figure">
     @if (preview(); as current) {
       <app-avatar
         [id]="user().id"
@@ -8,7 +8,7 @@
         [size]="64"
         data-testid="avatar-preview"
       />
-      <span class="caption">Vista previa</span>
+      <span class="avatar-uploader__caption">Vista previa</span>
     } @else {
       <app-user-avatar
         [id]="user().id"
@@ -20,39 +20,35 @@
     }
   </div>
 
-  <div class="controls">
+  <div class="avatar-uploader__controls">
+    <ng-content />
+
     <input
       #fileInput
       type="file"
-      class="file-input"
+      class="avatar-uploader__file"
       tabindex="-1"
       accept="image/png,image/jpeg,image/webp"
       aria-label="Elegir foto de perfil"
       (change)="onPick($event)"
     />
 
-    <div class="buttons">
+    <div class="avatar-uploader__buttons">
       @if (preview()) {
-        <p-button
-          label="Guardar foto"
-          class="touch-target"
-          [loading]="busy() === 'upload'"
-          (onClick)="upload()"
-        />
+        <p-button label="Guardar foto" [loading]="busy() === 'upload'" (onClick)="upload()" />
         <p-button
           label="Cancelar"
           severity="secondary"
           [outlined]="true"
-          class="touch-target"
           [disabled]="busy() !== null"
           (onClick)="cancelPreview()"
         />
       } @else {
         <p-button
           label="Subir foto"
+          icon="pi pi-upload"
           severity="secondary"
           [outlined]="true"
-          class="touch-target"
           [disabled]="busy() !== null"
           (onClick)="chooseFile()"
         />
@@ -61,7 +57,6 @@
             label="Quitar foto"
             severity="danger"
             [text]="true"
-            class="touch-target"
             [loading]="busy() === 'remove'"
             (onClick)="remove()"
           />
@@ -69,10 +64,10 @@
       }
     </div>
 
-    <p class="hint">PNG, JPEG o WebP de hasta {{ sizeLimitMb }} MB.</p>
+    <p class="avatar-uploader__hint">PNG, JPEG o WebP de hasta {{ sizeLimitMb }} MB.</p>
 
     @if (error(); as message) {
-      <div class="alert" role="alert">{{ message }}</div>
+      <div class="avatar-uploader__alert" role="alert">{{ message }}</div>
     }
   </div>
 </div>

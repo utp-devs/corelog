@@ -1,5 +1,5 @@
 <form
-  class="form"
+  class="profile-form"
   [formGroup]="form"
   (ngSubmit)="submit()"
   novalidate
@@ -17,39 +17,39 @@
     <input pInputText appFieldControl type="text" formControlName="displayName" maxlength="120" />
   </app-field-row>
 
-  <app-field-row label="Cargo" [error]="errorOf('jobTitle')">
+  <app-field-row label="Cargo" [optional]="true" [error]="errorOf('jobTitle')">
     <input pInputText appFieldControl type="text" formControlName="jobTitle" maxlength="120" />
   </app-field-row>
 
-  <app-field-row label="Departamento" [error]="errorOf('department')">
+  <app-field-row label="Departamento" [optional]="true" [error]="errorOf('department')">
     <input pInputText appFieldControl type="text" formControlName="department" maxlength="120" />
   </app-field-row>
 
   <app-field-row #timezoneRow label="Zona horaria" [required]="true" [error]="errorOf('timezone')">
-    <p-select
+    <app-select-field
       [inputId]="timezoneRow.controlId"
       [ariaLabelledBy]="timezoneRow.labelId"
       ariaLabel="Zona horaria"
-      formControlName="timezone"
-      [options]="timezones()"
-      [filter]="true"
+      filter="on"
+      placeholder="Elige una zona horaria"
+      emptyMessage="Sin resultados"
+      [options]="timezoneOptions()"
       [invalid]="!!errorOf('timezone')"
-      styleClass="timezone-select"
+      formControlName="timezone"
     />
   </app-field-row>
 
   <app-field-row
     label="Correo electrónico"
-    helper="Tu correo de acceso no se puede cambiar desde aquí."
+    disabledReason="Tu correo de acceso no se puede cambiar desde aquí."
   >
     <input pInputText appFieldControl type="email" [value]="user().email" disabled readonly />
   </app-field-row>
 
-  <div class="actions">
+  <div class="profile-form__actions">
     <p-button
       type="submit"
       label="Guardar cambios"
-      class="touch-target"
       [loading]="isSubmitting()"
       [disabled]="!dirty() || isSubmitting()"
     />

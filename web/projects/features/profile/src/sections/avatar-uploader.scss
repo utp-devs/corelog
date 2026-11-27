@@ -1,63 +1,49 @@
-@use '../shared/profile' as *;
+@use '../../../../ui/styles/mixins' as m;
 
 :host {
   display: block;
   min-width: 0;
 }
 
-.root {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--cl-space-4);
+.avatar-uploader {
+  @include m.cluster(5, flex-start);
   min-width: 0;
-}
 
-.figure {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--cl-space-1);
-  flex: none;
-}
+  &__figure {
+    @include m.flex-column(1, center);
+    flex: none;
+  }
 
-.caption {
-  font-size: var(--cl-font-caption);
-  color: var(--cl-text-subtle);
-}
+  &__caption {
+    font-size: var(--cl-font-caption);
+    color: var(--cl-text-subtle);
+  }
 
-.controls {
-  display: flex;
-  flex: 1 1 240px;
-  flex-direction: column;
-  gap: var(--cl-space-2);
-  min-width: 0;
-}
+  &__controls {
+    @include m.flex-column(3);
+    flex: 1 1 16rem;
+    min-width: 0;
+  }
 
-.file-input {
-  display: none;
-}
+  &__file {
+    display: none;
+  }
 
-.buttons {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--cl-space-2);
-}
+  &__buttons {
+    @include m.cluster(2);
+  }
 
-.hint {
-  @include hint;
-  font-size: var(--cl-font-caption);
-}
+  &__hint {
+    margin: 0;
+    color: var(--cl-text-subtle);
+    font-size: var(--cl-font-small);
+  }
 
-.alert {
-  max-width: 100%;
-  padding: var(--cl-space-2) var(--cl-space-3);
-  border-radius: var(--cl-radius-sm);
-  background: var(--cl-danger-bg);
-  color: var(--cl-danger-text);
-  overflow-wrap: anywhere;
-}
-
-.touch-target {
-  @include touch-target;
+  &__alert {
+    padding: var(--cl-space-2) var(--cl-space-3);
+    border-radius: var(--cl-radius-md);
+    background: var(--cl-danger-bg);
+    color: var(--cl-danger-text);
+    overflow-wrap: anywhere;
+  }
 }

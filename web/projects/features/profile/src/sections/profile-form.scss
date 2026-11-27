@@ -1,27 +1,16 @@
-@use '../shared/profile' as *;
+@use '../../../../ui/styles/mixins' as m;
 
 :host {
   display: block;
   min-width: 0;
 }
 
-.form {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: var(--cl-space-4);
+.profile-form {
+  @include m.grid-auto(16rem, 4);
   min-width: 0;
-}
 
-.actions {
-  grid-column: 1 / -1;
-  display: flex;
-  justify-content: flex-end;
-}
-
-.touch-target {
-  @include touch-target;
-}
-
-.timezone-select {
-  width: 100%;
+  &__actions {
+    @include m.flex-row(2, center, flex-end);
+    grid-column: 1 / -1;
+  }
 }

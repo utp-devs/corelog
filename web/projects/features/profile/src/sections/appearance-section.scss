@@ -1,88 +1,135 @@
-@use '../shared/profile' as *;
+@use '../../../../ui/styles/mixins' as m;
+@use '../../../../ui/field-row/src/control' as c;
 
 :host {
   display: block;
   min-width: 0;
 }
 
-.section {
-  @include section-root;
-}
-
-.section-title {
-  @include section-title;
-}
-
-.card {
-  @include card;
-}
-
-.card-title {
-  @include card-title;
-}
-
-.hint {
-  @include hint;
-}
-
-.segmented {
-  display: inline-flex;
-  flex-wrap: wrap;
-  max-width: 100%;
-  padding: 2px;
-  border-radius: var(--cl-radius-md);
-  background: var(--cl-bg-sunken);
-}
-
-.segment {
-  min-height: 36px;
-  padding: var(--cl-space-1) var(--cl-space-4);
-  border: 0;
-  border-radius: var(--cl-radius-sm);
-  background: transparent;
-  color: var(--cl-text);
-  font: inherit;
-  cursor: pointer;
-
-  &.active {
-    background: var(--cl-bg-surface);
-    box-shadow: var(--cl-shadow-1);
-    font-weight: 600;
-  }
-
-  &:focus-visible {
-    outline: 2px solid var(--cl-brand);
-    outline-offset: 2px;
-  }
-}
-
-.touch-target {
-  @include touch-target;
-}
-
-.row {
-  @include row-between;
-}
-
-.row-text {
-  display: flex;
-  flex-direction: column;
-  gap: var(--cl-space-1);
+.appearance-section {
+  @include m.flex-column(6);
   min-width: 0;
+
+  &__choices {
+    @include m.grid-auto(11rem, 4);
+  }
 }
 
-.row-title {
-  font-weight: 600;
-}
+// A selectable card: a native radio hidden visually, a preview, the label and a check mark that
+// only shows on the selected card.
+.choice {
+  @include m.flex-column(3);
+  position: relative;
+  box-sizing: border-box;
+  min-width: 0;
+  padding: var(--cl-space-3);
+  border: 2px solid var(--cl-border);
+  border-radius: var(--cl-radius-lg);
+  background: var(--cl-bg-surface);
+  cursor: pointer;
+  transition:
+    border-color var(--cl-motion-fast) var(--cl-ease),
+    background-color var(--cl-motion-fast) var(--cl-ease);
 
-.row-end {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: var(--cl-space-3);
-}
+  &:hover {
+    border-color: var(--cl-border-strong);
+    background: var(--cl-bg-hover);
+  }
 
-.language-select {
-  min-width: 160px;
-  max-width: 100%;
+  &:has(.choice__input:focus-visible) {
+    @include c.focus-ring;
+  }
+
+  &--selected,
+  &--selected:hover {
+    border-color: var(--cl-brand);
+    background: var(--cl-brand-subtle);
+  }
+
+  &--plain {
+    justify-content: center;
+    min-height: var(--cl-control-h-lg);
+  }
+
+  &__input {
+    @include m.visually-hidden;
+  }
+
+  // Miniature window. Each half forces its own color scheme, so the system colors give a light
+  // and a dark sample whatever theme is active. "Sistema" shows both halves side by side.
+  &__preview {
+    display: flex;
+    overflow: hidden;
+    height: 4.5rem;
+    border: 1px solid var(--cl-border);
+    border-radius: var(--cl-radius-md);
+
+    &[data-preview='light'] .choice__half--dark,
+    &[data-preview='dark'] .choice__half--light {
+      display: none;
+    }
+  }
+
+  &__half {
+    @include m.flex-column(2);
+    flex: 1 1 0;
+    min-width: 0;
+    padding: var(--cl-space-2);
+    background: Canvas;
+
+    &--light {
+      color-scheme: light;
+    }
+
+    &--dark {
+      color-scheme: dark;
+    }
+  }
+
+  &__bar {
+    display: block;
+    height: var(--cl-space-2);
+    border-radius: var(--cl-radius-full);
+    background: color-mix(in srgb, CanvasText 28%, Canvas);
+
+    &--accent {
+      width: 40%;
+      background: var(--cl-brand);
+    }
+
+    &--short {
+      width: 60%;
+    }
+  }
+
+  &__text {
+    @include m.flex-column(1);
+    min-width: 0;
+  }
+
+  &__label {
+    font-weight: var(--cl-weight-semibold);
+  }
+
+  &__hint {
+    color: var(--cl-text-subtle);
+    font-size: var(--cl-font-small);
+  }
+
+  &__check {
+    position: absolute;
+    top: var(--cl-space-2);
+    right: var(--cl-space-2);
+    color: var(--cl-brand);
+    font-size: 1.125rem;
+    opacity: 0;
+
+    .choice--selected > & {
+      opacity: 1;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+  }
 }

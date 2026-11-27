@@ -7,13 +7,12 @@ import {
   ValidationErrors,
 } from '@angular/forms';
 import { ChangePasswordPayload } from '@corelog/core';
-import { FieldControl, FieldRow } from '@corelog/ui/field-row';
+import { FieldRow } from '@corelog/ui/field-row';
 import { PasswordInput } from '@corelog/ui/password-input';
+import { PasswordStrength } from '@corelog/ui/password-strength';
 import { Button } from 'primeng/button';
 
 const MIN_NEW_PASSWORD_LENGTH = 8;
-
-type FieldName = 'currentPassword' | 'newPassword';
 
 function requiredCurrent(control: AbstractControl<string>): ValidationErrors | null {
   return control.value ? null : { invalid: 'La contraseña actual es obligatoria' };
@@ -28,7 +27,7 @@ function minimumNew(control: AbstractControl<string>): ValidationErrors | null {
 /** Password change form. The form is cleared after a successful change and keeps its values after a failure. */
 @Component({
   selector: 'app-profile-password-form',
-  imports: [Button, FieldRow, PasswordInput, ReactiveFormsModule],
+  imports: [Button, FieldRow, PasswordInput, PasswordStrength, ReactiveFormsModule],
   templateUrl: './password-form.html',
   styleUrl: './password-form.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -43,14 +42,8 @@ export class ProfilePasswordForm {
     newPassword: new FormControl('', { nonNullable: true, validators: [minimumNew] }),
   });
 
+  /** True after the first submit: errors of untouched fields become visible. */
   protected readonly submitted = signal(false);
-
-  /** Error text for a field; shown after the first submit and updated as the user types. */
-  protected errorOf(name: FieldName): string | undefined {
-    const errors: ValidationErrors | null = this.form.controls[name].errors;
-    if (!errors || !this.submitted()) return undefined;
-    return typeof errors['invalid'] === 'string' ? errors['invalid'] : undefined;
-  }
 
   protected async submit(): Promise<void> {
     this.submitted.set(true);

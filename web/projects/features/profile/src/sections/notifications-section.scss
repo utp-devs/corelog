@@ -1,61 +1,53 @@
-@use '../shared/profile' as *;
+@use '../../../../ui/styles/mixins' as m;
 
 :host {
   display: block;
   min-width: 0;
 }
 
-.section {
-  @include section-root;
-}
+.notifications-section {
+  &__row {
+    @include m.flex-row(4, center, space-between);
+    flex-wrap: wrap;
+    min-width: 0;
+  }
 
-.section-title {
-  @include section-title;
-}
+  &__text {
+    @include m.flex-column(1);
+    flex: 1 1 16rem;
+    min-width: 0;
+  }
 
-.card {
-  @include card;
-}
+  &__title {
+    font-weight: var(--cl-weight-semibold);
+  }
 
-.card-title {
-  @include card-title;
-  display: flex;
-  align-items: center;
-  gap: var(--cl-space-2);
-}
+  &__hint,
+  &__status {
+    margin: 0;
+    color: var(--cl-text-subtle);
+    font-size: var(--cl-font-small);
+  }
 
-.stack {
-  display: flex;
-  flex-direction: column;
-  gap: var(--cl-space-3);
-  min-width: 0;
-}
+  &__status,
+  &__error {
+    margin-block-start: var(--cl-space-3);
+  }
 
-.row {
-  @include row-between;
-}
+  &__control {
+    @include m.flex-row(3);
+  }
 
-.row-end {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: var(--cl-space-3);
-}
+  &__loading {
+    @include m.flex-row(2);
+    font-size: var(--cl-font-small);
+    color: var(--cl-text-subtle);
+  }
 
-.status {
-  @include hint;
-}
-
-.error {
-  margin: 0;
-  color: var(--cl-danger-text);
-  overflow-wrap: anywhere;
-}
-
-.loading {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--cl-space-2);
-  font-size: var(--cl-font-small);
-  color: var(--cl-text-subtle);
+  &__error {
+    margin-inline: 0;
+    margin-block-end: 0;
+    color: var(--cl-danger-text);
+    overflow-wrap: anywhere;
+  }
 }

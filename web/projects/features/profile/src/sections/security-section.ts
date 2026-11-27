@@ -13,20 +13,22 @@ import {
   NotificationService,
 } from '@corelog/core';
 import { ConfirmModal } from '@corelog/ui/confirm-modal';
+import { Dialog } from '@corelog/ui/dialog';
 import { FieldControl, FieldRow } from '@corelog/ui/field-row';
 import { LoadingSkeleton } from '@corelog/ui/loading-skeleton';
 import { PasswordInput } from '@corelog/ui/password-input';
+import { Section, SectionActions } from '@corelog/ui/section';
 import { ToneTag } from '@corelog/ui/tone-tag';
 import { Button } from 'primeng/button';
-import { Dialog } from 'primeng/dialog';
-import { PrimeTemplate } from 'primeng/api';
-import { ToggleSwitch } from 'primeng/toggleswitch';
 import { firstValueFrom } from 'rxjs';
 
 import { messageOr } from '../shared/feature-error';
 import { ProfilePasswordForm } from './password-form';
 
-/** Password, sessions and account deactivation. */
+const SESSIONS_PAGE_SIZE = 5;
+const MOBILE_PATTERN = /Android|iPhone|iPad|Mobile/i;
+
+/** Password, sessions (first five, then all on request) and account deactivation. */
 @Component({
   selector: 'app-profile-security-section',
   imports: [
@@ -37,10 +39,10 @@ import { ProfilePasswordForm } from './password-form';
     FieldRow,
     LoadingSkeleton,
     PasswordInput,
-    PrimeTemplate,
     ProfilePasswordForm,
     ReactiveFormsModule,
-    ToggleSwitch,
+    Section,
+    SectionActions,
     ToneTag,
   ],
   templateUrl: './security-section.html',
@@ -56,11 +58,27 @@ export class ProfileSecuritySection {
 
   protected readonly describeAgent = describeUserAgent;
 
+  protected isMobile(userAgent: string): boolean {
+    return MOBILE_PATTERN.test(userAgent);
+  }
+
   protected readonly savingPassword = signal(false);
   protected readonly sessions = signal<AccountSession[] | null>(null);
   protected readonly sessionsError = signal<string | null>(null);
   protected readonly savingSessions = signal(false);
   protected readonly confirmOthersOpen = signal(false);
+  protected readonly showAll = signal(false);
+  protected readonly visibleSessions = computed(() => {
+    const all = this.sessions() ?? [];
+    return this.showAll() ? all : all.slice(0, SESSIONS_PAGE_SIZE);
+  });
+  protected readonly hiddenCount = computed(
+    () => (this.sessions()?.length ?? 0) - this.visibleSessions().length,
+  );
+  protected readonly moreLabel = computed(() => {
+    const count = this.hiddenCount();
+    return `Mostrar ${count} ${count === 1 ? 'sesión más' : 'sesiones más'}`;
+  });
   protected readonly hasOtherSessions = computed(() =>
     (this.sessions() ?? []).some((session) => !session.current),
   );

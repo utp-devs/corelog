@@ -24,7 +24,7 @@ function setup(
 }
 
 function loadingStatus(el: HTMLElement): HTMLElement | null {
-  return el.querySelector<HTMLElement>('.loading');
+  return el.querySelector<HTMLElement>('.notifications-section__loading');
 }
 
 describe('ProfileNotificationsSection', () => {

@@ -1,42 +1,63 @@
-<section id="perfil-apariencia" aria-labelledby="perfil-apariencia-title" class="section">
-  <h2 id="perfil-apariencia-title" class="section-title">Apariencia</h2>
-
-  <section class="card" aria-labelledby="perfil-tema-title">
-    <h3 id="perfil-tema-title" class="card-title">Tema</h3>
-    <p class="hint">El tema se guarda en este navegador y se aplica al abrir la aplicación.</p>
-    <div class="segmented" role="group" aria-label="Tema de la aplicación">
+<div class="appearance-section">
+  <app-section
+    title="Tema"
+    description="El tema se guarda en este navegador y se aplica al abrir la aplicación."
+  >
+    <div class="appearance-section__choices" role="radiogroup" aria-label="Tema de la aplicación">
       @for (option of themeOptions; track option.value) {
-        <button
-          type="button"
-          class="segment touch-target"
-          [class.active]="theme.mode() === option.value"
-          [attr.aria-pressed]="theme.mode() === option.value"
-          (click)="theme.setMode(option.value)"
-        >
-          {{ option.label }}
-        </button>
+        <label class="choice" [class.choice--selected]="theme.mode() === option.value">
+          <input
+            type="radio"
+            class="choice__input"
+            name="profile-theme"
+            [value]="option.value"
+            [checked]="theme.mode() === option.value"
+            (change)="theme.setMode(option.value)"
+          />
+          <span class="choice__preview" [attr.data-preview]="option.value" aria-hidden="true">
+            <span class="choice__half choice__half--light">
+              <span class="choice__bar choice__bar--accent"></span>
+              <span class="choice__bar"></span>
+              <span class="choice__bar choice__bar--short"></span>
+            </span>
+            <span class="choice__half choice__half--dark">
+              <span class="choice__bar choice__bar--accent"></span>
+              <span class="choice__bar"></span>
+              <span class="choice__bar choice__bar--short"></span>
+            </span>
+          </span>
+          <span class="choice__text">
+            <span class="choice__label">{{ option.label }}</span>
+            <span class="choice__hint">{{ option.hint }}</span>
+          </span>
+          <i class="pi pi-check-circle choice__check" aria-hidden="true"></i>
+        </label>
       }
     </div>
-  </section>
+  </app-section>
 
-  <section class="card" aria-label="Idioma">
-    <div class="row">
-      <div class="row-text">
-        <span class="row-title"><i class="pi pi-globe" aria-hidden="true"></i> Idioma</span>
-        <p class="hint">La interfaz está disponible en español.</p>
-      </div>
-      <div class="row-end">
-        <app-tone-tag label="Próximamente" tone="neutral" />
-        <p-select
-          ariaLabel="Idioma"
-          styleClass="language-select"
-          [disabled]="true"
-          [options]="languageOptions"
-          optionLabel="label"
-          optionValue="value"
-          [ngModel]="'es'"
-        />
-      </div>
+  <app-section title="Densidad" description="Controla el espacio de las filas en tablas y listas.">
+    <div class="appearance-section__choices" role="radiogroup" aria-label="Densidad de las tablas">
+      @for (option of densityOptions; track option.value) {
+        <label
+          class="choice choice--plain"
+          [class.choice--selected]="preferences.density() === option.value"
+        >
+          <input
+            type="radio"
+            class="choice__input"
+            name="profile-density"
+            [value]="option.value"
+            [checked]="preferences.density() === option.value"
+            (change)="preferences.setDensity(option.value)"
+          />
+          <span class="choice__text">
+            <span class="choice__label">{{ option.label }}</span>
+            <span class="choice__hint">{{ option.hint }}</span>
+          </span>
+          <i class="pi pi-check-circle choice__check" aria-hidden="true"></i>
+        </label>
+      }
     </div>
-  </section>
-</section>
+  </app-section>
+</div>
