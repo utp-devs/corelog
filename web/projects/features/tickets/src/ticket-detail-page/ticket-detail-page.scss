@@ -24,14 +24,19 @@
     font-size: var(--cl-font-small);
   }
 
+  /* The editable title keeps the text on the page gutter: the pull-back equals the trigger padding plus its border. */
   &__title {
-    width: 100%;
+    width: calc(100% + var(--cl-space-2) + 1px);
     min-width: 0;
-    margin: 0;
+    margin: 0 0 0 calc(-1 * (var(--cl-space-2) + 1px));
     overflow-wrap: anywhere;
     font-size: var(--cl-font-h2);
     font-weight: var(--cl-weight-semibold);
     line-height: var(--cl-lh-tight);
+  }
+
+  &__title-edit {
+    display: block;
   }
 
   &__back-row {

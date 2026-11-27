@@ -3,8 +3,8 @@
     <app-loading-skeleton variant="detail" />
   </app-page-container>
 } @else if (showError()) {
-  <app-page-container variant="wide" pageName="issue-detail" [ready]="true" [fill]="true">
-    <app-section ariaLabel="Error de la incidencia" [fill]="true">
+  <app-page-container variant="wide" pageName="issue-detail" [ready]="true">
+    <app-section ariaLabel="Error de la incidencia">
       <app-error-state [status]="errorStatus()" [canRetry]="canRetryLoad()" (retry)="retry()" />
     </app-section>
     <div class="ticket-detail__back-row">
@@ -198,6 +198,7 @@
         </div>
         <h1 class="ticket-detail__title">
           <app-inline-edit
+            class="ticket-detail__title-edit"
             label="Título"
             type="text"
             [value]="selected.title"

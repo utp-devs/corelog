@@ -8,11 +8,13 @@
 .project-workspace {
   @include m.flex-column(3);
   min-width: 0;
-  padding: var(--cl-space-3) var(--cl-gutter) 0;
+  padding-block: var(--cl-space-3) 0;
 
+  /* The page below the tabs brings its own gutter, so only the header and the tab bar are inset here. */
   &__header {
     @include m.flex-row(3, flex-start);
     min-width: 0;
+    margin-inline: var(--cl-gutter);
     padding: var(--cl-space-3) var(--cl-space-4);
     border: 1px solid var(--cl-border);
     border-radius: var(--cl-radius-lg);
@@ -98,6 +100,7 @@
   /* Tabs stay in view while the page scrolls. On narrow widths they scroll inside the bar and
      fade at the edges that still hide tabs. */
   &__nav {
+    margin-inline: var(--cl-gutter);
     position: sticky;
     top: 0;
     z-index: 2;

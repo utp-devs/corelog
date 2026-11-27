@@ -51,7 +51,7 @@
       />
     </app-section>
   } @else {
-    <app-card-grid ariaLabel="Equipos" [fill]="true">
+    <app-card-grid ariaLabel="Equipos">
       @for (team of visible(); track team.id) {
         <app-team-card [team]="team" />
       }

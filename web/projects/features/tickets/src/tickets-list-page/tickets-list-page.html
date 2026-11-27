@@ -7,7 +7,7 @@
   <app-toolbar>
     <div appToolbarLeft class="tickets-list-page__filters">
       <app-filter-bar
-        searchPlaceholder="Buscar incidencia por título o descripción"
+        searchPlaceholder="Buscar incidencias"
         [searchValue]="search()"
         (searchValueChange)="onSearch($event)"
         [filters]="filterDefinitions()"
@@ -21,7 +21,9 @@
 
     <div appToolbarSecondary>
       <p-button
-        label="{{ advancedVisible() ? 'Ocultar filtros avanzados' : 'Filtros avanzados' }}"
+        label="Filtros avanzados"
+        [icon]="advancedVisible() ? 'pi pi-chevron-up' : 'pi pi-chevron-down'"
+        iconPos="right"
         severity="secondary"
         [outlined]="true"
         [attr.aria-expanded]="advancedVisible()"

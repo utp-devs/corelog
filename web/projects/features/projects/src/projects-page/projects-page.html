@@ -30,7 +30,7 @@
       <div appToolbarLeft class="projects-page__filters">
         <app-search-input
           [(value)]="query"
-          [placeholder]="'Buscar por nombre o clave'"
+          [placeholder]="'Buscar proyectos'"
           [ariaLabel]="'Buscar proyectos'"
         />
         <div role="group" aria-label="Filtrar por visibilidad">
@@ -89,7 +89,7 @@
         />
       </app-section>
     } @else {
-      <app-card-grid ariaLabel="Proyectos" [minCardWidth]="280" [fill]="true">
+      <app-card-grid ariaLabel="Proyectos" [minCardWidth]="280">
         @for (project of visible(); track project.id) {
           <article
             class="projects-page__card"

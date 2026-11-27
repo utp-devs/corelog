@@ -16,10 +16,12 @@
               <i class="pi pi-users" aria-hidden="true"></i>
               {{ membersSummary() }}
             </li>
-            <li class="team-page__meta-item">
-              <i class="pi pi-user" aria-hidden="true"></i>
-              Creado por {{ creatorName() }}
-            </li>
+            @if (current.createdBy) {
+              <li class="team-page__meta-item">
+                <i class="pi pi-user" aria-hidden="true"></i>
+                Creado por {{ creatorName() }}
+              </li>
+            }
             <li class="team-page__meta-item">
               <i class="pi pi-calendar" aria-hidden="true"></i>
               <time [attr.datetime]="current.createdAt">{{ formatDate(current.createdAt) }}</time>

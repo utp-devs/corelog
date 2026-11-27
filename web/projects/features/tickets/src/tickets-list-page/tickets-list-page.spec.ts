@@ -18,7 +18,7 @@ const SAVED_FILTER: SavedFilter = {
   updatedAt: '2026-01-01T00:00:00Z',
 };
 
-const SEARCH_PLACEHOLDER = 'Buscar incidencia por título o descripción';
+const SEARCH_PLACEHOLDER = 'Buscar incidencias';
 
 const sampleTicket: Ticket = ticketOf({
   id: 'a1b2c3d4-0000-0000-0000-000000000001',
