@@ -1,3 +1,5 @@
+@use '../../styles/mixins' as m;
+
 /* Structure: the page does not scroll. The top bar is sticky; only the main area scrolls. */
 :host {
   display: block;
@@ -7,8 +9,7 @@
 }
 
 .shell {
-  display: flex;
-  flex-direction: column;
+  @include m.flex-column;
   height: 100%;
   overflow: hidden;
   background: var(--cl-bg-page);
@@ -49,13 +50,7 @@
 }
 
 .announcer {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0 0 0 0);
-  white-space: nowrap;
+  @include m.visually-hidden;
 }
 
 /* Phone navigation: mounted with the shell and hidden while closed, so its organization switcher stays in the DOM. */
@@ -84,9 +79,7 @@
   top: 0;
   bottom: 0;
   left: 0;
-  display: flex;
-  flex-direction: column;
-  gap: var(--cl-space-3);
+  @include m.flex-column(3);
   width: 272px;
   max-width: 100vw;
   padding: var(--cl-space-4);
@@ -133,15 +126,11 @@
 }
 
 .drawer-nav {
-  display: flex;
-  flex-direction: column;
-  gap: var(--cl-space-3);
+  @include m.flex-column(3);
 }
 
 .drawer-org {
-  display: flex;
-  flex-direction: column;
-  gap: var(--cl-space-2);
+  @include m.flex-column(2);
   min-width: 0;
 }
 

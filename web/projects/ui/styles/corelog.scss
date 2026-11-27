@@ -1,5 +1,6 @@
+@use 'utilities';
+
 @import 'primeicons/primeicons.css';
-@import 'primeflex/primeflex.css';
 
 /*
  * Design tokens. Theme-dependent tokens are declared in :root (light) and in
@@ -13,14 +14,21 @@
   --cl-bg-page: #f7f8fa;
   --cl-bg-surface: #ffffff;
   --cl-bg-sunken: #f1f2f4;
-  --cl-border: #dfe1e6;
+  --cl-bg-elevated: #ffffff;
+  --cl-bg-hover: #f1f2f4;
+  --cl-bg-selected: #deebff;
+  /* --cl-border delimits cards and groups; --cl-border-strong delimits controls (>= 3:1); --cl-divider is the quiet separator. */
+  --cl-border: #c1c7d0;
   --cl-border-strong: #7a869a;
+  --cl-divider: #dfe1e6;
   --cl-text: #172b4d;
   --cl-text-subtle: #5e6c84;
-  --cl-text-disabled: #a5adba;
+  --cl-text-placeholder: #6b778c;
+  --cl-text-disabled: #8993a4;
+  --cl-text-on-brand: #ffffff;
   --cl-brand: #0052cc;
-  --cl-brand-hover: #2684ff;
-  --cl-brand-pressed: #0747a6;
+  --cl-brand-hover: #0747a6;
+  --cl-brand-pressed: #053a85;
   --cl-brand-subtle: #deebff;
   --cl-success: #22a06b;
   --cl-success-bg: #e3fcef;
@@ -37,6 +45,10 @@
   --cl-shadow-2: 0 0 1px rgba(9, 30, 66, 0.31), 0 8px 12px rgba(9, 30, 66, 0.15);
   --cl-shadow-3: 0 8px 16px rgba(9, 30, 66, 0.25), 0 0 1px rgba(9, 30, 66, 0.31);
   --cl-shadow-focus: 0 0 0 2px var(--cl-bg-surface), 0 0 0 4px var(--cl-brand);
+  /* Semantic elevation: raised cards, overlays (menus, popovers, toasts) and modals. */
+  --cl-elev-raised: var(--cl-shadow-1);
+  --cl-elev-overlay: var(--cl-shadow-2);
+  --cl-elev-modal: var(--cl-shadow-3);
   --cl-radius-sm: 3px;
   --cl-radius-md: 6px;
   --cl-radius-lg: 8px;
@@ -59,13 +71,44 @@
   --cl-font-h2: 24px;
   --cl-font-h1: 28px;
   --cl-font-display: 32px;
+  --cl-weight-regular: 400;
+  --cl-weight-medium: 500;
+  --cl-weight-semibold: 600;
+  --cl-btn-weight: 500;
+  --cl-lh-body: 1.5;
+  --cl-lh-tight: 1.25;
 
-  /* Z-index scale (theme independent). */
+  /* Control heights: sm, md (default) and lg. Touch devices get larger targets below. */
+  --cl-control-h-sm: 28px;
+  --cl-control-h-md: 36px;
+  --cl-control-h-lg: 44px;
+  --cl-disabled-opacity: 0.5;
+
+  /* Overlay sizes. */
+  --cl-menu-w: 280px;
+  --cl-menu-w-min: 200px;
+  --cl-menu-item-h: 36px;
+  --cl-dialog-w-sm: 400px;
+  --cl-dialog-w-md: 560px;
+  --cl-dialog-w-lg: 720px;
+  --cl-popover-w: 340px;
+  --cl-toast-w: 360px;
+  --cl-tooltip-w: 280px;
+
+  /* Motion. */
+  --cl-motion-fast: 120ms;
+  --cl-motion: 180ms;
+  --cl-ease: cubic-bezier(0.2, 0, 0, 1);
+
+  /* Z-index scale (theme independent). Page chrome sits below every overlay; the numbers for modal, overlay
+     and tooltip are mirrored by the PrimeNG zIndex configuration (CL_Z_INDEX). */
   --cl-z-header: 100;
   --cl-z-dropdown: 105;
-  --cl-z-modal: 110;
-  --cl-z-toast: 120;
-  --cl-z-palette: 130;
+  --cl-z-modal: 1100;
+  --cl-z-overlay: 1200;
+  --cl-z-toast: 1300;
+  --cl-z-palette: 1400;
+  --cl-z-tooltip: 1500;
 
   /* Layout (theme independent). gutter drops to 16px below 768px. */
   --cl-topbar-h: 56px;
@@ -167,14 +210,20 @@
   --cl-bg-page: #1d2125;
   --cl-bg-surface: #22272b;
   --cl-bg-sunken: #1b1f23;
-  --cl-border: #44546f;
-  --cl-border-strong: #6b778c;
+  --cl-bg-elevated: #2c333a;
+  --cl-bg-hover: #38414a;
+  --cl-bg-selected: #123263;
+  --cl-border: #66758c;
+  --cl-border-strong: #8590a2;
+  --cl-divider: #38414a;
   --cl-text: #c7d1db;
   --cl-text-subtle: #9fadbc;
+  --cl-text-placeholder: #8590a2;
   --cl-text-disabled: #6b778c;
+  --cl-text-on-brand: #1d2125;
   --cl-brand: #4c9aff;
   --cl-brand-hover: #79b8ff;
-  --cl-brand-pressed: #2684ff;
+  --cl-brand-pressed: #3a8dff;
   --cl-brand-subtle: #0c2849;
   --cl-success: #4bce97;
   --cl-success-bg: #1b3b2e;
@@ -187,10 +236,10 @@
   --cl-danger-text: #ff9c8f;
   --cl-info: #4c9aff;
   --cl-overlay: rgba(9, 30, 66, 0.72);
-  /* Dark shadows keep the light values so current rendering is unchanged. */
-  --cl-shadow-1: 0 1px 1px rgba(9, 30, 66, 0.15), 0 0 1px rgba(9, 30, 66, 0.31);
-  --cl-shadow-2: 0 0 1px rgba(9, 30, 66, 0.31), 0 8px 12px rgba(9, 30, 66, 0.15);
-  --cl-shadow-3: 0 8px 16px rgba(0, 0, 0, 0.5), 0 0 1px rgba(0, 0, 0, 0.6);
+  /* Dark shadows are black and heavier: lighter shadows vanish on dark surfaces. */
+  --cl-shadow-1: 0 1px 2px rgba(0, 0, 0, 0.5), 0 0 1px rgba(0, 0, 0, 0.6);
+  --cl-shadow-2: 0 4px 12px rgba(0, 0, 0, 0.45), 0 0 1px rgba(0, 0, 0, 0.6);
+  --cl-shadow-3: 0 12px 28px rgba(0, 0, 0, 0.6), 0 0 1px rgba(0, 0, 0, 0.7);
   --cl-shadow-focus: 0 0 0 2px var(--cl-bg-surface), 0 0 0 4px var(--cl-brand);
 
   --cl-cat-todo: #9fadbc;
@@ -232,32 +281,56 @@
   }
 }
 
-/* Touch targets: on phones every control is at least 40 px tall (the layout audit requires 32 px). */
-@media (max-width: 767.98px) {
+/* Touch devices and phones: larger control heights and menu rows. Every PrimeNG control and native control
+   reads these tokens, so no per-component touch rule is needed. */
+@media (pointer: coarse), (max-width: 767.98px) {
+  :root {
+    --cl-control-h-sm: 36px;
+    --cl-control-h-md: 40px;
+    --cl-control-h-lg: 48px;
+    --cl-menu-item-h: 40px;
+  }
+
   input:not([type='checkbox']):not([type='radio']):not([type='hidden']),
   select,
   textarea,
-  button,
-  .p-button,
-  .p-select,
-  .p-togglebutton,
-  .p-inputtext,
-  .p-autocomplete,
-  .p-password,
-  .p-inputnumber {
-    min-height: 40px;
+  button {
+    min-height: var(--cl-control-h-md);
   }
 
-  button,
-  .p-select-dropdown {
-    min-width: 40px;
+  button {
+    min-width: var(--cl-control-h-md);
   }
+}
+
+/* The brand artwork has dark lettering: in the dark theme it sits on a light plate so it stays legible. */
+:root {
+  --cl-logo-plate: transparent;
+}
+
+:root[data-theme='dark'] {
+  --cl-logo-plate: #f4f5f7;
+}
+
+img[src*='/brand/corelog-banner'],
+img[src*='/brand/corelog-icon'] {
+  background: var(--cl-logo-plate);
+  /* The spread grows the plate without changing the layout box. */
+  box-shadow: 0 0 0 var(--cl-space-1) var(--cl-logo-plate);
+  border-radius: var(--cl-radius-md);
 }
 
 *,
 *::before,
 *::after {
   box-sizing: border-box;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
 }
 
 html,
@@ -271,6 +344,7 @@ body {
     Roboto,
     sans-serif;
   font-size: var(--cl-font-body);
+  line-height: var(--cl-lh-body);
   color: var(--cl-text);
   background: var(--cl-bg-page);
 }

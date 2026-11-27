@@ -1,0 +1,93 @@
+@use 'sass:math';
+@use 'sass:meta';
+
+// Layout mixins for component styles.
+//
+// How to use them:
+// - Components keep semantic BEM classes (block__element--modifier) and call these mixins inside them.
+//   Do not put layout utility classes in component templates when a mixin can express the same thing.
+// - Gaps are spacing steps: a plain number 1..16 means var(--cl-space-N). Any other value (a length or a
+//   var()) is passed through unchanged, and 0 stays 0.
+// - Breakpoints are 768, 1024 and 1280 pixels. respond-down(768px) is the phone range, respond-up(768px)
+//   is tablets and wider. Always pass one of these three values.
+// - Colors, font sizes and fixed sizes never belong in these mixins; they come from the --cl-* tokens
+//   in the component itself.
+
+/// Turns a spacing step into its token; leaves other values alone.
+@function space($value) {
+  @if meta.type-of($value) == 'number' and math.is-unitless($value) and $value != 0 {
+    @return var(--cl-space-#{$value});
+  }
+  @return $value;
+}
+
+/// Horizontal flex row. Children can shrink (min-width is not forced, so truncation works on a child
+/// that sets its own min-width: 0).
+@mixin flex-row($gap: 0, $align: center, $justify: flex-start) {
+  display: flex;
+  align-items: $align;
+  justify-content: $justify;
+  gap: space($gap);
+}
+
+/// Vertical flex column.
+@mixin flex-column($gap: 0, $align: stretch) {
+  display: flex;
+  flex-direction: column;
+  align-items: $align;
+  gap: space($gap);
+}
+
+/// Row of items that wrap onto new lines (chips, toolbars, button groups).
+@mixin cluster($gap: 2, $align: center, $justify: flex-start) {
+  @include flex-row($gap, $align, $justify);
+  flex-wrap: wrap;
+}
+
+/// Responsive grid whose columns are at least $min wide and share the free space.
+@mixin grid-auto($min: 16rem, $gap: 4) {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(#{$min}, 100%), 1fr));
+  gap: space($gap);
+}
+
+/// Hides an element visually but keeps it available to screen readers.
+@mixin visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/// Single-line text cut with an ellipsis. The element needs a bounded width (min-width: 0 inside flex).
+@mixin truncate {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/// Makes a control at least as large as a comfortable pointer target (the touch tokens enlarge it on phones).
+@mixin touch-target {
+  min-width: var(--cl-control-h-md);
+  min-height: var(--cl-control-h-md);
+}
+
+/// Styles that apply from the given breakpoint and wider.
+@mixin respond-up($breakpoint) {
+  @media (min-width: $breakpoint) {
+    @content;
+  }
+}
+
+/// Styles that apply below the given breakpoint.
+@mixin respond-down($breakpoint) {
+  @media (max-width: $breakpoint - 0.02px) {
+    @content;
+  }
+}

@@ -1,3 +1,5 @@
+@use '../../styles/mixins' as m;
+
 :host {
   display: inline-flex;
   align-items: center;
@@ -133,10 +135,8 @@
 }
 
 .title {
-  overflow: hidden;
+  @include m.truncate;
   font-weight: 600;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .subtitle {

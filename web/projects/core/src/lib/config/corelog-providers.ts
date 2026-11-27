@@ -32,7 +32,7 @@ import { errorInterceptor } from '../interceptors/error.interceptor';
 import { loadingInterceptor } from '../interceptors/loading.interceptor';
 import { API_URL, CORELOG_APP } from './api.config';
 import { AppTitleStrategy } from './app-title.strategy';
-import { PRIMENG_TRANSLATION_ES, CorelogPreset } from './theme';
+import { PRIMENG_TRANSLATION_ES, CL_Z_INDEX, CorelogPreset } from './theme';
 
 export interface CorelogOptions {
   /** Application name: portal, workspace or admin. */
@@ -88,6 +88,12 @@ export function provideCorelog(options: CorelogOptions): EnvironmentProviders {
     ),
     providePrimeNG({
       ripple: true,
+      zIndex: {
+        modal: CL_Z_INDEX.modal,
+        overlay: CL_Z_INDEX.overlay,
+        menu: CL_Z_INDEX.menu,
+        tooltip: CL_Z_INDEX.tooltip,
+      },
       translation: PRIMENG_TRANSLATION_ES,
       theme: {
         preset: CorelogPreset,

@@ -1,0 +1,76 @@
+@use 'mixins' as m;
+
+// Layout utility classes for markup-level layout.
+//
+// Prefer the mixins in _mixins.scss inside a component's own BEM styles. Use these classes only for
+// one-off layout in a template where adding a BEM element would be noise. Every class has the u- prefix.
+// The set is deliberately small: add a class only when a template uses it, and delete it when the last
+// use goes away. Gap steps map to the --cl-space-* tokens.
+
+.u-flex {
+  display: flex;
+}
+
+.u-flex-col {
+  display: flex;
+  flex-direction: column;
+}
+
+.u-wrap {
+  flex-wrap: wrap;
+}
+
+.u-grow {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.u-items-start {
+  align-items: flex-start;
+}
+
+.u-items-center {
+  align-items: center;
+}
+
+.u-items-end {
+  align-items: flex-end;
+}
+
+.u-justify-between {
+  justify-content: space-between;
+}
+
+.u-justify-center {
+  justify-content: center;
+}
+
+.u-justify-end {
+  justify-content: flex-end;
+}
+
+@each $step in (1, 2, 3, 4, 5, 6) {
+  .u-gap-#{$step} {
+    gap: var(--cl-space-#{$step});
+  }
+}
+
+.u-visually-hidden {
+  @include m.visually-hidden;
+}
+
+.u-truncate {
+  @include m.truncate;
+}
+
+.u-hide-mobile {
+  @include m.respond-down(768px) {
+    display: none;
+  }
+}
+
+.u-hide-desktop {
+  @include m.respond-up(768px) {
+    display: none;
+  }
+}

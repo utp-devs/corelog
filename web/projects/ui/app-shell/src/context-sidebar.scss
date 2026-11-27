@@ -1,3 +1,5 @@
+@use '../../styles/mixins' as m;
+
 :host {
   display: flex;
   min-height: 0;
@@ -34,31 +36,24 @@
 }
 
 .title {
-  overflow: hidden;
+  @include m.truncate;
   font-weight: 600;
   color: var(--cl-text);
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .project {
-  display: flex;
-  align-items: center;
-  gap: var(--cl-space-2);
+  @include m.flex-row(2);
   min-width: 0;
 }
 
 .project-text {
-  display: flex;
-  flex-direction: column;
+  @include m.flex-column;
   min-width: 0;
 }
 
 .project-name {
-  overflow: hidden;
+  @include m.truncate;
   font-weight: 600;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .project-key {
@@ -108,9 +103,7 @@
 }
 
 .label {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  @include m.truncate;
 }
 
 .footer {

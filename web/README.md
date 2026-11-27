@@ -1,6 +1,6 @@
 # CoreLog web (Angular)
 
-Monorepo de las aplicaciones web de CoreLog. Sustituye a la aplicación React original y usa Angular 21, PrimeNG 21, primeflex, primeicons y tokens de diseño `--cl-*`.
+Monorepo de las aplicaciones web de CoreLog. Sustituye a la aplicación React original y usa Angular 21, PrimeNG 21, primeicons y tokens de diseño `--cl-*`.
 
 ## Estructura
 

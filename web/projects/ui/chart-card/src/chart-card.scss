@@ -1,3 +1,5 @@
+@use '../../styles/mixins' as m;
+
 :host {
   display: flex;
   flex-direction: column;
@@ -127,12 +129,7 @@
 
 // Declared last so it wins over .table when the data is hidden.
 .sr-only {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip: rect(0 0 0 0);
-  white-space: nowrap;
+  @include m.visually-hidden;
 }
 
 @media (max-width: 767.98px) {
