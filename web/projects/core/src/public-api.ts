@@ -50,3 +50,8 @@ export * from './lib/guards/unsaved-changes.copy';
 export * from './lib/guards/unsaved-changes.guard';
 export * from './lib/services/hotkeys.service';
 export * from './lib/services/breakpoint.service';
+export * from './lib/guards/permission';
+export * from './lib/services/ui-preferences.service';
+export * from './lib/utils/password-strength';
+export * from './lib/utils/safe-redirect';
+export * from './lib/services/org-logo.service';

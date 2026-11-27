@@ -27,3 +27,6 @@ export function provideCorelogTesting(
     { provide: LOCATION_ASSIGN, useValue: recorder.assign },
   ];
 }
+
+export * from './console-guard';
+export * from './viewport';
