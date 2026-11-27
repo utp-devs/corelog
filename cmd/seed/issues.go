@@ -249,7 +249,7 @@ func emitIssues(ds *dataset, recs []issueRec) {
 	issues := ds.table("issues", "id", "project_id", "summary", "description", "status", "priority",
 		"reporter_id", "assignee_id", "issue_type", "parent_id", "due_date", "story_points",
 		"rank", "closed_at", "created_at", "updated_at", "sprint_id", "key_number",
-		"issue_type_id", "priority_id", "resolution_id", "resolved_at", "custom")
+		"issue_type_id", "priority_id", "resolution_id", "resolved_at", "custom", "vote_count")
 	issueLabels := ds.ignoreDuplicates("issue_labels", "issue_id", "label_id")
 	issueComponents := ds.ignoreDuplicates("issue_components", "issue_id", "component_id")
 	watchers := ds.ignoreDuplicates("watchers", "issue_id", "user_id", "created_at")
@@ -272,7 +272,7 @@ func emitIssues(ds *dataset, recs []issueRec) {
 			r.reporter, opt(r.assignee), r.itype, opt(r.parent), opt(r.due), opt(r.points),
 			r.rank, opt(r.closed), r.created, r.updated, opt(r.sprint), keyNumbers[r.projectID],
 			catalogRef{org: r.orgID, table: "issue_types", legacy: r.itype},
-			catalogRef{org: r.orgID, table: "priorities", legacy: r.priority}, resolutionID, resolvedAt, customJSON(r.custom))
+			catalogRef{org: r.orgID, table: "priorities", legacy: r.priority}, resolutionID, resolvedAt, customJSON(r.custom), 0)
 		for _, l := range r.labels {
 			issueLabels.add(r.id, l)
 		}

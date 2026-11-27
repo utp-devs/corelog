@@ -38,12 +38,6 @@ type CollaborationRepository interface {
 	FindMentionIDs(ctx context.Context, issueID uuid.UUID, names []string) ([]uuid.UUID, error)
 }
 
-type IssueLinkRepository interface {
-	Save(ctx context.Context, link *domain.IssueLink) error
-	ListByIssue(ctx context.Context, issueID uuid.UUID) ([]*domain.IssueLink, error)
-	Delete(ctx context.Context, issueID, linkID uuid.UUID) error
-}
-
 type WorkflowRepository interface {
 	CanTransition(ctx context.Context, projectID uuid.UUID, fromStatus, toStatus domain.Status, actorRole string) (bool, error)
 	DefaultWorkflow(ctx context.Context, projectID uuid.UUID) (*Workflow, error)

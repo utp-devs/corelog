@@ -252,11 +252,14 @@ type issueViewResponse struct {
 	AvailableTransitions []transitionResponse `json:"available_transitions"`
 	Counts               countsResponse       `json:"counts"`
 	Breadcrumb           breadcrumbResponse   `json:"breadcrumb"`
+	// ViewerHasVoted tells whether the caller has voted for the issue.
+	ViewerHasVoted bool `json:"viewer_has_voted"`
 }
 
 func toIssueViewResponse(resp issueResponse, view *port.IssueView) issueViewResponse {
 	out := issueViewResponse{
 		issueResponse:        resp,
+		ViewerHasVoted:       view.ViewerHasVoted,
 		Permissions:          view.Permissions,
 		AvailableTransitions: make([]transitionResponse, 0, len(view.Transitions)),
 		Counts: countsResponse{

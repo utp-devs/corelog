@@ -2972,12 +2972,16 @@ paths:
       - $ref: '#/components/parameters/IssueOrganizationId'
     get:
       tags: [issues]
-      summary: List issue links
+      summary: Listar los enlaces de una incidencia
+      description: >-
+        Devuelve los enlaces de la incidencia en ambos sentidos. Cada elemento indica el tipo de enlace, la direccion
+        (outward si la incidencia es el origen, inward si es el destino), la etiqueta en espanol y la incidencia del otro extremo.
+        Se omiten los enlaces cuyo otro extremo no es visible para quien consulta.
       security:
         - bearerAuth: []
       responses:
         '200':
-          description: Links connected to the issue
+          description: Enlaces de la incidencia
           content:
             application/json:
               schema:
@@ -2986,14 +2990,18 @@ paths:
                   data:
                     type: array
                     items:
-                      $ref: '#/components/schemas/IssueLink'
+                      $ref: '#/components/schemas/IssueLinkEntry'
         '401':
           $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
     post:
       tags: [issues]
-      summary: Create an issue link
+      summary: Crear un enlace entre incidencias
+      description: >-
+        Requiere edicion sobre la incidencia de origen y visibilidad sobre el destino. El destino puede indicarse
+        por UUID o por clave. No se permiten enlaces a la propia incidencia, duplicados (tambien en sentido inverso)
+        ni ciclos en los enlaces de bloqueo. El destino debe estar en la misma organizacion.
       security:
         - bearerAuth: []
       requestBody:
@@ -3004,18 +3012,22 @@ paths:
               $ref: '#/components/schemas/CreateIssueLinkRequest'
       responses:
         '201':
-          description: Issue link created
+          description: Enlace creado
           content:
             application/json:
               schema:
                 type: object
                 properties:
                   data:
-                    $ref: '#/components/schemas/IssueLink'
-        '409':
-          $ref: '#/components/responses/Conflict'
+                    $ref: '#/components/schemas/IssueLinkEntry'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
         '422':
           $ref: '#/components/responses/ValidationError'
   /issues/{id}/links/{link_id}:
@@ -3030,12 +3042,75 @@ paths:
           format: uuid
     delete:
       tags: [issues]
-      summary: Delete an issue link
+      summary: Eliminar un enlace
+      description: El enlace debe tocar la incidencia de la ruta. Requiere edicion sobre esa incidencia.
       security:
         - bearerAuth: []
       responses:
         '204':
-          description: Issue link deleted
+          description: Enlace eliminado
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /issues/{id}/children:
+    parameters:
+      - $ref: '#/components/parameters/IssueRef'
+      - $ref: '#/components/parameters/IssueOrganizationId'
+    get:
+      tags: [issues]
+      summary: Listar las subtareas o hijos de una incidencia con su progreso
+      description: >-
+        Devuelve los hijos directos vivos de la incidencia. El progreso cuenta como hechos los hijos en estado
+        resolved o closed; percent es el redondeo del porcentaje (0 sin hijos).
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Hijos y progreso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/IssueChildren'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /issues/{id}/vote:
+    parameters:
+      - $ref: '#/components/parameters/IssueRef'
+      - $ref: '#/components/parameters/IssueOrganizationId'
+    put:
+      tags: [issues]
+      summary: Votar por una incidencia
+      description: Idempotente. Votar dos veces deja un solo voto. Las incidencias propias tambien se pueden votar.
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: Voto registrado
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [issues]
+      summary: Retirar el voto
+      description: Idempotente. Retirar un voto inexistente no es un error.
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: Voto retirado
+        '401':
+          $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
         '404':
@@ -6519,6 +6594,9 @@ components:
               $ref: '#/components/schemas/IssueCounts'
             breadcrumb:
               $ref: '#/components/schemas/IssueBreadcrumb'
+            viewer_has_voted:
+              type: boolean
+              description: Indica si quien consulta ya ha votado la incidencia.
     UpdateIssueRankRequest:
       type: object
       required: [rank]
@@ -6673,37 +6751,98 @@ components:
           type: string
           minLength: 1
           maxLength: 5000
-    IssueLink:
+    IssueLinkEntry:
+      type: object
+      description: Enlace visto desde la incidencia consultada.
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Identificador del enlace; es el valor de link_id para eliminarlo.
+        kind:
+          type: string
+          enum: [blocks, relates, duplicates, clones, causes, implements]
+        direction:
+          type: string
+          enum: [outward, inward]
+          description: outward si la incidencia consultada es el origen del enlace.
+        label:
+          type: string
+          description: Etiqueta en espanol desde el lado consultado (por ejemplo "bloquea" o "bloqueada por").
+        issue:
+          $ref: '#/components/schemas/IssueLinkTarget'
+    IssueLinkTarget:
       type: object
       properties:
         id:
           type: string
           format: uuid
-        source_issue_id:
+        key:
           type: string
-          format: uuid
-        target_issue_id:
+        summary:
           type: string
-          format: uuid
-        kind:
+        status:
           type: string
-          enum: [blocks, relates, duplicates]
-        created_by:
+        type:
           type: string
-          format: uuid
-        created_at:
+          description: Nombre del tipo de incidencia.
+        priority:
           type: string
-          format: date-time
+          description: Nombre de la prioridad.
     CreateIssueLinkRequest:
       type: object
-      required: [target_issue_id, kind]
+      required: [target, kind]
+      additionalProperties: false
       properties:
-        target_issue_id:
+        target:
           type: string
-          format: uuid
+          maxLength: 255
+          description: UUID o clave de la incidencia destino.
         kind:
           type: string
-          enum: [blocks, relates, duplicates]
+          enum: [blocks, relates, duplicates, clones, causes, implements]
+    IssueChildren:
+      type: object
+      properties:
+        progress:
+          $ref: '#/components/schemas/IssueChildProgress'
+        children:
+          type: array
+          items:
+            $ref: '#/components/schemas/IssueChild'
+    IssueChildProgress:
+      type: object
+      properties:
+        total:
+          type: integer
+        done:
+          type: integer
+          description: Hijos en estado resolved o closed.
+        percent:
+          type: integer
+          minimum: 0
+          maximum: 100
+    IssueChild:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        key:
+          type: string
+        summary:
+          type: string
+        type:
+          type: string
+        status:
+          type: string
+        assignee_id:
+          type: string
+          format: uuid
+          nullable: true
+        assignee_name:
+          type: string
+          nullable: true
     IssueActivity:
       type: object
       properties:

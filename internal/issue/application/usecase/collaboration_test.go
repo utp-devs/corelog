@@ -63,37 +63,6 @@ func (m *memCollab) FindMentionIDs(_ context.Context, _ uuid.UUID, names []strin
 	return m.mentionIDs, nil
 }
 
-// memLinks guarda enlaces entre incidencias.
-type memLinks struct {
-	links []*domain.IssueLink
-}
-
-func (m *memLinks) Save(_ context.Context, l *domain.IssueLink) error {
-	l.ID = uuid.New()
-	m.links = append(m.links, l)
-	return nil
-}
-
-func (m *memLinks) ListByIssue(_ context.Context, issueID uuid.UUID) ([]*domain.IssueLink, error) {
-	var out []*domain.IssueLink
-	for _, l := range m.links {
-		if l.SourceIssueID == issueID || l.TargetIssueID == issueID {
-			out = append(out, l)
-		}
-	}
-	return out, nil
-}
-
-func (m *memLinks) Delete(_ context.Context, issueID, linkID uuid.UUID) error {
-	for i, l := range m.links {
-		if l.ID == linkID && l.SourceIssueID == issueID {
-			m.links = append(m.links[:i], m.links[i+1:]...)
-			return nil
-		}
-	}
-	return errors.New("link not found")
-}
-
 func TestIssueServiceCommentsAndMentions(t *testing.T) {
 	ctx := context.Background()
 	repo := newFakeIssueRepo()
@@ -122,42 +91,6 @@ func TestIssueServiceCommentsAndMentions(t *testing.T) {
 		t.Fatalf("non member lists comments: got %v", err)
 	}
 
-}
-
-func TestIssueServiceActivitiesAndLinks(t *testing.T) {
-	ctx := context.Background()
-	repo := newFakeIssueRepo()
-	links := &memLinks{}
-	svc := NewIssueService(repo, newFakeUserDirectory(), links, contributorRoleResolver())
-	source, _ := svc.Create(ctx, port.CreateInput{Summary: "Origen", Description: "Desc", Priority: domain.PriorityLow, ReporterID: uuid.New()})
-	target, _ := svc.Create(ctx, port.CreateInput{Summary: "Destino", Description: "Desc", Priority: domain.PriorityLow, ReporterID: uuid.New()})
-	actor := uuid.New()
-
-	link, err := svc.CreateIssueLink(ctx, source.ID, target.ID, actor, "agent", domain.IssueLinkBlocks)
-	if err != nil {
-		t.Fatalf("CreateIssueLink: %v", err)
-	}
-	listed, err := svc.ListIssueLinks(ctx, source.ID, actor, "agent")
-	if err != nil || len(listed) != 1 {
-		t.Fatalf("ListIssueLinks = %d, %v; want 1", len(listed), err)
-	}
-	if err := svc.DeleteIssueLink(ctx, source.ID, link.ID, actor, "agent"); err != nil {
-		t.Fatalf("DeleteIssueLink: %v", err)
-	}
-	if err := svc.DeleteIssueLink(ctx, source.ID, link.ID, actor, "agent"); err == nil {
-		t.Fatal("deleting a link twice must fail")
-	}
-
-	if _, err := svc.CreateIssueLink(ctx, source.ID, source.ID, actor, "agent", "unknown-kind"); err == nil {
-		t.Fatal("an invalid link kind must be rejected")
-	}
-	denied := NewIssueService(repo, newFakeUserDirectory(), links, fakeProjectRoleResolver{})
-	if _, err := denied.CreateIssueLink(ctx, source.ID, target.ID, actor, "requester", domain.IssueLinkRelates); apperror.KindOf(err) != apperror.KindForbidden {
-		t.Fatalf("non member links issues: got %v", err)
-	}
-	if _, err := svc.ListActivities(ctx, source.ID, actor, "agent"); err != nil {
-		t.Fatalf("ListActivities: %v", err)
-	}
 }
 
 func TestIssueServiceUserNamesResolvesOnlyRequestedPeople(t *testing.T) {

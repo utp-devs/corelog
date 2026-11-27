@@ -165,6 +165,7 @@ func buildDemo(passwordHash string) *dataset {
 	emitIssues(ds, recs)
 	syncIssueCounters(ds, recs)
 	addDemoLinks(ds, rng, recs, org.users[0])
+	addDemoVotes(ds, rng, recs, org.users)
 	addDemoFilters(ds)
 	addDemoNotifications(ds, recs)
 	return ds
@@ -191,7 +192,7 @@ func assignDemoSprints(recs []issueRec, core uuid.UUID, closedSprint, activeSpri
 // from the older issue to the newer one as the former SQL did.
 func addDemoLinks(ds *dataset, rng *rand.Rand, recs []issueRec, admin uuid.UUID) {
 	links := ds.table("issue_links", "id", "source_issue_id", "target_issue_id", "kind", "created_at", "created_by")
-	kinds := []string{"blocks", "relates", "duplicates"}
+	kinds := []string{"blocks", "relates", "duplicates", "clones", "causes", "implements"}
 	for a := range recs {
 		for b := range recs {
 			if a == b || recs[a].projectID != recs[b].projectID || !recs[b].created.After(recs[a].created) {

@@ -53,6 +53,11 @@ func (s *IssueService) GetView(ctx context.Context, id, actorID uuid.UUID, globa
 		view.Breadcrumb = domain.Breadcrumb{ProjectID: issue.ProjectID, ProjectKey: issue.ProjectKey}
 		view.Counts.Votes = issue.VoteCount
 	}
+	if s.votes != nil {
+		if view.ViewerHasVoted, err = s.votes.HasVoted(ctx, issue.ID, actorID); err != nil {
+			return nil, err
+		}
+	}
 	return view, nil
 }
 

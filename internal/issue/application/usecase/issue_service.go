@@ -52,6 +52,8 @@ type IssueService struct {
 	hierarchy      port.HierarchyReader
 	lifecycle      port.IssueLifecycle
 	activityBatch  port.ActivityBatchWriter
+	votes          port.VoteRepository
+	children       port.ChildReader
 }
 
 func NewIssueService(repo port.Repository, directory port.UserDirectory, repositories ...any) *IssueService {
@@ -106,6 +108,12 @@ func NewIssueService(repo port.Repository, directory port.UserDirectory, reposit
 		}
 		if typed, ok := candidate.(port.ActivityBatchWriter); ok {
 			service.activityBatch = typed
+		}
+		if typed, ok := candidate.(port.VoteRepository); ok {
+			service.votes = typed
+		}
+		if typed, ok := candidate.(port.ChildReader); ok {
+			service.children = typed
 		}
 	}
 	return service
@@ -632,62 +640,6 @@ func (s *IssueService) ListActivities(ctx context.Context, issueID, actorID uuid
 		return []*domain.Activity{}, nil
 	}
 	return s.collaboration.FindActivities(ctx, issueID)
-}
-
-func (s *IssueService) ListIssueLinks(ctx context.Context, issueID, actorID uuid.UUID, globalRole string) ([]*domain.IssueLink, error) {
-	issue, err := s.repo.FindByID(ctx, issueID)
-	if err != nil {
-		return nil, err
-	}
-	if err := s.requireIssueView(ctx, issue.ProjectID, actorID, globalRole); err != nil {
-		return nil, err
-	}
-	if s.issueLinks == nil {
-		return []*domain.IssueLink{}, nil
-	}
-	return s.issueLinks.ListByIssue(ctx, issueID)
-}
-
-func (s *IssueService) CreateIssueLink(ctx context.Context, sourceIssueID, targetIssueID, createdBy uuid.UUID, globalRole string, kind domain.IssueLinkKind) (*domain.IssueLink, error) {
-	if s.issueLinks == nil {
-		return nil, domain.ErrInvalidIssueLink
-	}
-	source, err := s.repo.FindByID(ctx, sourceIssueID)
-	if err != nil {
-		return nil, err
-	}
-	target, err := s.repo.FindByID(ctx, targetIssueID)
-	if err != nil {
-		return nil, err
-	}
-	if source.ProjectID != target.ProjectID {
-		return nil, domain.ErrInvalidIssueLink
-	}
-	if err := s.requireIssueEdit(ctx, source.ProjectID, createdBy, globalRole); err != nil {
-		return nil, err
-	}
-	link, err := domain.NewIssueLink(sourceIssueID, targetIssueID, createdBy, kind)
-	if err != nil {
-		return nil, err
-	}
-	if err := s.issueLinks.Save(ctx, link); err != nil {
-		return nil, err
-	}
-	return link, nil
-}
-
-func (s *IssueService) DeleteIssueLink(ctx context.Context, issueID, linkID, actorID uuid.UUID, globalRole string) error {
-	if s.issueLinks == nil {
-		return domain.ErrInvalidIssueLink
-	}
-	issue, err := s.repo.FindByID(ctx, issueID)
-	if err != nil {
-		return err
-	}
-	if err := s.requireIssueEdit(ctx, issue.ProjectID, actorID, globalRole); err != nil {
-		return err
-	}
-	return s.issueLinks.Delete(ctx, issueID, linkID)
 }
 
 func (s *IssueService) UpdateRank(ctx context.Context, id, actorID uuid.UUID, globalRole, rank string) (*domain.Issue, error) {

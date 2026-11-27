@@ -118,9 +118,16 @@ type Service interface {
 	Backlog(ctx context.Context, actorID uuid.UUID, globalRole string, projectID uuid.UUID) ([]*domain.Issue, error)
 	MoveInBacklog(ctx context.Context, actorID uuid.UUID, globalRole string, projectID, issueID uuid.UUID, position int) ([]*domain.Issue, error)
 	DeleteSavedFilter(ctx context.Context, ownerID, filterID uuid.UUID) error
-	ListIssueLinks(ctx context.Context, issueID, actorID uuid.UUID, globalRole string) ([]*domain.IssueLink, error)
-	CreateIssueLink(ctx context.Context, sourceIssueID, targetIssueID, createdBy uuid.UUID, globalRole string, kind domain.IssueLinkKind) (*domain.IssueLink, error)
+	ListIssueLinks(ctx context.Context, issueID, actorID uuid.UUID, globalRole string) ([]LinkedIssue, error)
+	// CreateIssueLink links the issue to the target, given as a UUID or a key visible in its organization.
+	CreateIssueLink(ctx context.Context, sourceID, actorID uuid.UUID, globalRole, targetRef string, kind domain.IssueLinkKind) (LinkedIssue, error)
 	DeleteIssueLink(ctx context.Context, issueID, linkID, actorID uuid.UUID, globalRole string) error
+	// ListChildren returns the live direct children of an issue with the progress of the done ones.
+	ListChildren(ctx context.Context, issueID, actorID uuid.UUID, globalRole string) (ChildrenView, error)
+	// VoteIssue records the vote of the caller. Voting twice is not an error.
+	VoteIssue(ctx context.Context, issueID, actorID uuid.UUID, globalRole string) error
+	// UnvoteIssue removes the vote of the caller. Removing a missing vote is not an error.
+	UnvoteIssue(ctx context.Context, issueID, actorID uuid.UUID, globalRole string) error
 	UpdateRank(ctx context.Context, id, actorID uuid.UUID, globalRole, rank string) (*domain.Issue, error)
 	// GetView returns the full view model of an issue for the caller.
 	GetView(ctx context.Context, id, actorID uuid.UUID, globalRole string) (*IssueView, error)

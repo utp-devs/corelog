@@ -70,6 +70,8 @@ type IssueView struct {
 	Transitions []Transition
 	Counts      domain.IssueCounts
 	Breadcrumb  domain.Breadcrumb
+	// ViewerHasVoted tells whether the caller has voted for the issue.
+	ViewerHasVoted bool
 }
 
 // TransitionProvider lists the transitions the caller may run on an issue. The legacy implementation derives
