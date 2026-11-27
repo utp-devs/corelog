@@ -80,7 +80,9 @@ func buildRouter(cfg *config.Config, db *sqlx.DB, log *slog.Logger) (chi.Router,
 	orgs := newOrgDirectory(db)
 	teamModule := team.NewModule(teamRepo, orgs, database.NewTxManager(db), cfg.Auth.JWTSecret)
 	projectAuthorizer := projectAuthorizerAdapter{authorizer: authusecase.NewAuthorizer(authpostgres.NewRoleLookup(db))}
-	projectModule := project.NewModule(projectRepo, projectMemberRepo, projectCatalogRepo, orgs, cfg.Auth.JWTSecret, projectAuthorizer)
+	projectModule := project.NewModule(projectRepo, projectMemberRepo, projectCatalogRepo, orgs, cfg.Auth.JWTSecret, projectAuthorizer).
+		WithEvents(projectpostgres.NewEventPublisher(db)).
+		WithTransactions(database.NewTxManager(db))
 
 	ticketRepo := ticketDBRepo
 	if cfg.Features.TicketRepository == "memory" {

@@ -749,8 +749,10 @@ paths:
   /projects:
     get:
       tags: [projects]
-      summary: List the projects of an organization
-      description: Returns the projects of the given organization that are visible to the authenticated user.
+      summary: Listar los proyectos de una organizacion
+      description: >-
+        Devuelve una pagina de los proyectos de la organizacion indicada que el usuario autenticado puede ver.
+        Los filtros se combinan con AND. Sin archived, solo se listan los proyectos activos.
       operationId: listProjects
       security:
         - bearerAuth: []
@@ -758,34 +760,105 @@ paths:
         - name: organization_id
           in: query
           required: true
-          description: Organization whose projects are listed.
+          description: Organizacion cuyos proyectos se listan.
           schema:
             type: string
             format: uuid
+        - name: q
+          in: query
+          description: Texto que debe aparecer en el nombre o en la clave del proyecto (sin distinguir mayusculas).
+          schema:
+            type: string
+            maxLength: 120
+        - name: template
+          in: query
+          description: Solo proyectos creados con esta plantilla.
+          schema:
+            $ref: '#/components/schemas/ProjectTemplate'
+        - name: type
+          in: query
+          description: >-
+            Alias legado. Con scrum equivale a template=scrum. Con kanban no filtra por si solo, porque agrupa
+            varias plantillas; usa template para esos casos.
+          schema:
+            type: string
+            enum: [kanban, scrum]
+        - name: lead_id
+          in: query
+          description: Solo proyectos cuyo lider es este usuario.
+          schema:
+            type: string
+            format: uuid
+        - name: starred
+          in: query
+          description: Si es true, solo los proyectos marcados como favoritos por el usuario.
+          schema:
+            type: boolean
+        - name: archived
+          in: query
+          description: >-
+            exclude (valor por defecto) oculta los archivados; include los muestra junto a los activos; only
+            muestra solo los archivados.
+          schema:
+            $ref: '#/components/schemas/ArchiveFilter'
+        - name: sort
+          in: query
+          description: Columna de orden. Por defecto name.
+          schema:
+            type: string
+            enum: [name, key, created_at, updated_at]
+        - name: desc
+          in: query
+          description: Si es true, orden descendente.
+          schema:
+            type: boolean
+        - name: page
+          in: query
+          description: Pagina, desde 1.
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: page_size
+          in: query
+          description: Elementos por pagina. Se limita a 100.
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 25
       responses:
         '200':
-          description: Projects of the organization visible to the authenticated user
+          description: Pagina de proyectos visibles para el usuario, con el total de coincidencias.
           content:
             application/json:
               schema:
                 type: object
+                required: [data, meta]
                 properties:
                   data:
                     type: array
                     items:
                       $ref: '#/components/schemas/Project'
+                  meta:
+                    $ref: '#/components/schemas/ProjectListMeta'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: La organizacion no existe o el usuario no pertenece a ella (codigo organization.not_found).
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
         '422':
-          description: organization_id is missing or is not a UUID (code project.organization_required).
+          description: >-
+            Un parametro no es valido (codigos project.organization_required, project.invalid, validation.failed).
           content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
     post:
       tags: [projects]
-      summary: Create a project
+      summary: Crear un proyecto desde una plantilla
       description: >-
-        The creator becomes the project lead. Any organization member may call this endpoint, but the
-        organization role and policy decide whether the project is created (code project.creation_not_allowed
-        otherwise). visibility is optional; when omitted the organization default applies.
+        El creador queda como lider. Cualquier miembro de la organizacion puede llamar a este endpoint, pero el
+        rol de la organizacion y su politica deciden si el proyecto se crea (codigo project.creation_not_allowed
+        en caso contrario). template es obligatoria salvo que se envie el campo legado type. visibility es
+        opcional; si falta se aplica el valor por defecto de la organizacion.
       operationId: createProject
       security:
         - bearerAuth: []
@@ -797,7 +870,7 @@ paths:
               $ref: '#/components/schemas/CreateProjectRequest'
       responses:
         '201':
-          description: Project created successfully
+          description: Proyecto creado.
           content:
             application/json:
               schema:
@@ -808,36 +881,94 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
-          description: The organization policy does not allow the caller to create projects (code project.creation_not_allowed).
+          description: La politica de la organizacion no permite al usuario crear proyectos (codigo project.creation_not_allowed).
           content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
         '404':
-          description: The organization does not exist (code organization.not_found).
+          description: La organizacion no existe o el usuario no pertenece a ella (codigo organization.not_found).
           content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
         '409':
-          description: A project with this key already exists (code project.key_taken).
+          description: Ya existe un proyecto activo con esta clave en la organizacion (codigo project.key_taken).
           content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
         '422':
           description: >-
-            The body failed validation (codes project.organization_required, project.invalid or validation.failed).
+            El cuerpo no es valido. Codigos: project.organization_required, project.invalid_key,
+            project.invalid_template, project.invalid_assignee_policy, project.user_not_in_org,
+            project.team_not_in_org, validation.failed.
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+  /projects/key-available:
+    get:
+      tags: [projects]
+      summary: Comprobar si una clave de proyecto esta libre
+      description: >-
+        Normaliza la clave (espacios fuera, mayusculas) y responde si es valida y no la usa ningun proyecto
+        activo de la organizacion. Los proyectos eliminados no cuentan.
+      operationId: checkProjectKeyAvailability
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: organization_id
+          in: query
+          required: true
+          description: Organizacion donde se comprueba la clave.
+          schema:
+            type: string
+            format: uuid
+        - name: key
+          in: query
+          required: true
+          description: Clave a comprobar.
+          schema:
+            type: string
+            minLength: 2
+            maxLength: 10
+            example: CORE
+      responses:
+        '200':
+          description: Resultado de la comprobacion.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/ProjectKeyAvailability'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: La organizacion no existe o el usuario no pertenece a ella (codigo organization.not_found).
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+        '422':
+          description: La organizacion o la clave no son validas (codigos project.organization_required, project.invalid_key).
           content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
   /projects/{id}:
     parameters:
       - name: id
         in: path
         required: true
+        description: UUID o clave del proyecto (por ejemplo CORE). Una clave requiere organization_id.
+        schema:
+          type: string
+          example: CORE
+      - name: organization_id
+        in: query
+        required: false
+        description: >-
+          Organizacion del proyecto. Obligatoria cuando {id} es una clave; se ignora cuando es un UUID.
         schema:
           type: string
           format: uuid
     get:
       tags: [projects]
-      summary: Get a project
-      description: Returns 404 (code project.not_found) when the project does not exist or is not visible to the caller.
+      summary: Obtener un proyecto
+      description: >-
+        Devuelve 404 (codigo project.not_found) cuando el proyecto no existe o no es visible para el usuario.
       operationId: getProject
       security:
         - bearerAuth: []
       responses:
         '200':
-          description: Project details
+          description: Detalle del proyecto.
           content:
             application/json:
               schema:
@@ -848,10 +979,14 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
         '404':
-          $ref: '#/components/responses/NotFound'
+          description: El proyecto no existe o no es visible para el usuario (codigo project.not_found).
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+        '422':
+          description: La clave no es valida o falta organization_id (codigos project.invalid_key, project.organization_required).
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
     patch:
       tags: [projects]
-      summary: Update a project
+      summary: Actualizar un proyecto
       operationId: updateProject
       security:
         - bearerAuth: []
@@ -863,7 +998,7 @@ paths:
               $ref: '#/components/schemas/UpdateProjectRequest'
       responses:
         '200':
-          description: Project updated successfully
+          description: Proyecto actualizado.
           content:
             application/json:
               schema:
@@ -876,24 +1011,136 @@ paths:
         '403':
           $ref: '#/components/responses/Forbidden'
         '404':
-          $ref: '#/components/responses/NotFound'
+          description: El proyecto no existe o no es visible para el usuario (codigo project.not_found).
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+        '409':
+          description: El proyecto esta archivado y no admite cambios (codigo project.archived).
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
         '422':
-          $ref: '#/components/responses/ValidationError'
+          description: >-
+            El cuerpo no es valido. Codigos: project.invalid_assignee_policy, project.user_not_in_org, validation.failed.
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
     delete:
       tags: [projects]
-      summary: Delete a project
+      summary: Eliminar un proyecto
+      description: >-
+        Eliminacion logica. El cuerpo debe repetir el nombre exacto del proyecto en confirmation; si no coincide,
+        responde 422 con codigo project.confirmation_mismatch y no se elimina nada.
       operationId: deleteProject
       security:
         - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeleteProjectRequest'
       responses:
         '204':
-          description: Project deleted successfully
+          description: Proyecto eliminado.
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
         '404':
-          $ref: '#/components/responses/NotFound'
+          description: El proyecto no existe o no es visible para el usuario (codigo project.not_found).
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+        '422':
+          description: >-
+            Falta el cuerpo o confirmation no coincide con el nombre del proyecto (codigo project.confirmation_mismatch).
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+  /projects/{id}/archive:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: UUID o clave del proyecto (por ejemplo CORE). Una clave requiere organization_id.
+        schema:
+          type: string
+          example: CORE
+      - name: organization_id
+        in: query
+        required: false
+        description: Organizacion del proyecto. Obligatoria cuando {id} es una clave.
+        schema:
+          type: string
+          format: uuid
+    post:
+      tags: [projects]
+      summary: Archivar un proyecto
+      description: Un proyecto archivado es de solo lectura. Requiere permiso para editar el proyecto.
+      operationId: archiveProject
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Proyecto archivado.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Project'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: El proyecto no existe o no es visible para el usuario (codigo project.not_found).
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+        '409':
+          description: El proyecto ya estaba archivado (codigo project.already_archived).
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+        '422':
+          description: La clave no es valida o falta organization_id (codigos project.invalid_key, project.organization_required).
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+  /projects/{id}/restore:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: UUID o clave del proyecto (por ejemplo CORE). Una clave requiere organization_id.
+        schema:
+          type: string
+          example: CORE
+      - name: organization_id
+        in: query
+        required: false
+        description: Organizacion del proyecto. Obligatoria cuando {id} es una clave.
+        schema:
+          type: string
+          format: uuid
+    post:
+      tags: [projects]
+      summary: Restaurar un proyecto archivado
+      description: Devuelve el proyecto a estado activo. Requiere permiso para editar el proyecto.
+      operationId: restoreProject
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Proyecto restaurado.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Project'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: El proyecto no existe o no es visible para el usuario (codigo project.not_found).
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+        '409':
+          description: El proyecto no estaba archivado (codigo project.not_archived).
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+        '422':
+          description: La clave no es valida o falta organization_id (codigos project.invalid_key, project.organization_required).
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
   /projects/{id}/board:
     parameters:
       - name: id
@@ -3675,6 +3922,81 @@ components:
         visibility:
           type: string
           enum: [private, open]
+        template:
+          $ref: '#/components/schemas/ProjectTemplate'
+        color:
+          type: string
+          maxLength: 20
+          example: blue
+        icon:
+          type: string
+          maxLength: 40
+          example: rocket
+        default_assignee_policy:
+          type: string
+          enum: [unassigned, lead]
+          description: Quien recibe una incidencia creada sin responsable. unassigned la deja sin asignar; lead la asigna al lider.
+        archived_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: Momento del archivado, o null si el proyecto esta activo.
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    ProjectTemplate:
+      type: string
+      enum: [scrum, kanban, task_tracking, bug_tracking]
+      description: >-
+        Plantilla del proyecto. Define el tablero, los estados, los tipos de incidencia y si hay sprints
+        (solo scrum). task_tracking y bug_tracking son proyectos de tipo kanban.
+      example: kanban
+    ArchiveFilter:
+      type: string
+      enum: [exclude, include, only]
+      default: exclude
+      description: exclude oculta los archivados, include los incluye y only muestra solo los archivados.
+    ProjectListMeta:
+      type: object
+      required: [page, page_size, total]
+      properties:
+        page:
+          type: integer
+          minimum: 1
+          example: 1
+        page_size:
+          type: integer
+          minimum: 1
+          maximum: 100
+          example: 25
+        total:
+          type: integer
+          minimum: 0
+          description: Numero de proyectos que cumplen los filtros, en todas las paginas.
+          example: 3
+    ProjectKeyAvailability:
+      type: object
+      required: [available, key]
+      properties:
+        available:
+          type: boolean
+          description: true si la clave es valida y no la usa ningun proyecto activo de la organizacion.
+          example: true
+        key:
+          type: string
+          description: Clave normalizada (sin espacios y en mayusculas).
+          example: CORE
+    DeleteProjectRequest:
+      type: object
+      required: [confirmation]
+      properties:
+        confirmation:
+          type: string
+          description: Nombre exacto del proyecto. Debe coincidir con el nombre guardado.
+          example: Plataforma Core
     ProjectBoard:
       type: object
       required: [id, project_id, name, type, columns]
@@ -3796,32 +4118,70 @@ components:
           format: date-time
     CreateProjectRequest:
       type: object
-      required: [organization_id, key, name, type]
+      required: [organization_id, key, name]
       properties:
         organization_id:
           type: string
           format: uuid
-          description: Organization that owns the project.
+          description: Organizacion que es duena del proyecto.
         key:
           type: string
-          minLength: 1
-          maxLength: 20
+          minLength: 2
+          maxLength: 10
+          pattern: '^[A-Za-z][A-Za-z0-9]{1,9}$'
+          description: >-
+            Clave del proyecto. Se guarda en mayusculas. Empieza por letra y usa solo letras y numeros.
+            Debe ser unica entre los proyectos activos de la organizacion.
+          example: CORE
         name:
           type: string
           minLength: 2
           maxLength: 120
+          example: Plataforma Core
         description:
           type: string
           maxLength: 5000
+        template:
+          $ref: '#/components/schemas/ProjectTemplate'
         type:
           type: string
           enum: [kanban, scrum]
+          deprecated: true
+          description: >-
+            Campo legado. Se usa solo cuando falta template: scrum crea una plantilla scrum y kanban una
+            plantilla kanban.
         visibility:
           type: string
           enum: [private, open]
           description: >-
-            Optional. When omitted the organization default applies. The legacy value team is accepted on
-            input and stored as open.
+            Opcional. Si falta se aplica el valor por defecto de la organizacion. El valor legado team se acepta
+            y se guarda como open.
+        color:
+          type: string
+          maxLength: 20
+          example: blue
+        icon:
+          type: string
+          maxLength: 40
+          example: rocket
+        default_assignee_policy:
+          type: string
+          enum: [unassigned, lead]
+          description: Responsable por defecto de las incidencias nuevas. Por defecto unassigned.
+        member_ids:
+          type: array
+          maxItems: 100
+          description: Usuarios que se anaden como contributor. El creador siempre es lider.
+          items:
+            type: string
+            format: uuid
+        team_ids:
+          type: array
+          maxItems: 100
+          description: Equipos que reciben el rol contributor en el proyecto. Deben pertenecer a la organizacion.
+          items:
+            type: string
+            format: uuid
     UpdateProjectRequest:
       type: object
       required: [name, type, lead_id, visibility]
@@ -3842,7 +4202,19 @@ components:
         visibility:
           type: string
           enum: [private, open]
-          description: The legacy value team is accepted on input and stored as open.
+          description: El valor legado team se acepta y se guarda como open.
+        color:
+          type: string
+          maxLength: 20
+          description: Si falta se conserva el valor actual.
+        icon:
+          type: string
+          maxLength: 40
+          description: Si falta se conserva el valor actual.
+        default_assignee_policy:
+          type: string
+          enum: [unassigned, lead]
+          description: Si falta se conserva el valor actual.
     CreateProjectLabelRequest:
       type: object
       required: [name]

@@ -7,37 +7,61 @@ import (
 	"github.com/jhonsferg/corelog/internal/project/domain"
 )
 
-// createProjectRequest: el creador queda como lider. visibility es opcional; si falta se usa
-// default_project_visibility de la organizacion.
+// createProjectRequest: el creador queda como lider. template es opcional si viene type (legado);
+// visibility es opcional; si falta se usa default_project_visibility de la organizacion.
 type createProjectRequest struct {
-	OrganizationID string `json:"organization_id" validate:"required,uuid"`
-	Key            string `json:"key" validate:"required,min=1,max=20"`
-	Name           string `json:"name" validate:"required,min=2,max=120"`
-	Description    string `json:"description" validate:"max=5000"`
-	Type           string `json:"type" validate:"required,oneof=kanban scrum"`
-	Visibility     string `json:"visibility" validate:"omitempty,oneof=private open team"`
+	OrganizationID        string   `json:"organization_id" validate:"required,uuid"`
+	Key                   string   `json:"key" validate:"required,min=1,max=20"`
+	Name                  string   `json:"name" validate:"required,min=2,max=120"`
+	Description           string   `json:"description" validate:"max=5000"`
+	Template              string   `json:"template" validate:"max=40"`
+	Type                  string   `json:"type" validate:"omitempty,oneof=kanban scrum"`
+	Visibility            string   `json:"visibility" validate:"omitempty,oneof=private open team"`
+	Color                 string   `json:"color" validate:"max=20"`
+	Icon                  string   `json:"icon" validate:"max=40"`
+	DefaultAssigneePolicy string   `json:"default_assignee_policy" validate:"max=20"`
+	MemberIDs             []string `json:"member_ids" validate:"max=100,dive,uuid"`
+	TeamIDs               []string `json:"team_ids" validate:"max=100,dive,uuid"`
 }
 
 type updateProjectRequest struct {
-	Name        string `json:"name" validate:"required,min=2,max=120"`
-	Description string `json:"description" validate:"max=5000"`
-	Type        string `json:"type" validate:"required,oneof=kanban scrum"`
-	LeadID      string `json:"lead_id" validate:"required,uuid"`
-	Visibility  string `json:"visibility" validate:"required,oneof=private open team"`
+	Name                  string `json:"name" validate:"required,min=2,max=120"`
+	Description           string `json:"description" validate:"max=5000"`
+	Type                  string `json:"type" validate:"required,oneof=kanban scrum"`
+	LeadID                string `json:"lead_id" validate:"required,uuid"`
+	Visibility            string `json:"visibility" validate:"required,oneof=private open team"`
+	Color                 string `json:"color" validate:"max=20"`
+	Icon                  string `json:"icon" validate:"max=40"`
+	DefaultAssigneePolicy string `json:"default_assignee_policy" validate:"max=20"`
+}
+
+// deleteProjectRequest carries the typed confirmation: the exact project name.
+type deleteProjectRequest struct {
+	Confirmation string `json:"confirmation"`
 }
 
 type projectResponse struct {
-	ID             string     `json:"id"`
-	OrganizationID string     `json:"organization_id"`
-	Key            string     `json:"key"`
-	Name           string     `json:"name"`
-	Description    string     `json:"description"`
-	Type           string     `json:"type"`
-	LeadID         string     `json:"lead_id"`
-	Visibility     string     `json:"visibility"`
-	ArchivedAt     *time.Time `json:"archived_at"`
-	CreatedAt      time.Time  `json:"created_at"`
-	UpdatedAt      time.Time  `json:"updated_at"`
+	ID                    string     `json:"id"`
+	OrganizationID        string     `json:"organization_id"`
+	Key                   string     `json:"key"`
+	Name                  string     `json:"name"`
+	Description           string     `json:"description"`
+	Type                  string     `json:"type"`
+	Template              string     `json:"template"`
+	LeadID                string     `json:"lead_id"`
+	Visibility            string     `json:"visibility"`
+	Color                 string     `json:"color"`
+	Icon                  string     `json:"icon"`
+	DefaultAssigneePolicy string     `json:"default_assignee_policy"`
+	ArchivedAt            *time.Time `json:"archived_at"`
+	CreatedAt             time.Time  `json:"created_at"`
+	UpdatedAt             time.Time  `json:"updated_at"`
+}
+
+// projectKeyAvailabilityResponse is the body of the key availability check.
+type projectKeyAvailabilityResponse struct {
+	Available bool   `json:"available"`
+	Key       string `json:"key"`
 }
 
 type projectMemberRequest struct {
@@ -87,7 +111,8 @@ type componentResponse struct {
 func toProjectResponse(p *domain.Project) projectResponse {
 	return projectResponse{
 		ID: p.ID.String(), OrganizationID: p.OrganizationID.String(), Key: p.Key, Name: p.Name, Description: p.Description,
-		Type: string(p.Type), LeadID: p.LeadID.String(), Visibility: string(p.Visibility),
+		Type: string(p.Type), Template: string(p.Template), LeadID: p.LeadID.String(), Visibility: string(p.Visibility),
+		Color: p.Color, Icon: p.Icon, DefaultAssigneePolicy: string(p.DefaultAssigneePolicy),
 		ArchivedAt: p.ArchivedAt, CreatedAt: p.CreatedAt, UpdatedAt: p.UpdatedAt,
 	}
 }
