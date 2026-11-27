@@ -130,6 +130,17 @@ describe('HotkeysService global shortcuts', () => {
     await vi.waitFor(() => expect(router.url).toBe('/issues/new'));
   });
 
+  it('calls onCreate instead of navigating when the create callback is given', async () => {
+    const hotkeys = setup();
+    const router = TestBed.inject(Router);
+    await router.navigateByUrl('/issues');
+    const onCreate = vi.fn();
+    hotkeys.registerGlobalShortcuts({ onCreate });
+    press('c');
+    expect(onCreate).toHaveBeenCalledTimes(1);
+    expect(router.url).toBe('/issues');
+  });
+
   it('no dispara los atajos mientras se escribe en un campo', async () => {
     const hotkeys = setup();
     const router = TestBed.inject(Router);

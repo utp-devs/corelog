@@ -21,6 +21,8 @@ export type RegisteredHotkey = Pick<HotkeyBinding, 'keys' | 'description' | 'gro
 export type GlobalShortcutOptions = {
   /** Opens the shortcuts dialog ('?'). */
   onHelp?: () => void;
+  /** Opens the quick create-issue dialog ('c'). Without it the shortcut opens the new-issue page. */
+  onCreate?: () => void;
   /** Project in context: 'g b' opens its board. */
   projectId?: string | null;
   /**
@@ -80,14 +82,19 @@ export class HotkeysService {
 
   /** Shell shortcuts: c, ?, g i, g d, g p, g b and n (coming soon). '/' belongs to the command palette. */
   registerGlobalShortcuts(options: GlobalShortcutOptions = {}): () => void {
-    const { onHelp, projectId, workPages = true } = options;
+    const { onHelp, onCreate, projectId, workPages = true } = options;
     const boardPath = projectId ? `/projects/${encodeURIComponent(projectId)}/board` : '/projects';
     const go = (path: string) => () => {
       void this.router.navigateByUrl(path);
     };
 
     const bindings: HotkeyBinding[] = [
-      { keys: 'c', group: 'General', description: 'Crear incidencia', run: go('/issues/new') },
+      {
+        keys: 'c',
+        group: 'General',
+        description: 'Crear incidencia',
+        run: onCreate ? () => onCreate() : go('/issues/new'),
+      },
       {
         keys: '?',
         group: 'General',
