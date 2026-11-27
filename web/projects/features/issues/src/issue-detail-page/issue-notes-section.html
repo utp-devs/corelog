@@ -1,0 +1,54 @@
+<app-section
+  title="Mis apuntes"
+  description="Solo tú puedes ver tus notas."
+  data-testid="issue-notes"
+>
+  <div class="issue-notes">
+    <label class="issue-notes__label" for="issue-notes-draft"
+      >Nuevo apunte sobre esta incidencia</label
+    >
+    <textarea
+      id="issue-notes-draft"
+      pTextarea
+      rows="3"
+      placeholder="Escribe un apunte privado…"
+      [fluid]="true"
+      [maxlength]="maxLength"
+      [ngModel]="draft()"
+      (ngModelChange)="draft.set($event)"
+      (keydown)="onKeydown($event)"
+    ></textarea>
+    <div class="issue-notes__actions">
+      <p-button
+        label="Añadir a mis apuntes"
+        icon="pi pi-plus"
+        class="touch-target"
+        [disabled]="!canSave()"
+        [loading]="saving()"
+        (onClick)="add()"
+      />
+    </div>
+
+    @if (notes().length === 0) {
+      <p class="issue-notes__empty">Aún no tienes apuntes sobre esta incidencia.</p>
+    } @else {
+      <ul class="issue-notes__list">
+        @for (note of notes(); track note.id) {
+          <li class="issue-notes__item" [attr.data-color]="note.color">
+            <a
+              class="issue-notes__link"
+              [routerLink]="['/notes']"
+              [queryParams]="{ note: note.id }"
+              [attr.aria-label]="'Abrir la nota ' + headline(note)"
+            >
+              <span class="issue-notes__title">{{ headline(note) }}</span>
+              @if (preview(note); as text) {
+                <span class="issue-notes__text">{{ text }}</span>
+              }
+            </a>
+          </li>
+        }
+      </ul>
+    }
+  </div>
+</app-section>

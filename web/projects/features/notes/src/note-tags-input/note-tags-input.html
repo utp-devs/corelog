@@ -1,0 +1,53 @@
+<div class="note-tags-input">
+  <label class="note-tags-input__label" [for]="id">Etiquetas</label>
+  <div class="note-tags-input__box">
+    @for (tag of tags(); track tag) {
+      <span class="note-tags-input__chip">
+        <span class="note-tags-input__chip-text">{{ tag }}</span>
+        <button
+          type="button"
+          class="note-tags-input__remove"
+          [attr.aria-label]="'Quitar la etiqueta ' + tag"
+          [appTooltip]="'Quitar ' + tag"
+          (click)="remove(tag)"
+        >
+          <i class="pi pi-times" aria-hidden="true"></i>
+        </button>
+      </span>
+    }
+    <input
+      pInputText
+      type="text"
+      autocomplete="off"
+      class="note-tags-input__field"
+      [id]="id"
+      [value]="draft()"
+      [disabled]="full()"
+      [attr.maxlength]="maxTagLength + 1"
+      [attr.placeholder]="
+        full() ? 'Máximo de etiquetas alcanzado' : 'Añade una etiqueta y pulsa Enter'
+      "
+      [attr.aria-invalid]="error() ? 'true' : null"
+      [attr.aria-describedby]="error() ? errorId : null"
+      (input)="onInput($event)"
+      (keydown)="onKeydown($event)"
+      (blur)="commit()"
+    />
+  </div>
+  @if (error(); as message) {
+    <p class="note-tags-input__error" role="alert" [id]="errorId">{{ message }}</p>
+  } @else {
+    <p class="note-tags-input__hint">
+      Hasta {{ maxTags }} etiquetas, de {{ maxTagLength }} caracteres.
+    </p>
+  }
+  @if (quickPicks().length > 0 && !full()) {
+    <div class="note-tags-input__picks" role="group" aria-label="Etiquetas existentes">
+      @for (tag of quickPicks(); track tag) {
+        <button type="button" class="note-tags-input__pick" (click)="add(tag)">
+          <i class="pi pi-plus" aria-hidden="true"></i>{{ tag }}
+        </button>
+      }
+    </div>
+  }
+</div>

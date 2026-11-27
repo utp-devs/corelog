@@ -57,6 +57,7 @@ describe('workspace routes', () => {
       'projects',
       'dashboard',
       'teams',
+      'notes',
       '**',
     ]);
   });

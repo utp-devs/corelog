@@ -18,7 +18,7 @@ async function mount(options: Parameters<typeof settingsEnvironment>[0]): Promis
 describe('ProjectSettingsShell', () => {
   afterEach(() => TestBed.resetTestingModule());
 
-  it('lists the five sections for a lead with key based links', async () => {
+  it('lists the six sections for a lead with key based links', async () => {
     const element = await mount({});
     const links = Array.from(element.querySelectorAll('a')).map((link) => ({
       text: link.textContent?.trim(),
@@ -29,6 +29,7 @@ describe('ProjectSettingsShell', () => {
       'Acceso',
       'Roles',
       'Permisos',
+      'Tipos de incidencia',
       'Zona de peligro',
     ]);
     expect(links[0].href).toBe('/projects/CORE/settings/details');
@@ -40,7 +41,7 @@ describe('ProjectSettingsShell', () => {
     expect(element.querySelector('[data-testid="settings-readonly"]')?.textContent).toContain(
       'Solo lectura',
     );
-    expect(element.querySelectorAll('a')).toHaveLength(5);
+    expect(element.querySelectorAll('a')).toHaveLength(6);
   });
 
   it('shows the forbidden state to viewers', async () => {

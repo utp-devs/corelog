@@ -40,6 +40,12 @@ export const PROJECT_SETTINGS_ROUTES: Routes = [
           ),
       },
       {
+        path: 'issue-types',
+        title: 'Tipos de incidencia',
+        loadComponent: () =>
+          import('./issue-types/project-issue-types-page').then((m) => m.ProjectIssueTypesPage),
+      },
+      {
         path: 'danger',
         title: 'Zona de peligro',
         loadComponent: () =>

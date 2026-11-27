@@ -16,18 +16,16 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import {
   AsyncState,
   AuthStore,
+  CatalogStore,
   BreakpointService,
-  ISSUE_PRIORITY_LABELS,
   ISSUES_PATH,
   ISSUE_STATUSES,
   ISSUE_STATUS_META,
-  ISSUE_TYPE_LABELS,
   IssueActivity,
   IssueAttachment,
   IssueComment,
   IssueLink,
   IssueLinkKind,
-  IssuePriority,
   IssueStatus,
   NotificationService,
   ProjectApiService,
@@ -47,6 +45,8 @@ import {
 import { ArchivedNotice } from '@corelog/ui/archived-notice';
 import { BreadcrumbItem, Breadcrumbs } from '@corelog/ui/breadcrumbs';
 import { trackRecent } from '@corelog/ui/command-palette';
+import { CatalogIcon } from '@corelog/ui/catalog-icon';
+import { IssueTypeIcon } from '@corelog/ui/issue-type-icon';
 import { ErrorState } from '@corelog/ui/error-state';
 import { FieldRow } from '@corelog/ui/field-row';
 import { InlineEdit, InlineEditOption, InlineEditTone } from '@corelog/ui/inline-edit';
@@ -73,6 +73,7 @@ import { MentionSearch } from '../shared/mention-search';
 import { exactDate, timeAgo } from '../shared/time';
 import { IssueActivityFeed } from './issue-activity';
 import { IssueDescriptionSection } from './issue-description-section';
+import { IssueNotesSection } from './issue-notes-section';
 
 const COLLABORATION_ERROR = 'No se pudo cargar toda la información de colaboración.';
 const ARCHIVED_REASON = 'El proyecto está archivado y es de solo lectura.';
@@ -91,15 +92,6 @@ const LINK_KIND_OPTIONS: { value: IssueLinkKind; label: string }[] = [
   { value: 'relates', label: 'Se relaciona con' },
   { value: 'duplicates', label: 'Duplica' },
 ];
-const PRIORITY_OPTIONS: InlineEditOption[] = (
-  Object.keys(ISSUE_PRIORITY_LABELS) as IssuePriority[]
-).map((value) => ({ value, label: ISSUE_PRIORITY_LABELS[value] }));
-const PRIORITY_ICONS: Readonly<Record<IssuePriority, string>> = {
-  low: 'pi pi-angle-down',
-  medium: 'pi pi-equals',
-  high: 'pi pi-angle-up',
-  critical: 'pi pi-angle-double-up',
-};
 const STATUS_TONES: Readonly<Record<IssueStatus, InlineEditTone>> = {
   open: 'neutral',
   in_progress: 'progress',
@@ -125,6 +117,7 @@ interface ProjectMembership {
     ArchivedNotice,
     Breadcrumbs,
     Button,
+    CatalogIcon,
     DatePipe,
     ErrorState,
     FieldRow,
@@ -132,6 +125,7 @@ interface ProjectMembership {
     InlineEdit,
     IssueKey,
     IssuePicker,
+    IssueTypeIcon,
     LoadingSkeleton,
     Menu,
     Message,
@@ -143,6 +137,7 @@ interface ProjectMembership {
     SelectField,
     IssueActivityFeed,
     IssueDescriptionSection,
+    IssueNotesSection,
     UserAvatar,
     UserPicker,
   ],
@@ -202,8 +197,11 @@ export class IssueDetailPage {
   });
 
   protected readonly issueKeyOf = issueKeyOf;
-  protected readonly issueTypeLabels = ISSUE_TYPE_LABELS;
-  protected readonly priorityOptions = PRIORITY_OPTIONS;
+  private readonly catalog = inject(CatalogStore);
+  /** Priorities of the organization, as options of the inline editor (the value is the priority id). */
+  protected readonly priorityOptions = computed<InlineEditOption[]>(() =>
+    this.catalog.priorities().map((item) => ({ value: item.id, label: item.name })),
+  );
   protected readonly linkKindOptions = LINK_KIND_OPTIONS;
   protected readonly noAssignPermission = NO_PERMISSION_TO_ASSIGN;
 
@@ -387,6 +385,8 @@ export class IssueDetailPage {
       if (ref) untracked(() => this.store.fetchIssue(ref));
     });
 
+    this.catalog.ensureLoaded();
+
     // The rest of the page loads once the issue itself is known: a refused issue makes one error, not seven.
     effect(() => {
       const id = this.loadedId();
@@ -466,7 +466,7 @@ export class IssueDetailPage {
     if (!issue) return;
     if (!next) throw new Error('La prioridad es obligatoria');
     await firstValueFrom(
-      this.store.updateDetails(issue.id, payloadFrom(issue, { priority: next as IssuePriority })),
+      this.store.updateDetails(issue.id, payloadFrom(issue, { priorityId: next })),
     );
     this.notify.success('Prioridad actualizada');
   };
@@ -699,10 +699,6 @@ export class IssueDetailPage {
 
   protected statusTone(status: IssueStatus): InlineEditTone {
     return STATUS_TONES[status];
-  }
-
-  protected priorityIcon(priority: IssuePriority): string {
-    return PRIORITY_ICONS[priority];
   }
 
   protected ago(iso: string): string {

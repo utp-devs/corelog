@@ -1,0 +1,24 @@
+<div class="palette-picker" role="radiogroup" [attr.aria-label]="label()">
+  @for (option of options(); track option.key; let index = $index) {
+    <button
+      #option
+      type="button"
+      role="radio"
+      class="palette-picker__option touch-target"
+      [class.palette-picker__option--selected]="option.key === value()"
+      [attr.aria-checked]="option.key === value()"
+      [attr.aria-label]="option.name"
+      [attr.title]="option.name"
+      [attr.data-key]="option.key"
+      [tabindex]="index === stop() ? 0 : -1"
+      (click)="choose(option.key)"
+      (keydown)="onKeydown($event, index)"
+    >
+      @if (kind() === 'icon') {
+        <app-catalog-icon [icon]="option.key" [color]="tint()" />
+      } @else {
+        <span class="palette-picker__swatch" [attr.data-color]="option.key"></span>
+      }
+    </button>
+  }
+</div>

@@ -1,0 +1,84 @@
+<article
+  class="note-card"
+  [class.note-card--pinned]="note().pinned"
+  [attr.data-color]="note().color"
+  data-testid="note-card"
+>
+  <button
+    type="button"
+    class="note-card__open"
+    [attr.aria-label]="'Abrir la nota ' + headline()"
+    (click)="openNote.emit(note())"
+  ></button>
+
+  <div class="note-card__content">
+    @if (hasTitle()) {
+      <h3 class="note-card__title">{{ note().title }}</h3>
+    }
+    @if (hasBody()) {
+      <div class="note-card__body">
+        <app-rich-text-view [value]="note().body" />
+      </div>
+    } @else if (!hasTitle()) {
+      <p class="note-card__placeholder">Nota sin contenido</p>
+    }
+    @if (note().tags.length > 0 || note().issueId) {
+      <ul class="note-card__meta" aria-label="Etiquetas y vínculos">
+        @if (note().issueId) {
+          <li class="note-card__chip note-card__chip--link">
+            <i class="pi pi-link" aria-hidden="true"></i>Incidencia
+          </li>
+        }
+        @for (tag of note().tags; track tag) {
+          <li class="note-card__chip"># {{ tag }}</li>
+        }
+      </ul>
+    }
+  </div>
+
+  <div class="note-card__actions">
+    <button
+      type="button"
+      class="note-card__action"
+      [class.note-card__action--on]="note().pinned"
+      [attr.aria-pressed]="note().pinned"
+      [attr.aria-label]="note().pinned ? 'Quitar la fijación de la nota' : 'Fijar la nota'"
+      [appTooltip]="note().pinned ? 'Quitar fijación' : 'Fijar'"
+      (click)="togglePin.emit(note())"
+    >
+      <i
+        class="pi"
+        [class.pi-bookmark-fill]="note().pinned"
+        [class.pi-bookmark]="!note().pinned"
+        aria-hidden="true"
+      ></i>
+    </button>
+    <button
+      type="button"
+      class="note-card__action"
+      aria-haspopup="dialog"
+      aria-label="Cambiar el color de la nota"
+      appTooltip="Cambiar color"
+      (click)="colors.toggle($event)"
+    >
+      <i class="pi pi-palette" aria-hidden="true"></i>
+    </button>
+    <button
+      type="button"
+      class="note-card__action"
+      aria-label="Eliminar la nota"
+      appTooltip="Eliminar"
+      (click)="deleteNote.emit(note())"
+    >
+      <i class="pi pi-trash" aria-hidden="true"></i>
+    </button>
+  </div>
+
+  <p-popover #colors appendTo="body">
+    <app-note-color-palette
+      label="Color de la nota"
+      [value]="note().color"
+      (valueChange)="pickColor($event); colors.hide()"
+    />
+  </p-popover>
+</article>

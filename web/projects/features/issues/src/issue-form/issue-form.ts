@@ -1,8 +1,6 @@
 import { ChangeDetectionStrategy, Component, effect, input, output, signal } from '@angular/core';
 import { ReactiveFormsModule } from '@angular/forms';
 import {
-  CREATABLE_ISSUE_TYPE_OPTIONS,
-  ISSUE_PRIORITY_OPTIONS,
   ISSUE_SUMMARY_MAX_LENGTH,
   ISSUE_SUMMARY_MIN_LENGTH,
   IssueDraftFormGroup,
@@ -45,6 +43,9 @@ export class IssueForm {
   readonly isSubmitting = input(false);
   readonly projectOptions = input<readonly SelectFieldOption[]>([]);
   readonly projectsLoading = input(false);
+  /** Types of the chosen project and the organization priorities, with icon and color. */
+  readonly typeOptions = input<readonly SelectFieldOption[]>([]);
+  readonly priorityOptions = input<readonly SelectFieldOption[]>([]);
   readonly assigneeUsers = input<PickableUser[]>([]);
   readonly searchUsers = input<(query: string) => Promise<MentionUser[]>>();
 
@@ -53,8 +54,6 @@ export class IssueForm {
   readonly cancelled = output<void>();
 
   protected readonly summaryMaxLength = ISSUE_SUMMARY_MAX_LENGTH;
-  protected readonly typeOptions = CREATABLE_ISSUE_TYPE_OPTIONS;
-  protected readonly priorityOptions = ISSUE_PRIORITY_OPTIONS;
   protected readonly summaryMessages = {
     required: 'Escribe un resumen.',
     minlength: 'El resumen es demasiado corto',

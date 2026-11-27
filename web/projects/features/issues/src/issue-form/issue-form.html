@@ -72,18 +72,18 @@
           </app-field-row>
           <app-field-row #typeRow label="Tipo" [required]="true">
             <app-select-field
-              formControlName="issueType"
+              formControlName="issueTypeId"
               [inputId]="typeRow.controlId"
               [ariaLabelledBy]="typeRow.labelId"
-              [options]="typeOptions"
+              [options]="typeOptions()"
             />
           </app-field-row>
           <app-field-row #priorityRow label="Prioridad" [required]="true">
             <app-select-field
-              formControlName="priority"
+              formControlName="priorityId"
               [inputId]="priorityRow.controlId"
               [ariaLabelledBy]="priorityRow.labelId"
-              [options]="priorityOptions"
+              [options]="priorityOptions()"
             />
           </app-field-row>
           <app-field-row label="Asignar a" [optional]="true">

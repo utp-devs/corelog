@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 import { ONBOARDING_ROUTES, ORG_ADMIN_ROUTES } from './organizations.routes';
 import { OnboardingPage } from './onboarding/onboarding-page';
+import { OrgCatalogsPage } from './catalogs/org-catalogs-page';
 import { OrgInvitationsPage } from './invitations/org-invitations-page';
 import { OrgMembersPage } from './members/org-members-page';
 import { OrgSettingsPage } from './settings/org-settings-page';
@@ -12,15 +13,17 @@ async function loaded(route: Route): Promise<unknown> {
 }
 
 describe('ORG_ADMIN_ROUTES', () => {
-  it('mounts settings, members and invitations with Spanish titles', () => {
+  it('mounts settings, members, catalogs and invitations with Spanish titles', () => {
     expect(ORG_ADMIN_ROUTES.map((route) => route.path)).toEqual([
       'settings',
       'members',
+      'catalogs',
       'invitations',
     ]);
     expect(ORG_ADMIN_ROUTES.map((route) => route.title)).toEqual([
       'Configuración de la organización',
       'Miembros',
+      'Tipos, prioridades y resoluciones',
       'Invitaciones',
     ]);
   });
@@ -28,7 +31,8 @@ describe('ORG_ADMIN_ROUTES', () => {
   it('lazy-loads each page component', async () => {
     expect(await loaded(ORG_ADMIN_ROUTES[0])).toBe(OrgSettingsPage);
     expect(await loaded(ORG_ADMIN_ROUTES[1])).toBe(OrgMembersPage);
-    expect(await loaded(ORG_ADMIN_ROUTES[2])).toBe(OrgInvitationsPage);
+    expect(await loaded(ORG_ADMIN_ROUTES[2])).toBe(OrgCatalogsPage);
+    expect(await loaded(ORG_ADMIN_ROUTES[3])).toBe(OrgInvitationsPage);
   });
 
   it('guards unsaved settings edits on leave', () => {

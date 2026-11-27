@@ -1,0 +1,69 @@
+<div class="project-issue-types">
+  <app-section
+    title="Tipos de incidencia"
+    [description]="
+      configured()
+        ? 'Estos son los tipos que se pueden elegir al crear una incidencia en este proyecto.'
+        : 'Este proyecto usa todos los tipos de la organización. Desactiva los que no necesites.'
+    "
+    ariaLabel="Tipos de incidencia del proyecto"
+  >
+    @if (status() === 'error') {
+      <app-error-state
+        message="No se pudieron cargar los tipos de incidencia."
+        [canRetry]="true"
+        (retry)="retry()"
+      />
+    } @else if (status() === 'loading' || types().length === 0) {
+      <app-loading-skeleton variant="detail" [rows]="4" />
+    } @else {
+      @if (error(); as message) {
+        <p-message severity="error" [closable]="false" role="alert">{{ message }}</p-message>
+      }
+
+      <ul class="project-issue-types__list" data-testid="project-issue-types">
+        @for (item of types(); track item.id) {
+          <li class="project-issue-types__item" [attr.data-name]="item.name">
+            <label
+              class="project-issue-types__label"
+              [attr.title]="lockReason(item)"
+              [class.project-issue-types__label--locked]="isLocked(item) || !canEdit()"
+            >
+              <input
+                type="checkbox"
+                class="project-issue-types__check"
+                [checked]="selected().has(item.id)"
+                [disabled]="!canEdit() || isLocked(item)"
+                (change)="toggle(item)"
+              />
+              <app-catalog-icon [icon]="item.icon" [color]="item.color" />
+              <span class="project-issue-types__name">{{ item.name }}</span>
+              @if (lockReason(item); as reason) {
+                <span class="project-issue-types__hint">{{ reason }}</span>
+              }
+            </label>
+          </li>
+        }
+      </ul>
+
+      @if (canEdit()) {
+        <div class="project-issue-types__actions">
+          <p-button
+            label="Descartar cambios"
+            severity="secondary"
+            [outlined]="true"
+            [disabled]="!dirty() || saving()"
+            (onClick)="reset()"
+          />
+          <p-button
+            label="Guardar"
+            data-testid="project-issue-types-save"
+            [loading]="saving()"
+            [disabled]="!dirty()"
+            (onClick)="save()"
+          />
+        </div>
+      }
+    }
+  </app-section>
+</div>

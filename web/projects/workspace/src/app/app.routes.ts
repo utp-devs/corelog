@@ -2,6 +2,7 @@ import { Routes } from '@angular/router';
 
 import { authGuard, externalPath, requireOrgGuard, sameUrl } from '@corelog/core';
 import { DASHBOARD_ROUTES } from '@corelog/features/dashboard';
+import { NOTES_ROUTES } from '@corelog/features/notes';
 import { PEOPLE_ROUTES } from '@corelog/features/people';
 import { PROFILE_ROUTES } from '@corelog/features/profile';
 import { PROJECT_PLANNING_ROUTES } from '@corelog/features/project-planning';
@@ -50,6 +51,7 @@ export const routes: Routes = [
       { path: 'projects', children: PROJECT_ROUTES },
       { path: 'dashboard', children: DASHBOARD_ROUTES },
       { path: 'teams', children: TEAMS_ROUTES },
+      { path: 'notes', children: NOTES_ROUTES },
       {
         path: '**',
         title: 'Página no encontrada',

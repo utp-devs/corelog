@@ -8,8 +8,8 @@ export function payloadFrom(
   return {
     summary: issue.summary,
     description: issue.description,
-    priority: issue.priority,
-    issueType: issue.issueType,
+    priorityId: issue.priority.id,
+    issueTypeId: issue.issueType.id,
     parentId: issue.parentId ?? undefined,
     dueDate: issue.dueDate ?? undefined,
     storyPoints: issue.storyPoints ?? undefined,

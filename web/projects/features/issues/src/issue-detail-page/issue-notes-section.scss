@@ -1,0 +1,72 @@
+@use '../../../../ui/styles/mixins' as m;
+
+.issue-notes {
+  @include m.flex-column(2);
+
+  &__label {
+    color: var(--cl-text);
+    font-size: var(--cl-font-body);
+    font-weight: var(--cl-weight-semibold);
+  }
+
+  &__actions {
+    @include m.flex-row(2, center, flex-end);
+  }
+
+  &__empty {
+    margin: 0;
+    color: var(--cl-text-subtle);
+  }
+
+  &__list {
+    @include m.flex-column(2);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  &__item {
+    border: 1px solid var(--cl-divider);
+    border-left: var(--cl-space-1) solid var(--cl-note-yellow-accent);
+    border-radius: var(--cl-radius-md);
+    background: var(--cl-note-yellow);
+    color: var(--cl-text);
+
+    @each $color in ('blue', 'green', 'pink', 'purple', 'orange', 'red', 'gray') {
+      &[data-color='#{$color}'] {
+        border-left-color: var(--cl-note-#{$color}-accent);
+        background: var(--cl-note-#{$color});
+      }
+    }
+  }
+
+  &__link {
+    @include m.flex-column(1);
+    min-width: 0;
+    min-height: var(--cl-control-h-md);
+    padding: var(--cl-space-2) var(--cl-space-3);
+    border-radius: var(--cl-radius-md);
+    color: inherit;
+    text-decoration: none;
+
+    &:hover {
+      background: var(--cl-bg-hover);
+    }
+
+    &:focus-visible {
+      outline: none;
+      box-shadow: var(--cl-shadow-focus);
+    }
+  }
+
+  &__title {
+    @include m.truncate;
+    font-weight: var(--cl-weight-semibold);
+  }
+
+  &__text {
+    @include m.truncate;
+    color: var(--cl-text-subtle);
+    font-size: var(--cl-font-small);
+  }
+}

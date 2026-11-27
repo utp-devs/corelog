@@ -1,11 +1,11 @@
-import { ChangeDetectionStrategy, Component, input, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { Button } from 'primeng/button';
 import { InputNumber } from 'primeng/inputnumber';
 import { InputText } from 'primeng/inputtext';
 import {
-  ISSUE_TYPE_LABELS,
-  IssueType,
+  injectIssueCatalogOptions,
+  toCatalogOption,
   MentionUser,
   Issue,
   UpdateIssueDetailsInput,
@@ -18,11 +18,6 @@ import { Section, SectionActions } from '@corelog/ui/section';
 import { SelectField } from '@corelog/ui/select-field';
 
 import { payloadFrom } from '../shared/issue-payload';
-
-const ISSUE_TYPE_OPTIONS = (Object.keys(ISSUE_TYPE_LABELS) as IssueType[]).map((value) => ({
-  value,
-  label: ISSUE_TYPE_LABELS[value],
-}));
 
 /**
  * Description of an issue: rendered text by default, and an edit form with the detail fields
@@ -56,13 +51,23 @@ export class IssueDescriptionSection {
   readonly readOnly = input(false);
   readonly searchUsers = input<(query: string) => Promise<MentionUser[]>>();
 
-  protected readonly issueTypeOptions = ISSUE_TYPE_OPTIONS;
+  private readonly catalog = injectIssueCatalogOptions(() => this.issue().projectId, undefined, {
+    allowSubtasks: true,
+  });
+  /** Types the project uses; the current type stays listed even when the project no longer uses it. */
+  protected readonly issueTypeOptions = computed(() => {
+    const current = this.issue().issueType;
+    const options = this.catalog.typeOptions().map(toCatalogOption);
+    return options.some((option) => option.value === current.id)
+      ? options
+      : [...options, toCatalogOption(current)];
+  });
   protected readonly editing = signal(false);
   protected readonly saving = signal(false);
 
   protected readonly form = new FormGroup({
     description: new FormControl('', { nonNullable: true }),
-    issueType: new FormControl<IssueType>('task', { nonNullable: true }),
+    issueTypeId: new FormControl('', { nonNullable: true }),
     parentId: new FormControl('', { nonNullable: true }),
     dueDate: new FormControl<string | null>(null),
     storyPoints: new FormControl<number | null>(null),
@@ -72,7 +77,7 @@ export class IssueDescriptionSection {
     const issue = this.issue();
     this.form.reset({
       description: issue.description,
-      issueType: issue.issueType,
+      issueTypeId: issue.issueType.id,
       parentId: issue.parentId ?? '',
       dueDate: issue.dueDate ? issue.dueDate.slice(0, 10) : null,
       storyPoints: issue.storyPoints,
@@ -100,7 +105,7 @@ export class IssueDescriptionSection {
       saved = await this.saveDetails()(
         payloadFrom(this.issue(), {
           description: values.description,
-          issueType: values.issueType,
+          issueTypeId: values.issueTypeId,
           parentId: values.parentId || undefined,
           dueDate: this.dueDatePayload(values.dueDate),
           storyPoints: values.storyPoints ?? undefined,

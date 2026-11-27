@@ -18,13 +18,10 @@ import { Message } from 'primeng/message';
 import { Select } from 'primeng/select';
 import { forkJoin, switchMap } from 'rxjs';
 import {
-  ISSUE_PRIORITY_LABELS,
   ISSUE_STATUS_META,
-  ISSUE_TYPE_LABELS,
-  IssuePriority,
   IssueStatus,
-  IssueType,
   AuthStore,
+  CatalogStore,
   ListIssuesFilter,
   NotificationService,
   SavedFilter,
@@ -34,8 +31,12 @@ import {
   IssueStore,
   ISSUES_PATH,
   UNASSIGNED_FILTER,
+  findPriorityByLegacyKey,
+  findTypeByLegacyKey,
   issueKeyOf,
   issuePath,
+  legacyPriorityKeyOf,
+  legacyTypeKeyOf,
 } from '@corelog/core';
 import { DataTablePageChange, DataTablePagination, RowMenuItem } from '@corelog/ui/data-table';
 import { Dialog } from '@corelog/ui/dialog';
@@ -60,14 +61,6 @@ const ASSIGNED_TO_ME = 'me';
 const STATUS_OPTIONS = (Object.keys(ISSUE_STATUS_META) as IssueStatus[]).map((value) => ({
   value,
   label: ISSUE_STATUS_META[value].label,
-}));
-const PRIORITY_OPTIONS = (Object.keys(ISSUE_PRIORITY_LABELS) as IssuePriority[]).map((value) => ({
-  value,
-  label: ISSUE_PRIORITY_LABELS[value],
-}));
-const ISSUE_TYPE_OPTIONS = (Object.keys(ISSUE_TYPE_LABELS) as IssueType[]).map((value) => ({
-  value,
-  label: ISSUE_TYPE_LABELS[value],
 }));
 
 /** Padded rank, so that ranks sort as strings in the same order as the list positions. */
@@ -124,10 +117,12 @@ export class IssuesListPage {
   private readonly notify = inject(NotificationService);
   private readonly savedFilterApi = inject(SavedFilterApiService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly catalog = inject(CatalogStore);
 
   protected readonly statusFilter = signal<IssueStatus | undefined>(undefined);
-  protected readonly priorityFilter = signal<IssuePriority | undefined>(undefined);
-  protected readonly issueTypeFilter = signal<IssueType | undefined>(undefined);
+  /** Catalog id of the selected priority and type. */
+  protected readonly priorityFilter = signal<string | undefined>(undefined);
+  protected readonly issueTypeFilter = signal<string | undefined>(undefined);
   /** Kept in the address (`?assignee=`): `me`, `none` or a member id. */
   private readonly queryParams = toSignal(this.route.queryParamMap, {
     initialValue: this.route.snapshot.queryParamMap,
@@ -149,8 +144,25 @@ export class IssuesListPage {
   protected readonly savedFilterError = signal<string | undefined>(undefined);
 
   protected readonly statusOptions = STATUS_OPTIONS;
-  protected readonly priorityOptions = PRIORITY_OPTIONS;
-  protected readonly issueTypeOptions = ISSUE_TYPE_OPTIONS;
+  protected readonly priorityOptions = computed(() =>
+    this.catalog.priorities().map((item) => ({ value: item.id, label: item.name })),
+  );
+  protected readonly issueTypeOptions = computed(() =>
+    this.catalog.issueTypes().map((item) => ({ value: item.id, label: item.name })),
+  );
+  /**
+   * The list endpoint filters by the legacy keys. A selected catalog item narrows the request through its
+   * legacy key when it has one, and the loaded page is always filtered by the exact item id, so renamed
+   * or custom items and shared legacy keys still show the right rows (totals may count the extras).
+   */
+  private readonly priorityLegacyKey = computed(() => {
+    const item = this.catalog.priorities().find((entry) => entry.id === this.priorityFilter());
+    return item ? legacyPriorityKeyOf(item) : undefined;
+  });
+  private readonly typeLegacyKey = computed(() => {
+    const item = this.catalog.issueTypes().find((entry) => entry.id === this.issueTypeFilter());
+    return item ? legacyTypeKeyOf(item) : undefined;
+  });
 
   protected readonly query = computed(() => this.search().trim() || undefined);
   protected readonly hasActiveFilters = computed(() =>
@@ -170,8 +182,8 @@ export class IssuesListPage {
   );
   protected readonly criteria = computed<SavedFilterCriteria>(() => ({
     status: this.statusFilter(),
-    priority: this.priorityFilter(),
-    issueType: this.issueTypeFilter(),
+    priority: this.priorityLegacyKey(),
+    issueType: this.typeLegacyKey(),
     query: this.query(),
     dueFrom: this.dueFrom(),
     dueTo: this.dueTo(),
@@ -188,8 +200,8 @@ export class IssuesListPage {
   ]);
   protected readonly filter = computed<ListIssuesFilter>(() => ({
     status: this.statusFilter(),
-    priority: this.priorityFilter(),
-    issueType: this.issueTypeFilter(),
+    priority: this.priorityLegacyKey(),
+    issueType: this.typeLegacyKey(),
     assigneeId: this.assigneeIdForApi(),
     query: this.query(),
     dueFrom: this.dueFrom(),
@@ -198,9 +210,18 @@ export class IssuesListPage {
     pageSize: this.pageSize(),
   }));
 
-  protected readonly issues = computed<Issue[]>(() =>
-    [...this.store.issues()].sort((a, b) => a.rank.localeCompare(b.rank)),
-  );
+  protected readonly issues = computed<Issue[]>(() => {
+    const priorityId = this.priorityFilter();
+    const typeId = this.issueTypeFilter();
+    return this.store
+      .issues()
+      .filter(
+        (issue) =>
+          (!priorityId || issue.priority.id === priorityId) &&
+          (!typeId || issue.issueType.id === typeId),
+      )
+      .sort((a, b) => a.rank.localeCompare(b.rank));
+  });
   protected readonly loading = this.store.list.loading;
   protected readonly error = computed(() => this.store.list.error()?.message ?? null);
   protected readonly pagination = computed<DataTablePagination | null>(() =>
@@ -221,18 +242,16 @@ export class IssuesListPage {
     {
       key: 'priority',
       label: 'Filtrar por prioridad',
-      options: this.priorityOptions,
+      options: this.priorityOptions(),
       value: this.priorityFilter(),
-      onChange: (value) =>
-        this.changeFilter(() => this.priorityFilter.set(value as IssuePriority | undefined)),
+      onChange: (value) => this.changeFilter(() => this.priorityFilter.set(value)),
     },
     {
       key: 'issueType',
       label: 'Filtrar por tipo',
-      options: this.issueTypeOptions,
+      options: this.issueTypeOptions(),
       value: this.issueTypeFilter(),
-      onChange: (value) =>
-        this.changeFilter(() => this.issueTypeFilter.set(value as IssueType | undefined)),
+      onChange: (value) => this.changeFilter(() => this.issueTypeFilter.set(value)),
     },
     {
       key: 'assignee',
@@ -281,6 +300,7 @@ export class IssuesListPage {
   ];
 
   constructor() {
+    this.catalog.ensureLoaded();
     // The list reloads whenever a filter, the search text, the page or the page size changes.
     effect(() => {
       const filter = this.filter();
@@ -357,8 +377,16 @@ export class IssuesListPage {
     this.selectedSavedFilter.set(id);
     const criteria = this.savedFilters().find((filter) => filter.id === id)?.criteria;
     this.statusFilter.set(criteria?.status);
-    this.priorityFilter.set(criteria?.priority);
-    this.issueTypeFilter.set(criteria?.issueType);
+    this.priorityFilter.set(
+      criteria?.priority
+        ? findPriorityByLegacyKey(this.catalog.priorities(), criteria.priority)?.id
+        : undefined,
+    );
+    this.issueTypeFilter.set(
+      criteria?.issueType
+        ? findTypeByLegacyKey(this.catalog.issueTypes(), criteria.issueType)?.id
+        : undefined,
+    );
     this.search.set(criteria?.query ?? '');
     this.dueFrom.set(criteria?.dueFrom);
     this.dueTo.set(criteria?.dueTo);

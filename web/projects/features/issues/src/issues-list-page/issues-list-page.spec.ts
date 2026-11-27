@@ -7,7 +7,14 @@ import { guardConsole, installViewport } from '@corelog/core/testing';
 import { Observable, of, throwError } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { ME_ID, pageOf, setupIssues, issueOf } from '../testing/issue-test-kit';
+import {
+  ME_ID,
+  PRIORITY_HIGH,
+  TYPE_BUG,
+  issueOf,
+  pageOf,
+  setupIssues,
+} from '../testing/issue-test-kit';
 import { IssuesListPage } from './issues-list-page';
 
 const SAVED_FILTER: SavedFilter = {
@@ -24,8 +31,8 @@ const sampleIssue: Issue = issueOf({
   id: 'a1b2c3d4-0000-0000-0000-000000000001',
   summary: 'Fallo al guardar el perfil',
   status: 'in_progress',
-  priority: 'high',
-  issueType: 'bug',
+  priority: PRIORITY_HIGH,
+  issueType: TYPE_BUG,
   assigneeId: 'user-2',
   assigneeName: 'Luis Pérez',
   updatedAt: '2026-01-02T10:00:00Z',
@@ -348,6 +355,76 @@ describe('IssuesListPage assignee filter', () => {
     expect(TestBed.inject(Router).url).not.toContain('assignee');
     expect(setup.issueApi.list).toHaveBeenLastCalledWith(
       expect.objectContaining({ assigneeId: undefined }),
+    );
+  });
+});
+
+describe('IssuesListPage catalog filters', () => {
+  let restoreViewport: () => void;
+
+  beforeEach(() => {
+    restoreViewport = installViewport(1280);
+  });
+
+  afterEach(() => {
+    restoreViewport();
+  });
+
+  function definition(fixture: ComponentFixture<IssuesListPage>, key: string) {
+    const bar = fixture.debugElement.query(By.directive(FilterBar)).componentInstance as FilterBar;
+    const found = bar.filters().find((filter) => filter.key === key);
+    if (!found) throw new Error(`no ${key} filter`);
+    return found;
+  }
+
+  it('builds the priority and type options from the organization catalogs', () => {
+    setupIssues();
+    const fixture = render();
+    expect(definition(fixture, 'priority').options).toEqual([
+      { value: 'prio-high', label: 'Alta' },
+      { value: 'prio-medium', label: 'Media' },
+    ]);
+    expect(definition(fixture, 'issueType').options.map((option) => option.label)).toEqual([
+      'Tarea',
+      'Error',
+      'Épica',
+      'Subtarea',
+    ]);
+  });
+
+  it('narrows the request with the legacy key and keeps only the rows of the chosen item', async () => {
+    const other = issueOf({
+      id: 'other',
+      summary: 'Otra',
+      priority: { id: 'prio-custom', name: 'Bloqueante', icon: 'alert', color: 'pink' },
+    });
+    const setup = setupIssues({
+      issueApi: { list: () => of(pageOf([sampleIssue, other])) },
+    });
+    const fixture = render();
+    definition(fixture, 'priority').onChange('prio-high');
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(setup.issueApi.list).toHaveBeenLastCalledWith(
+      expect.objectContaining({ priority: 'high' }),
+    );
+    expect(document.body.textContent).toContain('Fallo al guardar el perfil');
+    expect(document.body.textContent).not.toContain('Otra');
+  });
+
+  it('filters on the page only when the type has no legacy key', async () => {
+    const setup = setupIssues({
+      issueApi: { list: () => of(pageOf([sampleIssue])) },
+    });
+    const fixture = render();
+    definition(fixture, 'issueType').onChange('type-epic');
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(setup.issueApi.list).toHaveBeenLastCalledWith(
+      expect.objectContaining({ issueType: 'epic' }),
     );
   });
 });

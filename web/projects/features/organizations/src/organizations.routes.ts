@@ -19,6 +19,11 @@ export const ORG_ADMIN_ROUTES: Routes = [
     loadComponent: () => import('./members/org-members-page').then((m) => m.OrgMembersPage),
   },
   {
+    path: 'catalogs',
+    title: 'Tipos, prioridades y resoluciones',
+    loadComponent: () => import('./catalogs/org-catalogs-page').then((m) => m.OrgCatalogsPage),
+  },
+  {
     path: 'invitations',
     title: 'Invitaciones',
     loadComponent: () =>

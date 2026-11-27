@@ -1,0 +1,38 @@
+@use '../../../../ui/styles/mixins' as m;
+
+.note-editor {
+  @include m.flex-column(4);
+
+  &__status {
+    @include m.flex-row(1, center, flex-end);
+    min-height: var(--cl-space-6);
+    color: var(--cl-text-subtle);
+    font-size: var(--cl-font-small);
+  }
+
+  &__saved {
+    color: var(--cl-text);
+  }
+
+  &__failed {
+    color: var(--cl-danger-text);
+    font-weight: var(--cl-weight-semibold);
+  }
+
+  &__field {
+    @include m.flex-column(1);
+    min-width: 0;
+  }
+
+  &__label {
+    color: var(--cl-text);
+    font-size: var(--cl-font-body);
+    font-weight: var(--cl-weight-semibold);
+  }
+
+  &__error {
+    margin: 0;
+    color: var(--cl-danger-text);
+    font-size: var(--cl-font-small);
+  }
+}

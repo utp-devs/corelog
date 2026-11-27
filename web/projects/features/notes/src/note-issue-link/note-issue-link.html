@@ -1,0 +1,50 @@
+<div class="note-issue-link">
+  <span class="note-issue-link__label" id="note-issue-link-label">Incidencia vinculada</span>
+  @if (issueId()) {
+    <div class="note-issue-link__current">
+      @if (selected(); as current) {
+        <a class="note-issue-link__issue" [routerLink]="path()">
+          <i class="pi pi-link" aria-hidden="true"></i>
+          <span class="note-issue-link__key">{{ current.key }}</span>
+          <span class="note-issue-link__summary">{{ current.summary }}</span>
+        </a>
+      } @else if (lookupFailed()) {
+        <span class="note-issue-link__issue note-issue-link__issue--missing">
+          <i class="pi pi-link" aria-hidden="true"></i>
+          Incidencia no disponible
+        </span>
+      } @else {
+        <span class="note-issue-link__issue">
+          <i class="pi pi-link" aria-hidden="true"></i>
+          Cargando incidencia…
+        </span>
+      }
+      <button
+        type="button"
+        class="note-issue-link__remove"
+        aria-label="Quitar el vínculo con la incidencia"
+        appTooltip="Quitar vínculo"
+        [disabled]="disabled()"
+        (click)="unlink()"
+      >
+        <i class="pi pi-times" aria-hidden="true"></i>
+      </button>
+    </div>
+  } @else {
+    <p-autocomplete
+      class="note-issue-link__search"
+      optionLabel="label"
+      placeholder="Buscar por clave o resumen"
+      ariaLabelledBy="note-issue-link-label"
+      appendTo="body"
+      [suggestions]="options()"
+      [dropdown]="true"
+      [forceSelection]="true"
+      [delay]="300"
+      [disabled]="disabled()"
+      [emptyMessage]="loading() ? 'Buscando…' : 'Sin resultados'"
+      (completeMethod)="search($event.query)"
+      (onSelect)="pick($event.value)"
+    />
+  }
+</div>

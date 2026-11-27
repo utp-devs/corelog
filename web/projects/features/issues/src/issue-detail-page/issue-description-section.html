@@ -30,10 +30,10 @@
       <div class="issue-description-section__fields">
         <app-field-row #typeRow label="Tipo">
           <app-select-field
-            formControlName="issueType"
+            formControlName="issueTypeId"
             [inputId]="typeRow.controlId"
             [ariaLabelledBy]="typeRow.labelId"
-            [options]="issueTypeOptions"
+            [options]="issueTypeOptions()"
           />
         </app-field-row>
         <app-field-row #dueRow label="Fecha límite" [optional]="true">

@@ -1,0 +1,54 @@
+<app-dialog
+  size="sm"
+  [heading]="'Eliminar ' + copy().oneBare"
+  [open]="open()"
+  (closeRequested)="closeRequested.emit()"
+>
+  <div class="catalog-delete-dialog">
+    @if (error(); as message) {
+      <p-message severity="error" [closable]="false" role="alert">{{ message }}</p-message>
+    }
+
+    @if (item(); as current) {
+      @if (inUse()) {
+        <p class="catalog-delete-dialog__text" data-testid="catalog-delete-in-use">
+          <strong>{{ current.name }}</strong> está en uso: {{ usage() }} lo usan. Elige a qué
+          elemento se moverán antes de eliminarlo.
+        </p>
+        <app-field-row #targetRow label="Mover las incidencias a" [required]="true">
+          <app-select-field
+            placeholder="Elige un elemento"
+            [inputId]="targetRow.controlId"
+            [ariaLabelledBy]="targetRow.labelId"
+            [options]="targets()"
+            [ngModel]="target()"
+            (ngModelChange)="target.set($event)"
+          />
+        </app-field-row>
+      } @else {
+        <p class="catalog-delete-dialog__text">
+          Vas a eliminar <strong>{{ current.name }}</strong
+          >. Ninguna incidencia lo usa, así que no se moverá nada.
+        </p>
+      }
+    }
+  </div>
+
+  <p-button
+    dialogFooter
+    type="button"
+    label="Cancelar"
+    severity="secondary"
+    [disabled]="deleting()"
+    (onClick)="closeRequested.emit()"
+  />
+  <p-button
+    dialogFooter
+    type="button"
+    label="Eliminar"
+    severity="danger"
+    [loading]="deleting()"
+    [disabled]="!canConfirm()"
+    (onClick)="confirm()"
+  />
+</app-dialog>

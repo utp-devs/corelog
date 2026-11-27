@@ -8,7 +8,12 @@ export const WORKSPACE_NAV: ShellNavConfig = {
   menus: [
     { key: 'projects', label: 'Proyectos', path: '/projects' },
     { key: 'filters', label: 'Filtros', path: '/issues' },
-    { key: 'dashboards', label: 'Paneles', path: '/dashboard' },
+    {
+      key: 'dashboards',
+      label: 'Paneles',
+      path: '/dashboard',
+      extras: [{ key: 'notes', label: 'Mis apuntes', path: '/notes' }],
+    },
     {
       key: 'teams',
       label: 'Equipos',

@@ -1,0 +1,71 @@
+<section class="note-composer" [attr.data-color]="color()" aria-label="Nueva nota">
+  @if (!expanded()) {
+    <button type="button" class="note-composer__collapsed" (click)="expand()">
+      <i class="pi pi-pencil" aria-hidden="true"></i>
+      <span>Escribe una nota…</span>
+    </button>
+  } @else {
+    <form class="note-composer__form" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+      <label class="note-composer__sr" for="note-composer-title"
+        >Título de la nota (opcional)</label
+      >
+      <input
+        #titleField
+        id="note-composer-title"
+        pInputText
+        type="text"
+        class="note-composer__title"
+        formControlName="title"
+        autocomplete="off"
+        placeholder="Título (opcional)"
+        [attr.maxlength]="titleMax"
+        (input)="onEdit()"
+      />
+
+      <app-rich-text-editor
+        ariaLabel="Texto de la nota"
+        placeholder="Escribe tu nota. Puedes usar Markdown."
+        formControlName="body"
+        [minRows]="3"
+        [maxRows]="10"
+        [submittable]="true"
+        (submitted)="submit()"
+      />
+
+      @if (showEmptyError()) {
+        <p class="note-composer__error" role="alert">Escribe un título o el texto de la nota.</p>
+      }
+      @if (form.controls.body.errors?.['maxlength']) {
+        <p class="note-composer__error" role="alert">
+          El texto admite hasta {{ bodyMax }} caracteres.
+        </p>
+      }
+
+      <div class="note-composer__options">
+        <app-note-tags-input [(tags)]="tags" [suggestions]="suggestions()" />
+        <div class="note-composer__color">
+          <span class="note-composer__color-label">Color</span>
+          <app-note-color-palette [(value)]="color" label="Color de la nota" />
+        </div>
+      </div>
+
+      <div class="note-composer__footer">
+        <span class="note-composer__privacy">
+          <i class="pi pi-lock" aria-hidden="true"></i>
+          Solo tú puedes ver tus notas
+        </span>
+        <div class="note-composer__buttons">
+          <p-button
+            type="button"
+            label="Cancelar"
+            severity="secondary"
+            [text]="true"
+            [disabled]="saving()"
+            (onClick)="cancel()"
+          />
+          <p-button type="submit" label="Guardar nota" [loading]="saving()" />
+        </div>
+      </div>
+    </form>
+  }
+</section>

@@ -3,6 +3,8 @@ import { TestBed } from '@angular/core/testing';
 import {
   AttachmentApiService,
   AuthStore,
+  CatalogItem,
+  CatalogStore,
   IssueActivity,
   IssueAttachment,
   IssueComment,
@@ -20,6 +22,8 @@ import {
   Issue,
   IssueApiService,
   IssuePage,
+  IssueTypeRef,
+  PriorityRef,
   User,
   UserDirectoryApiService,
 } from '@corelog/core';
@@ -48,6 +52,72 @@ function fakeOf<T extends object>(
   return fake;
 }
 
+export const TYPE_BUG: IssueTypeRef = {
+  id: 'type-bug',
+  name: 'Error',
+  icon: 'bug',
+  color: 'red',
+  hierarchyLevel: 0,
+};
+export const PRIORITY_MEDIUM: PriorityRef = {
+  id: 'prio-medium',
+  name: 'Media',
+  icon: 'minus',
+  color: 'amber',
+};
+export const PRIORITY_HIGH: PriorityRef = {
+  id: 'prio-high',
+  name: 'Alta',
+  icon: 'arrow-up',
+  color: 'orange',
+};
+
+export function catalogItemOf(
+  id: string,
+  name: string,
+  overrides: Partial<CatalogItem> = {},
+): CatalogItem {
+  return {
+    id,
+    name,
+    description: '',
+    icon: 'task',
+    color: 'blue',
+    hierarchyLevel: 0,
+    position: 0,
+    isDefault: false,
+    usageCount: 0,
+    createdAt: '2026-01-01T00:00:00Z',
+    updatedAt: '2026-01-01T00:00:00Z',
+    ...overrides,
+  };
+}
+
+export const TEST_TYPES: CatalogItem[] = [
+  catalogItemOf('type-task', 'Tarea', { isDefault: true }),
+  catalogItemOf('type-bug', 'Error', { icon: 'bug', color: 'red' }),
+  catalogItemOf('type-epic', 'Épica', { hierarchyLevel: 1, icon: 'epic' }),
+  catalogItemOf('type-sub', 'Subtarea', { hierarchyLevel: -1, icon: 'subtask' }),
+];
+export const TEST_PRIORITIES: CatalogItem[] = [
+  catalogItemOf('prio-high', 'Alta', { icon: 'arrow-up', color: 'orange' }),
+  catalogItemOf('prio-medium', 'Media', { icon: 'minus', color: 'amber', isDefault: true }),
+];
+
+/** Catalog store with the default catalogs already loaded, for pages that read the catalogs. */
+export function fakeCatalogStore() {
+  return {
+    issueTypes: signal(TEST_TYPES),
+    priorities: signal(TEST_PRIORITIES),
+    resolutions: signal<CatalogItem[]>([]),
+    defaultIssueType: signal(TEST_TYPES[0]),
+    defaultPriority: signal(TEST_PRIORITIES[1]),
+    loaded: signal(true),
+    ensureLoaded: vi.fn(),
+    projectIssueTypes: vi.fn(() => of({ items: TEST_TYPES, configured: false })),
+  };
+}
+
 export function issueOf(overrides: Partial<Issue> = {}): Issue {
   return {
     id: ISSUE_ID,
@@ -56,9 +126,11 @@ export function issueOf(overrides: Partial<Issue> = {}): Issue {
     summary: 'Error de prueba',
     description: 'Descripción de la incidencia',
     status: 'open',
-    priority: 'medium',
+    priority: PRIORITY_MEDIUM,
     projectId: PROJECT_ID,
-    issueType: 'bug',
+    issueType: TYPE_BUG,
+    resolution: null,
+    resolvedAt: null,
     parentId: null,
     dueDate: null,
     storyPoints: null,
@@ -222,6 +294,7 @@ export function setupIssues(options: IssueTestOptions = {}): IssueTestSetup {
       { provide: UserDirectoryApiService, useValue: directoryApi },
       { provide: SavedFilterApiService, useValue: savedFilterApi },
       { provide: OrganizationStore, useValue: organizations },
+      { provide: CatalogStore, useValue: fakeCatalogStore() },
       { provide: AuthStore, useValue: auth },
       { provide: MEMBER_NAMES_SOURCE, useValue: memberSource },
     ],

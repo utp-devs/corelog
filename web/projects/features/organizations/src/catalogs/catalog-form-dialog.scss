@@ -1,0 +1,15 @@
+@use '../../../../ui/styles/mixins' as m;
+
+.catalog-form-dialog {
+  @include m.flex-column(4);
+
+  &__input {
+    width: 100%;
+  }
+
+  &__default {
+    @include m.flex-row(2);
+    color: var(--cl-text);
+    cursor: pointer;
+  }
+}

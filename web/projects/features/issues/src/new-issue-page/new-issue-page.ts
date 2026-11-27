@@ -21,6 +21,8 @@ import {
   IssueStore,
   asApiError,
   createIssueDraftForm,
+  injectIssueCatalogOptions,
+  toCatalogOption,
   isApiError,
   issueKeyOf,
   issuePath,
@@ -75,6 +77,18 @@ export class NewIssuePage {
     initialValue: false,
   });
 
+  private readonly projectId = toSignal(this.form.controls.projectId.valueChanges, {
+    initialValue: '',
+  });
+  private readonly catalog = injectIssueCatalogOptions(() => this.projectId(), {
+    type: this.form.controls.issueTypeId,
+    priority: this.form.controls.priorityId,
+  });
+  protected readonly typeOptions = computed(() => this.catalog.typeOptions().map(toCatalogOption));
+  protected readonly priorityOptions = computed(() =>
+    this.catalog.priorityOptions().map(toCatalogOption),
+  );
+
   protected readonly isSubmitting = signal(false);
   protected readonly searchUsers = this.mentions.search;
 
@@ -118,8 +132,8 @@ export class NewIssuePage {
         projectId: values.projectId,
         summary: values.summary.trim(),
         description: values.description,
-        priority: values.priority,
-        issueType: values.issueType,
+        priorityId: values.priorityId || undefined,
+        issueTypeId: values.issueTypeId || undefined,
       })
       .pipe(
         switchMap((issue) =>
@@ -134,10 +148,10 @@ export class NewIssuePage {
           // Reset first so the unsaved-changes guard sees a clean form when the navigation starts.
           this.form.reset({
             projectId: values.projectId,
-            issueType: 'task',
+            issueTypeId: values.issueTypeId,
             summary: '',
             description: '',
-            priority: 'medium',
+            priorityId: values.priorityId,
             assigneeId: undefined,
           });
           void this.router.navigateByUrl(issuePath(issue.key));

@@ -1,0 +1,76 @@
+@use '../../../../ui/styles/mixins' as m;
+
+.note-issue-link {
+  @include m.flex-column(1);
+  min-width: 0;
+
+  &__label {
+    color: var(--cl-text);
+    font-size: var(--cl-font-body);
+    font-weight: var(--cl-weight-semibold);
+  }
+
+  &__search {
+    width: 100%;
+  }
+
+  &__current {
+    @include m.flex-row(1);
+  }
+
+  &__issue {
+    @include m.flex-row(2);
+    flex: 1 1 auto;
+    min-width: 0;
+    min-height: var(--cl-control-h-md);
+    padding: 0 var(--cl-space-3);
+    border: 1px solid var(--cl-border);
+    border-radius: var(--cl-radius-md);
+    background: var(--cl-bg-sunken);
+    color: var(--cl-text);
+    text-decoration: none;
+
+    &--missing {
+      color: var(--cl-text-subtle);
+    }
+
+    &:is(a):hover {
+      background: var(--cl-bg-hover);
+    }
+
+    &:is(a):focus-visible {
+      outline: none;
+      box-shadow: var(--cl-shadow-focus);
+    }
+  }
+
+  &__key {
+    flex: none;
+    font-weight: var(--cl-weight-semibold);
+  }
+
+  &__summary {
+    @include m.truncate;
+    color: var(--cl-text-subtle);
+  }
+
+  &__remove {
+    @include m.touch-target;
+    flex: none;
+    border: 0;
+    border-radius: var(--cl-radius-md);
+    background: transparent;
+    color: var(--cl-text-subtle);
+    cursor: pointer;
+
+    &:hover {
+      background: var(--cl-bg-hover);
+      color: var(--cl-text);
+    }
+
+    &:focus-visible {
+      outline: none;
+      box-shadow: var(--cl-shadow-focus);
+    }
+  }
+}

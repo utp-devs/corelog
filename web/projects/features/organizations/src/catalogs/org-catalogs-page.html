@@ -1,0 +1,98 @@
+<app-page-container variant="wide" pageName="org-catalogs" [ready]="!loading()" [fill]="true">
+  <app-page-header title="Tipos, prioridades y resoluciones" [subtitle]="subtitle()">
+    @if (canManage() && !loadError()) {
+      <div appPageHeaderActions>
+        <p-button
+          icon="pi pi-plus"
+          [label]="copy().createLabel"
+          data-testid="catalog-create"
+          (onClick)="openCreate()"
+        />
+      </div>
+    }
+  </app-page-header>
+
+  @if (!canManage()) {
+    <p-message severity="info" [closable]="false" class="org-catalogs-page__banner">
+      <span class="org-catalogs-page__alert-body">
+        <strong>Solo lectura</strong>
+        <span
+          >Puedes ver los catálogos de la organización. Solo los administradores pueden
+          cambiarlos.</span
+        >
+      </span>
+    </p-message>
+  }
+
+  <div class="org-catalogs-page__tabs" role="tablist" aria-label="Catálogos de incidencias">
+    @for (tab of tabs; track tab.kind; let index = $index) {
+      <button
+        type="button"
+        role="tab"
+        class="org-catalogs-page__tab touch-target"
+        aria-controls="catalog-panel"
+        [id]="'catalog-tab-' + tab.kind"
+        [class.org-catalogs-page__tab--active]="tab.kind === active()"
+        [attr.aria-selected]="tab.kind === active()"
+        [tabindex]="tab.kind === active() ? 0 : -1"
+        (click)="select(tab.kind)"
+        (keydown)="onTabKeydown($event, index)"
+      >
+        {{ tab.title }}
+      </button>
+    }
+  </div>
+
+  <app-section id="catalog-panel" role="tabpanel" [fill]="true" [ariaLabel]="copy().title">
+    <p class="org-catalogs-page__intro">{{ copy().intro }}</p>
+
+    @if (listError(); as message) {
+      <div role="alert" class="org-catalogs-page__banner">
+        <p-message severity="error" [closable]="true" (onClose)="listError.set(null)">{{
+          message
+        }}</p-message>
+      </div>
+    }
+
+    @if (loading()) {
+      <app-loading-skeleton variant="table" [rows]="5" />
+    } @else if (loadError(); as failure) {
+      <app-error-state [status]="failure.status" [canRetry]="true" (retry)="retry()" />
+    } @else {
+      <app-catalog-table
+        [kind]="active()"
+        [items]="items()"
+        [canManage]="canManage()"
+        [busy]="busy()"
+        (reordered)="reorder($event)"
+        (editRequested)="openEdit($event)"
+        (defaultRequested)="makeDefault($event)"
+        (deleteRequested)="openDelete($event)"
+        (createRequested)="openCreate()"
+      />
+    }
+  </app-section>
+
+  <p class="org-catalogs-page__sr" role="status" aria-live="polite">{{ announcement() }}</p>
+
+  <app-catalog-form-dialog
+    [open]="formOpen()"
+    [kind]="active()"
+    [item]="editing()"
+    [saving]="busy()"
+    [error]="formError()"
+    (saved)="save($event)"
+    (closeRequested)="closeForm()"
+  />
+
+  <app-catalog-delete-dialog
+    [open]="deleteOpen()"
+    [kind]="active()"
+    [item]="deleting()"
+    [catalog]="items()"
+    [deleting]="busy()"
+    [error]="deleteError()"
+    (confirmed)="confirmDelete($event)"
+    (closeRequested)="closeDelete()"
+  />
+</app-page-container>

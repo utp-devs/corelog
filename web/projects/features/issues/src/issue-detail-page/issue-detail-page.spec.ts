@@ -109,6 +109,38 @@ describe('IssueDetailPage', () => {
     harness.fixture.detectChanges();
   });
 
+  it('shows the priority and the type with the catalog name, and the resolution when set', async () => {
+    setupIssues({
+      user: userOf({ role: 'admin' }),
+      issueApi: {
+        getById: () =>
+          of(
+            issueOf({
+              status: 'resolved',
+              resolution: { id: 'res-1', name: 'No se reproduce' },
+              resolvedAt: AT,
+            }),
+          ),
+      },
+    });
+    await renderDetail();
+
+    expect(rowOf('Prioridad').textContent).toContain('Media');
+    expect(rowOf('Prioridad').querySelector('app-catalog-icon')?.getAttribute('data-color')).toBe(
+      'amber',
+    );
+    expect(document.querySelector('[data-testid="issue-resolution"]')?.textContent).toContain(
+      'No se reproduce',
+    );
+    expect(sectionOf('Más información').textContent).toContain('Error');
+  });
+
+  it('does not show a resolution for an open issue', async () => {
+    setupIssues({ user: userOf({ role: 'admin' }) });
+    await renderDetail();
+    expect(document.querySelector('[data-testid="issue-resolution"]')).toBeNull();
+  });
+
   it('stacks into one column on tablets and puts the details block right after the title', async () => {
     restoreViewport();
     restoreViewport = installViewport(800);

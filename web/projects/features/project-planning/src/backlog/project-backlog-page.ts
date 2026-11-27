@@ -10,6 +10,8 @@ import {
 import { RouterLink } from '@angular/router';
 import {
   AuthStore,
+  PriorityRef,
+  priorityDisplayOf,
   BacklogItem,
   BacklogSprint,
   BacklogStore,
@@ -175,6 +177,10 @@ export class ProjectBacklogPage {
 
   protected statusLabel(status: WorkItemStatus): string {
     return statusName(status, status);
+  }
+
+  protected priorityOf(key: string): PriorityRef {
+    return priorityDisplayOf(key);
   }
 
   protected typeLabel(type: string): string {

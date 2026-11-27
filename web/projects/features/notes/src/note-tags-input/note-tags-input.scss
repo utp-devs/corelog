@@ -1,0 +1,123 @@
+@use '../../../../ui/styles/mixins' as m;
+
+.note-tags-input {
+  @include m.flex-column(1);
+  min-width: 0;
+
+  &__label {
+    color: var(--cl-text);
+    font-size: var(--cl-font-body);
+    font-weight: var(--cl-weight-semibold);
+  }
+
+  &__box {
+    @include m.cluster(1);
+    min-height: var(--cl-control-h-md);
+    padding: var(--cl-space-1) var(--cl-space-2);
+    border: 1px solid var(--cl-border-strong);
+    border-radius: var(--cl-radius-md);
+    background: var(--cl-bg-surface);
+
+    &:focus-within {
+      box-shadow: var(--cl-shadow-focus);
+    }
+  }
+
+  &__chip {
+    @include m.flex-row(1);
+    max-width: 100%;
+    padding: 0 0 0 var(--cl-space-2);
+    border-radius: var(--cl-radius-full);
+    background: var(--cl-brand-subtle);
+    color: var(--cl-text);
+    font-size: var(--cl-font-small);
+  }
+
+  &__chip-text {
+    @include m.truncate;
+  }
+
+  &__remove {
+    @include m.flex-row(0, center, center);
+    width: var(--cl-control-h-sm);
+    height: var(--cl-control-h-sm);
+    min-width: var(--cl-control-h-sm);
+    min-height: var(--cl-control-h-sm);
+    padding: 0;
+    border: 0;
+    border-radius: var(--cl-radius-full);
+    background: transparent;
+    color: var(--cl-text-subtle);
+    font-size: var(--cl-font-caption);
+    cursor: pointer;
+
+    &:hover {
+      color: var(--cl-text);
+    }
+
+    &:focus-visible {
+      outline: none;
+      box-shadow: var(--cl-shadow-focus);
+    }
+
+    @media (pointer: coarse) {
+      width: var(--cl-control-h-lg);
+      height: var(--cl-control-h-lg);
+      min-width: var(--cl-control-h-lg);
+      min-height: var(--cl-control-h-lg);
+    }
+  }
+
+  &__field {
+    flex: 1 1 8rem;
+    min-width: 8rem;
+    border: 0;
+    box-shadow: none;
+    background: transparent;
+
+    &:focus {
+      outline: none;
+      box-shadow: none;
+    }
+  }
+
+  &__hint,
+  &__error {
+    margin: 0;
+    font-size: var(--cl-font-small);
+  }
+
+  &__hint {
+    color: var(--cl-text-subtle);
+  }
+
+  &__error {
+    color: var(--cl-danger-text);
+  }
+
+  &__picks {
+    @include m.cluster(1);
+  }
+
+  &__pick {
+    @include m.flex-row(1);
+    min-height: var(--cl-control-h-sm);
+    padding: 0 var(--cl-space-2);
+    border: 1px dashed var(--cl-border-strong);
+    border-radius: var(--cl-radius-full);
+    background: transparent;
+    color: var(--cl-text);
+    font: inherit;
+    font-size: var(--cl-font-small);
+    cursor: pointer;
+
+    &:hover {
+      background: var(--cl-bg-hover);
+    }
+
+    &:focus-visible {
+      outline: none;
+      box-shadow: var(--cl-shadow-focus);
+    }
+  }
+}

@@ -1,0 +1,43 @@
+@use '../../../../ui/styles/mixins' as m;
+
+.note-color-palette {
+  @include m.cluster(1);
+
+  &__swatch {
+    @include m.flex-row(0, center, center);
+    box-sizing: border-box;
+    min-width: var(--cl-control-h-sm);
+    min-height: var(--cl-control-h-sm);
+    width: var(--cl-control-h-sm);
+    height: var(--cl-control-h-sm);
+    padding: 0;
+    border: 2px solid var(--cl-divider);
+    border-radius: var(--cl-radius-full);
+    background: var(--cl-note-yellow);
+    color: var(--cl-text);
+    cursor: pointer;
+
+    @each $color in ('yellow', 'blue', 'green', 'pink', 'purple', 'orange', 'red', 'gray') {
+      &[data-color='#{$color}'] {
+        border-color: var(--cl-note-#{$color}-accent);
+        background: var(--cl-note-#{$color});
+      }
+    }
+
+    &:focus-visible {
+      outline: none;
+      box-shadow: var(--cl-shadow-focus);
+    }
+
+    @media (pointer: coarse) {
+      width: var(--cl-control-h-lg);
+      height: var(--cl-control-h-lg);
+      min-width: var(--cl-control-h-lg);
+      min-height: var(--cl-control-h-lg);
+    }
+  }
+
+  &__check {
+    font-size: var(--cl-font-small);
+  }
+}

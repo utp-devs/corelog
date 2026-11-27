@@ -1,0 +1,233 @@
+@use '../../../../ui/styles/mixins' as m;
+
+// Tag sidebar (240 px) beside the main column. Below 992 px the filters become a row of chips on top.
+.notes-page {
+  display: grid;
+  grid-template-columns: 15rem minmax(0, 1fr);
+  flex: 1 1 auto;
+  gap: var(--cl-space-6);
+  align-items: stretch;
+
+  @include m.respond-down(992px) {
+    grid-template-columns: minmax(0, 1fr);
+    // The filters keep their height; the notes take the spare height of the page.
+    grid-template-rows: auto minmax(0, 1fr);
+    gap: var(--cl-space-4);
+  }
+
+  &__nav {
+    @include m.flex-column(2);
+    align-self: start;
+    position: sticky;
+    top: var(--cl-space-4);
+
+    @include m.respond-down(992px) {
+      position: static;
+    }
+  }
+
+  &__nav-title {
+    margin: var(--cl-space-3) 0 0;
+    padding: 0 var(--cl-space-3);
+    color: var(--cl-text-subtle);
+    font-size: var(--cl-font-small);
+    font-weight: var(--cl-weight-semibold);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+
+    @include m.respond-down(992px) {
+      display: none;
+    }
+  }
+
+  &__nav-list {
+    @include m.flex-column(1);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+
+    @include m.respond-down(992px) {
+      @include m.cluster(2);
+      flex-direction: row;
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      padding-bottom: var(--cl-space-1);
+    }
+  }
+
+  &__nav-item {
+    @include m.flex-row(2);
+    box-sizing: border-box;
+    width: 100%;
+    min-height: var(--cl-control-h-md);
+    padding: 0 var(--cl-space-3);
+    border: 0;
+    border-radius: var(--cl-radius-md);
+    background: transparent;
+    color: var(--cl-text);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+
+    &:hover {
+      background: var(--cl-bg-hover);
+    }
+
+    &:focus-visible {
+      outline: none;
+      box-shadow: var(--cl-shadow-focus);
+    }
+
+    &--active {
+      background: var(--cl-bg-selected);
+      font-weight: var(--cl-weight-semibold);
+    }
+
+    @include m.respond-down(992px) {
+      flex: none;
+      width: auto;
+      border: 1px solid var(--cl-border);
+      border-radius: var(--cl-radius-full);
+    }
+
+    @media (pointer: coarse) {
+      min-height: var(--cl-control-h-lg);
+    }
+  }
+
+  &__nav-label {
+    @include m.truncate;
+    flex: 1 1 auto;
+  }
+
+  &__nav-count {
+    flex: none;
+    color: var(--cl-text-subtle);
+    font-size: var(--cl-font-small);
+  }
+
+  &__main {
+    @include m.flex-column(4);
+    min-width: 0;
+  }
+
+  // Surface that holds the cards. It grows to the bottom of the page, so a short list never leaves bare space.
+  &__board {
+    @include m.flex-column(4);
+    flex: 1 1 auto;
+    min-width: 0;
+    padding: var(--cl-space-4);
+    border: 1px solid var(--cl-border);
+    border-radius: var(--cl-radius-lg);
+    background: var(--cl-bg-surface);
+    box-shadow: var(--cl-elev-raised);
+  }
+
+  &__search {
+    max-width: 28rem;
+  }
+
+  &__section {
+    @include m.flex-column(3);
+  }
+
+  &__section-title {
+    margin: 0;
+    color: var(--cl-text-subtle);
+    font-size: var(--cl-font-small);
+    font-weight: var(--cl-weight-semibold);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+
+    &--hidden {
+      @include m.visually-hidden;
+    }
+  }
+
+  // Masonry-like layout: columns of at least 17 rem share the width, cards keep an equal gutter.
+  &__grid {
+    column-width: 17rem;
+    column-count: var(--notes-columns, auto);
+    column-gap: var(--cl-space-4);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  &__item {
+    break-inside: avoid;
+    margin: 0 0 var(--cl-space-4);
+  }
+
+  &__more {
+    @include m.flex-row(0, center, center);
+  }
+
+  &__examples {
+    @include m.flex-column(4);
+  }
+
+  &__example {
+    @include m.flex-column(2, flex-start);
+    box-sizing: border-box;
+    padding: var(--cl-space-4);
+    border: 1px dashed var(--cl-border-strong);
+    border-radius: var(--cl-radius-lg);
+    background: var(--cl-note-yellow);
+    color: var(--cl-text);
+
+    @each $color in ('blue', 'green', 'pink', 'purple', 'orange', 'red', 'gray') {
+      &[data-color='#{$color}'] {
+        background: var(--cl-note-#{$color});
+      }
+    }
+  }
+
+  &__example-title {
+    margin: 0;
+    font-size: var(--cl-font-body-strong);
+    font-weight: var(--cl-weight-semibold);
+  }
+
+  &__example-body {
+    display: block;
+  }
+
+  &__undo {
+    @include m.flex-row(3, center, space-between);
+    position: fixed;
+    bottom: var(--cl-space-6);
+    left: 50%;
+    z-index: var(--cl-z-toast);
+    box-sizing: border-box;
+    width: min(24rem, calc(100% - var(--cl-space-8)));
+    padding: var(--cl-space-2) var(--cl-space-2) var(--cl-space-2) var(--cl-space-4);
+    border: 1px solid var(--cl-border-strong);
+    border-radius: var(--cl-radius-lg);
+    background: var(--cl-bg-elevated);
+    color: var(--cl-text);
+    box-shadow: var(--cl-elev-overlay);
+    transform: translateX(-50%);
+  }
+
+  &__undo-action {
+    @include m.touch-target;
+    padding: 0 var(--cl-space-3);
+    border: 0;
+    border-radius: var(--cl-radius-md);
+    background: transparent;
+    color: var(--cl-brand);
+    font: inherit;
+    font-weight: var(--cl-weight-semibold);
+    cursor: pointer;
+
+    &:hover {
+      background: var(--cl-bg-hover);
+    }
+
+    &:focus-visible {
+      outline: none;
+      box-shadow: var(--cl-shadow-focus);
+    }
+  }
+}

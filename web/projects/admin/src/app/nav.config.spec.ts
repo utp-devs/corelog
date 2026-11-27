@@ -84,6 +84,7 @@ describe('admin navigation', () => {
       expect(items.map((item) => [item.label, item.path])).toEqual([
         ['Configuración', '/organization/settings'],
         ['Miembros', '/organization/members'],
+        ['Incidencias', '/organization/catalogs'],
         ['Invitaciones', '/organization/invitations'],
       ]);
     });

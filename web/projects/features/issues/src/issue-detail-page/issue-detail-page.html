@@ -37,18 +37,18 @@
           </app-field-row>
 
           <app-field-row label="Prioridad">
-            <div class="issue-detail__priority" [attr.data-priority]="selected.priority">
-              <i
+            <div class="issue-detail__priority">
+              <app-catalog-icon
                 class="issue-detail__priority-icon"
-                [class]="priorityIcon(selected.priority)"
-                aria-hidden="true"
-              ></i>
+                [icon]="selected.priority.icon"
+                [color]="selected.priority.color"
+              />
               <app-inline-edit
                 label="Prioridad"
                 type="select"
                 appearance="field"
-                [value]="selected.priority"
-                [options]="priorityOptions"
+                [value]="selected.priority.id"
+                [options]="priorityOptions()"
                 [locked]="archived()"
                 [disabledReason]="archivedReason"
                 [onSave]="savePriority"
@@ -127,7 +127,18 @@
             }}</a>
           </dd>
           <dt>Tipo</dt>
-          <dd>{{ issueTypeLabels[selected.issueType] }}</dd>
+          <dd><app-issue-type-icon [type]="selected.issueType" [showLabel]="true" /></dd>
+          @if (selected.resolution; as resolution) {
+            <dt>Resolución</dt>
+            <dd data-testid="issue-resolution">
+              {{ resolution.name }}
+              @if (selected.resolvedAt) {
+                <span class="issue-detail__muted" [appTooltip]="exact(selected.resolvedAt)">
+                  ({{ ago(selected.resolvedAt) }})
+                </span>
+              }
+            </dd>
+          }
           <dt>Fecha límite</dt>
           <dd>
             {{ selected.dueDate ? (selected.dueDate | date: 'dd/MM/yyyy') : 'Sin fecha límite' }}
@@ -360,6 +371,8 @@
           </ul>
         }
       </app-section>
+
+      <app-issue-notes-section [issueId]="selected.id" />
 
       <app-issue-activity
         [comments]="visibleComments()"

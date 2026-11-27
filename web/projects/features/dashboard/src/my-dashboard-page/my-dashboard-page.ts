@@ -7,8 +7,9 @@ import {
   DashboardIssue,
   DashboardSprint,
   DashboardStore,
-  IssuePriority,
   IssueStatus,
+  PriorityRef,
+  priorityRefFromKey,
   Project,
   ProjectApiService,
   RecentItem,
@@ -44,7 +45,6 @@ const STATUS_COLORS: Readonly<Record<string, string>> = {
 const FALLBACK_STATUS_COLOR = 'var(--cl-cat-todo)';
 
 const STATUSES: readonly string[] = ['open', 'in_progress', 'resolved', 'closed'];
-const PRIORITIES: readonly string[] = ['low', 'medium', 'high', 'critical'];
 
 const SHORT_DATE = new Intl.DateTimeFormat('es', { day: 'numeric', month: 'short' });
 const LONG_DATE = new Intl.DateTimeFormat('es', {
@@ -198,8 +198,8 @@ export class MyDashboardPage {
     return STATUSES.includes(issue.status) ? (issue.status as IssueStatus) : null;
   }
 
-  protected priorityOf(issue: DashboardIssue): IssuePriority | null {
-    return PRIORITIES.includes(issue.priority) ? (issue.priority as IssuePriority) : null;
+  protected priorityOf(issue: DashboardIssue): PriorityRef | null {
+    return priorityRefFromKey(issue.priority) ?? null;
   }
 
   private loadProjects(): void {

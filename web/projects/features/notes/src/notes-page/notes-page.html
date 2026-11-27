@@ -1,0 +1,203 @@
+<app-page-container variant="wide" pageName="notes" [ready]="ready()" [fill]="true">
+  <app-page-header
+    title="Mis apuntes"
+    subtitle="Tus notas personales. Solo tú puedes ver tus notas."
+  />
+
+  <div class="notes-page">
+    <nav class="notes-page__nav" aria-label="Filtrar notas">
+      <ul class="notes-page__nav-list">
+        <li>
+          <button
+            type="button"
+            class="notes-page__nav-item"
+            [class.notes-page__nav-item--active]="!pinnedOnly() && tag() === null"
+            [attr.aria-current]="!pinnedOnly() && tag() === null ? 'true' : null"
+            (click)="showAll()"
+          >
+            <i class="pi pi-th-large" aria-hidden="true"></i>
+            <span class="notes-page__nav-label">Todas</span>
+          </button>
+        </li>
+        <li>
+          <button
+            type="button"
+            class="notes-page__nav-item"
+            [class.notes-page__nav-item--active]="pinnedOnly()"
+            [attr.aria-current]="pinnedOnly() ? 'true' : null"
+            (click)="showPinned()"
+          >
+            <i class="pi pi-bookmark" aria-hidden="true"></i>
+            <span class="notes-page__nav-label">Fijadas</span>
+          </button>
+        </li>
+      </ul>
+
+      @if (tags().length > 0) {
+        <h2 class="notes-page__nav-title">Etiquetas</h2>
+        <ul class="notes-page__nav-list">
+          @for (entry of tags(); track entry.tag) {
+            <li>
+              <button
+                type="button"
+                class="notes-page__nav-item"
+                [class.notes-page__nav-item--active]="tag() === entry.tag"
+                [attr.aria-current]="tag() === entry.tag ? 'true' : null"
+                (click)="showTag(entry.tag)"
+              >
+                <i class="pi pi-tag" aria-hidden="true"></i>
+                <span class="notes-page__nav-label">{{ entry.tag }}</span>
+                <span class="notes-page__nav-count">{{ entry.count }}</span>
+              </button>
+            </li>
+          }
+        </ul>
+      }
+    </nav>
+
+    <div class="notes-page__main">
+      <app-note-composer [suggestions]="tagNames()" [defaultTag]="tag()" />
+
+      <div class="notes-page__search">
+        <app-search-input
+          [(value)]="query"
+          placeholder="Buscar en mis notas"
+          ariaLabel="Buscar en mis notas"
+        />
+      </div>
+
+      <div class="notes-page__board">
+        @if (loading()) {
+          <div class="notes-page__grid" role="status" aria-busy="true" aria-label="Cargando notas">
+            @for (index of skeletonCards; track index) {
+              <div class="notes-page__item" aria-hidden="true">
+                <app-loading-skeleton variant="card" />
+              </div>
+            }
+          </div>
+        } @else if (failed()) {
+          <app-error-state [message]="errorMessage()" [canRetry]="true" (retry)="load()" />
+        } @else if (showExamples()) {
+          <section class="notes-page__examples" aria-labelledby="notes-examples-title">
+            <app-empty-state
+              title="Aún no tienes notas"
+              description="Escribe ideas, pendientes o enlaces. Solo tú puedes verlos. Empieza con uno de estos ejemplos o crea el tuyo."
+            >
+              <span action>
+                <p-button label="Crear mi primera nota" icon="pi pi-plus" (onClick)="startNote()" />
+              </span>
+            </app-empty-state>
+            <h2 id="notes-examples-title" class="notes-page__section-title">Ejemplos</h2>
+            <ul class="notes-page__grid" [style.--notes-columns]="examples.length">
+              @for (example of examples; track example.title) {
+                <li class="notes-page__item">
+                  <div class="notes-page__example" [attr.data-color]="example.color">
+                    <h3 class="notes-page__example-title">{{ example.title }}</h3>
+                    <app-rich-text-view class="notes-page__example-body" [value]="example.body" />
+                    <p-button
+                      label="Usar este ejemplo"
+                      icon="pi pi-plus"
+                      severity="secondary"
+                      size="small"
+                      [outlined]="true"
+                      (onClick)="useExample(example)"
+                    />
+                  </div>
+                </li>
+              }
+            </ul>
+          </section>
+        } @else if (isEmpty()) {
+          <app-empty-state
+            title="Ninguna nota coincide"
+            description="Prueba con otra búsqueda o quita los filtros."
+          >
+            <p-button
+              action
+              label="Quitar filtros"
+              severity="secondary"
+              [outlined]="true"
+              (onClick)="clearFilters()"
+            />
+          </app-empty-state>
+        } @else {
+          @if (pinned().length > 0) {
+            <section class="notes-page__section" aria-labelledby="notes-pinned-title">
+              <h2 id="notes-pinned-title" class="notes-page__section-title">Fijadas</h2>
+              <div
+                class="notes-page__grid"
+                data-testid="notes-pinned"
+                [style.--notes-columns]="pinned().length"
+              >
+                @for (note of pinned(); track note.id) {
+                  <div class="notes-page__item">
+                    <app-note-card
+                      [note]="note"
+                      (openNote)="open($event)"
+                      (togglePin)="togglePin($event)"
+                      (changeColor)="changeColor($event)"
+                      (deleteNote)="remove($event)"
+                    />
+                  </div>
+                }
+              </div>
+            </section>
+          }
+          @if (others().length > 0) {
+            <section class="notes-page__section" aria-labelledby="notes-others-title">
+              <h2
+                id="notes-others-title"
+                class="notes-page__section-title"
+                [class.notes-page__section-title--hidden]="!showOthersHeading()"
+              >
+                Otras
+              </h2>
+              <div
+                class="notes-page__grid"
+                data-testid="notes-others"
+                [style.--notes-columns]="others().length"
+              >
+                @for (note of others(); track note.id) {
+                  <div class="notes-page__item">
+                    <app-note-card
+                      [note]="note"
+                      (openNote)="open($event)"
+                      (togglePin)="togglePin($event)"
+                      (changeColor)="changeColor($event)"
+                      (deleteNote)="remove($event)"
+                    />
+                  </div>
+                }
+              </div>
+            </section>
+          }
+          @if (hasMore()) {
+            <div class="notes-page__more">
+              <p-button
+                label="Cargar más"
+                severity="secondary"
+                [outlined]="true"
+                [loading]="loadingMore()"
+                (onClick)="loadMore()"
+              />
+            </div>
+          }
+        }
+      </div>
+    </div>
+  </div>
+
+  <app-note-editor
+    [note]="editing()"
+    [suggestions]="tagNames()"
+    (closed)="closeEditor()"
+    (deleted)="remove($event)"
+  />
+
+  @if (undoable()) {
+    <div class="notes-page__undo" role="status" aria-live="polite">
+      <span>Nota eliminada</span>
+      <button type="button" class="notes-page__undo-action" (click)="undo()">Deshacer</button>
+    </div>
+  }
+</app-page-container>

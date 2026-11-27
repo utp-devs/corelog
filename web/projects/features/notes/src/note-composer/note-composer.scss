@@ -1,0 +1,87 @@
+@use '../../../../ui/styles/mixins' as m;
+
+.note-composer {
+  box-sizing: border-box;
+  border: 1px solid var(--cl-border);
+  border-left: var(--cl-space-1) solid var(--cl-note-yellow-accent);
+  border-radius: var(--cl-radius-lg);
+  background: var(--cl-note-yellow);
+  color: var(--cl-text);
+  box-shadow: var(--cl-elev-raised);
+
+  @each $color in ('blue', 'green', 'pink', 'purple', 'orange', 'red', 'gray') {
+    &[data-color='#{$color}'] {
+      border-left-color: var(--cl-note-#{$color}-accent);
+      background: var(--cl-note-#{$color});
+    }
+  }
+
+  &__collapsed {
+    @include m.flex-row(2);
+    box-sizing: border-box;
+    width: 100%;
+    min-height: var(--cl-control-h-lg);
+    padding: 0 var(--cl-space-4);
+    border: 0;
+    border-radius: var(--cl-radius-lg);
+    background: transparent;
+    color: var(--cl-text-subtle);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+
+    &:focus-visible {
+      outline: none;
+      box-shadow: var(--cl-shadow-focus);
+    }
+  }
+
+  &__form {
+    @include m.flex-column(3);
+    padding: var(--cl-space-4);
+  }
+
+  &__sr {
+    @include m.visually-hidden;
+  }
+
+  &__title {
+    width: 100%;
+    font-weight: var(--cl-weight-semibold);
+  }
+
+  &__error {
+    margin: 0;
+    color: var(--cl-text);
+    font-size: var(--cl-font-small);
+    font-weight: var(--cl-weight-semibold);
+  }
+
+  &__options {
+    @include m.flex-column(3);
+  }
+
+  &__color {
+    @include m.flex-column(1);
+  }
+
+  &__color-label {
+    color: var(--cl-text);
+    font-size: var(--cl-font-body);
+    font-weight: var(--cl-weight-semibold);
+  }
+
+  &__footer {
+    @include m.cluster(2, center, space-between);
+  }
+
+  &__privacy {
+    @include m.flex-row(1);
+    color: var(--cl-text-subtle);
+    font-size: var(--cl-font-small);
+  }
+
+  &__buttons {
+    @include m.cluster(2);
+  }
+}

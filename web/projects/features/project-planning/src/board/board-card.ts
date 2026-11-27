@@ -3,8 +3,9 @@ import { RouterLink } from '@angular/router';
 import {
   BoardCard,
   BoardMoveTarget,
-  ISSUE_TYPES,
-  IssueType,
+  IssueTypeRef,
+  issueTypeRefFromKey,
+  priorityDisplayOf,
   issueKeyOf,
   shortIssueKeyOf,
   issuePath,
@@ -40,8 +41,9 @@ export class BoardCardView {
   protected readonly fullKey = computed(() => issueKeyOf(this.card()));
   protected readonly shortKey = computed(() => shortIssueKeyOf(this.card()));
   protected readonly href = computed(() => issuePath(this.card().id));
-  protected readonly issueType = computed<IssueType | undefined>(() =>
-    ISSUE_TYPES.find((type) => type === this.card().type),
+  protected readonly issueType = computed<IssueTypeRef | undefined>(() =>
+    issueTypeRefFromKey(this.card().type),
   );
+  protected readonly priority = computed(() => priorityDisplayOf(this.card().priority));
   protected readonly showMenu = computed(() => !this.readOnly() && this.targets().length > 0);
 }

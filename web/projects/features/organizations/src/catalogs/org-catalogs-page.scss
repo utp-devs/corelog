@@ -1,0 +1,57 @@
+@use '../../../../ui/styles/mixins' as m;
+
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.org-catalogs-page {
+  &__banner {
+    display: block;
+    margin-bottom: var(--cl-space-4);
+  }
+
+  &__alert-body {
+    @include m.flex-column(1);
+  }
+
+  &__tabs {
+    @include m.cluster(1);
+    margin-bottom: var(--cl-space-4);
+    border-bottom: 1px solid var(--cl-divider);
+  }
+
+  &__tab {
+    padding: var(--cl-space-2) var(--cl-space-3);
+    border: 0;
+    border-bottom: 2px solid transparent;
+    background: transparent;
+    color: var(--cl-text-subtle);
+    font: inherit;
+    font-weight: var(--cl-weight-semibold);
+    cursor: pointer;
+
+    &:hover {
+      color: var(--cl-text);
+    }
+
+    &:focus-visible {
+      outline: none;
+      box-shadow: var(--cl-shadow-focus);
+    }
+
+    &--active {
+      border-bottom-color: var(--cl-brand);
+      color: var(--cl-text);
+    }
+  }
+
+  &__intro {
+    margin: 0 0 var(--cl-space-4);
+    color: var(--cl-text-subtle);
+  }
+
+  &__sr {
+    @include m.visually-hidden;
+  }
+}

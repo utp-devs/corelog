@@ -89,27 +89,10 @@
   &__priority {
     @include m.flex-row(2);
     min-width: 0;
-
-    &[data-priority='critical'] {
-      --issue-detail-priority: var(--cl-prio-highest);
-    }
-
-    &[data-priority='high'] {
-      --issue-detail-priority: var(--cl-prio-high);
-    }
-
-    &[data-priority='medium'] {
-      --issue-detail-priority: var(--cl-prio-medium);
-    }
-
-    &[data-priority='low'] {
-      --issue-detail-priority: var(--cl-prio-low);
-    }
   }
 
   &__priority-icon {
     flex: none;
-    color: var(--issue-detail-priority, var(--cl-prio-lowest));
   }
 
   &__inline-actions {
@@ -195,6 +178,10 @@
 
   &__empty {
     margin: var(--cl-space-3) 0 0;
+    color: var(--cl-text-subtle);
+  }
+
+  &__muted {
     color: var(--cl-text-subtle);
   }
 

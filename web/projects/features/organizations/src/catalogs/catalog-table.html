@@ -1,0 +1,126 @@
+@if (items().length === 0) {
+  <app-empty-state [title]="copy().emptyTitle" description="Crea el primero para empezar.">
+    @if (canManage()) {
+      <p-button
+        action
+        icon="pi pi-plus"
+        [label]="copy().createLabel"
+        (onClick)="createRequested.emit()"
+      />
+    }
+  </app-empty-state>
+} @else {
+  <ul
+    class="catalog-table"
+    cdkDropList
+    cdkDropListLockAxis="y"
+    [cdkDropListDisabled]="reorderDisabled()"
+    [attr.aria-label]="copy().title"
+    [attr.data-testid]="'catalog-list-' + kind()"
+    (cdkDropListDropped)="drop($event)"
+  >
+    @for (
+      item of items();
+      track item.id;
+      let index = $index;
+      let first = $first;
+      let last = $last
+    ) {
+      <li
+        class="catalog-table__row"
+        cdkDrag
+        data-testid="catalog-row"
+        [cdkDragDisabled]="reorderDisabled()"
+        [attr.data-name]="item.name"
+      >
+        @if (canManage()) {
+          <span class="catalog-table__handle" cdkDragHandle aria-hidden="true">
+            <i class="pi pi-bars"></i>
+          </span>
+        }
+
+        @if (copy().hasIcon) {
+          <app-catalog-icon class="catalog-table__icon" [icon]="item.icon" [color]="item.color" />
+        }
+
+        <div class="catalog-table__main">
+          <span class="catalog-table__name">{{ item.name }}</span>
+          @if (item.description) {
+            <span class="catalog-table__description">{{ item.description }}</span>
+          }
+        </div>
+
+        <div class="catalog-table__tags">
+          @if (item.isDefault) {
+            <span class="catalog-table__tag catalog-table__tag--default">Predeterminado</span>
+          }
+          @if (hierarchyText(item); as level) {
+            <span class="catalog-table__tag">{{ level }}</span>
+          }
+        </div>
+
+        <span class="catalog-table__usage" data-testid="catalog-usage">{{
+          usageText(item.usageCount)
+        }}</span>
+
+        @if (canManage()) {
+          <div class="catalog-table__actions">
+            <p-button
+              icon="pi pi-arrow-up"
+              severity="secondary"
+              [text]="true"
+              class="touch-target"
+              [ariaLabel]="'Subir ' + item.name"
+              appTooltip="Subir"
+              [disabled]="first || busy()"
+              (onClick)="move(index, -1)"
+            />
+            <p-button
+              icon="pi pi-arrow-down"
+              severity="secondary"
+              [text]="true"
+              class="touch-target"
+              [ariaLabel]="'Bajar ' + item.name"
+              appTooltip="Bajar"
+              [disabled]="last || busy()"
+              (onClick)="move(index, 1)"
+            />
+            @if (!item.isDefault) {
+              <p-button
+                icon="pi pi-star"
+                severity="secondary"
+                [text]="true"
+                class="touch-target"
+                [ariaLabel]="'Usar ' + item.name + ' como predeterminado'"
+                appTooltip="Usar como predeterminado"
+                [disabled]="busy()"
+                (onClick)="defaultRequested.emit(item)"
+              />
+            }
+            <p-button
+              icon="pi pi-pencil"
+              severity="secondary"
+              [text]="true"
+              class="touch-target"
+              [ariaLabel]="'Editar ' + item.name"
+              appTooltip="Editar"
+              [disabled]="busy()"
+              (onClick)="editRequested.emit(item)"
+            />
+            <span [appTooltip]="deleteReason(item) ?? 'Eliminar'">
+              <p-button
+                icon="pi pi-trash"
+                severity="danger"
+                [text]="true"
+                class="touch-target"
+                [ariaLabel]="'Eliminar ' + item.name"
+                [disabled]="busy() || deleteReason(item) !== null"
+                (onClick)="deleteRequested.emit(item)"
+              />
+            </span>
+          </div>
+        }
+      </li>
+    }
+  </ul>
+}

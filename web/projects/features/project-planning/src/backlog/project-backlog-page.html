@@ -86,7 +86,7 @@
                         >
                         <span class="project-backlog__key">{{ shortKey(issue) }}</span>
                       </div>
-                      <app-priority-tag [priority]="issue.priority" />
+                      <app-priority-tag [priority]="priorityOf(issue.priority)" />
                       <app-lozenge [category]="statusCategory(issue.status)">{{
                         statusLabel(issue.status)
                       }}</app-lozenge>
@@ -153,7 +153,7 @@
                 {{ typeLabel(row.type) }}
               </ng-template>
               <ng-template appDataTableCell="priority" let-row>
-                <app-priority-tag [priority]="row.priority" />
+                <app-priority-tag [priority]="priorityOf(row.priority)" />
               </ng-template>
               <ng-template appDataTableCell="status" let-row>
                 <app-lozenge [category]="statusCategory(row.status)">{{
@@ -193,7 +193,7 @@
                 <div class="project-backlog__meta">
                   <span class="project-backlog__key">{{ shortKey(row) }}</span>
                   <span class="project-backlog__type">{{ typeLabel(row.type) }}</span>
-                  <app-priority-tag [priority]="row.priority" />
+                  <app-priority-tag [priority]="priorityOf(row.priority)" />
                   <app-lozenge [category]="statusCategory(row.status)">{{
                     statusLabel(row.status)
                   }}</app-lozenge>

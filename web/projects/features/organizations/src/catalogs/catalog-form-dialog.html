@@ -1,0 +1,77 @@
+<app-dialog
+  size="md"
+  [heading]="heading()"
+  [open]="open()"
+  (closeRequested)="closeRequested.emit()"
+>
+  <form class="catalog-form-dialog" [formGroup]="form" (ngSubmit)="submit()">
+    @if (error(); as message) {
+      <p-message severity="error" [closable]="false" role="alert">{{ message }}</p-message>
+    }
+
+    <app-field-row
+      label="Nombre"
+      [required]="true"
+      [control]="form.controls.name"
+      [messages]="nameMessages"
+      [submitted]="submitted()"
+    >
+      <input
+        pInputText
+        appFieldControl
+        data-autofocus
+        type="text"
+        formControlName="name"
+        autocomplete="off"
+        class="catalog-form-dialog__input"
+        [maxlength]="copy().nameMax"
+      />
+    </app-field-row>
+
+    <app-field-row label="Descripción" [optional]="true">
+      <textarea
+        pTextarea
+        appFieldControl
+        formControlName="description"
+        rows="2"
+        maxlength="500"
+        class="catalog-form-dialog__input"
+      ></textarea>
+    </app-field-row>
+
+    @if (copy().hasIcon) {
+      <app-field-row label="Color" [required]="true">
+        <app-palette-picker
+          kind="color"
+          label="Color"
+          [value]="color()"
+          (valueChange)="form.controls.color.setValue($event)"
+        />
+      </app-field-row>
+      <app-field-row label="Icono" [required]="true">
+        <app-palette-picker
+          kind="icon"
+          label="Icono"
+          [tint]="color()"
+          [value]="icon()"
+          (valueChange)="form.controls.icon.setValue($event)"
+        />
+      </app-field-row>
+    }
+
+    <label class="catalog-form-dialog__default">
+      <input type="checkbox" formControlName="isDefault" />
+      <span>Usar como predeterminado</span>
+    </label>
+  </form>
+
+  <p-button
+    dialogFooter
+    type="button"
+    label="Cancelar"
+    severity="secondary"
+    [disabled]="saving()"
+    (onClick)="closeRequested.emit()"
+  />
+  <p-button dialogFooter type="button" label="Guardar" [loading]="saving()" (onClick)="submit()" />
+</app-dialog>

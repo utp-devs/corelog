@@ -22,6 +22,7 @@ export const SETTINGS_SECTIONS: readonly SettingsSection[] = [
   { path: 'access', label: 'Acceso', icon: 'pi pi-users' },
   { path: 'roles', label: 'Roles', icon: 'pi pi-id-card' },
   { path: 'permissions', label: 'Permisos', icon: 'pi pi-lock' },
+  { path: 'issue-types', label: 'Tipos de incidencia', icon: 'pi pi-tags' },
   { path: 'danger', label: 'Zona de peligro', icon: 'pi pi-exclamation-triangle', danger: true },
 ];
 

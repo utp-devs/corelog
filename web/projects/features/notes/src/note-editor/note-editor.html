@@ -1,0 +1,96 @@
+<app-side-panel
+  size="lg"
+  [open]="note() !== null"
+  [heading]="heading()"
+  subtitle="Solo tú puedes ver tus notas."
+  (closeRequested)="close()"
+>
+  @if (note()) {
+    <form class="note-editor" [formGroup]="form" (submit)="$event.preventDefault()" novalidate>
+      <div
+        class="note-editor__status"
+        role="status"
+        aria-live="polite"
+        data-testid="note-save-state"
+      >
+        @switch (saveState()) {
+          @case ('saving') {
+            <span><i class="pi pi-spin pi-spinner" aria-hidden="true"></i> Guardando…</span>
+          }
+          @case ('saved') {
+            <span class="note-editor__saved"
+              ><i class="pi pi-check" aria-hidden="true"></i> Guardado</span
+            >
+          }
+          @case ('error') {
+            <span class="note-editor__failed">
+              <i class="pi pi-exclamation-triangle" aria-hidden="true"></i>
+              No se pudo guardar. Vuelve a intentarlo al hacer otro cambio.
+            </span>
+          }
+        }
+      </div>
+
+      <div class="note-editor__field">
+        <label class="note-editor__label" for="note-editor-title">Título</label>
+        <input
+          id="note-editor-title"
+          pInputText
+          type="text"
+          formControlName="title"
+          autocomplete="off"
+          placeholder="Sin título"
+          [attr.maxlength]="titleMax"
+        />
+      </div>
+
+      <div class="note-editor__field">
+        <span class="note-editor__label" id="note-editor-body-label">Texto</span>
+        <app-rich-text-editor
+          ariaLabel="Texto de la nota"
+          placeholder="Escribe tu nota. Puedes usar Markdown."
+          formControlName="body"
+          [minRows]="8"
+          [maxRows]="20"
+        />
+        @if (form.controls.body.errors?.['maxlength']) {
+          <p class="note-editor__error" role="alert">
+            El texto admite hasta {{ bodyMax }} caracteres.
+          </p>
+        }
+      </div>
+
+      <app-note-tags-input
+        [tags]="tags()"
+        [suggestions]="suggestions()"
+        (tagsChange)="setTags($event)"
+      />
+
+      <div class="note-editor__field">
+        <span class="note-editor__label">Color</span>
+        <app-note-color-palette [value]="color()" (valueChange)="setColor($event)" />
+      </div>
+
+      <app-note-issue-link [issueId]="issueId()" (issueIdChange)="setIssue($event)" />
+    </form>
+  }
+
+  <ng-container panelFooter>
+    <p-button
+      label="Eliminar"
+      icon="pi pi-trash"
+      severity="danger"
+      [text]="true"
+      (onClick)="remove()"
+    />
+    <p-button
+      type="button"
+      [label]="pinned() ? 'Quitar fijación' : 'Fijar'"
+      icon="pi pi-bookmark"
+      severity="secondary"
+      [outlined]="true"
+      (onClick)="togglePin()"
+    />
+    <p-button label="Listo" icon="pi pi-check" (onClick)="close()" />
+  </ng-container>
+</app-side-panel>

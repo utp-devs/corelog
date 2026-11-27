@@ -1,0 +1,21 @@
+<div class="note-color-palette" role="radiogroup" [attr.aria-label]="label()">
+  @for (color of colors; track color; let index = $index) {
+    <button
+      #swatch
+      type="button"
+      role="radio"
+      class="note-color-palette__swatch"
+      [attr.data-color]="color"
+      [attr.aria-checked]="value() === color"
+      [attr.aria-label]="labels[color]"
+      [attr.tabindex]="value() === color ? 0 : -1"
+      [appTooltip]="labels[color]"
+      (click)="select(color)"
+      (keydown)="onKeydown($event, index)"
+    >
+      @if (value() === color) {
+        <i class="pi pi-check note-color-palette__check" aria-hidden="true"></i>
+      }
+    </button>
+  }
+</div>

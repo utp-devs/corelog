@@ -1,0 +1,82 @@
+@use '../../../../ui/styles/mixins' as m;
+
+:host {
+  display: block;
+}
+
+.palette-picker {
+  @include m.cluster(1);
+
+  &__option {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--cl-control-h-md);
+    height: var(--cl-control-h-md);
+    padding: 0;
+    border: 1px solid var(--cl-border-strong);
+    border-radius: var(--cl-radius-md);
+    background: var(--cl-bg-surface);
+    color: var(--cl-text);
+    font-size: var(--cl-font-body-strong);
+    cursor: pointer;
+
+    &:hover {
+      background: var(--cl-bg-hover);
+    }
+
+    &:focus-visible {
+      outline: none;
+      box-shadow: var(--cl-shadow-focus);
+    }
+
+    &--selected {
+      border-color: var(--cl-brand);
+      background: var(--cl-bg-selected);
+      box-shadow: inset 0 0 0 1px var(--cl-brand);
+    }
+  }
+
+  &__swatch {
+    width: 1.25em;
+    height: 1.25em;
+    border-radius: var(--cl-radius-full);
+    background: var(--cl-hue-gray);
+
+    &[data-color='red'] {
+      background: var(--cl-hue-red);
+    }
+
+    &[data-color='orange'] {
+      background: var(--cl-hue-orange);
+    }
+
+    &[data-color='amber'] {
+      background: var(--cl-hue-amber);
+    }
+
+    &[data-color='green'] {
+      background: var(--cl-hue-green);
+    }
+
+    &[data-color='teal'] {
+      background: var(--cl-hue-teal);
+    }
+
+    &[data-color='blue'] {
+      background: var(--cl-hue-blue);
+    }
+
+    &[data-color='indigo'] {
+      background: var(--cl-hue-indigo);
+    }
+
+    &[data-color='purple'] {
+      background: var(--cl-hue-purple);
+    }
+
+    &[data-color='pink'] {
+      background: var(--cl-hue-pink);
+    }
+  }
+}

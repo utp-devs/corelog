@@ -44,7 +44,7 @@
     card().summary
   }}</a>
   <div class="board-card__footer">
-    <app-priority-tag [priority]="card().priority" />
+    <app-priority-tag [priority]="priority()" />
     @if (card().storyPoints !== undefined) {
       <app-lozenge>{{ card().storyPoints }} pts</app-lozenge>
     }
