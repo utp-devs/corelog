@@ -466,7 +466,14 @@ function measureLayout(input: PageInput): PageOutput {
     // Fluid boards are measured per column; everything else against the visible main area.
     const columns =
       input.template === 'fluid'
-        ? Array.from(main.querySelectorAll('[data-board-column]')).filter(isVisible)
+        ? Array.from(main.querySelectorAll('[data-board-column]'))
+            .filter(isVisible)
+            // A column that sticks out of the scroll box and only shows a sliver is not a gap of the page.
+            .filter((col) => {
+              const box = boxOf(col);
+              const shown = clipToViewport(box);
+              return shown.right - shown.left >= box.width / 2;
+            })
         : [];
     const regions: Array<{ name: string; region: Region; skipTop: number }> =
       columns.length > 0

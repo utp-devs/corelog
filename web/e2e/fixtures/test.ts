@@ -40,7 +40,9 @@ export interface DataHelpers {
   /** POST a resource as `role`, unwraps the `data` envelope and returns it. */
   create<T>(role: RoleKey, path: string, body: unknown): Promise<T>;
   /** Registers a resource to be deleted (DELETE path) when the test ends. Only for endpoints that have DELETE. */
-  track(role: RoleKey, deletePath: string): void;
+  track(role: RoleKey, deletePath: string, body?: unknown): void;
+  /** Registers a project (created by the test through the UI or the API) to be deleted with its name as confirmation. */
+  trackProject(role: RoleKey, project: { id: string; name: string }): void;
   /** Creates an organization as `role` (it becomes the owner). Deleted at the end of the test. */
   createOrg(role: RoleKey, prefix?: string): Promise<{ id: string; slug: string; name: string }>;
   /** Creates a team in the organization as `role`. Deleted at the end of the test. */
@@ -149,7 +151,7 @@ export const test = base.extend<E2eFixtures>({
 
   data: async ({ api, playwright }, provide) => {
     const env = readE2eEnv();
-    const tracked: Array<{ role: RoleKey; deletePath: string }> = [];
+    const tracked: Array<{ role: RoleKey; deletePath: string; body?: unknown }> = [];
     const users: Array<{ email: string; password: string; token: string }> = [];
 
     const unwrap = async <T>(
@@ -164,14 +166,36 @@ export const test = base.extend<E2eFixtures>({
       return (JSON.parse(text) as { data: T }).data;
     };
 
+    /**
+     * Body of the cleanup DELETE. A project is deleted with its current name (a test may have renamed it);
+     * null means the project is already gone.
+     */
+    const currentConfirmation = async (
+      client: APIRequestContext,
+      item: { deletePath: string; body?: unknown },
+    ): Promise<unknown> => {
+      if (!item.body || !/^projects\/[^/]+$/.test(item.deletePath)) return item.body;
+      const current = await client.get(item.deletePath);
+      if (!current.ok()) return null;
+      const name = ((await current.json()) as { data: { name: string } }).data.name;
+      return { confirmation: name };
+    };
+
     const helpers: DataHelpers = {
       uniqueName: (prefix) => `e2e-${slug(prefix)}-${randomSuffix()}`,
       create: async <T>(role: RoleKey, path: string, body: unknown): Promise<T> => {
         const client = await api(role);
         return unwrap<T>(await client.post(path, { data: body }), `POST ${path}`);
       },
-      track: (role, deletePath) => {
-        tracked.push({ role, deletePath });
+      track: (role, deletePath, body) => {
+        tracked.push({ role, deletePath, body });
+      },
+      trackProject: (role, project) => {
+        tracked.push({
+          role,
+          deletePath: `projects/${project.id}`,
+          body: { confirmation: project.name },
+        });
       },
       createOrg: async (role, prefix = 'org') => {
         // Slugs: 3 to 40 lowercase letters, digits and hyphens.
@@ -207,7 +231,7 @@ export const test = base.extend<E2eFixtures>({
             visibility: 'open',
           },
         );
-        helpers.track(role, `projects/${project.id}`);
+        helpers.trackProject(role, project);
         return project;
       },
       inviteUser: async (role, organizationId, email, inviteRole = 'member') => {
@@ -255,7 +279,9 @@ export const test = base.extend<E2eFixtures>({
     // Cleanup in reverse creation order. Items already gone (404) are fine.
     for (const item of tracked.reverse()) {
       const client = await api(item.role);
-      const response = await client.delete(item.deletePath);
+      const body = await currentConfirmation(client, item);
+      if (body === null) continue;
+      const response = await client.delete(item.deletePath, body ? { data: body } : {});
       // 409: an accepted or revoked invitation cannot be deleted again; it is already closed.
       expect(
         [200, 204, 404, 409],

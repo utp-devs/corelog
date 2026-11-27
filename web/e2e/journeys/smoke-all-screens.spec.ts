@@ -70,9 +70,9 @@ const screens: readonly Screen[] = [
     template: 'wide',
   },
   {
-    name: 'project-permissions',
-    path: (ids) => `/projects/${ids.projectId}/permisos`,
-    template: 'reading',
+    name: 'project-settings',
+    path: (ids) => `/projects/${ids.projectId}/settings/details`,
+    template: 'wide',
   },
   { name: 'teams', path: () => '/teams', template: 'wide' },
   { name: 'people', path: () => '/people', template: 'wide' },
