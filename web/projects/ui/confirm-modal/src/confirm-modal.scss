@@ -1,0 +1,22 @@
+::ng-deep .cl-confirm-dialog {
+  width: 520px;
+  max-width: calc(100vw - var(--cl-space-8));
+}
+
+.cl-modal-text {
+  margin: 0 0 var(--cl-space-2);
+  color: var(--cl-text);
+}
+
+.cl-modal-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--cl-space-2);
+}
+
+@media (max-width: 767.98px) {
+  .cl-modal-actions ::ng-deep .p-button {
+    min-height: 44px;
+  }
+}

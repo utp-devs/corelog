@@ -1,0 +1,8 @@
+<div class="container" role="alert">
+  <i class="pi pi-exclamation-circle icon" aria-hidden="true"></i>
+  <p class="title">{{ title() }}</p>
+  <p class="message">{{ message() }}</p>
+  @if (canRetry()) {
+    <p-button label="Reintentar" (onClick)="retry.emit()" />
+  }
+</div>

@@ -1,0 +1,39 @@
+<p-dialog
+  styleClass="cl-confirm-dialog"
+  [visible]="open()"
+  [header]="title()"
+  [modal]="true"
+  [dismissableMask]="true"
+  (visibleChange)="onVisibleChange($event)"
+  (onHide)="onDialogHidden()"
+>
+  @if (description()) {
+    <p class="cl-modal-text">{{ description() }}</p>
+  }
+  <div class="field">
+    <label [attr.for]="fieldId">
+      Escribe <strong>{{ confirmation() }}</strong> para confirmar
+    </label>
+    <input
+      #field
+      [id]="fieldId"
+      type="text"
+      autocomplete="off"
+      class="input"
+      [value]="typed()"
+      (input)="onTyped(field.value)"
+    />
+  </div>
+  <ng-template pTemplate="footer">
+    <div class="cl-modal-actions">
+      <p-button label="Cancelar" severity="secondary" [outlined]="true" (onClick)="onCancel()" />
+      <p-button
+        [label]="confirmText()"
+        severity="danger"
+        [disabled]="!matches()"
+        [loading]="loading()"
+        (onClick)="onConfirm()"
+      />
+    </div>
+  </ng-template>
+</p-dialog>

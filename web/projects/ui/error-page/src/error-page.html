@@ -1,0 +1,12 @@
+<div class="page" role="alert" [attr.data-variant]="variant()">
+  <i class="page-icon" [class]="copy().icon" aria-hidden="true"></i>
+  <p class="code">{{ variant() }}</p>
+  <h1 class="title">{{ title() ?? copy().title }}</h1>
+  <p class="description">{{ description() ?? copy().description }}</p>
+  <div class="actions">
+    <a class="primary" routerLink="/">Volver al inicio</a>
+    @if (variant() === 500 && canRetry()) {
+      <p-button label="Reintentar" (onClick)="retry.emit()" />
+    }
+  </div>
+</div>

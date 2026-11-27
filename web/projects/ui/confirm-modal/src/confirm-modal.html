@@ -1,0 +1,28 @@
+<p-dialog
+  styleClass="cl-confirm-dialog"
+  [visible]="open()"
+  [header]="title()"
+  [modal]="true"
+  [dismissableMask]="true"
+  (visibleChange)="onVisibleChange($event)"
+>
+  @if (description()) {
+    <p class="cl-modal-text">{{ description() }}</p>
+  }
+  <ng-template pTemplate="footer">
+    <div class="cl-modal-actions">
+      <p-button
+        [label]="cancelText()"
+        severity="secondary"
+        [outlined]="true"
+        (onClick)="onCancel()"
+      />
+      <p-button
+        [label]="confirmText()"
+        [severity]="danger() ? 'danger' : 'primary'"
+        [loading]="loading()"
+        (onClick)="onConfirm()"
+      />
+    </div>
+  </ng-template>
+</p-dialog>

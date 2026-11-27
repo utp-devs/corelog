@@ -1,0 +1,56 @@
+<section class="card" [attr.aria-labelledby]="titleId" [attr.data-testid]="testId()">
+  <header class="header">
+    <div>
+      <h3 class="title" [id]="titleId">{{ title() }}</h3>
+      @if (description()) {
+        <p class="description">{{ description() }}</p>
+      }
+    </div>
+    @if (!isEmpty()) {
+      <button
+        type="button"
+        class="toggle"
+        [attr.aria-expanded]="showData()"
+        [attr.aria-controls]="tableId"
+        (click)="toggleData()"
+      >
+        Ver datos
+      </button>
+    }
+  </header>
+
+  @if (isEmpty()) {
+    <p class="empty">{{ emptyText() }}</p>
+  } @else {
+    <div class="body">
+      <canvas #canvas aria-hidden="true"></canvas>
+    </div>
+    <table
+      [id]="tableId"
+      class="table"
+      [class.sr-only]="!showData()"
+      [attr.aria-label]="'Datos: ' + title()"
+    >
+      <thead>
+        <tr>
+          @for (header of table().headers; track $index) {
+            <th scope="col">{{ header }}</th>
+          }
+        </tr>
+      </thead>
+      <tbody>
+        @for (row of table().rows; track $index) {
+          <tr>
+            @for (cell of row; track $index; let first = $first) {
+              @if (first) {
+                <th scope="row">{{ cell }}</th>
+              } @else {
+                <td>{{ cell }}</td>
+              }
+            }
+          </tr>
+        }
+      </tbody>
+    </table>
+  }
+</section>
