@@ -27,9 +27,10 @@ const (
 )
 
 type Handler struct {
-	service   port.Service
-	manager   port.ProjectManager
-	jwtSecret string
+	service     port.Service
+	manager     port.ProjectManager
+	jwtSecret   string
+	permissions permissionService
 }
 
 func NewHandler(service port.Service, manager port.ProjectManager, jwtSecret string) *Handler {

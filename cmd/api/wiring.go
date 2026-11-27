@@ -17,6 +17,8 @@ import (
 	calendarpostgres "github.com/jhonsferg/corelog/internal/calendar/adapter/out/postgres"
 	"github.com/jhonsferg/corelog/internal/dashboard"
 	dashboardpostgres "github.com/jhonsferg/corelog/internal/dashboard/adapter/out/postgres"
+	"github.com/jhonsferg/corelog/internal/favorite"
+	favoritepostgres "github.com/jhonsferg/corelog/internal/favorite/adapter/out/postgres"
 	"github.com/jhonsferg/corelog/internal/notification"
 	notificationpostgres "github.com/jhonsferg/corelog/internal/notification/adapter/out/postgres"
 	"github.com/jhonsferg/corelog/internal/organization"
@@ -79,10 +81,12 @@ func buildRouter(cfg *config.Config, db *sqlx.DB, log *slog.Logger) (chi.Router,
 	)
 	orgs := newOrgDirectory(db)
 	teamModule := team.NewModule(teamRepo, orgs, database.NewTxManager(db), cfg.Auth.JWTSecret)
-	projectAuthorizer := projectAuthorizerAdapter{authorizer: authusecase.NewAuthorizer(authpostgres.NewRoleLookup(db))}
+	authorizer := authusecase.NewAuthorizer(authpostgres.NewRoleLookup(db)).WithSchemes(authpostgres.NewSchemeRepository(db))
+	projectAuthorizer := projectAuthorizerAdapter{authorizer: authorizer}
 	projectModule := project.NewModule(projectRepo, projectMemberRepo, projectCatalogRepo, orgs, cfg.Auth.JWTSecret, projectAuthorizer).
 		WithEvents(projectpostgres.NewEventPublisher(db)).
 		WithTransactions(database.NewTxManager(db))
+	projectModule.Handler.WithPermissions(authusecase.NewPermissionService(authorizer, authpostgres.NewSchemeRepository(db)))
 
 	ticketRepo := ticketDBRepo
 	if cfg.Features.TicketRepository == "memory" {
@@ -105,6 +109,7 @@ func buildRouter(cfg *config.Config, db *sqlx.DB, log *slog.Logger) (chi.Router,
 	ticketModule := ticket.NewModule(ticketRepo, userDirectory, collaborationRepo, issueLinkRepo, workflowRepo, watcherRepo, savedFilterRepo, cfg.Auth.JWTSecret, projectAuthorizer, notificationModule.Service, projectMemberRepo).WithTxManager(database.NewTxManager(db))
 	searchModule := search.NewModule(searchpostgres.NewSearchIndex(db), cfg.Auth.JWTSecret)
 	dashboardModule := dashboard.NewModule(dashboardpostgres.NewDashboardReader(db), cfg.Auth.JWTSecret)
+	favoriteModule := favorite.NewModule(favoritepostgres.NewRepository(db), favoritepostgres.NewProjectVisibility(db), cfg.Auth.JWTSecret)
 	calendarModule := calendar.NewModule(calendarpostgres.NewCalendarRepository(db), projectAuthorizer, cfg.Auth.JWTSecret)
 	sprintModule := sprint.NewModule(sprintpostgres.NewSprintRepository(db), projectAuthorizer, cfg.Auth.JWTSecret)
 	boardModule := board.NewModule(boardpostgres.NewBoardRepository(db), projectModule.Service, projectAuthorizer, boardIssueMover{issues: ticketModule.Service}, cfg.Auth.JWTSecret)
@@ -119,7 +124,7 @@ func buildRouter(cfg *config.Config, db *sqlx.DB, log *slog.Logger) (chi.Router,
 	router.Route("/api/v1", func(r chi.Router) {
 		avatar.RegisterRoutes(r)
 		logo.RegisterRoutes(r)
-		httpserver.Mount(r, userModule.Handler, teamModule.Handler, projectModule.Handler, boardModule.Handler, ticketModule.Handler, sprintModule.Handler, notificationModule.Handler, calendarModule.Handler, searchModule.Handler, dashboardModule.Handler, orgModule.Handler)
+		httpserver.Mount(r, userModule.Handler, teamModule.Handler, projectModule.Handler, boardModule.Handler, ticketModule.Handler, sprintModule.Handler, notificationModule.Handler, calendarModule.Handler, searchModule.Handler, dashboardModule.Handler, favoriteModule.Handler, orgModule.Handler)
 	})
 	return router, nil
 }

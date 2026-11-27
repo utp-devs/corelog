@@ -55,3 +55,11 @@ type RoleLookup interface {
 type AccessLookup interface {
 	FindAccess(ctx context.Context, projectID, userID uuid.UUID) (domain.Access, error)
 }
+
+// SchemeRepository almacena los esquemas de permisos editados por proyecto. Un proyecto sin filas
+// usa el esquema por defecto: Load devuelve nil en ese caso.
+type SchemeRepository interface {
+	Load(ctx context.Context, projectID uuid.UUID) (*domain.Scheme, error)
+	Replace(ctx context.Context, projectID uuid.UUID, scheme domain.Scheme) error
+	Reset(ctx context.Context, projectID uuid.UUID) error
+}

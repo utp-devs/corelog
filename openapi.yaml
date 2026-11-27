@@ -17,6 +17,8 @@ tags:
     description: Organizations, members, roles and ownership
   - name: invitations
     description: Invitations to join an organization
+  - name: favorites
+    description: Starred elements and recently viewed elements
   - name: tickets
     description: Incident and ticket management
   - name: health
@@ -2800,6 +2802,152 @@ paths:
           $ref: '#/components/responses/NotFound'
         '422':
           $ref: '#/components/responses/ValidationError'
+  /projects/{id}/permissions:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: Identificador del proyecto (UUID o clave; la clave requiere organization_id).
+        schema:
+          type: string
+    get:
+      tags: [projects]
+      summary: Obtener el esquema de permisos del proyecto
+      description: >-
+        Devuelve el esquema completo: una entrada por cada permiso del catalogo con sus titulares. is_default es
+        true cuando el proyecto no tiene reglas propias. Requiere poder ver el proyecto; si no, responde 404
+        (code project.not_found).
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Esquema de permisos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PermissionScheme'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: El proyecto no existe o el usuario no puede verlo (code project.not_found).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    put:
+      tags: [projects]
+      summary: Reemplazar el esquema de permisos del proyecto
+      description: >-
+        Sustituye el esquema completo por el enviado y lo valida. Permisos no listados quedan sin titulares.
+        Reglas: lead conserva manage_members y edit_project; delete_project lo tiene lead u org_admin;
+        browse_project lo tiene viewer, contributor o lead. Requiere edit_project (403 si no).
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReplacePermissionsRequest'
+            example:
+              grants:
+                - permission: create_issue
+                  holders: [lead, contributor, viewer]
+      responses:
+        '200':
+          description: Esquema guardado (is_default false)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PermissionScheme'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: El usuario puede ver el proyecto pero no tiene edit_project.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: El proyecto no existe o el usuario no puede verlo (code project.not_found).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: >-
+            Cuerpo no valido, permiso o titular desconocido, o regla de esquema rota (code
+            authorization.invalid_scheme).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /projects/{id}/permissions/reset:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: Identificador del proyecto (UUID o clave; la clave requiere organization_id).
+        schema:
+          type: string
+    post:
+      tags: [projects]
+      summary: Restaurar el esquema de permisos por defecto
+      description: Borra las reglas propias del proyecto. Requiere edit_project (403 si no) y poder ver el proyecto (404 si no).
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Esquema por defecto (is_default true)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PermissionScheme'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: El usuario puede ver el proyecto pero no tiene edit_project.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: El proyecto no existe o el usuario no puede verlo (code project.not_found).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /projects/{id}/permissions/me:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: Identificador del proyecto (UUID o clave; la clave requiere organization_id).
+        schema:
+          type: string
+    get:
+      tags: [projects]
+      summary: Permisos efectivos del usuario en el proyecto
+      description: >-
+        Devuelve el rol efectivo del usuario (none si no tiene rol) y la lista de permisos que obtiene sin titulares
+        especiales. Pensado para ocultar o mostrar acciones en la interfaz.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Rol y permisos efectivos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EffectivePermissions'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: El proyecto no existe o el usuario no puede verlo (code project.not_found).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /projects/{id}/labels:
     parameters:
       - name: id
@@ -3549,6 +3697,129 @@ paths:
                     example: ok
         '405':
           description: Método HTTP no permitido para esta ruta
+  /favorites:
+    get:
+      tags: [favorites]
+      operationId: listFavorites
+      summary: Favoritos del usuario por tipo
+      description: Devuelve los elementos marcados con estrella que el usuario todavia puede ver. Los proyectos borrados o que dejaron de ser visibles no aparecen. El campo created_at es el momento en que se marco la estrella.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: type
+          in: query
+          required: true
+          description: Tipo de elemento. Hoy solo se admite project.
+          schema:
+            type: string
+            enum: [project, filter, board, dashboard, issue, team]
+          example: project
+      responses:
+        '200':
+          description: Favoritos del usuario
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/FavoriteItem'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+  /favorites/{type}/{id}:
+    parameters:
+      - name: type
+        in: path
+        required: true
+        description: Tipo de elemento. Hoy solo se admite project.
+        schema:
+          type: string
+          enum: [project, filter, board, dashboard, issue, team]
+      - name: id
+        in: path
+        required: true
+        description: Identificador del elemento
+        schema:
+          type: string
+          format: uuid
+    put:
+      tags: [favorites]
+      operationId: starEntity
+      summary: Marcar un elemento como favorito
+      description: Operación idempotente. Requiere poder ver el elemento; si no es visible responde 404 sin revelar que existe. Marcarlo dos veces no tiene efecto adicional.
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: Favorito guardado (o ya existía)
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+    delete:
+      tags: [favorites]
+      operationId: unstarEntity
+      summary: Quitar un elemento de favoritos
+      description: Operación idempotente. Permite quitar la estrella aunque el elemento ya no sea visible o haya sido borrado.
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: Favorito eliminado (o no existía)
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+  /recent:
+    get:
+      tags: [favorites]
+      operationId: listRecent
+      summary: Elementos vistos recientemente por el usuario
+      description: Ordenados por última visita, de más reciente a más antiguo. Se conservan como máximo 50 por usuario y tipo. El campo created_at es la fecha de creación del elemento y viewed_at la última visita. Los elementos no visibles o borrados se omiten.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: type
+          in: query
+          required: true
+          description: Tipo de elemento. Hoy solo se admite project.
+          schema:
+            type: string
+            enum: [project, filter, board, dashboard, issue, team]
+          example: project
+        - name: limit
+          in: query
+          required: false
+          description: Número máximo de elementos. Por defecto 10; el máximo es 50 y valores mayores se ajustan a 50.
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 10
+      responses:
+        '200':
+          description: Elementos recientes del usuario
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/RecentItem'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ValidationError'
 components:
   securitySchemes:
     bearerAuth:
@@ -4074,6 +4345,60 @@ components:
         rank:
           type: string
           maxLength: 64
+    PermissionGrant:
+      type: object
+      required: [permission, holders]
+      properties:
+        permission:
+          type: string
+          description: Nombre del permiso del catalogo (por ejemplo create_issue, edit_project).
+          example: create_issue
+        holders:
+          type: array
+          description: >-
+            Titulares que tienen el permiso: lead, contributor, viewer, org_admin, o los titulares especiales
+            reporter, assignee, watcher (solo aplican sobre una incidencia).
+          items:
+            type: string
+            enum: [lead, contributor, viewer, org_admin, reporter, assignee, watcher]
+          example: [lead, contributor]
+    PermissionScheme:
+      type: object
+      properties:
+        project_id:
+          type: string
+          format: uuid
+        is_default:
+          type: boolean
+          description: true cuando el proyecto no tiene reglas propias y usa el esquema por defecto.
+        grants:
+          type: array
+          description: Una entrada por cada permiso del catalogo, en orden de catalogo.
+          items:
+            $ref: '#/components/schemas/PermissionGrant'
+    ReplacePermissionsRequest:
+      type: object
+      description: Esquema completo. Campos desconocidos se rechazan (422).
+      required: [grants]
+      properties:
+        grants:
+          type: array
+          items:
+            $ref: '#/components/schemas/PermissionGrant'
+    EffectivePermissions:
+      type: object
+      properties:
+        role:
+          type: string
+          description: Rol efectivo del usuario en el proyecto, o none si no tiene rol.
+          enum: [lead, contributor, viewer, none]
+          example: contributor
+        permissions:
+          type: array
+          description: Permisos del catalogo que el usuario tiene (sin titulares especiales).
+          items:
+            type: string
+          example: [browse_project, create_issue, comment_issue]
     ProjectMember:
       type: object
       properties:
@@ -4237,6 +4562,57 @@ components:
         description:
           type: string
           maxLength: 5000
+    FavoriteItem:
+      type: object
+      description: Elemento marcado con estrella. Para proyectos incluye nombre, clave y color.
+      required: [type, id, name, key, color, created_at]
+      properties:
+        type:
+          type: string
+          example: project
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          example: Plataforma web
+        key:
+          type: string
+          example: WEB
+        color:
+          type: string
+          example: blue
+        created_at:
+          type: string
+          format: date-time
+          description: Momento en que se marco la estrella
+    RecentItem:
+      type: object
+      description: Elemento visto recientemente. created_at es la fecha de creación del elemento.
+      required: [type, id, name, key, color, created_at, viewed_at]
+      properties:
+        type:
+          type: string
+          example: project
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          example: Plataforma web
+        key:
+          type: string
+          example: WEB
+        color:
+          type: string
+          example: blue
+        created_at:
+          type: string
+          format: date-time
+        viewed_at:
+          type: string
+          format: date-time
+          description: Momento de la última visita
     AuthSession:
       type: object
       properties:
