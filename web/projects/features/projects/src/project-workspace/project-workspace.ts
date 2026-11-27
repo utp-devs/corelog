@@ -1,6 +1,7 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  DestroyRef,
   DOCUMENT,
   computed,
   effect,
@@ -8,11 +9,12 @@ import {
   signal,
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { ActivatedRoute, NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
+import { NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
 import {
+  CurrentProjectStore,
   Project,
   ProjectAccessVariant,
-  ProjectStore,
+  projectPath,
   leadNameOf,
   projectAccessVariantOf,
   pushRecent,
@@ -27,15 +29,6 @@ import { ProjectAvatar } from '@corelog/ui/project-avatar';
 import { filter, map } from 'rxjs';
 
 import { TYPE_LABELS, VISIBILITY_LABELS } from '../projects-page/projects-page.utils';
-
-/** Sections of the project. Each one is a child route of the workspace. */
-const SECTIONS: { key: string; label: string }[] = [
-  { key: 'board', label: 'Tablero' },
-  { key: 'backlog', label: 'Backlog' },
-  { key: 'sprints', label: 'Sprints' },
-  { key: 'calendar', label: 'Calendario' },
-  { key: 'permisos', label: 'Permisos' },
-];
 
 /** Descriptions longer than this show the expand toggle. */
 const DESCRIPTION_PREVIEW_CHARS = 70;
@@ -66,25 +59,22 @@ type LoadState =
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ProjectWorkspace {
-  private readonly projects = inject(ProjectStore);
-  private readonly route = inject(ActivatedRoute);
+  private readonly current = inject(CurrentProjectStore);
   private readonly router = inject(Router);
   private readonly document = inject(DOCUMENT);
 
-  protected readonly sections = SECTIONS;
   protected readonly loadFailedMessage = LOAD_FAILED_MESSAGE;
-  protected readonly id = toSignal(
-    this.route.paramMap.pipe(map((params) => params.get('id') ?? '')),
-    { requireSync: true },
-  );
+
+  /** Section tabs allowed for the project: template and permissions decide which ones are listed. */
+  protected readonly sections = this.current.navItems;
 
   /** Loading, failure or the project, derived from the store read of the route project. */
   protected readonly state = computed<LoadState>(() => {
-    const error = this.projects.projectError();
+    const error = this.current.error();
     if (error) {
       return { status: 'error', variant: projectAccessVariantOf(error) };
     }
-    const project = this.projects.project();
+    const project = this.current.project();
     return project ? { status: 'ready', project } : { status: 'loading' };
   });
 
@@ -110,9 +100,9 @@ export class ProjectWorkspace {
   );
 
   protected readonly activeKey = computed(() => {
-    const prefix = `/projects/${this.id()}/`;
-    const url = this.url();
-    return SECTIONS.find((section) => url.startsWith(prefix + section.key))?.key ?? 'board';
+    // /projects/<key or id>/<section>: the section is the fourth segment of the path.
+    const segment = this.url().split(/[?#]/)[0].split('/')[3];
+    return this.sections().find((section) => section.key === segment)?.key ?? 'board';
   });
 
   protected readonly descriptionOpen = signal(false);
@@ -120,13 +110,8 @@ export class ProjectWorkspace {
   protected readonly lead = useOrgMembersById(computed(() => this.project()?.organizationId));
 
   constructor() {
-    // Loads the project for the route id. The store keeps the failure so the access status survives.
-    effect(() => {
-      const id = this.id();
-      if (id) {
-        this.projects.loadOne(id);
-      }
-    });
+    // Leaving the project area clears the project and its permissions.
+    inject(DestroyRef).onDestroy(() => this.current.reset());
 
     // Keeps the active tab visible when the tabs scroll (phones).
     effect(() => {
@@ -146,7 +131,7 @@ export class ProjectWorkspace {
           id: project.id,
           title: project.name,
           subtitle: project.key,
-          link: `/projects/${project.id}`,
+          link: projectPath(project),
         });
       }
     });
@@ -179,9 +164,6 @@ export class ProjectWorkspace {
   }
 
   protected retry(): void {
-    const id = this.id();
-    if (id) {
-      this.projects.loadOne(id);
-    }
+    this.current.reload();
   }
 }

@@ -3,6 +3,7 @@ import { provideRouter } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import {
   BacklogApiService,
+  ProjectApiService,
   BacklogItem,
   Sprint,
   SprintApiService,
@@ -17,6 +18,7 @@ import {
   PROJECT_ID,
   ensureMatchMedia,
   failWith,
+  projectOf,
   projectRoutes,
   signedInSession,
 } from '../testing/planning-test-kit';
@@ -72,6 +74,7 @@ async function renderPage(overrides: Partial<Record<'list', Observable<Sprint[]>
       provideCorelogTesting(),
       provideRouter(projectRoutes(ProjectSprintsPage, 'sprints')),
       { provide: SessionService, useValue: signedInSession() },
+      { provide: ProjectApiService, useValue: { get: vi.fn(() => of(projectOf())) } },
       { provide: SprintApiService, useValue: sprintApi },
       { provide: BacklogApiService, useValue: backlogApi },
     ],

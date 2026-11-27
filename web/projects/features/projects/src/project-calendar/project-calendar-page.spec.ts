@@ -2,7 +2,7 @@ import { Component } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, RouterOutlet } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
-import { ApiError, CalendarEvent } from '@corelog/core';
+import { ApiError, CalendarEvent, projectRouteResolver } from '@corelog/core';
 import { guardConsole } from '@corelog/core/testing';
 import { NEVER, Observable, of, throwError } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -15,7 +15,8 @@ class WorkspaceStub {}
 
 const ROUTES = [
   {
-    path: 'projects/:id',
+    path: 'projects/:key',
+    resolve: { project: projectRouteResolver },
     component: WorkspaceStub,
     children: [{ path: 'calendar', component: ProjectCalendarPage }],
   },

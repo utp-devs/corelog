@@ -2,7 +2,7 @@ import { Component } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, RouterOutlet } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
-import { ApiError } from '@corelog/core';
+import { ApiError, projectRouteResolver } from '@corelog/core';
 import { guardConsole, installViewport } from '@corelog/core/testing';
 import { NEVER, Observable, of, throwError } from 'rxjs';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -15,7 +15,8 @@ class WorkspaceStub {}
 
 const ROUTES = [
   {
-    path: 'projects/:id',
+    path: 'projects/:key',
+    resolve: { project: projectRouteResolver },
     component: WorkspaceStub,
     children: [{ path: 'permisos', component: ProjectPermissionsPage }],
   },

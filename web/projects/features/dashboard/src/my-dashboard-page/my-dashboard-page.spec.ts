@@ -194,7 +194,7 @@ describe('MyDashboardPage', () => {
     dashboardApi.me.mockReturnValue(of(idleSummary));
     const fixture = create();
 
-    expect(linkNamed(fixture, 'CoreLog')?.getAttribute('href')).toBe('/projects/p-1/board');
+    expect(linkNamed(fixture, 'CoreLog')?.getAttribute('href')).toBe('/projects/CORE/board');
   });
 
   it('shows the recently visited items from the local history', () => {

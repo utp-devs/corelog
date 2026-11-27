@@ -7,13 +7,14 @@ import {
   inject,
   signal,
 } from '@angular/core';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { RouterLink } from '@angular/router';
 import {
   AuthStore,
   BacklogItem,
   BacklogSprint,
   BacklogStore,
   OrganizationStore,
+  CurrentProjectStore,
   ProjectStore,
   SprintStatus,
   WorkItemStatus,
@@ -114,8 +115,7 @@ export class ProjectBacklogPage {
   protected readonly ready = computed(() => this.store.items.hasValue() && this.failure() === null);
 
   protected readonly scope = trackProjectScope(
-    inject(ActivatedRoute),
-    inject(ProjectStore),
+    inject(CurrentProjectStore),
     this.destroyRef,
     (projectId) => {
       this.store.load(projectId);

@@ -1,8 +1,7 @@
-import { DestroyRef, Signal, signal } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { ActivatedRoute } from '@angular/router';
-import { ApiError, ProjectStore } from '@corelog/core';
-import { EMPTY, Observable, distinctUntilChanged, filter, map } from 'rxjs';
+import { DestroyRef, Injector, Signal, inject } from '@angular/core';
+import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
+import { ApiError, CurrentProjectStore } from '@corelog/core';
+import { Observable, distinctUntilChanged, filter } from 'rxjs';
 
 /** Project scope of a planning page: the project id and the failure of reading the project. */
 export interface ProjectScope {
@@ -14,51 +13,40 @@ export interface ProjectScope {
 }
 
 /**
- * Project id from the nearest route that declares an `id` parameter. The planning routes are children
- * of the project workspace, which owns the `:id` segment. Emits only non-empty values that changed.
+ * UUIDs of the project in view, as the project area resolves them from the `:key` route parameter.
+ * Emits only non-empty values that changed. Call it in an injection context.
  */
-export function projectIdParam(route: ActivatedRoute): Observable<string> {
-  const owner = [...route.pathFromRoot].reverse().find((item) => item.snapshot.paramMap.has('id'));
-  if (!owner) {
-    return EMPTY;
-  }
-  return owner.paramMap.pipe(
-    map((params) => params.get('id') ?? ''),
-    filter((id) => id !== ''),
+export function projectIdChanges(
+  current: CurrentProjectStore = inject(CurrentProjectStore),
+  injector: Injector = inject(Injector),
+): Observable<string> {
+  return toObservable(current.projectId, { injector }).pipe(
+    filter((id): id is string => !!id),
     distinctUntilChanged(),
   );
 }
 
 /**
- * Follows the project of the route. For every project id, the project is read to check access and
- * `onProject` loads the page data. A failed read is kept in `accessError`; the page decides how to show it.
+ * Follows the project of the route. For every project id, `onProject` loads the page data. A failed
+ * read is kept in `accessError`; the page decides how to show it. Call it in an injection context.
  */
 export function trackProjectScope(
-  route: ActivatedRoute,
-  projects: ProjectStore,
+  current: CurrentProjectStore,
   destroyRef: DestroyRef,
   onProject: (projectId: string) => void,
 ): ProjectScope {
-  const projectId = signal<string | null>(null);
-
-  const open = (id: string): void => {
-    projectId.set(id);
-    projects.loadOne(id);
-    onProject(id);
-  };
-
-  projectIdParam(route)
+  projectIdChanges(current)
     .pipe(takeUntilDestroyed(destroyRef))
-    .subscribe((id) => open(id));
+    .subscribe((id) => onProject(id));
 
   return {
-    projectId: projectId.asReadonly(),
-    accessError: projects.projectError,
+    projectId: current.projectId,
+    accessError: current.error,
     reload: () => {
-      const current = projectId();
-      if (current) {
-        open(current);
-      }
+      const id = current.projectId();
+      // Without a project the read failed: a successful retry emits the id and loads the page data.
+      current.reload();
+      if (id) onProject(id);
     },
   };
 }

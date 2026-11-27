@@ -96,6 +96,14 @@ describe('workspace routes', () => {
     }
   });
 
+  it('takes the project key (or id) in the key parameter and resolves it', () => {
+    const shell = routes.find((route) => route.path === '');
+    const projects = shell?.children?.find((route) => route.path === 'projects');
+    const detail = projects?.children?.find((route) => route.path === ':key');
+    expect(detail).toBeDefined();
+    expect(detail?.resolve?.['project']).toBeDefined();
+  });
+
   it('opens the project board when the project has no section', async () => {
     const { router } = setup();
     await router.navigateByUrl('/projects/p1');

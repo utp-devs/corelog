@@ -2,7 +2,13 @@ import { Component } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
-import { ApiError, OrganizationMember, Project } from '@corelog/core';
+import {
+  ApiError,
+  CurrentProjectStore,
+  OrganizationMember,
+  Project,
+  projectRouteResolver,
+} from '@corelog/core';
 import { guardConsole } from '@corelog/core/testing';
 import { NEVER, Observable, of, throwError } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -14,8 +20,10 @@ import { ProjectWorkspace } from './project-workspace';
 class BoardStub {}
 
 const ROUTES = [
+  { path: 'elsewhere', component: BoardStub },
   {
-    path: 'projects/:id',
+    path: 'projects/:key',
+    resolve: { project: projectRouteResolver },
     component: ProjectWorkspace,
     children: [{ path: 'board', component: BoardStub }],
   },
@@ -102,7 +110,7 @@ describe('ProjectWorkspace', () => {
     expect(toggle?.getAttribute('aria-expanded')).toBe('true');
   });
 
-  it('lists the five section tabs and marks the current one', async () => {
+  it('lists the tabs of a scrum project with key based links and marks the current one', async () => {
     const { fixture } = await open({ projectApi: { get: () => of(demoProject()) } });
 
     const tabs = Array.from(root(fixture).querySelectorAll<HTMLElement>('.project-workspace__tab'));
@@ -182,10 +190,52 @@ describe('ProjectWorkspace', () => {
     consoleGuard.expectNoConsoleOutput();
   });
 
-  it('shows the loading state with the tabs while the project request is pending', async () => {
+  it('shows the loading state without tabs while the project request is pending', async () => {
     const { fixture } = await open({ projectApi: { get: () => NEVER as Observable<Project> } });
 
     expect(root(fixture).querySelector('[aria-busy="true"]')).not.toBeNull();
-    expect(root(fixture).querySelector('nav[aria-label="Secciones del proyecto"]')).not.toBeNull();
+    expect(root(fixture).querySelector('nav[aria-label="Secciones del proyecto"]')).toBeNull();
+  });
+
+  it('hides backlog and sprints for a kanban project', async () => {
+    const { fixture } = await open({
+      projectApi: { get: () => of(demoProject({ type: 'kanban', template: 'bug_tracking' })) },
+    });
+
+    const tabs = Array.from(root(fixture).querySelectorAll<HTMLElement>('.project-workspace__tab'));
+    expect(tabs.map((tab) => tab.textContent?.trim())).toEqual([
+      'Tablero',
+      'Calendario',
+      'Permisos',
+    ]);
+  });
+
+  it('links the tabs with the project key even when opened by id', async () => {
+    const { fixture } = await open({ projectApi: { get: () => of(demoProject()) } });
+
+    const hrefs = Array.from(
+      root(fixture).querySelectorAll<HTMLAnchorElement>('.project-workspace__tab'),
+    ).map((tab) => tab.getAttribute('href'));
+    expect(hrefs[0]).toBe('/projects/DEM/board');
+    expect(hrefs[1]).toBe('/projects/DEM/backlog');
+  });
+
+  it('records the recent project with its key path', async () => {
+    await open({ projectApi: { get: () => of(demoProject()) } });
+
+    const recent = JSON.parse(window.localStorage.getItem('corelog.recent') ?? '[]') as {
+      link: string;
+    }[];
+    expect(recent[0].link).toBe('/projects/DEM');
+  });
+
+  it('clears the current project when the area is left', async () => {
+    const { harness } = await open({ projectApi: { get: () => of(demoProject()) } });
+    const current = TestBed.inject(CurrentProjectStore);
+    expect(current.project()?.key).toBe('DEM');
+
+    await harness.navigateByUrl('/elsewhere');
+
+    expect(current.project()).toBeUndefined();
   });
 });

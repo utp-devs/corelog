@@ -8,7 +8,6 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute } from '@angular/router';
 import {
   Sprint,
   SprintDraft,
@@ -37,7 +36,7 @@ import { InputText } from 'primeng/inputtext';
 import { Message } from 'primeng/message';
 import { Select } from 'primeng/select';
 
-import { projectIdParam } from '../shared/project-scope';
+import { projectIdChanges } from '../shared/project-scope';
 import {
   SPRINT_STATUS_LABELS,
   SPRINT_STATUS_TONES,
@@ -130,7 +129,7 @@ export class ProjectSprintsPage {
   );
 
   constructor() {
-    projectIdParam(inject(ActivatedRoute))
+    projectIdChanges()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((projectId) => this.store.load(projectId));
   }

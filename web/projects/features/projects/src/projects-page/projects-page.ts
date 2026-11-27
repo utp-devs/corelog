@@ -21,6 +21,7 @@ import {
   OrganizationStore,
   projectAccessVariantOf,
   useOrgMembersById,
+  projectPath,
 } from '@corelog/core';
 import { CardGrid } from '@corelog/ui/card-grid';
 import { EmptyState } from '@corelog/ui/empty-state';
@@ -211,7 +212,7 @@ export class ProjectsPage implements OnInit {
   }
 
   protected openBoard(project: Project): void {
-    void this.router.navigate(['/projects', project.id, 'board']);
+    void this.router.navigateByUrl(projectPath(project, 'board'));
   }
 
   protected selectProject(project: Project): void {

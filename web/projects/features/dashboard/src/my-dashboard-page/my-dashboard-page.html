@@ -182,7 +182,7 @@
                   <span class="dashboard__item-main">
                     <a
                       class="dashboard__link dashboard__link--title"
-                      [routerLink]="['/projects', project.id, 'board']"
+                      [routerLink]="['/projects', project.key, 'board']"
                       [title]="project.name"
                       >{{ project.name }}</a
                     >
@@ -190,7 +190,7 @@
                   <span class="dashboard__key">{{ project.key }}</span>
                   <a
                     class="dashboard__link dashboard__link--secondary"
-                    [routerLink]="['/projects', project.id, 'board']"
+                    [routerLink]="['/projects', project.key, 'board']"
                     [attr.aria-label]="'Abrir tablero de ' + project.name"
                     >Abrir tablero</a
                   >

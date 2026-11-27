@@ -15,7 +15,6 @@ import {
   signal,
   untracked,
 } from '@angular/core';
-import { ActivatedRoute } from '@angular/router';
 import {
   AuthStore,
   BoardColumn,
@@ -25,6 +24,7 @@ import {
   BreakpointService,
   ISSUE_PRIORITY_LABELS,
   OrganizationStore,
+  CurrentProjectStore,
   ProjectStore,
   WorkItemPriority,
   isColumnFull,
@@ -180,8 +180,7 @@ export class ProjectBoardPage {
   protected readonly loadErrorMessage = LOAD_ERROR_MESSAGE;
 
   protected readonly scope = trackProjectScope(
-    inject(ActivatedRoute),
-    inject(ProjectStore),
+    inject(CurrentProjectStore),
     this.destroyRef,
     (projectId) => {
       this.store.load(projectId);

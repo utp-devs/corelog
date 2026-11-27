@@ -120,7 +120,7 @@ export class ProjectCalendarPage implements OnInit {
   }
 
   private load(id: string): void {
-    if (id === this.loadedId) return;
+    if (!id || id === this.loadedId) return;
     this.loadedId = id;
     this.calendar.reset();
     this.calendar.load(id);

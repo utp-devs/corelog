@@ -12,7 +12,7 @@ import { TICKETS_ROUTES } from '@corelog/features/tickets';
 const [projectList, projectDetail] = PROJECTS_ROUTES;
 
 /**
- * Project list at /projects and the project workspace at /projects/:id. The planning screens are
+ * Project list at /projects and the project workspace at /projects/:key. The planning screens are
  * appended to the project children; an unknown child opens the board.
  */
 const PROJECT_ROUTES: Routes = [

@@ -55,21 +55,23 @@
     }
 
     @if (!failed()) {
-      <nav aria-label="Secciones del proyecto" class="project-workspace__nav" data-scroll-x>
-        <ul class="project-workspace__tabs">
-          @for (section of sections; track section.key) {
-            <li class="project-workspace__tab-item">
-              <a
-                class="project-workspace__tab"
-                [routerLink]="['/projects', id(), section.key]"
-                [class.project-workspace__tab--active]="isActive(section.key)"
-                [attr.aria-current]="isActive(section.key) ? 'page' : null"
-                >{{ section.label }}</a
-              >
-            </li>
-          }
-        </ul>
-      </nav>
+      @if (sections().length > 0) {
+        <nav aria-label="Secciones del proyecto" class="project-workspace__nav" data-scroll-x>
+          <ul class="project-workspace__tabs">
+            @for (section of sections(); track section.key) {
+              <li class="project-workspace__tab-item">
+                <a
+                  class="project-workspace__tab"
+                  [routerLink]="section.path"
+                  [class.project-workspace__tab--active]="isActive(section.key)"
+                  [attr.aria-current]="isActive(section.key) ? 'page' : null"
+                  >{{ section.label }}</a
+                >
+              </li>
+            }
+          </ul>
+        </nav>
+      }
       <router-outlet />
     }
   }

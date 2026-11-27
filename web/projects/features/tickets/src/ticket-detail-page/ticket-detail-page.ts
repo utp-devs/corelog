@@ -42,6 +42,7 @@ import {
   issueKeyOf,
   shortIssueKeyOf,
   issuePath,
+  projectPath,
 } from '@corelog/core';
 import { BreadcrumbItem, Breadcrumbs } from '@corelog/ui/breadcrumbs';
 import { trackRecent } from '@corelog/ui/command-palette';
@@ -406,7 +407,7 @@ export class TicketDetailPage {
           id: project.id,
           title: project.name,
           subtitle: project.key,
-          link: `/projects/${encodeURIComponent(project.id)}/board`,
+          link: projectPath(project, 'board'),
         });
       }
     });

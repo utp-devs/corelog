@@ -139,7 +139,7 @@ export class ProjectPermissionsPage implements OnInit {
   }
 
   private load(id: string): void {
-    if (id === this.loadedId) return;
+    if (!id || id === this.loadedId) return;
     this.loadedId = id;
     this.store.fetchMembers(id);
   }

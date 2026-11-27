@@ -1,5 +1,5 @@
 import { signal, Type } from '@angular/core';
-import { ApiError, AuthStore, Project, SessionService } from '@corelog/core';
+import { ApiError, AuthStore, Project, SessionService, projectRouteResolver } from '@corelog/core';
 import { Routes } from '@angular/router';
 import { Observable, throwError } from 'rxjs';
 import { ComponentFixture } from '@angular/core/testing';
@@ -31,9 +31,15 @@ export function failWith(status: number): Observable<never> {
   return throwError(() => apiErrorOf(status));
 }
 
-/** Routes that mirror the project workspace: the planning page is a child of a route with an `:id` segment. */
+/** Routes that mirror the project workspace: the planning page is a child of the `:key` route that resolves the project. */
 export function projectRoutes(page: Type<unknown>, segment: string): Routes {
-  return [{ path: 'projects/:id', children: [{ path: segment, component: page }] }];
+  return [
+    {
+      path: 'projects/:key',
+      resolve: { project: projectRouteResolver },
+      children: [{ path: segment, component: page }],
+    },
+  ];
 }
 
 /** Session stand-in: the store resets its data while no session is active, so tests run signed in. */

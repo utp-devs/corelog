@@ -1,13 +1,11 @@
-import { Signal, inject } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
-import { ActivatedRoute } from '@angular/router';
-import { map } from 'rxjs';
+import { Signal, computed, inject } from '@angular/core';
+import { CurrentProjectStore } from '@corelog/core';
 
-/** Project id taken from the parent route (the project workspace), for the section routes. */
+/**
+ * UUID of the project in view, for the section routes. The project area resolves the `:key` route
+ * parameter (key or UUID) into the current project; the value is empty until the project is read.
+ */
 export function injectProjectId(): Signal<string> {
-  const route = inject(ActivatedRoute);
-  const source = route.parent ?? route;
-  return toSignal(source.paramMap.pipe(map((params) => params.get('id') ?? '')), {
-    requireSync: true,
-  });
+  const current = inject(CurrentProjectStore);
+  return computed(() => current.projectId() ?? '');
 }
