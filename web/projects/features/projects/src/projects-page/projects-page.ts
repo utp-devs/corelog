@@ -16,8 +16,9 @@ import {
   ProjectMemberRole,
   ProjectStore,
   leadNameOf,
-  projectAccessVariantOf,
   NotificationService,
+  projectAccessVariantOf,
+  useOrgMembersById,
 } from '@corelog/core';
 import { CardGrid } from '@corelog/ui/card-grid';
 import { EmptyState } from '@corelog/ui/empty-state';
@@ -38,7 +39,6 @@ import { SelectButton } from 'primeng/selectbutton';
 import { Tooltip } from 'primeng/tooltip';
 
 import { failureMessage, inputValue } from '../shared/failure-message';
-import { ProjectLeadLookup, projectLeadLookup } from '../shared/project-lead-lookup';
 import { ProjectCreateDialog } from './project-create-dialog';
 import {
   ArchivedFilter,
@@ -148,9 +148,7 @@ export class ProjectsPage implements OnInit {
   protected readonly componentDescription = signal('');
 
   // All projects of the list belong to the current organization: its members resolve the leads.
-  protected readonly lead: ProjectLeadLookup = projectLeadLookup(
-    computed(() => this.projects()[0]?.organizationId),
-  );
+  protected readonly lead = useOrgMembersById(computed(() => this.projects()[0]?.organizationId));
 
   protected readonly visibilityOptions = VISIBILITY_OPTIONS;
   protected readonly archivedOptions = ARCHIVED_OPTIONS;

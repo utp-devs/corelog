@@ -9,13 +9,14 @@ import {
   asApiError,
   isApiError,
   warnBeforeUnload,
+  ISSUES_BASE_PATH,
+  issuePath,
 } from '@corelog/core';
 import { PageContainer } from '@corelog/ui/page-container';
 import { PageHeader } from '@corelog/ui/page-header';
 import { Section } from '@corelog/ui/section';
 
 import { MentionSearch } from '../shared/mention-search';
-import { ISSUES_BASE_PATH, issuePath } from '../shared/ticket-paths';
 import { TicketForm, createTicketForm } from '../ticket-form/ticket-form';
 
 const CREATE_FAILED = 'No se pudo crear la incidencia';

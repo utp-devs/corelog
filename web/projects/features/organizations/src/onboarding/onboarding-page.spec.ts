@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, Router, convertToParamMap } from '@angular/router';
-import { ApiError, Organization, OrganizationApiService } from '@corelog/core';
+import { ApiError, LOCATION_ASSIGN, Organization, OrganizationApiService } from '@corelog/core';
 import { Observable, of, throwError } from 'rxjs';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -17,17 +17,19 @@ function newOrg(id: string, name: string): Organization {
 
 function create(path: { new?: boolean } = {}, overrides: Overrides = {}) {
   const query = path.new ? { new: '1' } : {};
+  const assign = vi.fn();
   const context = setupOrgContext('owner', overrides, [
     {
       provide: ActivatedRoute,
       useValue: { snapshot: { queryParamMap: convertToParamMap(query) } },
     },
+    { provide: LOCATION_ASSIGN, useValue: assign },
   ]);
   const router = TestBed.inject(Router);
   const navigate = vi.spyOn(router, 'navigateByUrl').mockResolvedValue(true);
   const fixture: ComponentFixture<OnboardingPage> = TestBed.createComponent(OnboardingPage);
   fixture.detectChanges();
-  return { ...context, fixture, navigate };
+  return { ...context, fixture, navigate, assign };
 }
 
 function input(label: string): HTMLInputElement {
@@ -159,7 +161,7 @@ describe('OnboardingPage', () => {
   });
 
   it('lets the user skip the invite step and finish in the projects page', () => {
-    const { fixture, navigate } = create(
+    const { fixture, assign } = create(
       { new: true },
       { create: () => of(newOrg('o-new', 'Acme Corp')) },
     );
@@ -169,7 +171,7 @@ describe('OnboardingPage', () => {
     expect(heading('Todo listo')).toBeDefined();
 
     buttonNamed('Ir a proyectos')?.click();
-    expect(navigate).toHaveBeenCalledWith('/projects', { replaceUrl: true });
+    expect(assign).toHaveBeenCalledWith('/workspace/projects');
   });
 
   it('takes a pasted invitation link to the accept page', () => {

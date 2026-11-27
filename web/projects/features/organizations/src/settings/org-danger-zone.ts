@@ -8,12 +8,12 @@ import {
   signal,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { Button } from 'primeng/button';
 import { Select } from 'primeng/select';
 import {
   AuthStore,
+  LOCATION_ASSIGN,
   NotificationService,
   Organization,
   OrganizationAdminStore,
@@ -41,7 +41,8 @@ export class OrgDangerZone {
   private readonly orgs = inject(OrganizationStore);
   private readonly auth = inject(AuthStore);
   private readonly notify = inject(NotificationService);
-  private readonly router = inject(Router);
+  /** Full-page move to the portal home: the portal is a separate application. */
+  private readonly assign = inject(LOCATION_ASSIGN);
   private readonly destroyRef = inject(DestroyRef);
 
   readonly org = input.required<Organization>();
@@ -83,7 +84,7 @@ export class OrgDangerZone {
           this.leaveOpen.set(false);
           this.orgs.fetchOrgs();
           this.notify.success(`Has salido de ${org.name}`);
-          void this.router.navigate(['/']);
+          this.assign('/');
         },
         error: (error: unknown) => {
           this.busy.set(false);
@@ -132,7 +133,7 @@ export class OrgDangerZone {
           this.deleteOpen.set(false);
           this.orgs.fetchOrgs();
           this.notify.success('Organización eliminada');
-          void this.router.navigate(['/']);
+          this.assign('/');
         },
         error: (error: unknown) => {
           this.busy.set(false);

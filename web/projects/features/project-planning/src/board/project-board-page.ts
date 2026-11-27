@@ -24,7 +24,7 @@ import {
   BoardStore,
   BreakpointService,
   ISSUE_PRIORITY_LABELS,
-  ProjectApiService,
+  ProjectStore,
   WorkItemPriority,
   isColumnFull,
   PROJECT_MOBILE_QUERY,
@@ -122,7 +122,7 @@ export class ProjectBoardPage {
 
   protected readonly scope = trackProjectScope(
     inject(ActivatedRoute),
-    inject(ProjectApiService),
+    inject(ProjectStore),
     this.destroyRef,
     (projectId) => this.store.load(projectId),
   );

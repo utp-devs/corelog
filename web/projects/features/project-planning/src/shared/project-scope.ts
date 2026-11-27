@@ -1,8 +1,8 @@
 import { DestroyRef, Signal, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute } from '@angular/router';
-import { ApiError, ProjectApiService, asApiError } from '@corelog/core';
-import { EMPTY, Observable, Subscription, distinctUntilChanged, filter, map } from 'rxjs';
+import { ApiError, ProjectStore } from '@corelog/core';
+import { EMPTY, Observable, distinctUntilChanged, filter, map } from 'rxjs';
 
 /** Project scope of a planning page: the project id and the failure of reading the project. */
 export interface ProjectScope {
@@ -35,32 +35,25 @@ export function projectIdParam(route: ActivatedRoute): Observable<string> {
  */
 export function trackProjectScope(
   route: ActivatedRoute,
-  projectApi: ProjectApiService,
+  projects: ProjectStore,
   destroyRef: DestroyRef,
   onProject: (projectId: string) => void,
 ): ProjectScope {
   const projectId = signal<string | null>(null);
-  const accessError = signal<ApiError | null>(null);
-  let check: Subscription | undefined;
 
   const open = (id: string): void => {
     projectId.set(id);
-    accessError.set(null);
-    check?.unsubscribe();
-    check = projectApi.get(id).subscribe({
-      error: (error: unknown) => accessError.set(asApiError(error)),
-    });
+    projects.loadOne(id);
     onProject(id);
   };
 
   projectIdParam(route)
     .pipe(takeUntilDestroyed(destroyRef))
     .subscribe((id) => open(id));
-  destroyRef.onDestroy(() => check?.unsubscribe());
 
   return {
     projectId: projectId.asReadonly(),
-    accessError: accessError.asReadonly(),
+    accessError: projects.projectError,
     reload: () => {
       const current = projectId();
       if (current) {

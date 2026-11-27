@@ -90,9 +90,7 @@ export class ProfilePage {
   /** Desktop shows the vertical menu; narrower screens show a horizontal row of tabs. */
   protected readonly isDesktop = this.breakpoints.matches(breakpointQuery('lg'));
 
-  /** Set when a section reports a new account state (saved profile or new photo). */
-  private readonly userOverride = signal<User | null>(null);
-  protected readonly user = computed(() => this.userOverride() ?? this.auth.user());
+  protected readonly user = this.auth.user;
   protected readonly shownName = computed(() => {
     const user = this.user();
     return user ? user.displayName || user.name : '';
@@ -115,8 +113,9 @@ export class ProfilePage {
     return ROLE_LABELS[role];
   }
 
+  /** A section saved the profile or the photo: the signed-in account is updated in the store. */
   protected onUserChange(user: User): void {
-    this.userOverride.set(user);
+    this.auth.setUser(user);
   }
 
   /** Links keep the current mount: the section route is a sibling of the route without a section. */

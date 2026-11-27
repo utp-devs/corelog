@@ -1,21 +1,14 @@
-import {
-  ChangeDetectionStrategy,
-  Component,
-  computed,
-  effect,
-  inject,
-  signal,
-} from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
 import {
   Project,
   ProjectAccessVariant,
-  ProjectApiService,
-  asApiError,
+  ProjectStore,
   leadNameOf,
   projectAccessVariantOf,
   pushRecent,
+  useOrgMembersById,
 } from '@corelog/core';
 import { BreadcrumbItem, Breadcrumbs } from '@corelog/ui/breadcrumbs';
 import { ErrorPage } from '@corelog/ui/error-page';
@@ -26,7 +19,6 @@ import { ProjectAvatar } from '@corelog/ui/project-avatar';
 import { filter, map } from 'rxjs';
 
 import { TYPE_LABELS, VISIBILITY_LABELS } from '../projects-page/projects-page.utils';
-import { projectLeadLookup } from '../shared/project-lead-lookup';
 
 /** Sections of the project. Each one is a child route of the workspace. */
 const SECTIONS: { key: string; label: string }[] = [
@@ -63,7 +55,7 @@ type LoadState =
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ProjectWorkspace {
-  private readonly api = inject(ProjectApiService);
+  private readonly projects = inject(ProjectStore);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
 
@@ -74,9 +66,15 @@ export class ProjectWorkspace {
     { requireSync: true },
   );
 
-  /** Incremented by the retry action to load the project again. */
-  private readonly attempt = signal(0);
-  protected readonly state = signal<LoadState>({ status: 'loading' });
+  /** Loading, failure or the project, derived from the store read of the route project. */
+  protected readonly state = computed<LoadState>(() => {
+    const error = this.projects.projectError();
+    if (error) {
+      return { status: 'error', variant: projectAccessVariantOf(error) };
+    }
+    const project = this.projects.project();
+    return project ? { status: 'ready', project } : { status: 'loading' };
+  });
 
   protected readonly project = computed(() => {
     const state = this.state();
@@ -114,21 +112,15 @@ export class ProjectWorkspace {
     { label: this.project()?.key ?? this.activeLabel() },
   ]);
 
-  protected readonly lead = projectLeadLookup(computed(() => this.project()?.organizationId));
+  protected readonly lead = useOrgMembersById(computed(() => this.project()?.organizationId));
 
   constructor() {
-    // Loads the project for the route id. Errors are kept unwrapped so the access status survives.
-    effect((onCleanup) => {
+    // Loads the project for the route id. The store keeps the failure so the access status survives.
+    effect(() => {
       const id = this.id();
-      this.attempt();
-      if (!id) return;
-      this.state.set({ status: 'loading' });
-      const subscription = this.api.get(id).subscribe({
-        next: (project) => this.state.set({ status: 'ready', project }),
-        error: (error: unknown) =>
-          this.state.set({ status: 'error', variant: projectAccessVariantOf(asApiError(error)) }),
-      });
-      onCleanup(() => subscription.unsubscribe());
+      if (id) {
+        this.projects.loadOne(id);
+      }
     });
 
     // Recents: the project once its header has loaded.
@@ -163,6 +155,9 @@ export class ProjectWorkspace {
   }
 
   protected retry(): void {
-    this.attempt.update((value) => value + 1);
+    const id = this.id();
+    if (id) {
+      this.projects.loadOne(id);
+    }
   }
 }

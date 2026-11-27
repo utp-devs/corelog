@@ -1,11 +1,4 @@
-import {
-  ChangeDetectionStrategy,
-  Component,
-  DestroyRef,
-  computed,
-  inject,
-  linkedSignal,
-} from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, computed, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
@@ -121,9 +114,6 @@ export class ProjectSprintsPage {
   protected readonly accessVariant = computed(() =>
     projectAccessVariantOf(this.store.overview.error()),
   );
-
-  /** Whether the action error banner is open. It opens again whenever a new error is stored. */
-  protected readonly alertOpen = linkedSignal(() => this.store.actionError() !== null);
 
   constructor() {
     projectIdParam(inject(ActivatedRoute))

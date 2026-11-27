@@ -182,6 +182,7 @@
             label="Comentar"
             class="touch-target"
             [disabled]="!canComment()"
+            [loading]="commentSending()"
             (onClick)="submitComment()"
           />
         </div>
@@ -264,19 +265,16 @@
 
         <app-section title="Responsable">
           <app-field-row label="Buscar compañero" [helper]="assigneeHelper()">
-            @if (canChangeAssignee()) {
-              <app-user-picker
-                [users]="assigneeUsers()"
-                [value]="selected.assigneeId ?? undefined"
-                [allowClear]="false"
-                [loading]="teammates.loading() || assigning()"
-                [placeholder]="selected.assigneeId ? 'Nombre o correo' : 'Sin asignar'"
-                (valueChange)="assign($event)"
-                (search)="teammates.search($event)"
-              />
-            } @else {
-              <span class="readonly">{{ selected.assigneeName ?? 'Sin asignar' }}</span>
-            }
+            <app-user-picker
+              [users]="assigneeUsers()"
+              [value]="selected.assigneeId ?? undefined"
+              [allowClear]="false"
+              [loading]="teammates.loading() || assigning()"
+              [disabled]="assigning() || !canChangeAssignee()"
+              [placeholder]="selected.assigneeId ? 'Nombre o correo' : 'Sin asignar'"
+              (valueChange)="assign($event)"
+              (search)="teammates.search($event)"
+            />
           </app-field-row>
           @if (canChangeAssignee() && selected.assigneeId) {
             <div class="inline-row">

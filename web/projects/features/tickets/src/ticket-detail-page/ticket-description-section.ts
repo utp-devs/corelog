@@ -87,16 +87,22 @@ export class TicketDescriptionSection {
   protected async save(): Promise<void> {
     const values = this.form.getRawValue();
     this.saving.set(true);
-    const saved = await this.saveDetails()(
-      payloadFrom(this.ticket(), {
-        description: values.description,
-        issueType: values.issueType,
-        parentId: values.parentId || undefined,
-        dueDate: values.dueDate?.toISOString(),
-        storyPoints: values.storyPoints ?? undefined,
-      }),
-    );
-    this.saving.set(false);
+    this.form.controls.description.disable({ emitEvent: false });
+    let saved: boolean;
+    try {
+      saved = await this.saveDetails()(
+        payloadFrom(this.ticket(), {
+          description: values.description,
+          issueType: values.issueType,
+          parentId: values.parentId || undefined,
+          dueDate: values.dueDate?.toISOString(),
+          storyPoints: values.storyPoints ?? undefined,
+        }),
+      );
+    } finally {
+      this.form.controls.description.enable({ emitEvent: false });
+      this.saving.set(false);
+    }
     if (saved) this.editing.set(false);
   }
 }

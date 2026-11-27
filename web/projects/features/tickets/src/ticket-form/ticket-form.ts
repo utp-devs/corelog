@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, input, output, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, effect, input, output, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Button } from 'primeng/button';
 import { InputText } from 'primeng/inputtext';
@@ -87,6 +87,18 @@ export class TicketForm {
   protected readonly issueTypeOptions = ISSUE_TYPE_OPTIONS;
   protected readonly priorityOptions = PRIORITY_OPTIONS;
   protected readonly showErrors = signal(false);
+
+  constructor() {
+    // The description editor follows its control: disabled while the page submits the issue.
+    effect(() => {
+      const control = this.form().controls.description;
+      if (this.isSubmitting()) {
+        control.disable({ emitEvent: false });
+      } else {
+        control.enable({ emitEvent: false });
+      }
+    });
+  }
 
   protected titleError(): string | undefined {
     return this.showErrors() && this.form().controls.title.invalid ? TITLE_ERROR : undefined;

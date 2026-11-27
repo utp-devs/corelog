@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
-import { ApiError, NotificationService } from '@corelog/core';
+import { ApiError, LOCATION_ASSIGN, NotificationService } from '@corelog/core';
 import { of, throwError } from 'rxjs';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -163,6 +163,24 @@ describe('OrgSettingsPage', () => {
     fixture.detectChanges();
 
     expect(api['deleteOrganization']).toHaveBeenCalledWith(ORG_ID, 'acme');
+  });
+
+  it('sends the owner to the portal with a full-page move after leaving the organization', () => {
+    const assign = vi.fn();
+    const { api } = setupOrgContext('owner', { leave: () => of(undefined) }, [
+      { provide: LOCATION_ASSIGN, useValue: assign },
+    ]);
+    const fixture = create();
+    buttonNamed('Salir de la organización')?.click();
+    fixture.detectChanges();
+    const dialog = document.querySelector('[role="dialog"]') as HTMLElement;
+    Array.from(dialog.querySelectorAll('button'))
+      .find((b) => b.textContent?.trim() === 'Salir')
+      ?.click();
+    fixture.detectChanges();
+
+    expect(api['leave']).toHaveBeenCalledWith(ORG_ID);
+    expect(assign).toHaveBeenCalledWith('/');
   });
 
   it('offers only members as transfer targets, excluding the caller', () => {

@@ -9,12 +9,20 @@
     <div class="stack">
       <div class="row">
         <span>Avisos en la aplicación</span>
-        <p-toggleswitch
-          ariaLabel="Avisos en la aplicación"
-          [ngModel]="inAppEnabled() ?? false"
-          [disabled]="inAppEnabled() === null"
-          (onChange)="toggleInApp($event.checked)"
-        />
+        <div class="row-end">
+          @if (loading()) {
+            <span class="loading" role="status">
+              <i class="pi pi-spin pi-spinner" aria-hidden="true"></i>
+              Cargando preferencias…
+            </span>
+          }
+          <p-toggleswitch
+            ariaLabel="Avisos en la aplicación"
+            [ngModel]="inAppEnabled() ?? false"
+            [disabled]="loading() || inAppEnabled() === null"
+            (onChange)="toggleInApp($event.checked)"
+          />
+        </div>
       </div>
 
       <div class="row">

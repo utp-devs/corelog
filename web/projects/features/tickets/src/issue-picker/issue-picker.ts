@@ -2,6 +2,7 @@ import {
   ChangeDetectionStrategy,
   Component,
   DestroyRef,
+  computed,
   effect,
   inject,
   input,
@@ -10,7 +11,7 @@ import {
   untracked,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Select } from 'primeng/select';
+import { AutoComplete } from 'primeng/autocomplete';
 import { Subscription, finalize } from 'rxjs';
 import { Ticket, TicketApiService } from '@corelog/core';
 
@@ -29,7 +30,7 @@ interface IssueOption {
  */
 @Component({
   selector: 'app-issue-picker',
-  imports: [FormsModule, Select],
+  imports: [FormsModule, AutoComplete],
   templateUrl: './issue-picker.html',
   styleUrl: './issue-picker.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -45,6 +46,16 @@ export class IssuePicker {
 
   protected readonly options = signal<IssueOption[]>([]);
   protected readonly loading = signal(false);
+  /** Last option picked by the user; keeps its label when the list no longer contains it. */
+  private readonly picked = signal<IssueOption | null>(null);
+  /** The option shown in the field: the picked one, else the listed option with the current id. */
+  protected readonly selectedOption = computed<IssueOption | null>(() => {
+    const id = this.value();
+    if (!id) return null;
+    const picked = this.picked();
+    if (picked?.value === id) return picked;
+    return this.options().find((option) => option.value === id) ?? { value: id, label: id };
+  });
 
   private timer: ReturnType<typeof setTimeout> | undefined;
   private request: Subscription | undefined;
@@ -72,8 +83,10 @@ export class IssuePicker {
     }, ISSUE_SEARCH_DEBOUNCE_MS);
   }
 
-  protected onPick(id: string | null): void {
-    this.value.set(id ?? '');
+  /** Results come from the server search: the list is shown as returned, without a client-side filter. */
+  protected onPick(option: IssueOption | null): void {
+    this.picked.set(option);
+    this.value.set(option?.value ?? '');
   }
 
   private toOptions(items: readonly Ticket[]): IssueOption[] {

@@ -17,7 +17,7 @@ export class BurndownChart {
 
   protected readonly labels = computed(() => this.points().map((point) => point.date));
   protected readonly series = computed<ChartCardSeries[]>(() => [
-    { label: 'Ideal', data: this.points().map((point) => point.ideal) },
+    { label: 'Ideal', data: this.points().map((point) => point.ideal), dashed: true },
     { label: 'Restante', data: this.points().map((point) => point.remaining) },
   ]);
   protected readonly table = computed<ChartTable>(() => ({

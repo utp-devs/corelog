@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { BoardCard, ISSUE_TYPES, IssueType } from '@corelog/core';
+import { BoardCard, ISSUE_TYPES, IssueType, issuePath } from '@corelog/core';
 import { Avatar } from '@corelog/ui/avatar';
 import { IssueKey } from '@corelog/ui/issue-key';
 import { Lozenge } from '@corelog/ui/lozenge';
@@ -20,6 +20,7 @@ export class BoardCardView {
   readonly dragging = input(false);
 
   protected readonly shortId = computed(() => this.card().id.slice(0, 8));
+  protected readonly href = computed(() => issuePath(this.card().id));
   protected readonly issueType = computed<IssueType | undefined>(() =>
     ISSUE_TYPES.find((type) => type === this.card().type),
   );

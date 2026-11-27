@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Button } from 'primeng/button';
-import { OrganizationStore } from '@corelog/core';
+import { LOCATION_ASSIGN, OrganizationStore } from '@corelog/core';
 import { PageContainer } from '@corelog/ui/page-container';
 
 import { ChooseStep } from './choose-step';
@@ -23,6 +23,8 @@ const STEP_TITLES = ['Elegir', 'Organización', 'Equipo', 'Finalizar'] as const;
 })
 export class OnboardingPage {
   private readonly router = inject(Router);
+  /** Full-page move to the workspace projects: the workspace is a separate application. */
+  private readonly assign = inject(LOCATION_ASSIGN);
   private readonly orgs = inject(OrganizationStore);
   private readonly route = inject(ActivatedRoute);
 
@@ -38,6 +40,6 @@ export class OnboardingPage {
   }
 
   protected finish(): void {
-    void this.router.navigateByUrl('/projects', { replaceUrl: true });
+    this.assign('/workspace/projects');
   }
 }

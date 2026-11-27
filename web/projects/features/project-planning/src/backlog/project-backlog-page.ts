@@ -4,7 +4,7 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import {
   BacklogItem,
   BacklogStore,
-  ProjectApiService,
+  ProjectStore,
   WorkItemStatus,
   projectAccessVariantOf,
 } from '@corelog/core';
@@ -91,7 +91,7 @@ export class ProjectBacklogPage {
 
   protected readonly scope = trackProjectScope(
     inject(ActivatedRoute),
-    inject(ProjectApiService),
+    inject(ProjectStore),
     this.destroyRef,
     (projectId) => this.store.load(projectId),
   );

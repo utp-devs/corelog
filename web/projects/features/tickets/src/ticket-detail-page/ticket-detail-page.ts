@@ -41,6 +41,8 @@ import {
   effectiveProjectRole,
   hasProjectPermission,
   issueKeyOf,
+  ISSUES_BASE_PATH,
+  issuePath,
 } from '@corelog/core';
 import { trackRecent } from '@corelog/ui/command-palette';
 import { EmptyState } from '@corelog/ui/empty-state';
@@ -58,7 +60,6 @@ import { PickableUser, UserPicker } from '@corelog/ui/user-picker';
 import { errorMessage } from '../shared/error-message';
 import { MentionSearch } from '../shared/mention-search';
 import { payloadFrom } from '../shared/issue-payload';
-import { ISSUES_BASE_PATH, issuePath } from '../shared/ticket-paths';
 import { injectMemberNames } from '../hooks/member-names';
 import { injectTeammateSearch } from '../hooks/teammate-search';
 import { IssuePicker } from '../issue-picker/issue-picker';
@@ -275,9 +276,14 @@ export class TicketDetailPage {
 
   // Comments.
   protected readonly commentControl = new FormControl('', { nonNullable: true });
+  /** True while a comment is being posted; the editor and the button stay disabled. */
+  protected readonly commentSending = signal(false);
   private readonly commentBody = toSignal(this.commentControl.valueChanges, { initialValue: '' });
   protected readonly canComment = computed(
-    () => !this.collaborationLoading() && this.commentBody().trim().length > 0,
+    () =>
+      !this.collaborationLoading() &&
+      !this.commentSending() &&
+      this.commentBody().trim().length > 0,
   );
 
   constructor() {
@@ -456,15 +462,22 @@ export class TicketDetailPage {
   protected submitComment(): void {
     const ticket = this.detail();
     const body = this.commentControl.value;
-    if (!ticket || !body.trim()) return;
+    if (!ticket || !body.trim() || this.commentSending()) return;
+    this.commentSending.set(true);
+    this.commentControl.disable({ emitEvent: false });
     this.store.createComment(ticket.id, body).subscribe({
       next: () => {
+        this.commentSending.set(false);
+        this.commentControl.enable({ emitEvent: false });
         this.store.fetchWatchers(ticket.id);
         this.commentControl.setValue('');
         this.notify.success('Comentario agregado');
       },
-      error: (error: unknown) =>
-        this.notify.error(errorMessage(error, 'No se pudo agregar el comentario')),
+      error: (error: unknown) => {
+        this.commentSending.set(false);
+        this.commentControl.enable({ emitEvent: false });
+        this.notify.error(errorMessage(error, 'No se pudo agregar el comentario'));
+      },
     });
   }
 

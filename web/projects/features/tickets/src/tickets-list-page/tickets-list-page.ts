@@ -32,6 +32,8 @@ import {
   SavedFilterCriteria,
   Ticket,
   TicketStore,
+  ISSUES_BASE_PATH,
+  issuePath,
 } from '@corelog/core';
 import { DataTablePageChange, DataTablePagination, RowMenuItem } from '@corelog/ui/data-table';
 import { EmptyState } from '@corelog/ui/empty-state';
@@ -41,7 +43,6 @@ import { PageHeader } from '@corelog/ui/page-header';
 import { Section } from '@corelog/ui/section';
 import { Toolbar, ToolbarLeft, ToolbarRight, ToolbarSecondary } from '@corelog/ui/toolbar';
 
-import { ISSUES_BASE_PATH, issuePath } from '../shared/ticket-paths';
 import { TicketList } from '../ticket-list/ticket-list';
 
 const DEFAULT_PAGE_SIZE = 20;

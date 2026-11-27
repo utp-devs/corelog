@@ -14,6 +14,7 @@ import {
   IssueStatusCategory,
   Ticket,
   issueKeyOf,
+  issuePath,
 } from '@corelog/core';
 import {
   DataTable,
@@ -27,8 +28,6 @@ import { IssueKey } from '@corelog/ui/issue-key';
 import { Lozenge } from '@corelog/ui/lozenge';
 import { PriorityTag } from '@corelog/ui/priority-tag';
 import { UserChip } from '@corelog/ui/user-chip';
-
-import { issuePath } from '../shared/ticket-paths';
 
 /** Below this width the updated-date column is left out so the remaining columns fit. */
 const NARROW_TABLE_QUERY = '(max-width: 1023.98px)';

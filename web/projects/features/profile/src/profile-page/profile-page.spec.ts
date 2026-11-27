@@ -64,6 +64,7 @@ interface Mocks {
   readonly prompt: ReturnType<typeof vi.fn>;
   readonly auth: {
     user: ReturnType<typeof signal<User | null>>;
+    setUser: ReturnType<typeof vi.fn>;
     changePassword: ReturnType<typeof vi.fn>;
     logout: ReturnType<typeof vi.fn>;
   };
@@ -82,15 +83,22 @@ interface Mocks {
   };
 }
 
+/** Auth store double: setUser writes the account the shell reads. */
+function authMock(start: User): Mocks['auth'] {
+  const current = signal<User | null>(start);
+  return {
+    user: current,
+    setUser: vi.fn((next: User) => current.set(next)),
+    changePassword: vi.fn(async () => undefined),
+    logout: vi.fn(),
+  };
+}
+
 function setup(): Mocks {
   const mocks: Mocks = {
     location: recordLocation(),
     prompt: vi.fn(async () => false),
-    auth: {
-      user: signal<User | null>(user),
-      changePassword: vi.fn(async () => undefined),
-      logout: vi.fn(),
-    },
+    auth: authMock(user),
     people: {
       getMe: vi.fn(() => of({ ...user, avatarKey: 'k-1' })),
       updateMe: vi.fn((payload: Record<string, unknown>) => of({ ...user, ...payload })),

@@ -15,13 +15,11 @@
       <app-loading-skeleton variant="detail" [rows]="6" />
     } @else {
       @if (actionError(); as message) {
-        @if (alertOpen()) {
-          <div class="alert" role="alert">
-            <p-message severity="warn" [closable]="true" (onClose)="alertOpen.set(false)">{{
-              message
-            }}</p-message>
-          </div>
-        }
+        <div class="alert" role="alert">
+          <p-message severity="warn" [closable]="true" (onClose)="store.clearActionError()">{{
+            message
+          }}</p-message>
+        </div>
       }
 
       <div class="layout">

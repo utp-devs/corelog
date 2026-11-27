@@ -41,4 +41,24 @@ describe('IssuePicker', () => {
     ).not.toBeNull();
     guard.expectNoConsoleOutput();
   });
+
+  it('shows the server results as returned, even when the title does not contain the query', () => {
+    setupTickets({
+      ticketApi: {
+        list: () => of(pageOf([ticketOf({ id: 'desc-1', title: 'Sin relación en el título' })])),
+      },
+    });
+    const fixture: ComponentFixture<IssuePicker> = TestBed.createComponent(IssuePicker);
+    fixture.componentRef.setInput('excludeId', ISSUE_ID);
+    fixture.detectChanges();
+    vi.advanceTimersByTime(300);
+
+    fixture.componentInstance['search']('texto de la descripción');
+    vi.advanceTimersByTime(300);
+    fixture.detectChanges();
+
+    const labels = fixture.componentInstance['options']().map((option) => option.label);
+    expect(labels).toEqual(expect.arrayContaining([expect.stringContaining('Sin relación')]));
+    guard.expectNoConsoleOutput();
+  });
 });

@@ -21,6 +21,8 @@ export class ProfileNotificationsSection {
 
   /** Null while the preference is not loaded (or not available): the switch stays disabled. */
   protected readonly inAppEnabled = signal<boolean | null>(null);
+  /** True until the preferences answer; the switch shows a spinner and stays disabled meanwhile. */
+  protected readonly loading = signal(true);
   protected readonly error = signal<string | null>(null);
   protected readonly status = signal<string | null>(null);
 
@@ -29,8 +31,11 @@ export class ProfileNotificationsSection {
       .getPreferences()
       .pipe(takeUntilDestroyed())
       .subscribe({
-        next: (prefs) => this.inAppEnabled.set(prefs.inApp),
-        error: () => undefined,
+        next: (prefs) => {
+          this.inAppEnabled.set(prefs.inApp);
+          this.loading.set(false);
+        },
+        error: () => this.loading.set(false),
       });
   }
 
