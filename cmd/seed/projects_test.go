@@ -1,6 +1,8 @@
 package main
 
 import (
+	"context"
+	"errors"
 	"testing"
 
 	"github.com/google/uuid"
@@ -182,5 +184,22 @@ func TestE2EProjectsPersistWithGrantsAndFavorites(t *testing.T) {
 	}
 	if favorites != 1 || recents != 1 {
 		t.Errorf("favorites = %d, recents = %d, want 1 and 1", favorites, recents)
+	}
+}
+
+func TestGuardRealAccountsRefusesHandMadeUsers(t *testing.T) {
+	db := testdb.New(t)
+	ctx := context.Background()
+	t.Setenv("SEED_ALLOW_DATA_LOSS", "")
+	if _, err := db.ExecContext(ctx, `INSERT INTO users (id, name, email, password_hash, role) VALUES (gen_random_uuid(), 'Real', 'someone@example.com', 'x', 'user')`); err != nil {
+		t.Skipf("cannot insert a user in this schema: %v", err)
+	}
+	t.Cleanup(func() { _, _ = db.ExecContext(ctx, `DELETE FROM users WHERE email = 'someone@example.com'`) })
+	if err := guardRealAccounts(ctx, db); !errors.Is(err, errRealAccounts) {
+		t.Fatalf("guardRealAccounts = %v, want errRealAccounts", err)
+	}
+	t.Setenv("SEED_ALLOW_DATA_LOSS", "yes")
+	if err := guardRealAccounts(ctx, db); err != nil {
+		t.Fatalf("with opt-in: %v", err)
 	}
 }

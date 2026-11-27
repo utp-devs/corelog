@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
 	"sort"
 	"strings"
 
@@ -104,6 +105,9 @@ func Execute(ctx context.Context, db *sqlx.DB, sc Scenario, opts Options) error 
 // statement (TRUNCATE with CASCADE handles foreign keys regardless of order).
 func prepareDatabase(ctx context.Context, db *sqlx.DB, forceReset bool) error {
 	if forceReset {
+		if err := guardRealAccounts(ctx, db); err != nil {
+			return err
+		}
 		if _, err := db.ExecContext(ctx, "TRUNCATE TABLE "+strings.Join(appTables, ", ")+" RESTART IDENTITY CASCADE"); err != nil {
 			return fmt.Errorf("vaciar tablas: %w", err)
 		}
@@ -115,6 +119,25 @@ func prepareDatabase(ctx context.Context, db *sqlx.DB, forceReset bool) error {
 	}
 	if users > 0 {
 		return errNotEmpty
+	}
+	return nil
+}
+
+// errRealAccounts is returned when a reset would delete accounts that were not created by the seed.
+var errRealAccounts = errors.New("la base contiene cuentas que no son de la semilla (correos fuera de @corelog.test y @corelog.local); un reinicio las borraria. Haz un volcado y define SEED_ALLOW_DATA_LOSS=yes si de verdad quieres continuar")
+
+// guardRealAccounts refuses to truncate a database that holds hand-made accounts unless the caller
+// opts in with SEED_ALLOW_DATA_LOSS=yes.
+func guardRealAccounts(ctx context.Context, db *sqlx.DB) error {
+	if os.Getenv("SEED_ALLOW_DATA_LOSS") == "yes" {
+		return nil
+	}
+	var real int
+	if err := db.GetContext(ctx, &real, `SELECT count(*) FROM users WHERE email NOT LIKE '%@corelog.test' AND email NOT LIKE '%@corelog.local'`); err != nil {
+		return fmt.Errorf("comprobar cuentas reales: %w", err)
+	}
+	if real > 0 {
+		return errRealAccounts
 	}
 	return nil
 }
