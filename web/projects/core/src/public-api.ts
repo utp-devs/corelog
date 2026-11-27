@@ -22,6 +22,7 @@ export * from './lib/state/org-members-by-id';
 export * from './lib/utils/api-error';
 export * from './lib/validators';
 export * from './lib/utils/org-id-provider';
+export * from './lib/utils/issue-draft-form';
 export * from './lib/utils/project-layout';
 export * from './lib/utils/project-lead';
 export * from './lib/utils/project-load-error';

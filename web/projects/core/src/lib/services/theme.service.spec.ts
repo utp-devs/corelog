@@ -38,4 +38,50 @@ describe('ThemeService', () => {
     localStorage.setItem(THEME_STORAGE_KEY, '{"mode":"auto"}');
     expect(TestBed.inject(ThemeService).mode()).toBe('light');
   });
+
+  describe('system mode', () => {
+    let listeners: Array<(event: { matches: boolean }) => void>;
+    let prefersDark: boolean;
+    const original = window.matchMedia;
+
+    beforeEach(() => {
+      listeners = [];
+      prefersDark = true;
+      window.matchMedia = ((query: string) => ({
+        matches: query.includes('prefers-color-scheme: dark') ? prefersDark : false,
+        addEventListener: (_: string, listener: (event: { matches: boolean }) => void) =>
+          listeners.push(listener),
+        removeEventListener: () => undefined,
+      })) as unknown as typeof window.matchMedia;
+    });
+
+    afterEach(() => {
+      window.matchMedia = original;
+    });
+
+    it('applies the operating system preference and keeps the mode as system', () => {
+      localStorage.setItem(THEME_STORAGE_KEY, 'system');
+      const theme = TestBed.inject(ThemeService);
+      expect(theme.mode()).toBe('system');
+      expect(theme.resolved()).toBe('dark');
+      expect(theme.isDark()).toBe(true);
+      expect(document.documentElement.dataset['theme']).toBe('dark');
+    });
+
+    it('follows a change of the operating system preference', () => {
+      const theme = TestBed.inject(ThemeService);
+      theme.setMode('system');
+      expect(localStorage.getItem(THEME_STORAGE_KEY)).toBe('system');
+      listeners.forEach((listener) => listener({ matches: false }));
+      expect(theme.resolved()).toBe('light');
+      expect(document.documentElement.dataset['theme']).toBe('light');
+    });
+
+    it('toggle leaves the system mode with the opposite of the applied theme', () => {
+      const theme = TestBed.inject(ThemeService);
+      theme.setMode('system');
+      theme.toggle();
+      expect(theme.mode()).toBe('light');
+    });
+  });
 });

@@ -128,6 +128,8 @@ export interface TicketPage {
 }
 
 export interface CreateTicketInput {
+  /** Project the issue belongs to. Without it the server uses the default project. */
+  readonly projectId?: string;
   readonly title: string;
   readonly description: string;
   readonly priority: IssuePriority;

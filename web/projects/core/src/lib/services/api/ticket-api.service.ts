@@ -188,6 +188,7 @@ export class TicketApiService {
   create(input: CreateTicketInput): Observable<Ticket> {
     return this.http
       .post<Envelope<TicketDto>>(this.baseUrl, {
+        project_id: input.projectId,
         title: input.title,
         description: input.description,
         priority: input.priority,
