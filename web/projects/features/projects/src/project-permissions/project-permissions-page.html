@@ -1,0 +1,121 @@
+@if (accessVariant(); as variant) {
+  <app-page-container variant="reading" pageName="permissions">
+    <app-error-page [variant]="variant" />
+  </app-page-container>
+} @else {
+  <app-page-container variant="reading" pageName="permissions" [ready]="!loading()" [fill]="true">
+    <app-page-header title="Permisos" subtitle="Qué puede hacer cada rol en este proyecto." />
+
+    @if (status() === 'error') {
+      <div role="alert">
+        <p-message severity="warn" [closable]="false">
+          No se pudieron cargar los miembros. La matriz de permisos sigue vigente.
+        </p-message>
+      </div>
+    }
+
+    <app-section title="Tu rol en este proyecto">
+      @if (loading()) {
+        <app-loading-skeleton variant="detail" [rows]="2" />
+      } @else {
+        <div class="your-role">
+          <app-lozenge tone="info">{{ roleLabel() }}</app-lozenge>
+          <p class="muted">{{ roleText() }}</p>
+        </div>
+      }
+    </app-section>
+
+    <app-section title="Miembros por rol">
+      @if (loading()) {
+        <app-loading-skeleton variant="detail" [rows]="2" />
+      } @else {
+        <div class="count-grid">
+          @for (role of memberRoles; track role) {
+            <app-stat-tile [label]="roleNames[role]" [value]="roleCounts()[role]" />
+          }
+        </div>
+      }
+    </app-section>
+
+    <app-section
+      title="Matriz de permisos"
+      description="Cada fila es un permiso y cada columna un rol. La columna resaltada es la tuya."
+      [flush]="true"
+      [fill]="true"
+    >
+      @if (loading()) {
+        <app-loading-skeleton variant="table" [rows]="4" />
+      } @else if (isMobile()) {
+        <ul class="mobile-list" aria-label="Matriz de permisos por rol">
+          @for (permission of permissions; track permission.key) {
+            <li class="mobile-card">
+              <strong>{{ permission.label }}</strong>
+              <span class="muted">{{ permission.description }}</span>
+              <ul class="mobile-roles" [attr.aria-label]="'Roles con ' + permission.label">
+                @for (column of columns; track column.key) {
+                  <li class="mobile-role">
+                    <span>{{ column.label }}{{ column.key === myRole() ? ' (tú)' : '' }}</span>
+                    @if (granted(column.key, permission)) {
+                      <app-lozenge tone="success">Permitido</app-lozenge>
+                    } @else {
+                      <app-lozenge tone="neutral">No permitido</app-lozenge>
+                    }
+                  </li>
+                }
+              </ul>
+            </li>
+          }
+        </ul>
+      } @else {
+        <div class="table-wrap">
+          <table class="matrix">
+            <thead>
+              <tr>
+                <th scope="col" class="permission-col">Permiso</th>
+                @for (column of columns; track column.key) {
+                  <th scope="col" class="role-col" [class.current]="column.key === myRole()">
+                    {{ column.label }}
+                    @if (column.key === myRole()) {
+                      <span class="you-tag">Tú</span>
+                    }
+                  </th>
+                }
+              </tr>
+            </thead>
+            <tbody>
+              @for (permission of permissions; track permission.key) {
+                <tr>
+                  <th scope="row" class="permission-cell">
+                    <span class="permission-label">{{ permission.label }}</span>
+                    <span class="permission-description">{{ permission.description }}</span>
+                  </th>
+                  @for (column of columns; track column.key) {
+                    <td class="role-cell" [class.current]="column.key === myRole()">
+                      @if (granted(column.key, permission)) {
+                        <span
+                          class="granted"
+                          role="img"
+                          [attr.aria-label]="column.label + ': permitido'"
+                        >
+                          <i class="pi pi-check" aria-hidden="true"></i>
+                        </span>
+                      } @else {
+                        <span
+                          class="denied"
+                          role="img"
+                          [attr.aria-label]="column.label + ': no permitido'"
+                        >
+                          <i class="pi pi-minus" aria-hidden="true"></i>
+                        </span>
+                      }
+                    </td>
+                  }
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </app-section>
+  </app-page-container>
+}

@@ -1,0 +1,86 @@
+<p-dialog
+  header="Nuevo proyecto"
+  [visible]="open()"
+  (visibleChange)="open.set($event)"
+  [modal]="true"
+  [draggable]="false"
+  [resizable]="false"
+  styleClass="cl-project-create-dialog"
+>
+  <form class="form" [formGroup]="form" novalidate>
+    <app-field-row
+      #keyRow
+      label="Clave"
+      [required]="true"
+      [error]="keyError() ?? serverError(form.controls.key)"
+    >
+      <input
+        pInputText
+        appFieldControl
+        formControlName="key"
+        placeholder="CORE"
+        autocomplete="off"
+      />
+    </app-field-row>
+
+    <app-field-row
+      #nameRow
+      label="Nombre"
+      [required]="true"
+      [error]="nameError() ?? serverError(form.controls.name)"
+    >
+      <input
+        pInputText
+        appFieldControl
+        formControlName="name"
+        placeholder="Nombre del proyecto"
+        autocomplete="off"
+      />
+    </app-field-row>
+
+    <app-field-row
+      #descriptionRow
+      label="Descripción"
+      [error]="serverError(form.controls.description)"
+    >
+      <textarea pTextarea appFieldControl formControlName="description" rows="3"></textarea>
+    </app-field-row>
+
+    <app-field-row
+      #typeRow
+      label="Tipo"
+      [required]="true"
+      [error]="serverError(form.controls.type)"
+    >
+      <p-select
+        formControlName="type"
+        [inputId]="typeRow.controlId"
+        [options]="typeOptions"
+        optionLabel="label"
+        optionValue="value"
+      />
+    </app-field-row>
+
+    <app-field-row
+      #visibilityRow
+      label="Visibilidad"
+      [required]="true"
+      [error]="serverError(form.controls.visibility)"
+    >
+      <p-select
+        formControlName="visibility"
+        [inputId]="visibilityRow.controlId"
+        [options]="visibilityOptions"
+        optionLabel="label"
+        optionValue="value"
+      />
+    </app-field-row>
+  </form>
+
+  <ng-template pTemplate="footer">
+    <div class="actions">
+      <p-button label="Cancelar" severity="secondary" [outlined]="true" (onClick)="cancel()" />
+      <p-button label="Crear" [loading]="submitting()" (onClick)="submit()" />
+    </div>
+  </ng-template>
+</p-dialog>

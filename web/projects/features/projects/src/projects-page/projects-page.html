@@ -1,0 +1,305 @@
+@if (accessVariant(); as variant) {
+  <app-page-container variant="wide" pageName="projects">
+    <app-error-page [variant]="variant" />
+  </app-page-container>
+} @else {
+  <app-page-container
+    variant="wide"
+    pageName="projects"
+    [ready]="!loading() && status() !== 'loading'"
+    [fill]="true"
+  >
+    <app-page-header title="Proyectos" subtitle="Organiza el trabajo en espacios independientes.">
+      <div appPageHeaderActions>
+        <span
+          [pTooltip]="isAdmin() ? undefined : 'Solo los administradores pueden crear proyectos.'"
+        >
+          <p-button
+            label="Nuevo proyecto"
+            icon="pi pi-plus"
+            [disabled]="!isAdmin()"
+            (onClick)="openCreate()"
+          />
+        </span>
+      </div>
+    </app-page-header>
+
+    <app-toolbar>
+      <div appToolbarLeft class="filters">
+        <app-search-input
+          [(value)]="query"
+          placeholder="Buscar por nombre o clave"
+          ariaLabel="Buscar proyectos"
+        />
+        <div role="group" aria-label="Filtrar por visibilidad">
+          <p-selectbutton
+            [options]="visibilityOptions"
+            optionLabel="label"
+            optionValue="value"
+            [ngModel]="visibility()"
+            (ngModelChange)="visibility.set($event)"
+          />
+        </div>
+        <p-select
+          ariaLabel="Filtrar por estado"
+          styleClass="archived-filter"
+          [options]="archivedOptions"
+          optionLabel="label"
+          optionValue="value"
+          [ngModel]="archived()"
+          (ngModelChange)="archived.set($event)"
+        />
+      </div>
+    </app-toolbar>
+
+    @if (loading()) {
+      <ul class="grid" aria-label="Cargando proyectos" aria-busy="true">
+        @for (slot of skeletonSlots; track slot) {
+          <li class="card-item">
+            <app-section>
+              <app-loading-skeleton variant="card" [rows]="2" />
+            </app-section>
+          </li>
+        }
+      </ul>
+    } @else if (status() === 'error' && projects().length === 0) {
+      <app-error-state [message]="errorMessage()" [canRetry]="true" (retry)="retry()" />
+    } @else if (projects().length === 0) {
+      <app-section [fill]="true">
+        <app-empty-state
+          title="Aún no hay proyectos"
+          description="Crea el primero para organizar el trabajo en espacios independientes."
+        >
+          <div action>
+            @if (isAdmin()) {
+              <p-button label="Nuevo proyecto" (onClick)="openCreate()" />
+            }
+          </div>
+        </app-empty-state>
+      </app-section>
+    } @else if (visible().length === 0) {
+      <app-section [fill]="true">
+        <app-empty-state
+          title="Sin resultados"
+          description="Ningún proyecto coincide con los filtros. Cambia la búsqueda o el filtro de estado."
+        />
+      </app-section>
+    } @else {
+      <app-card-grid ariaLabel="Proyectos" [minCardWidth]="280" [fill]="true">
+        @for (project of visible(); track project.id) {
+          <article class="card" [attr.data-testid]="'project-card-' + project.key">
+            <header class="card-header">
+              <app-project-avatar [name]="project.name" [projectKey]="project.key" [size]="40" />
+              <div class="card-title">
+                <h3 class="name" [attr.title]="project.name">{{ project.name }}</h3>
+                <span class="key">{{ project.key }}</span>
+              </div>
+            </header>
+
+            <p class="description" [attr.title]="project.description || null">
+              {{ project.description || 'Sin descripción' }}
+            </p>
+
+            <p class="lead">
+              Responsable:
+              <span [attr.data-testid]="'project-lead-' + project.key">{{
+                leadName(project)
+              }}</span>
+            </p>
+
+            <div class="tags">
+              <app-lozenge [tone]="project.visibility === 'open' ? 'info' : 'warning'">{{
+                visibilityLabel(project)
+              }}</app-lozenge>
+              <app-lozenge>{{ typeLabel(project) }}</app-lozenge>
+              @if (project.archivedAt) {
+                <app-lozenge tone="neutral">Archivado</app-lozenge>
+              }
+            </div>
+
+            <footer class="card-actions">
+              <button type="button" class="link-action" (click)="openBoard(project)">
+                <i class="pi pi-briefcase" aria-hidden="true"></i>
+                <span>Abrir tablero</span>
+              </button>
+              <button
+                type="button"
+                class="link-action"
+                [attr.aria-pressed]="isSelected(project)"
+                (click)="selectProject(project)"
+              >
+                Miembros y etiquetas
+              </button>
+            </footer>
+          </article>
+        }
+      </app-card-grid>
+    }
+
+    @if (selectedProjectId()) {
+      <app-section
+        [title]="membersTitle()"
+        description="Líder, colaborador o lector. Los cambios se aplican al momento."
+      >
+        <div class="inline-form">
+          <input
+            pInputText
+            class="member-input"
+            type="text"
+            placeholder="UUID del usuario"
+            aria-label="UUID del usuario"
+            [value]="memberUserId()"
+            (input)="onMemberInput($event)"
+          />
+          <p-select
+            ariaLabel="Rol del nuevo miembro"
+            [options]="roleOptions"
+            optionLabel="label"
+            optionValue="value"
+            [ngModel]="memberRole()"
+            (ngModelChange)="memberRole.set($event)"
+          />
+          <p-button label="Agregar" [disabled]="!memberUserId()" (onClick)="addMember()" />
+        </div>
+
+        @if (members().length === 0) {
+          <app-empty-state
+            title="Aún no hay miembros"
+            description="Agrega a un usuario con su UUID para empezar."
+          />
+        } @else {
+          <ul class="item-list" aria-label="Miembros del proyecto">
+            @for (member of members(); track member.userId) {
+              <li class="item">
+                <span class="item-text" [attr.title]="member.userId">{{ member.userId }}</span>
+                <div class="item-actions">
+                  <p-select
+                    size="small"
+                    [ariaLabel]="'Rol de ' + member.userId"
+                    [options]="roleOptions"
+                    optionLabel="label"
+                    optionValue="value"
+                    [ngModel]="member.role"
+                    (ngModelChange)="changeMemberRole(member.userId, $event)"
+                  />
+                  <p-button
+                    label="Eliminar"
+                    severity="danger"
+                    size="small"
+                    [outlined]="true"
+                    (onClick)="removeMember(member.userId)"
+                  />
+                </div>
+              </li>
+            }
+          </ul>
+        }
+      </app-section>
+
+      <app-section
+        title="Etiquetas y componentes"
+        description="Organizan las incidencias dentro del proyecto."
+      >
+        <div class="two-columns">
+          <div class="column">
+            <h3 class="subtitle">Etiquetas</h3>
+            <div class="inline-form">
+              <input
+                pInputText
+                class="label-input"
+                type="text"
+                placeholder="Nueva etiqueta"
+                aria-label="Nombre de la etiqueta"
+                [value]="labelName()"
+                (input)="onLabelNameInput($event)"
+              />
+              <p-select
+                ariaLabel="Color de la etiqueta"
+                [options]="labelColorOptions"
+                optionLabel="label"
+                optionValue="value"
+                [ngModel]="labelColor()"
+                (ngModelChange)="labelColor.set($event)"
+              />
+              <p-button
+                label="Crear etiqueta"
+                [disabled]="!labelName().trim()"
+                (onClick)="createLabel()"
+              />
+            </div>
+            @if (labels().length === 0) {
+              <app-empty-state title="Aún no hay etiquetas" />
+            } @else {
+              <ul class="item-list" aria-label="Etiquetas del proyecto">
+                @for (label of labels(); track label.id) {
+                  <li class="item">
+                    <span class="item-text">{{ label.name }} ({{ label.color }})</span>
+                    <p-button
+                      label="Eliminar"
+                      severity="danger"
+                      size="small"
+                      [outlined]="true"
+                      (onClick)="deleteLabel(label.id)"
+                    />
+                  </li>
+                }
+              </ul>
+            }
+          </div>
+
+          <div class="column">
+            <h3 class="subtitle">Componentes</h3>
+            <div class="inline-form">
+              <input
+                pInputText
+                class="component-name-input"
+                type="text"
+                placeholder="Nuevo componente"
+                aria-label="Nombre del componente"
+                [value]="componentName()"
+                (input)="onComponentNameInput($event)"
+              />
+              <input
+                pInputText
+                class="component-description-input"
+                type="text"
+                placeholder="Descripción"
+                aria-label="Descripción del componente"
+                [value]="componentDescription()"
+                (input)="onComponentDescriptionInput($event)"
+              />
+              <p-button
+                label="Crear componente"
+                [disabled]="!componentName().trim()"
+                (onClick)="createComponent()"
+              />
+            </div>
+            @if (components().length === 0) {
+              <app-empty-state title="Aún no hay componentes" />
+            } @else {
+              <ul class="item-list" aria-label="Componentes del proyecto">
+                @for (component of components(); track component.id) {
+                  <li class="item">
+                    <span class="item-text"
+                      >{{ component.name
+                      }}{{ component.description ? ' - ' + component.description : '' }}</span
+                    >
+                    <p-button
+                      label="Eliminar"
+                      severity="danger"
+                      size="small"
+                      [outlined]="true"
+                      (onClick)="deleteComponent(component.id)"
+                    />
+                  </li>
+                }
+              </ul>
+            }
+          </div>
+        </div>
+      </app-section>
+    }
+
+    <app-project-create-dialog [(open)]="createOpen" />
+  </app-page-container>
+}

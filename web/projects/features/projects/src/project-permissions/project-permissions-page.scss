@@ -1,0 +1,139 @@
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.your-role {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--cl-space-3);
+}
+
+.muted {
+  color: var(--cl-text-subtle);
+  font-size: var(--cl-font-small);
+}
+
+.count-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: var(--cl-space-3);
+}
+
+.table-wrap {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.matrix {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--cl-font-small);
+}
+
+.matrix th,
+.matrix td {
+  padding: var(--cl-space-3);
+  border-bottom: 1px solid var(--cl-border);
+  text-align: left;
+  vertical-align: middle;
+}
+
+.permission-col {
+  min-width: 220px;
+}
+
+.role-col,
+.role-cell {
+  width: 140px;
+  text-align: center;
+}
+
+.role-col {
+  color: var(--cl-text);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.permission-cell {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cl-space-1);
+  font-weight: 600;
+}
+
+.permission-label {
+  color: var(--cl-text);
+}
+
+.permission-description {
+  color: var(--cl-text-subtle);
+  font-weight: 400;
+}
+
+.current {
+  background: var(--cl-brand-subtle);
+}
+
+.role-col.current {
+  color: var(--cl-brand);
+}
+
+.you-tag {
+  margin-inline-start: var(--cl-space-1);
+  padding: 0 var(--cl-space-1);
+  border-radius: var(--cl-radius-sm);
+  background: var(--cl-brand);
+  color: var(--cl-bg-surface);
+  font-size: var(--cl-font-caption);
+  font-weight: 600;
+}
+
+.granted {
+  color: var(--cl-success);
+  font-size: var(--cl-font-h3);
+}
+
+.denied {
+  color: var(--cl-text-subtle);
+}
+
+.mobile-list {
+  display: grid;
+  gap: var(--cl-space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.mobile-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cl-space-2);
+  min-width: 0;
+  padding: var(--cl-space-3);
+  border: 1px solid var(--cl-border);
+  border-radius: var(--cl-radius-md);
+}
+
+.mobile-roles {
+  display: grid;
+  gap: var(--cl-space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.mobile-role {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--cl-space-2);
+}
+
+@media (max-width: 767px) {
+  .count-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

@@ -1,0 +1,176 @@
+@if (accessVariant(); as variant) {
+  <app-page-container variant="fluid" pageName="board">
+    <div class="frame">
+      <app-error-page [variant]="variant" />
+    </div>
+  </app-page-container>
+} @else {
+  <app-page-container variant="fluid" pageName="board" [ready]="ready()" [fill]="true">
+    <div class="frame">
+      <app-page-header
+        title="Tablero"
+        subtitle="Arrastra una incidencia a otra columna, o usa su selector para cambiarla de columna."
+      />
+      <p class="sr-only" role="status" aria-live="polite">{{ store.announcement() }}</p>
+
+      @if (store.moveError(); as message) {
+        <div class="alert" role="alert">
+          <p-message severity="warn" [closable]="true" (onClose)="store.clearMoveError()">{{
+            message
+          }}</p-message>
+        </div>
+      }
+
+      @if (failed()) {
+        <app-error-state [message]="loadErrorMessage" [canRetry]="true" (retry)="retry()" />
+      } @else if (board(); as current) {
+        @if (store.hasColumns()) {
+          <div class="filters" role="search" aria-label="Filtrar tarjetas del tablero">
+            <app-search-input
+              class="search-field"
+              placeholder="Buscar en el tablero"
+              ariaLabel="Buscar en el tablero"
+              [debounceMs]="0"
+              [value]="filter().search"
+              (valueChange)="setSearch($event)"
+            />
+            <p-select
+              styleClass="priority-field"
+              placeholder="Prioridad"
+              ariaLabel="Filtrar por prioridad"
+              [options]="priorityOptions"
+              optionLabel="label"
+              optionValue="value"
+              [showClear]="true"
+              [ngModel]="filter().priority"
+              (ngModelChange)="setPriority($event)"
+            />
+            <label class="mine-toggle">
+              <p-toggleswitch
+                size="small"
+                ariaLabel="Solo mis incidencias"
+                [ngModel]="filter().onlyMine"
+                (ngModelChange)="setOnlyMine($event)"
+              />
+              <span>Solo mis incidencias</span>
+            </label>
+          </div>
+
+          <div
+            class="board"
+            role="region"
+            [attr.aria-label]="'Tablero ' + current.name"
+            data-scroll="inside-board"
+            data-scroll-x=""
+            [attr.data-layout]="isMobile() ? 'mobile-columns' : 'desktop-columns'"
+            cdkDropListGroup
+          >
+            @for (column of columns(); track column.id) {
+              <section
+                class="column"
+                [class.column-over]="overColumnId() === column.id && !isFull(column)"
+                [class.column-full]="isFull(column)"
+                [attr.aria-labelledby]="'column-' + column.id"
+              >
+                <header class="column-header">
+                  <h3 class="column-title" [id]="'column-' + column.id" [attr.title]="column.name">
+                    {{ column.name }}
+                  </h3>
+                  <div class="column-meta">
+                    @if (current.canManageBoard) {
+                      <p-inputnumber
+                        size="small"
+                        styleClass="wip-input"
+                        [min]="1"
+                        placeholder="Sin límite"
+                        [ariaLabel]="'Límite WIP de ' + column.name"
+                        [ngModel]="column.wipLimit ?? null"
+                        (onBlur)="saveWip(column, $event)"
+                        (onKeyDown)="onWipKey(column, $event)"
+                      />
+                    }
+                    <app-lozenge [tone]="isFull(column) ? 'danger' : 'neutral'">{{
+                      countLabel(column)
+                    }}</app-lozenge>
+                  </div>
+                </header>
+
+                <div
+                  class="column-body"
+                  cdkDropList
+                  [cdkDropListData]="column.id"
+                  [cdkDropListDisabled]="isFull(column)"
+                  (cdkDropListEntered)="onEnter($event.container.data)"
+                  (cdkDropListExited)="overColumnId.set(null)"
+                  (cdkDropListDropped)="onDrop($event)"
+                >
+                  @if (column.cards.length === 0) {
+                    <app-empty-state
+                      title="Sin incidencias"
+                      description="Arrastra incidencias aquí."
+                    />
+                  } @else {
+                    <ul class="cards" [attr.aria-label]="'Incidencias en ' + column.name">
+                      @for (card of column.cards; track trackCard(card)) {
+                        <li class="card-item">
+                          <div
+                            class="card-row"
+                            cdkDrag
+                            [cdkDragData]="card.id"
+                            [class.is-dragging]="activeCardId() === card.id"
+                            (cdkDragStarted)="activeCardId.set(card.id)"
+                            (cdkDragEnded)="activeCardId.set(null)"
+                          >
+                            <button
+                              type="button"
+                              class="handle"
+                              cdkDragHandle
+                              [attr.aria-label]="'Arrastrar ' + card.summary"
+                            >
+                              <i class="pi pi-bars" aria-hidden="true"></i>
+                            </button>
+                            <app-board-card [card]="card" />
+                            <ng-template cdkDragPreview>
+                              <app-board-card [card]="card" [dragging]="true" />
+                            </ng-template>
+                          </div>
+                          <p-select
+                            size="small"
+                            styleClass="move-select"
+                            placeholder="Mover a..."
+                            [ariaLabel]="'Mover ' + card.summary + ' a columna'"
+                            [ngModel]="null"
+                            [options]="moveTargets(card.id)"
+                            optionLabel="name"
+                            optionValue="id"
+                            optionDisabled="disabled"
+                            (onChange)="moveCard(card.id, $event.value)"
+                          />
+                        </li>
+                      }
+                    </ul>
+                  }
+                </div>
+              </section>
+            }
+          </div>
+        } @else {
+          <app-empty-state
+            title="Sin columnas"
+            description="El proyecto todavía no tiene columnas de tablero."
+          />
+        }
+      } @else {
+        <div class="board board-loading" aria-busy="true" aria-label="Cargando tablero">
+          @for (index of skeletonColumns; track index) {
+            <div class="column">
+              <p-skeleton height="8rem" />
+              <p-skeleton height="8rem" />
+              <p-skeleton height="8rem" />
+            </div>
+          }
+        </div>
+      }
+    </div>
+  </app-page-container>
+}

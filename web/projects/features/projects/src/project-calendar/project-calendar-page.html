@@ -1,0 +1,106 @@
+@if (accessVariant(); as variant) {
+  <app-page-container variant="fluid" pageName="calendar">
+    <div class="frame">
+      <app-error-page [variant]="variant" />
+    </div>
+  </app-page-container>
+} @else {
+  <app-page-container
+    variant="fluid"
+    pageName="calendar"
+    [ready]="!loading() && !failed()"
+    [fill]="true"
+  >
+    <div class="frame">
+      <app-page-header
+        title="Calendario"
+        subtitle="Inicios y fines de sprint y fechas límite de incidencias."
+      />
+
+      <div class="toolbar">
+        <div class="month-nav">
+          <button type="button" class="icon-button" aria-label="Mes anterior" (click)="shift(-1)">
+            <i class="pi pi-chevron-left" aria-hidden="true"></i>
+          </button>
+          <h2 class="month-title">{{ monthLabel() }}</h2>
+          <button type="button" class="icon-button" aria-label="Mes siguiente" (click)="shift(1)">
+            <i class="pi pi-chevron-right" aria-hidden="true"></i>
+          </button>
+        </div>
+        <div role="group" aria-label="Vista del calendario">
+          <p-selectbutton
+            [options]="viewOptions"
+            optionLabel="label"
+            optionValue="value"
+            [ngModel]="view()"
+            (ngModelChange)="view.set($event)"
+          />
+        </div>
+      </div>
+
+      @if (failed()) {
+        <app-error-state [message]="loadFailedMessage" [canRetry]="true" (retry)="retry()" />
+      } @else if (loading()) {
+        <app-loading-skeleton variant="detail" [rows]="5" />
+      } @else if (calendar.isEmpty()) {
+        <div class="panel">
+          <app-empty-state
+            title="No hay hitos en este mes"
+            description="Los sprints y las fechas límite aparecerán aquí."
+          />
+        </div>
+      } @else if (view() === 'month') {
+        <div class="grid" role="grid" [attr.aria-label]="'Calendario de ' + monthLabel()">
+          @for (day of weekdays; track day) {
+            <div role="columnheader" class="weekday">{{ day }}</div>
+          }
+          @for (cell of cells(); track $index) {
+            @if (cell === null) {
+              <div class="blank" role="gridcell" aria-hidden="true"></div>
+            } @else {
+              <div
+                role="gridcell"
+                class="day"
+                [attr.aria-label]="cell.getDate() + ' de ' + monthLabel()"
+              >
+                <span class="day-number">{{ cell.getDate() }}</span>
+                <ul class="day-events">
+                  @for (event of eventsOn(cell); track event.kind + event.sourceId + event.date) {
+                    <li class="event">
+                      <app-lozenge [tone]="kindTone(event.kind)">{{
+                        kindLabel(event.kind)
+                      }}</app-lozenge>
+                      <a class="event-link" [routerLink]="event.link" [attr.title]="event.title">{{
+                        event.title
+                      }}</a>
+                    </li>
+                  }
+                </ul>
+              </div>
+            }
+          }
+        </div>
+      } @else {
+        <div class="list">
+          @for (day of calendar.days(); track day.date) {
+            <section class="list-day" [attr.aria-label]="day.date">
+              <h3 class="list-date">{{ day.date }}</h3>
+              <ul class="day-events">
+                @for (event of day.events; track event.kind + event.sourceId + event.date) {
+                  <li class="event">
+                    <app-lozenge [tone]="kindTone(event.kind)">{{
+                      kindLabel(event.kind)
+                    }}</app-lozenge>
+                    <a class="event-link" [routerLink]="event.link" [attr.title]="event.title">{{
+                      event.title
+                    }}</a>
+                  </li>
+                }
+              </ul>
+            </section>
+          }
+        </div>
+      }
+    </div>
+  </app-page-container>
+}

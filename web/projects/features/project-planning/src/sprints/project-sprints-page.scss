@@ -1,0 +1,174 @@
+/* Two columns from 992 px: sprint list and form on the left, the selected sprint on the right. Content starts at the top. */
+.layout {
+  display: grid;
+  grid-template-columns: minmax(280px, 340px) minmax(0, 1fr);
+  gap: var(--cl-space-4);
+  align-items: start;
+  min-width: 0;
+}
+
+.side,
+.main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cl-space-4);
+  min-width: 0;
+}
+
+.alert {
+  margin: 0;
+}
+
+.sprint-list,
+.velocity-list {
+  display: grid;
+  gap: var(--cl-space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sprint-item,
+.sprint-selected {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--cl-space-2);
+  padding: var(--cl-space-2) var(--cl-space-3);
+  border: 1px solid var(--cl-border);
+  border-radius: var(--cl-radius-md);
+  background: var(--cl-bg-sunken);
+  color: var(--cl-text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.sprint-selected {
+  border-color: var(--cl-brand);
+  background: var(--cl-brand-subtle);
+}
+
+.sprint-item:focus-visible,
+.sprint-selected:focus-visible {
+  outline: 2px solid var(--cl-brand);
+  outline-offset: 2px;
+}
+
+.sprint-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cl-space-3);
+  width: 100%;
+}
+
+.form input,
+.form p-button {
+  width: 100%;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--cl-space-2);
+}
+
+.close-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--cl-space-2);
+}
+
+.close-mode {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--cl-space-3);
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.radio {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--cl-space-1);
+  cursor: pointer;
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: var(--cl-space-3);
+}
+
+.add-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--cl-space-2);
+  margin-bottom: var(--cl-space-3);
+}
+
+.target-select {
+  min-width: 220px;
+  max-width: 100%;
+}
+
+.issue-title {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mobile-issue {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--cl-space-2);
+  min-width: 0;
+}
+
+.velocity-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--cl-space-3);
+  padding: var(--cl-space-2) var(--cl-space-3);
+  border: 1px solid var(--cl-border);
+  border-radius: var(--cl-radius-md);
+}
+
+@media (max-width: 991px) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 767px) {
+  /* Touch: the sprint buttons and the target selectors reach 44 px. */
+  .sprint-item,
+  .sprint-selected {
+    min-height: 44px;
+  }
+
+  .target-select {
+    min-height: 44px;
+  }
+
+  .actions p-button,
+  .close-row p-button,
+  .add-row p-button {
+    min-height: 44px;
+  }
+}

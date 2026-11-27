@@ -1,0 +1,31 @@
+<article
+  class="card"
+  [class.card-preview]="dragging()"
+  [attr.data-testid]="'board-card-' + card().id"
+>
+  <div class="card-top">
+    <app-issue-key
+      [issueKey]="shortId()"
+      [href]="'/issues/' + card().id"
+      [summary]="card().summary"
+      [type]="issueType()"
+    />
+  </div>
+  <a class="summary" [routerLink]="['/issues', card().id]" [title]="card().summary">{{
+    card().summary
+  }}</a>
+  <div class="card-meta">
+    <app-priority-tag [priority]="card().priority" />
+    @if (card().storyPoints !== undefined) {
+      <app-lozenge>{{ card().storyPoints }} puntos</app-lozenge>
+    }
+  </div>
+  <div class="assignee">
+    @if (card().assignee; as assignee) {
+      <app-avatar [id]="card().assigneeId ?? card().id" [name]="assignee" [size]="20" />
+      <span class="assignee-name" [title]="assignee">Responsable: {{ assignee }}</span>
+    } @else {
+      <span class="muted">Sin asignar</span>
+    }
+  </div>
+</article>

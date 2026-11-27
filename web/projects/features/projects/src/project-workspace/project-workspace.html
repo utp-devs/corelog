@@ -1,0 +1,62 @@
+<div class="workspace">
+  @if (accessVariant(); as variant) {
+    <app-error-page [variant]="variant" />
+  } @else {
+    <app-breadcrumbs [items]="breadcrumbs()" />
+
+    @if (state().status === 'loading') {
+      <div class="header" aria-busy="true">
+        <app-loading-skeleton variant="detail" [rows]="1" />
+      </div>
+    }
+
+    @if (failed()) {
+      <div class="header">
+        <app-error-state [message]="loadFailedMessage" [canRetry]="true" (retry)="retry()" />
+      </div>
+    }
+
+    @if (project(); as current) {
+      <header class="header">
+        <div class="identity">
+          <app-project-avatar [name]="current.name" [projectKey]="current.key" [size]="40" />
+          <div class="title-block">
+            <h2 class="title">{{ current.name }}</h2>
+            <div class="meta">
+              <span class="key-tag">{{ current.key }}</span>
+              <app-lozenge [tone]="current.visibility === 'open' ? 'info' : 'warning'">{{
+                visibilityLabel(current)
+              }}</app-lozenge>
+              <app-lozenge>{{ typeLabel(current) }}</app-lozenge>
+            </div>
+            <p class="lead">
+              Responsable: <span data-testid="workspace-lead">{{ leadName(current) }}</span>
+            </p>
+          </div>
+        </div>
+        @if (current.description) {
+          <p class="description">{{ current.description }}</p>
+        }
+      </header>
+    }
+
+    @if (!failed()) {
+      <nav aria-label="Secciones del proyecto" class="nav" data-scroll-x>
+        <ul class="tabs">
+          @for (section of sections; track section.key) {
+            <li>
+              <a
+                class="tab"
+                [routerLink]="['/projects', id(), section.key]"
+                [class.active]="isActive(section.key)"
+                [attr.aria-current]="isActive(section.key) ? 'page' : null"
+                >{{ section.label }}</a
+              >
+            </li>
+          }
+        </ul>
+      </nav>
+      <router-outlet />
+    }
+  }
+</div>

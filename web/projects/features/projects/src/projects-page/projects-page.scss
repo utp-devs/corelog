@@ -1,0 +1,244 @@
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--cl-space-3);
+  width: 100%;
+  min-width: 0;
+}
+
+.archived-filter {
+  min-width: 180px;
+}
+
+/* Skeleton grid while the projects load: same columns as the card grid. */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: var(--cl-space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.card-item {
+  display: flex;
+  min-width: 0;
+}
+
+.card-item > * {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* Equal-height cards: the grid stretches each article and the card fills it. */
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cl-space-3);
+  width: 100%;
+  min-width: 0;
+  padding: var(--cl-space-4);
+  border: 1px solid var(--cl-border);
+  border-radius: var(--cl-radius-lg);
+  background: var(--cl-bg-surface);
+  box-shadow: var(--cl-shadow-1);
+  transition: box-shadow 150ms ease;
+}
+
+.card:hover {
+  box-shadow: var(--cl-shadow-2);
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  gap: var(--cl-space-3);
+  min-width: 0;
+}
+
+.card-title {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.name {
+  margin: 0;
+  overflow: hidden;
+  color: var(--cl-text);
+  font-size: var(--cl-font-body-strong);
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.key {
+  color: var(--cl-text-subtle);
+  font-size: var(--cl-font-small);
+  letter-spacing: 0.04em;
+}
+
+.description {
+  display: -webkit-box;
+  margin: 0;
+  min-height: calc(var(--cl-font-small) * 2 * 1.5);
+  overflow: hidden;
+  color: var(--cl-text-subtle);
+  font-size: var(--cl-font-small);
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow-wrap: anywhere;
+}
+
+.lead {
+  margin: 0;
+  overflow: hidden;
+  color: var(--cl-text-subtle);
+  font-size: var(--cl-font-small);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--cl-space-2);
+}
+
+.card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--cl-space-2);
+  margin-top: auto;
+  padding-top: var(--cl-space-2);
+  border-top: 1px solid var(--cl-border);
+}
+
+/* Text action inside a card. Targets are 44 px tall on phones. */
+.link-action {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--cl-space-2);
+  min-height: 32px;
+  padding: 0 var(--cl-space-2);
+  border: 0;
+  border-radius: var(--cl-radius-md);
+  background: transparent;
+  color: var(--cl-brand);
+  font: inherit;
+  cursor: pointer;
+}
+
+.link-action[aria-pressed='true'] {
+  background: var(--cl-brand-subtle);
+}
+
+.link-action:focus-visible {
+  outline: none;
+  box-shadow: var(--cl-shadow-focus);
+}
+
+.inline-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--cl-space-2);
+  margin-bottom: var(--cl-space-4);
+}
+
+.member-input {
+  width: 280px;
+  max-width: 100%;
+}
+
+.label-input {
+  width: 200px;
+  max-width: 100%;
+}
+
+.component-name-input {
+  width: 200px;
+  max-width: 100%;
+}
+
+.component-description-input {
+  width: 240px;
+  max-width: 100%;
+}
+
+.item-list {
+  display: grid;
+  gap: var(--cl-space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--cl-space-3);
+  min-width: 0;
+  padding: var(--cl-space-2) var(--cl-space-3);
+  border: 1px solid var(--cl-border);
+  border-radius: var(--cl-radius-md);
+}
+
+.item-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.item-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--cl-space-2);
+  flex-shrink: 0;
+}
+
+.two-columns {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: var(--cl-space-6);
+  align-items: start;
+}
+
+.column {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.subtitle {
+  margin: 0 0 var(--cl-space-3);
+  font-size: var(--cl-font-body-strong);
+  font-weight: 600;
+}
+
+@media (max-width: 767px) {
+  .grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .link-action {
+    min-height: 44px;
+  }
+
+  .member-input,
+  .label-input,
+  .component-name-input,
+  .component-description-input {
+    width: 100%;
+  }
+}
