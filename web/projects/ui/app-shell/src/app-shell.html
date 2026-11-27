@@ -30,52 +30,72 @@
   </div>
 
   @if (collapsedNav()) {
-    <p-drawer
-      [visible]="drawerOpen()"
-      (visibleChange)="onDrawerVisible($event)"
-      position="left"
-      header="Navegación"
-      styleClass="cl-shell-drawer"
+    <div
+      class="drawer"
+      [class.open]="drawerOpen()"
+      [attr.inert]="drawerOpen() ? null : ''"
+      [attr.aria-hidden]="drawerOpen() ? null : 'true'"
     >
-      <nav aria-label="Navegación móvil" class="drawer-nav">
-        @if (isMobile() && orgSwitcher(); as switcher) {
-          <section class="drawer-org" aria-label="Organización">
-            <p class="drawer-title">Organización</p>
-            <ng-container *ngTemplateOutlet="switcher" />
-          </section>
-        }
-
-        <ul class="drawer-list">
-          @for (menu of topMenus(); track menu.key) {
-            <li>
-              <a class="drawer-link" [routerLink]="menu.path" (click)="closeDrawer()">
-                {{ menu.label }}
-              </a>
-            </li>
+      <button
+        type="button"
+        class="drawer-mask"
+        tabindex="-1"
+        aria-hidden="true"
+        (click)="closeDrawer()"
+      ></button>
+      <div class="drawer-panel">
+        <div class="drawer-head">
+          <p class="drawer-heading">Navegación</p>
+          <button
+            #drawerClose
+            type="button"
+            class="drawer-close"
+            aria-label="Cerrar navegación"
+            (click)="closeDrawer()"
+          >
+            <app-shell-icon name="close" />
+          </button>
+        </div>
+        <nav aria-label="Navegación móvil" class="drawer-nav">
+          @if (isMobile() && orgSwitcher(); as switcher) {
+            <section class="drawer-org" aria-label="Organización">
+              <p class="drawer-title">Organización</p>
+              <ng-container *ngTemplateOutlet="switcher" />
+            </section>
           }
-        </ul>
 
-        @if (items().length > 0) {
-          <p class="drawer-title">{{ sidebarTitle() }}</p>
           <ul class="drawer-list">
-            @for (item of items(); track item.key) {
+            @for (menu of topMenus(); track menu.key) {
               <li>
-                <a
-                  class="drawer-link"
-                  [class.active]="isItemActive(item)"
-                  [routerLink]="item.path"
-                  [attr.aria-current]="isItemActive(item) ? 'page' : null"
-                  (click)="closeDrawer()"
-                >
-                  <app-shell-icon [name]="item.icon" />
-                  <span>{{ item.label }}</span>
+                <a class="drawer-link" [routerLink]="menu.path" (click)="closeDrawer()">
+                  {{ menu.label }}
                 </a>
               </li>
             }
           </ul>
-        }
-      </nav>
-    </p-drawer>
+
+          @if (items().length > 0) {
+            <p class="drawer-title">{{ sidebarTitle() }}</p>
+            <ul class="drawer-list">
+              @for (item of items(); track item.key) {
+                <li>
+                  <a
+                    class="drawer-link"
+                    [class.active]="isItemActive(item)"
+                    [routerLink]="item.path"
+                    [attr.aria-current]="isItemActive(item) ? 'page' : null"
+                    (click)="closeDrawer()"
+                  >
+                    <app-shell-icon [name]="item.icon" />
+                    <span>{{ item.label }}</span>
+                  </a>
+                </li>
+              }
+            </ul>
+          }
+        </nav>
+      </div>
+    </div>
   }
 
   <p class="announcer" role="status" aria-live="polite">{{ announcement() }}</p>

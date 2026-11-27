@@ -1,29 +1,22 @@
-<p-select
+<p-autocomplete
   styleClass="user-picker"
-  [options]="options()"
-  optionLabel="label"
-  optionValue="id"
-  [filter]="true"
-  filterBy="searchText"
-  [ngModel]="value()"
+  [ngModel]="selected()"
   (ngModelChange)="onSelect($event)"
-  (onFilter)="search.emit($event.filter)"
+  [suggestions]="suggestions()"
+  (completeMethod)="onComplete($event.query)"
+  optionLabel="label"
+  [dropdown]="true"
+  [forceSelection]="true"
   [showClear]="allowClear()"
-  [loading]="loading()"
   [disabled]="disabled()"
   [placeholder]="placeholder()"
   [ariaLabel]="placeholder()"
   [emptyMessage]="emptyText()"
-  [emptyFilterMessage]="emptyText()"
 >
-  <ng-template #selectedItem let-option>
-    <span class="avatar" aria-hidden="true">{{ option.initials }}</span>
-    <span>{{ option.name }}</span>
-  </ng-template>
-  <ng-template #item let-option>
+  <ng-template let-option #item>
     <span class="option">
       <span class="avatar" aria-hidden="true">{{ option.initials }}</span>
       <span>{{ option.label }}</span>
     </span>
   </ng-template>
-</p-select>
+</p-autocomplete>

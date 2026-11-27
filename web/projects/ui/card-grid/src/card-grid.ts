@@ -14,6 +14,7 @@ import { booleanAttribute, ChangeDetectionStrategy, Component, input } from '@an
   templateUrl: './card-grid.html',
   styleUrl: './card-grid.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { '[class.fill-host]': 'fill()' },
 })
 export class CardGrid {
   /** Minimum card width in px; columns fill the row with repeat(auto-fill, minmax(min, 1fr)). Default 280. */

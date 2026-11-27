@@ -1,6 +1,6 @@
 <div class="row" [attr.data-variant]="variant()">
   <div class="label-column">
-    <label class="label" [attr.for]="controlId">
+    <label class="label" [attr.id]="labelId" [attr.for]="controlId">
       {{ label() }}
       @if (required()) {
         <span class="required-mark" aria-hidden="true">*</span>

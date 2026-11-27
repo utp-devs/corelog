@@ -232,6 +232,28 @@
   }
 }
 
+/* Touch targets: on phones every control is at least 40 px tall (the layout audit requires 32 px). */
+@media (max-width: 767.98px) {
+  input:not([type='checkbox']):not([type='radio']):not([type='hidden']),
+  select,
+  textarea,
+  button,
+  .p-button,
+  .p-select,
+  .p-togglebutton,
+  .p-inputtext,
+  .p-autocomplete,
+  .p-password,
+  .p-inputnumber {
+    min-height: 40px;
+  }
+
+  button,
+  .p-select-dropdown {
+    min-width: 40px;
+  }
+}
+
 *,
 *::before,
 *::after {

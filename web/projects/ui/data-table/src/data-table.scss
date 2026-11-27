@@ -34,6 +34,20 @@
   min-width: 0;
 }
 
+/* Wide tables scroll inside their own box instead of pushing the page past the viewport. */
+.table-scroll {
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: 100%;
+  min-height: 0;
+  overflow-x: auto;
+}
+
+/* The wrapper above is the only horizontal scroller; PrimeNG table containers do not scroll on their own. */
+.table-scroll ::ng-deep .p-datatable-table-container {
+  overflow: visible !important;
+}
+
 .area .empty {
   align-items: flex-start;
   padding-top: var(--cl-space-4);
@@ -351,5 +365,14 @@ tr.cl-data-row:hover > td {
 
   .sort-button {
     min-height: 44px;
+  }
+}
+
+/* Phones: the row checkbox is the whole touch target of its label (the audit requires 32 px). */
+@media (max-width: 767.98px) {
+  .check-touch input[type='checkbox'] {
+    width: 32px;
+    height: 32px;
+    margin: 0;
   }
 }

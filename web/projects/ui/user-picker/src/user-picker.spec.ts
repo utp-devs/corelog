@@ -36,12 +36,13 @@ describe('UserPicker', () => {
     fixture.detectChanges();
     await fixture.whenStable();
     fixture.detectChanges();
-    expect((fixture.nativeElement as HTMLElement).textContent).toContain('Ana Torres');
+    const input = (fixture.nativeElement as HTMLElement).querySelector('input');
+    expect(input?.value).toBe('Ana Torres');
   });
 
   it('renders the placeholder when nothing is selected', () => {
     const el = create({ users: [], placeholder: 'Elegir responsable' });
-    expect(el.textContent).toContain('Elegir responsable');
+    expect(el.querySelector('input')?.placeholder).toBe('Elegir responsable');
   });
 
   it('shows the email next to the name in the options when the user has one', () => {
@@ -67,8 +68,41 @@ describe('UserPicker', () => {
     fixture.componentRef.setInput('disabled', true);
     fixture.detectChanges();
 
-    const select = (fixture.nativeElement as HTMLElement).querySelector('.p-select');
-    expect(select?.classList.contains('p-disabled')).toBe(true);
+    const input = (fixture.nativeElement as HTMLElement).querySelector('input');
+    expect(input?.disabled).toBe(true);
+  });
+
+  it('narrows the suggestions to the typed text, by name or email', () => {
+    TestBed.configureTestingModule({});
+    const fixture = TestBed.createComponent(UserPicker);
+    fixture.componentRef.setInput('users', [
+      { id: 'u1', name: 'Ana Torres', email: 'ana@example.test' },
+      { id: 'u2', name: 'Luis Gómez' },
+    ]);
+    fixture.detectChanges();
+    const component = fixture.componentInstance;
+    component['onComplete']('luis');
+    expect(component['suggestions']().map((option) => option.id)).toEqual(['u2']);
+    component['onComplete']('ANA@');
+    expect(component['suggestions']().map((option) => option.id)).toEqual(['u1']);
+  });
+
+  it('sets the value only from a suggestion; typed text without one clears it', () => {
+    TestBed.configureTestingModule({});
+    const fixture = TestBed.createComponent(UserPicker);
+    fixture.componentRef.setInput('users', users);
+    fixture.detectChanges();
+    const component = fixture.componentInstance;
+    component['onSelect']({
+      id: 'u1',
+      name: 'Ana Torres',
+      label: 'Ana Torres',
+      initials: 'AT',
+      searchText: 'Ana Torres',
+    });
+    expect(component.value()).toBe('u1');
+    component['onSelect']('texto libre');
+    expect(component.value()).toBeUndefined();
   });
 
   it('accepts a search callback without calling it on render', () => {

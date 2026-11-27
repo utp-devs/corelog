@@ -257,6 +257,18 @@ describe('AppShell', () => {
     expect(drawer?.textContent).toContain('Tablero');
   });
 
+  it('closes the phone drawer on Escape and keeps its organization switcher mounted', async () => {
+    const { root, harness } = await render('/projects/p1/board', { width: 390 });
+    byLabel(root, 'button', 'Abrir menú de navegación')?.click();
+    harness.fixture.detectChanges();
+    const drawer = root.querySelector<HTMLElement>('.drawer');
+    expect(drawer?.classList.contains('open')).toBe(true);
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    harness.fixture.detectChanges();
+    expect(drawer?.classList.contains('open')).toBe(false);
+    expect(drawer?.getAttribute('aria-hidden')).toBe('true');
+  });
+
   it('moves the primary menus into the drawer at 820 px and keeps the sidebar', async () => {
     const { root, harness } = await render('/projects/p1/board', { width: 820 });
     expect(root.querySelector('nav[aria-label="Principal"]')).toBeNull();

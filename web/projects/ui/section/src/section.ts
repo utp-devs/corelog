@@ -36,6 +36,7 @@ export class SectionFooter {}
   templateUrl: './section.html',
   styleUrl: './section.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { '[class.fill-host]': 'fill()' },
 })
 export class Section {
   /** Heading of the section. */

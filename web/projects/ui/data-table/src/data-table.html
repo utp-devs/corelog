@@ -192,110 +192,112 @@
       </ul>
     }
   } @else {
-    <p-table [value]="rows()">
-      <ng-template pTemplate="header">
-        <tr>
-          @if (selectable()) {
-            <th class="col-select">
-              <label class="check check-touch">
-                <input
-                  type="checkbox"
-                  aria-label="Seleccionar todas las filas"
-                  [checked]="allChecked()"
-                  [indeterminate]="someChecked()"
-                  (change)="toggleAll($event)"
-                />
-              </label>
-            </th>
-          }
-          @for (column of visibleColumns(); track column.key) {
-            <th
-              [class.align-right]="column.align === 'right'"
-              [class.align-center]="column.align === 'center'"
-              [attr.aria-sort]="column.sortable ? ariaSort(column) : null"
-            >
-              @if (column.sortable) {
-                <button type="button" class="sort-button" (click)="toggleSort(column.key)">
-                  {{ column.title }}
-                  <i
-                    class="pi"
-                    [class.pi-sort-amount-up]="ariaSort(column) === 'ascending'"
-                    [class.pi-sort-amount-down]="ariaSort(column) === 'descending'"
-                    [class.pi-sort]="ariaSort(column) === 'none'"
-                    aria-hidden="true"
-                  ></i>
-                </button>
-              } @else {
-                {{ column.title }}
-              }
-            </th>
-          }
-          @if (showActionsColumn()) {
-            <th class="col-actions"></th>
-          }
-        </tr>
-      </ng-template>
-      <ng-template pTemplate="body" let-row>
-        <tr
-          class="cl-data-row"
-          [attr.tabindex]="rowOpenable() ? 0 : null"
-          (click)="onRowClick($event, row)"
-          (keydown)="onRowKeyDown($event, row)"
-        >
-          @if (selectable()) {
-            <td class="col-select">
-              <label class="check check-touch">
-                <input
-                  type="checkbox"
-                  aria-label="Seleccionar fila"
-                  [checked]="isSelected(row)"
-                  (change)="toggleRow(row, $event)"
-                />
-              </label>
-            </td>
-          }
-          @for (column of visibleColumns(); track column.key) {
-            <td
-              [class.align-right]="column.align === 'right'"
-              [class.align-center]="column.align === 'center'"
-              [class.ellipsis]="column.ellipsis === true"
-              [attr.title]="column.ellipsis ? cellText(row, column) : null"
-            >
-              @let cellTemplate = templateFor(column.key);
-              @if (cellTemplate) {
-                <ng-container *ngTemplateOutlet="cellTemplate; context: { $implicit: row }" />
-              } @else {
-                {{ cellText(row, column) }}
-              }
-            </td>
-          }
-          @if (showActionsColumn()) {
-            <td class="col-actions">
-              @if (itemsFor(row).length > 0) {
-                <button
-                  type="button"
-                  class="icon-button"
-                  aria-label="Acciones de la fila"
-                  aria-haspopup="menu"
-                  (click)="openRowMenu($event, row, rowMenu)"
-                >
-                  <i class="pi pi-ellipsis-h" aria-hidden="true"></i>
-                </button>
-              }
-            </td>
-          }
-        </tr>
-      </ng-template>
-      <ng-template pTemplate="emptymessage">
-        <tr>
-          <td [attr.colspan]="colspan()">
-            @if (!loading()) {
-              <ng-container *ngTemplateOutlet="emptyContent" />
+    <div class="table-scroll" data-scroll-x>
+      <p-table [value]="rows()">
+        <ng-template pTemplate="header">
+          <tr>
+            @if (selectable()) {
+              <th class="col-select">
+                <label class="check check-touch">
+                  <input
+                    type="checkbox"
+                    aria-label="Seleccionar todas las filas"
+                    [checked]="allChecked()"
+                    [indeterminate]="someChecked()"
+                    (change)="toggleAll($event)"
+                  />
+                </label>
+              </th>
             }
-          </td>
-        </tr>
-      </ng-template>
-    </p-table>
+            @for (column of visibleColumns(); track column.key) {
+              <th
+                [class.align-right]="column.align === 'right'"
+                [class.align-center]="column.align === 'center'"
+                [attr.aria-sort]="column.sortable ? ariaSort(column) : null"
+              >
+                @if (column.sortable) {
+                  <button type="button" class="sort-button" (click)="toggleSort(column.key)">
+                    {{ column.title }}
+                    <i
+                      class="pi"
+                      [class.pi-sort-amount-up]="ariaSort(column) === 'ascending'"
+                      [class.pi-sort-amount-down]="ariaSort(column) === 'descending'"
+                      [class.pi-sort]="ariaSort(column) === 'none'"
+                      aria-hidden="true"
+                    ></i>
+                  </button>
+                } @else {
+                  {{ column.title }}
+                }
+              </th>
+            }
+            @if (showActionsColumn()) {
+              <th class="col-actions"></th>
+            }
+          </tr>
+        </ng-template>
+        <ng-template pTemplate="body" let-row>
+          <tr
+            class="cl-data-row"
+            [attr.tabindex]="rowOpenable() ? 0 : null"
+            (click)="onRowClick($event, row)"
+            (keydown)="onRowKeyDown($event, row)"
+          >
+            @if (selectable()) {
+              <td class="col-select">
+                <label class="check check-touch">
+                  <input
+                    type="checkbox"
+                    aria-label="Seleccionar fila"
+                    [checked]="isSelected(row)"
+                    (change)="toggleRow(row, $event)"
+                  />
+                </label>
+              </td>
+            }
+            @for (column of visibleColumns(); track column.key) {
+              <td
+                [class.align-right]="column.align === 'right'"
+                [class.align-center]="column.align === 'center'"
+                [class.ellipsis]="column.ellipsis === true"
+                [attr.title]="column.ellipsis ? cellText(row, column) : null"
+              >
+                @let cellTemplate = templateFor(column.key);
+                @if (cellTemplate) {
+                  <ng-container *ngTemplateOutlet="cellTemplate; context: { $implicit: row }" />
+                } @else {
+                  {{ cellText(row, column) }}
+                }
+              </td>
+            }
+            @if (showActionsColumn()) {
+              <td class="col-actions">
+                @if (itemsFor(row).length > 0) {
+                  <button
+                    type="button"
+                    class="icon-button"
+                    aria-label="Acciones de la fila"
+                    aria-haspopup="menu"
+                    (click)="openRowMenu($event, row, rowMenu)"
+                  >
+                    <i class="pi pi-ellipsis-h" aria-hidden="true"></i>
+                  </button>
+                }
+              </td>
+            }
+          </tr>
+        </ng-template>
+        <ng-template pTemplate="emptymessage">
+          <tr>
+            <td [attr.colspan]="colspan()">
+              @if (!loading()) {
+                <ng-container *ngTemplateOutlet="emptyContent" />
+              }
+            </td>
+          </tr>
+        </ng-template>
+      </p-table>
+    </div>
   }
 </ng-template>
 

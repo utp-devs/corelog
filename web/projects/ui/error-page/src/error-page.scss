@@ -1,15 +1,23 @@
 :host {
-  display: block;
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
 }
 
+/* A surface panel that fills the page, so a short error screen leaves no bare band. */
 .page {
   display: flex;
+  flex: 1 1 auto;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: var(--cl-space-3);
   min-height: 60vh;
   padding: var(--cl-space-8) var(--cl-space-4);
+  border: 1px solid var(--cl-border);
+  border-radius: var(--cl-radius-lg);
+  background: var(--cl-bg-surface);
   text-align: center;
 }
 

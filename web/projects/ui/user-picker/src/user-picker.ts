@@ -1,7 +1,15 @@
-import { ChangeDetectionStrategy, Component, computed, input, model, output } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  input,
+  model,
+  output,
+  signal,
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { initialsOf } from '@corelog/ui/avatar';
-import { Select } from 'primeng/select';
+import { AutoComplete } from 'primeng/autocomplete';
 
 export interface PickableUser {
   id: string;
@@ -24,7 +32,7 @@ interface PickerOption {
  */
 @Component({
   selector: 'app-user-picker',
-  imports: [FormsModule, Select],
+  imports: [FormsModule, AutoComplete],
   templateUrl: './user-picker.html',
   styleUrl: './user-picker.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -50,8 +58,28 @@ export class UserPicker {
     })),
   );
   protected readonly emptyText = computed(() => (this.loading() ? '' : 'Sin resultados'));
+  /** Text typed in the field; options are narrowed to the users matching it. */
+  private readonly query = signal('');
 
-  protected onSelect(selected: string | null | undefined): void {
-    this.value.set(selected ?? undefined);
+  /** Options that match the typed text (case-insensitive, name or email). */
+  protected readonly suggestions = computed<PickerOption[]>(() => {
+    const term = this.query().trim().toLowerCase();
+    return this.options().filter(
+      (option) => term === '' || option.searchText.toLowerCase().includes(term),
+    );
+  });
+
+  protected readonly selected = computed<PickerOption | null>(
+    () => this.options().find((option) => option.id === this.value()) ?? null,
+  );
+
+  protected onComplete(term: string): void {
+    this.query.set(term);
+    this.search.emit(term);
+  }
+
+  /** Only a suggestion sets the value; typed text without a match clears the selection. */
+  protected onSelect(selected: PickerOption | string | null | undefined): void {
+    this.value.set(typeof selected === 'object' && selected !== null ? selected.id : undefined);
   }
 }

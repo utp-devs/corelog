@@ -3,7 +3,10 @@ import {
   ChangeDetectionStrategy,
   Component,
   ElementRef,
+  HostListener,
+  Injector,
   TemplateRef,
+  afterNextRender,
   computed,
   contentChild,
   effect,
@@ -25,7 +28,6 @@ import {
 } from '@corelog/core';
 import { trackRecent } from '@corelog/ui/command-palette';
 import { ShortcutsDialog } from '@corelog/ui/shortcuts-dialog';
-import { Drawer } from 'primeng/drawer';
 import { filter, map } from 'rxjs';
 
 import { DEFAULT_SHELL_BRAND, type ShellBrand } from './brand';
@@ -55,7 +57,6 @@ import { TopBar } from './top-bar';
   selector: 'app-shell',
   imports: [
     ContextSidebar,
-    Drawer,
     NgTemplateOutlet,
     RouterLink,
     RouterOutlet,
@@ -145,6 +146,8 @@ export class AppShell {
   protected readonly drawerOpen = signal(false);
   protected readonly announcement = signal('');
   private drawerOpener: HTMLElement | null = null;
+  private readonly injector = inject(Injector);
+  protected readonly drawerClose = viewChild<ElementRef<HTMLButtonElement>>('drawerClose');
   private routeCount = 0;
 
   constructor() {
@@ -207,16 +210,26 @@ export class AppShell {
   protected openDrawer(): void {
     const active = this.document.activeElement;
     this.drawerOpener = active instanceof HTMLElement ? active : null;
-    this.drawerOpen.set(true);
+    this.onDrawerVisible(true);
   }
 
-  /** Closing the drawer by any means returns focus to the element that opened it. */
+  /**
+   * Opening or closing the drawer by any means. The drawer stays in the DOM, so closing only hides it;
+   * closing returns focus to the element that opened it, opening moves focus to the drawer's close button.
+   */
   protected onDrawerVisible(visible: boolean): void {
     this.drawerOpen.set(visible);
-    if (!visible) {
+    if (visible) {
+      afterNextRender(() => this.drawerClose()?.nativeElement.focus(), { injector: this.injector });
+    } else {
       this.drawerOpener?.focus();
       this.drawerOpener = null;
     }
+  }
+
+  @HostListener('document:keydown.escape')
+  protected onEscape(): void {
+    if (this.drawerOpen()) this.closeDrawer();
   }
 
   protected closeDrawer(): void {

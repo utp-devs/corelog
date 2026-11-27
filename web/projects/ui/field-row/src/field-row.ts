@@ -31,6 +31,8 @@ export class FieldRow {
 
   /** Id for the control. Also usable on PrimeNG components that accept an input id. */
   readonly controlId = `corelog-field-${nextFieldRowId++}`;
+  /** Id of the label text; PrimeNG controls reference it through their labelled-by input. */
+  readonly labelId = `${this.controlId}-label`;
   protected readonly helperId = `${this.controlId}-helper`;
   protected readonly errorId = `${this.controlId}-error`;
 
