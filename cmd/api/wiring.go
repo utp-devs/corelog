@@ -19,6 +19,13 @@ import (
 	dashboardpostgres "github.com/jhonsferg/corelog/internal/dashboard/adapter/out/postgres"
 	"github.com/jhonsferg/corelog/internal/favorite"
 	favoritepostgres "github.com/jhonsferg/corelog/internal/favorite/adapter/out/postgres"
+	"github.com/jhonsferg/corelog/internal/issue"
+	issuedirectory "github.com/jhonsferg/corelog/internal/issue/adapter/out/directory"
+	issuefilesystem "github.com/jhonsferg/corelog/internal/issue/adapter/out/filesystem"
+	issuepostgres "github.com/jhonsferg/corelog/internal/issue/adapter/out/postgres"
+	issueport "github.com/jhonsferg/corelog/internal/issue/application/port"
+	"github.com/jhonsferg/corelog/internal/note"
+	notepostgres "github.com/jhonsferg/corelog/internal/note/adapter/out/postgres"
 	"github.com/jhonsferg/corelog/internal/notification"
 	notificationpostgres "github.com/jhonsferg/corelog/internal/notification/adapter/out/postgres"
 	"github.com/jhonsferg/corelog/internal/organization"
@@ -40,12 +47,6 @@ import (
 	"github.com/jhonsferg/corelog/internal/team"
 	teampostgres "github.com/jhonsferg/corelog/internal/team/adapter/out/postgres"
 	teamport "github.com/jhonsferg/corelog/internal/team/application/port"
-	"github.com/jhonsferg/corelog/internal/ticket"
-	ticketdirectory "github.com/jhonsferg/corelog/internal/ticket/adapter/out/directory"
-	ticketfilesystem "github.com/jhonsferg/corelog/internal/ticket/adapter/out/filesystem"
-	ticketmemory "github.com/jhonsferg/corelog/internal/ticket/adapter/out/memory"
-	ticketpostgres "github.com/jhonsferg/corelog/internal/ticket/adapter/out/postgres"
-	ticketport "github.com/jhonsferg/corelog/internal/ticket/application/port"
 	"github.com/jhonsferg/corelog/internal/user"
 	userhttp "github.com/jhonsferg/corelog/internal/user/adapter/in/http"
 	userpostgres "github.com/jhonsferg/corelog/internal/user/adapter/out/postgres"
@@ -58,12 +59,12 @@ import (
 func buildRouter(cfg *config.Config, db *sqlx.DB, log *slog.Logger) (chi.Router, error) {
 	var userRepo userport.Repository
 	var teamRepo teamport.Repository
-	var ticketDBRepo ticketport.Repository
+	var issueDBRepo issueport.Repository
 	var projectRepo projectport.Repository
 	var projectMemberRepo projectport.MemberRepository
 	userRepo = userpostgres.NewUserRepository(db)
 	teamRepo = teampostgres.NewTeamRepository(db)
-	ticketDBRepo = ticketpostgres.NewTicketRepository(db)
+	issueDBRepo = issuepostgres.NewIssueRepository(db)
 	projectRepo = projectpostgres.NewProjectRepository(db)
 	projectMemberRepo = projectpostgres.NewMemberRepository(db)
 	projectCatalogRepo := projectpostgres.NewCatalogRepository(db)
@@ -89,33 +90,30 @@ func buildRouter(cfg *config.Config, db *sqlx.DB, log *slog.Logger) (chi.Router,
 		WithTeamGrants(projectpostgres.NewTeamGrantRepository(db))
 	projectModule.Handler.WithPermissions(authusecase.NewPermissionService(authorizer, authpostgres.NewSchemeRepository(db)))
 
-	ticketRepo := ticketDBRepo
-	if cfg.Features.TicketRepository == "memory" {
-		ticketRepo = ticketmemory.NewTicketRepository()
-		log.Warn("ticket module using in-memory repository")
-	}
-	userDirectory := ticketdirectory.NewUserDirectory(db)
-	collaborationRepo := ticketpostgres.NewCollaborationRepository(db)
-	issueLinkRepo := ticketpostgres.NewIssueLinkRepository(db)
-	watcherRepo := ticketpostgres.NewWatcherRepository(db)
-	savedFilterRepo := ticketpostgres.NewSavedFilterRepository(db)
-	attachmentRepo := ticketpostgres.NewAttachmentRepository(db)
+	issueRepo := issueDBRepo
+	userDirectory := issuedirectory.NewUserDirectory(db)
+	collaborationRepo := issuepostgres.NewCollaborationRepository(db)
+	issueLinkRepo := issuepostgres.NewIssueLinkRepository(db)
+	watcherRepo := issuepostgres.NewWatcherRepository(db)
+	savedFilterRepo := issuepostgres.NewSavedFilterRepository(db)
+	attachmentRepo := issuepostgres.NewAttachmentRepository(db)
 	attachmentRoot := os.Getenv("ATTACHMENTS_DIR")
 	if attachmentRoot == "" {
 		attachmentRoot = filepath.Join("data", "attachments")
 	}
-	fileStorage := ticketfilesystem.New(attachmentRoot)
-	workflowRepo := ticketpostgres.NewWorkflowRepository(db)
+	fileStorage := issuefilesystem.New(attachmentRoot)
+	workflowRepo := issuepostgres.NewWorkflowRepository(db)
 	notificationModule := notification.NewModule(notificationpostgres.NewNotificationRepository(db), cfg.Auth.JWTSecret)
-	ticketModule := ticket.NewModule(ticketRepo, userDirectory, collaborationRepo, issueLinkRepo, workflowRepo, watcherRepo, savedFilterRepo, cfg.Auth.JWTSecret, projectAuthorizer, notificationModule.Service, projectMemberRepo).WithTxManager(database.NewTxManager(db))
+	issueModule := issue.NewModule(issueRepo, userDirectory, collaborationRepo, issueLinkRepo, workflowRepo, watcherRepo, savedFilterRepo, cfg.Auth.JWTSecret, projectAuthorizer, notificationModule.Service, projectMemberRepo).WithTxManager(database.NewTxManager(db))
 	searchModule := search.NewModule(searchpostgres.NewSearchIndex(db), cfg.Auth.JWTSecret)
 	dashboardModule := dashboard.NewModule(dashboardpostgres.NewDashboardReader(db), cfg.Auth.JWTSecret)
 	favoriteModule := favorite.NewModule(favoritepostgres.NewRepository(db), favoritepostgres.NewProjectVisibility(db), cfg.Auth.JWTSecret)
 	projectModule.WithRecents(favoriteModule.RecentRecorder)
+	noteModule := note.NewModule(notepostgres.NewRepository(db), notepostgres.NewLinkAccess(db), cfg.Auth.JWTSecret)
 	calendarModule := calendar.NewModule(calendarpostgres.NewCalendarRepository(db), projectAuthorizer, cfg.Auth.JWTSecret)
 	sprintModule := sprint.NewModule(sprintpostgres.NewSprintRepository(db), projectAuthorizer, cfg.Auth.JWTSecret)
-	boardModule := board.NewModule(boardpostgres.NewBoardRepository(db), projectModule.Service, projectAuthorizer, boardIssueMover{issues: ticketModule.Service}, cfg.Auth.JWTSecret)
-	ticketModule.Handler.WithAttachments(attachmentRepo, fileStorage)
+	boardModule := board.NewModule(boardpostgres.NewBoardRepository(db), projectModule.Service, projectAuthorizer, boardIssueMover{issues: issueModule.Service}, cfg.Auth.JWTSecret)
+	issueModule.Handler.WithAttachments(attachmentRepo, fileStorage)
 
 	avatarStorage := filestorage.NewDiskStorage(dirFromEnv("AVATARS_DIR", filepath.Join("data", "avatars")))
 	logoStorage := filestorage.NewDiskStorage(dirFromEnv("LOGOS_DIR", filepath.Join("data", "logos")))
@@ -126,7 +124,7 @@ func buildRouter(cfg *config.Config, db *sqlx.DB, log *slog.Logger) (chi.Router,
 	router.Route("/api/v1", func(r chi.Router) {
 		avatar.RegisterRoutes(r)
 		logo.RegisterRoutes(r)
-		httpserver.Mount(r, userModule.Handler, teamModule.Handler, projectModule.Handler, boardModule.Handler, ticketModule.Handler, sprintModule.Handler, notificationModule.Handler, calendarModule.Handler, searchModule.Handler, dashboardModule.Handler, favoriteModule.Handler, orgModule.Handler)
+		httpserver.Mount(r, userModule.Handler, teamModule.Handler, projectModule.Handler, boardModule.Handler, issueModule.Handler, sprintModule.Handler, notificationModule.Handler, calendarModule.Handler, searchModule.Handler, dashboardModule.Handler, favoriteModule.Handler, noteModule.Handler, orgModule.Handler)
 	})
 	return router, nil
 }

@@ -39,7 +39,7 @@ func TestBoardRepositoryFindDefaultByProjectPostgres(t *testing.T) {
 		`CREATE TABLE projects (id UUID PRIMARY KEY, deleted_at TIMESTAMPTZ)`,
 		`CREATE TABLE boards (id UUID PRIMARY KEY, project_id UUID NOT NULL, name VARCHAR(80) NOT NULL, type VARCHAR(10) NOT NULL, is_default BOOLEAN NOT NULL)`,
 		`CREATE TABLE board_columns (id UUID PRIMARY KEY, board_id UUID NOT NULL, name VARCHAR(80) NOT NULL, status VARCHAR(20) NOT NULL, position INTEGER NOT NULL, wip_limit INTEGER)`,
-		`CREATE TABLE issues (id UUID PRIMARY KEY, project_id UUID NOT NULL, issue_type VARCHAR(20) NOT NULL, title VARCHAR(200) NOT NULL, status VARCHAR(20) NOT NULL, priority VARCHAR(20) NOT NULL, assignee_id UUID, story_points NUMERIC(4,1), rank VARCHAR(64) NOT NULL, created_at TIMESTAMPTZ NOT NULL)`,
+		`CREATE TABLE issues (id UUID PRIMARY KEY, project_id UUID NOT NULL, issue_type VARCHAR(20) NOT NULL, summary VARCHAR(200) NOT NULL, status VARCHAR(20) NOT NULL, priority VARCHAR(20) NOT NULL, assignee_id UUID, story_points NUMERIC(4,1), rank VARCHAR(64) NOT NULL, created_at TIMESTAMPTZ NOT NULL)`,
 	} {
 		if _, err := db.Exec(statement); err != nil {
 			t.Fatal(err)
@@ -56,7 +56,7 @@ func TestBoardRepositoryFindDefaultByProjectPostgres(t *testing.T) {
 		{`INSERT INTO projects (id) VALUES ($1)`, []any{projectID}},
 		{`INSERT INTO boards (id, project_id, name, type, is_default) VALUES ($1, $2, 'Default', 'kanban', true)`, []any{boardID, projectID}},
 		{`INSERT INTO board_columns (id, board_id, name, status, position) VALUES ($1, $2, 'Open', 'open', 0), ($3, $2, 'In progress', 'in_progress', 1)`, []any{openColumnID, boardID, progressColumnID}},
-		{`INSERT INTO issues (id, project_id, issue_type, title, status, priority, assignee_id, story_points, rank, created_at) VALUES ($1, $2, 'story', 'Board read card', 'open', 'high', $3, 5, 'm', now())`, []any{issueID, projectID, assigneeID}},
+		{`INSERT INTO issues (id, project_id, issue_type, summary, status, priority, assignee_id, story_points, rank, created_at) VALUES ($1, $2, 'story', 'Board read card', 'open', 'high', $3, 5, 'm', now())`, []any{issueID, projectID, assigneeID}},
 	} {
 		if _, err := db.Exec(statement.query, statement.args...); err != nil {
 			t.Fatal(err)

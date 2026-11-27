@@ -23,8 +23,8 @@ type Authorizer interface {
 	Authorize(ctx context.Context, action string, actorID uuid.UUID, globalRole string, projectID uuid.UUID) error
 }
 
-// IssueMover cambia el estado de una incidencia del proyecto. Lo implementa el modulo ticket
-// mediante un adaptador en el root de composicion, asi el tablero no importa tipos de ticket.
+// IssueMover cambia el estado de una incidencia del proyecto. Lo implementa el modulo issue
+// mediante un adaptador en el root de composicion, asi el tablero no importa tipos de issue.
 type IssueMover interface {
 	MoveIssue(ctx context.Context, actorID uuid.UUID, globalRole string, projectID, issueID uuid.UUID, status string) error
 }

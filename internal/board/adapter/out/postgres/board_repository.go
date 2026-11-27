@@ -47,7 +47,7 @@ func (r *BoardRepository) FindDefaultByProject(ctx context.Context, projectID uu
 		SELECT b.id AS board_id, b.project_id, b.name AS board_name, b.type AS board_type,
 		       c.id AS column_id, c.name AS column_name, c.status AS column_status,
 		       c.position AS column_position, c.wip_limit,
-		       i.id AS issue_id, i.issue_type, i.title AS summary, i.status AS issue_status,
+		       i.id AS issue_id, i.issue_type, i.summary, i.status AS issue_status,
 		       i.priority, i.assignee_id, assignee.name AS assignee_name,
 		       i.story_points, i.rank
 		FROM boards b

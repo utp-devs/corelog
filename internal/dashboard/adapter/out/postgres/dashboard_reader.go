@@ -91,7 +91,7 @@ func (r *DashboardReader) Summary(ctx context.Context, userID uuid.UUID, now tim
 
 	var issues []issueRow
 	if err := r.db.SelectContext(ctx, &issues, `
-		SELECT i.id, i.title, i.status, i.priority, p.key AS project_key, i.due_date
+		SELECT i.id, i.summary AS title, i.status, i.priority, p.key AS project_key, i.due_date
 		FROM issues i
 		JOIN projects p ON p.id = i.project_id AND p.deleted_at IS NULL
 		WHERE i.assignee_id = $1 AND i.status <> 'closed'

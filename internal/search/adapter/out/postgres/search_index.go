@@ -60,11 +60,11 @@ func (s *SearchIndex) Search(ctx context.Context, actorID uuid.UUID, admin bool,
 
 	var issues []issueHit
 	if err := s.db.SelectContext(ctx, &issues, `
-		SELECT i.id, i.title, p.key
+		SELECT i.id, i.summary AS title, p.key
 		FROM issues i
 		JOIN projects p ON p.id = i.project_id AND p.deleted_at IS NULL
 		WHERE ($1 OR EXISTS (SELECT 1 FROM project_members pm WHERE pm.project_id = i.project_id AND pm.user_id = $2))
-		  AND (i.title ILIKE $3 ESCAPE '\' OR i.description ILIKE $3 ESCAPE '\')
+		  AND (i.summary ILIKE $3 ESCAPE '\' OR i.description ILIKE $3 ESCAPE '\')
 		ORDER BY i.updated_at DESC
 		LIMIT $4`, admin, actorID, pattern, limit); err != nil {
 		return nil, apperror.Wrap(apperror.KindInternal, "failed to search issues", err)

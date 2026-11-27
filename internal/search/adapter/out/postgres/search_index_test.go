@@ -36,7 +36,7 @@ func newSearchTestDB(t *testing.T) *sqlx.DB {
 	for _, statement := range []string{
 		`CREATE TABLE projects (id UUID PRIMARY KEY, key TEXT NOT NULL, name TEXT NOT NULL, archived_at TIMESTAMPTZ, deleted_at TIMESTAMPTZ)`,
 		`CREATE TABLE project_members (project_id UUID NOT NULL, user_id UUID NOT NULL, PRIMARY KEY (project_id, user_id))`,
-		`CREATE TABLE issues (id UUID PRIMARY KEY, project_id UUID NOT NULL REFERENCES projects (id), title TEXT NOT NULL, description TEXT NOT NULL DEFAULT '', updated_at TIMESTAMPTZ NOT NULL DEFAULT now())`,
+		`CREATE TABLE issues (id UUID PRIMARY KEY, project_id UUID NOT NULL REFERENCES projects (id), summary TEXT NOT NULL, description TEXT NOT NULL DEFAULT '', updated_at TIMESTAMPTZ NOT NULL DEFAULT now())`,
 	} {
 		if _, err := db.Exec(statement); err != nil {
 			t.Fatal(err)
@@ -59,11 +59,11 @@ func TestSearchIndexVisibilityAndLiteralPatternsPostgres(t *testing.T) {
 	if _, err := db.Exec(`INSERT INTO project_members VALUES ($1, $2)`, mine, member); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := db.Exec(`INSERT INTO issues (id, project_id, title) VALUES ($1, $2, 'Exportar 100% de datos'), ($3, $4, 'Exportar 100% tambien')`,
+	if _, err := db.Exec(`INSERT INTO issues (id, project_id, summary) VALUES ($1, $2, 'Exportar 100% de datos'), ($3, $4, 'Exportar 100% tambien')`,
 		uuid.New(), mine, uuid.New(), theirs); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := db.Exec(`INSERT INTO issues (id, project_id, title) VALUES ($1, $2, 'Exportar 1000 datos')`, uuid.New(), mine); err != nil {
+	if _, err := db.Exec(`INSERT INTO issues (id, project_id, summary) VALUES ($1, $2, 'Exportar 1000 datos')`, uuid.New(), mine); err != nil {
 		t.Fatal(err)
 	}
 
@@ -117,7 +117,7 @@ func TestSearchSkipsDeletedProjectsKeepsArchivedPostgres(t *testing.T) {
 	if _, err := db.Exec(`INSERT INTO projects (id, key, name, archived_at) VALUES ($1, 'OLD', 'Exportar historico', now())`, archived); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := db.Exec(`INSERT INTO issues (id, project_id, title) VALUES ($1, $2, 'Exportar 7 borrado'), ($3, $4, 'Exportar 8 archivado'), ($5, $6, 'Exportar 9 vivo')`,
+	if _, err := db.Exec(`INSERT INTO issues (id, project_id, summary) VALUES ($1, $2, 'Exportar 7 borrado'), ($3, $4, 'Exportar 8 archivado'), ($5, $6, 'Exportar 9 vivo')`,
 		uuid.New(), deleted, uuid.New(), archived, uuid.New(), live); err != nil {
 		t.Fatal(err)
 	}

@@ -9,9 +9,9 @@ import (
 	"github.com/google/uuid"
 )
 
-var issueTitles = [...]string{
+var issueSummaries = [...]string{
 	"Error 500 al exportar reportes en CSV",
-	"Lentitud en el listado de tickets con filtros",
+	"Lentitud en el listado de incidencias con filtros",
 	"Renovar certificado TLS del dominio de API",
 	"Configurar alertas de uso de CPU en produccion",
 	"Permisos incorrectos en carpeta compartida",
@@ -49,7 +49,7 @@ var commentBodies = [...]string{
 	"Subo un fix en la siguiente iteracion.",
 	"Esto bloquea la release de la proxima semana.",
 	"Coordinemos con infraestructura antes de tocar la base.",
-	"Cerrado como duplicado, seguimos en el otro ticket.",
+	"Cerrado como duplicado, seguimos en la otra incidencia.",
 	"Pendiente de validacion del cliente.",
 	"Gracias, ya quedo funcionando en mi entorno.",
 }
@@ -66,9 +66,9 @@ type commentRec struct {
 // issueRec is one generated issue with its relations. It is plain data, so the
 // generators can be tested without a database.
 type issueRec struct {
-	id, projectID, requester     uuid.UUID
+	id, projectID, reporter      uuid.UUID
 	assignee, parent, sprint     *uuid.UUID
-	title, description, status   string
+	summary, description, status string
 	priority, itype, rank        string
 	due                          *time.Time
 	points                       *float64
@@ -147,8 +147,8 @@ func generateIssues(rng *rand.Rand, org orgModel, n int) []issueRec {
 		rec := issueRec{
 			id:          issueID(i),
 			projectID:   proj.id,
-			requester:   requesters[int(rPeople*float64(len(requesters)))],
-			title:       issueTitles[int(rPick*float64(len(issueTitles)))] + " #" + strconv.Itoa(i),
+			reporter:    requesters[int(rPeople*float64(len(requesters)))],
+			summary:     issueSummaries[int(rPick*float64(len(issueSummaries)))] + " #" + strconv.Itoa(i),
 			description: "Caso de prueba #" + strconv.Itoa(i) + ". " + issueDescriptions[int(rText*float64(len(issueDescriptions)))],
 			status:      status,
 			priority:    priorityFor(rPriority),
@@ -242,19 +242,21 @@ func columnIndex(t *table, column string) int {
 // emitIssues writes issues and their relations. Parents must come before
 // children in recs, which generateIssues guarantees.
 func emitIssues(ds *dataset, recs []issueRec) {
-	issues := ds.table("issues", "id", "project_id", "title", "description", "status", "priority",
-		"requester_id", "assignee_id", "issue_type", "parent_id", "due_date", "story_points",
-		"rank", "closed_at", "created_at", "updated_at", "sprint_id")
+	issues := ds.table("issues", "id", "project_id", "summary", "description", "status", "priority",
+		"reporter_id", "assignee_id", "issue_type", "parent_id", "due_date", "story_points",
+		"rank", "closed_at", "created_at", "updated_at", "sprint_id", "key_number")
 	issueLabels := ds.ignoreDuplicates("issue_labels", "issue_id", "label_id")
 	issueComponents := ds.ignoreDuplicates("issue_components", "issue_id", "component_id")
 	watchers := ds.ignoreDuplicates("watchers", "issue_id", "user_id", "created_at")
 	activities := ds.table("activities", "id", "issue_id", "actor_id", "action", "field_name", "old_value", "new_value", "created_at")
 	comments := ds.table("comments", "id", "issue_id", "author_id", "body", "created_at", "updated_at")
 
+	keyNumbers := map[uuid.UUID]int{}
 	for _, r := range recs {
-		issues.add(r.id, r.projectID, r.title, r.description, r.status, r.priority,
-			r.requester, opt(r.assignee), r.itype, opt(r.parent), opt(r.due), opt(r.points),
-			r.rank, opt(r.closed), r.created, r.updated, opt(r.sprint))
+		keyNumbers[r.projectID]++
+		issues.add(r.id, r.projectID, r.summary, r.description, r.status, r.priority,
+			r.reporter, opt(r.assignee), r.itype, opt(r.parent), opt(r.due), opt(r.points),
+			r.rank, opt(r.closed), r.created, r.updated, opt(r.sprint), keyNumbers[r.projectID])
 		for _, l := range r.labels {
 			issueLabels.add(r.id, l)
 		}
@@ -264,9 +266,9 @@ func emitIssues(ds *dataset, recs []issueRec) {
 		for _, w := range r.watchers {
 			watchers.add(r.id, w, r.created)
 		}
-		activities.add(idFor("activity", r.id.String(), "created"), r.id, r.requester, "created", nil, nil, nil, r.created)
+		activities.add(idFor("activity", r.id.String(), "created"), r.id, r.reporter, "created", nil, nil, nil, r.created)
 		if r.status != "open" {
-			actor := r.requester
+			actor := r.reporter
 			if r.assignee != nil {
 				actor = *r.assignee
 			}

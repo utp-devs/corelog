@@ -160,7 +160,7 @@ type issueRefRow struct {
 func (r *SprintRepository) ListIssues(ctx context.Context, sprintID uuid.UUID) ([]port.IssueRef, error) {
 	var rows []issueRefRow
 	if err := r.db.SelectContext(ctx, &rows, `
-		SELECT id, title, status, priority, story_points, closed_at
+		SELECT id, summary AS title, status, priority, story_points, closed_at
 		FROM issues
 		WHERE sprint_id = $1
 		  AND EXISTS (SELECT 1 FROM projects p WHERE p.id = issues.project_id AND p.deleted_at IS NULL)

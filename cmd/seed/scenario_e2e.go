@@ -233,8 +233,8 @@ func buildE2E(passwordHash string) *dataset {
 		rec := issueRec{
 			id:          issueID(n + 1),
 			projectID:   proj.id,
-			requester:   org.users[spec.requester],
-			title:       spec.title,
+			reporter:    org.users[spec.requester],
+			summary:     spec.title,
 			description: spec.description,
 			status:      spec.status,
 			priority:    spec.priority,

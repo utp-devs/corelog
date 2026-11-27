@@ -2,7 +2,7 @@
   <img alt="CoreLog" src="docs/assets/corelog-banner.png" width="640">
 </p>
 
-<h1 align="center">CoreLog - Pequeño pero poderoso gestor de tickets</h1>
+<h1 align="center">CoreLog - Pequeño pero poderoso gestor de incidencias</h1>
 
 <p align="center">
   Gestión de incidencias y proyectos para equipos de soporte: tableros kanban y scrum, flujos de trabajo,
@@ -30,7 +30,7 @@
   <img alt="OpenAPI" src="https://img.shields.io/badge/OpenAPI-3-6BA539?style=for-the-badge&logo=openapiinitiative&logoColor=white">
 </p>
 
-Un minisistema para la gestión de incidentes y la resolución de tickets.
+Un minisistema para la gestión de incidentes y la resolución de incidencias.
 Este proyecto se está desarrollando con fines educativos como parte del curso "Herramientas de Desarrollo" de la Universidad Tecnológica del Perú.
 
 ## Tabla de contenidos
@@ -89,7 +89,7 @@ corelog/
 │   │   │   ├── out/postgres/         adaptador de salida: repositorio basado en sqlx para producción
 │   │   └── module.go                 conecta el dominio, la aplicación y el adaptador
 │   ├── team/                    hexágono de equipos para agrupar usuarios, misma estructura que user
-│   └── ticket/                  hexágono de tickets para incidentes, misma estructura que user, además de adapter/out/memory y adapter/out/directory
+│   └── issue/                   hexágono de incidencias, misma estructura que user y adapter/out/directory
 ├── migrations/
 │   ├── postgres/                 migraciones SQL versionadas para producción, aplicadas con golang-migrate
 ├── docker/                      Dockerfiles y configuración de nginx
@@ -100,9 +100,9 @@ corelog/
 
 ```
 
-### Flujo de solicitud, ejemplo: crear ticket
+### Flujo de solicitud, ejemplo: crear incidencia
 
-`HTTP request -> adapter/in/http as the Handler -> application/port/in as the Service interface -> application/usecase for business orchestration -> domain for Ticket invariants -> application/port/out as the Repository interface -> adapter/out/postgres via sqlx`
+`HTTP request -> adapter/in/http as the Handler -> application/port/in as the Service interface -> application/usecase for business orchestration -> domain for Issue invariants -> application/port/out as the Repository interface -> adapter/out/postgres via sqlx`
 
 ## Tecnologías del backend
 
@@ -116,11 +116,9 @@ corelog/
 
 ### PostgreSQL, conjunto único de persistencia
 
-`internal/user/module.go`, `internal/team/module.go`, `internal/project/module.go` y `internal/ticket/module.go` reciben repositorios PostgreSQL mediante puertos. El composition root de `cmd/api/main.go` usa `database.NewPostgres` y los adaptadores `adapter/out/postgres`.
+`internal/user/module.go`, `internal/team/module.go`, `internal/project/module.go` y `internal/issue/module.go` reciben repositorios PostgreSQL mediante puertos. El composition root de `cmd/api/main.go` usa `database.NewPostgres` y los adaptadores `adapter/out/postgres`.
 
 Las migraciones versionadas viven en `migrations/postgres/` y se aplican mediante golang-migrate en Docker o desde la CLI. PostgreSQL es obligatorio tanto en desarrollo como en producción.
-
-El ticket hexagon admite opcionalmente `TICKET_REPOSITORY=memory` para demos y pruebas aisladas. Esta opción no sustituye PostgreSQL para el resto de módulos.
 
 Los adjuntos de issues se almacenan en `data/attachments` en desarrollo local. Docker Compose monta el volumen persistente `corelog_attachments` en `/var/lib/corelog/attachments`; `ATTACHMENTS_DIR` permite configurar otra ruta. La API acepta PDF, PNG, JPEG, GIF, WebP, texto plano y CSV de hasta 10 MiB por archivo.
 
@@ -136,7 +134,7 @@ Las pruebas de integración de adjuntos, seguidores, filtros guardados y tablero
 
 Every user optionally belongs to one team, tracked as a nullable `team_id` on the user. Teams themselves are a small, independent hexagon under `internal/team`, managed by administrators through the `/teams` endpoints.
 
-When a ticket is assigned, `internal/ticket/application/usecase/ticket_service.go` checks that the user performing the assignment and the user being assigned share the same team, using an outbound port, `ticket/application/port.UserDirectory`, implemented in `internal/ticket/adapter/out/directory` sobre PostgreSQL via `sqlx.DB.Rebind`. A user with no team can neither assign tickets nor be assigned one, and a mismatched team returns `403`.
+When an issue is assigned, `internal/issue/application/usecase/issue_service.go` checks that the user performing the assignment and the user being assigned share the same team, using an outbound port, `issue/application/port.UserDirectory`, implemented in `internal/issue/adapter/out/directory` sobre PostgreSQL via `sqlx.DB.Rebind`. A user with no team can neither assign issues nor be assigned one, and a mismatched team returns `403`.
 
 There is no dedicated admin bootstrap step: the very first account ever registered becomes an admin automatically, and every account after that defaults to requester. Admins manage teams and assign other users to them from the Teams screen in the frontend.
 
@@ -181,7 +179,7 @@ El frontend llama a la API en `/api/v1`; el servidor de desarrollo la redirige a
 
 ### 3. Verificar que ambos estén ejecutándose
 
-Abre `http://localhost:5173` in a browser, registra una nueva cuenta, inicia sesión y crea un ticket. La página se comunica con la API at `http://localhost:8080` in the background.
+Abre `http://localhost:5173` in a browser, registra una nueva cuenta, inicia sesión y crea una incidencia. La página se comunica con la API at `http://localhost:8080` in the background.
 
 Para comprobar el backend por separado, sin el navegador:
 
@@ -271,7 +269,6 @@ All variables live in `.env`, copied from `.env.example`.
 | `DB_MAX_OPEN_CONNS`, `DB_MAX_IDLE_CONNS`, `DB_CONN_MAX_LIFETIME` | `25`, `25`, `5m` | Configuración del pool de conexiones de PostgreSQL |
 | `JWT_SECRET` | `change-me-in-production` | Secreto de firma HMAC para los tokens de acceso; establece un secreto real fuera del desarrollo local |
 | `JWT_EXPIRATION` | `24h` | Duración del token de acceso |
-| `TICKET_REPOSITORY` | `postgres` | `postgres` uses PostgreSQL, or `memory` forces the in-memory ticket adapter |
 
 ## Referencia de la API
 
@@ -286,7 +283,7 @@ Ruta base: `/api/v1`. Los endpoints que requieren autenticación esperan `Author
 | `GET` | `/users/me` | Requerida | Usuario autenticado actual |
 | `PATCH` | `/users/me` | Requerida | Actualiza el nombre y correo electrónico del usuario actual |
 | `POST` | `/users/me/password` | Requerida | Cambia la contraseña del usuario actual proporcionando la contraseña vigente |
-| `GET` | `/users/search` | Requerida | Busca usuarios dentro del propio equipo del solicitante mediante `?q=`, for picking a ticket assignee |
+| `GET` | `/users/search` | Requerida | Busca usuarios dentro del propio equipo del solicitante mediante `?q=`, for picking an issue assignee |
 | `GET` | `/users` | Solo administrador | Lista o busca todos los usuarios mediante `?q=` and `?team_id=` |
 | `PATCH` | `/users/{id}/team` | Solo administrador | Asigna un usuario a un equipo o lo desvincula con `team_id: null` |
 | `GET` | `/teams` | Requerida | Lista todos los equipos |
@@ -294,14 +291,14 @@ Ruta base: `/api/v1`. Los endpoints que requieren autenticación esperan `Author
 | `GET` | `/teams/{id}` | Requerida | Obtiene un equipo por ID |
 | `PATCH` | `/teams/{id}` | Solo administrador | Cambia el nombre de un equipo |
 | `DELETE` | `/teams/{id}` | Solo administrador | Elimina un equipo; sus miembros quedan sin equipo en lugar de ser eliminados |
-| `POST` | `/tickets` | Requerida | Crea un ticket |
-| `GET` | `/tickets` | Requerida | Lista tickets, filtrables mediante `?status=`, `?priority=`, `?page=`, `?page_size=` |
-| `GET` | `/tickets/{id}` | Requerida | Obtiene un ticket por ID |
-| `PATCH` | `/tickets/{id}/status` | Requerida | Cambia el estado de un ticket: `open → in_progress → resolved → closed`, with `resolved → in_progress` also allowed |
-| `PATCH` | `/tickets/{id}/assign` | Requerida | Asigna un ticket a un usuario; el asignado debe pertenecer al mismo equipo que el solicitante; de lo contrario, devuelve `403` |
+| `POST` | `/issues` | Requerida | Crea una incidencia (la respuesta incluye `key`, por ejemplo `CORE-12`) |
+| `GET` | `/issues` | Requerida | Lista incidencias, filtrables mediante `?status=`, `?priority=`, `?page=`, `?page_size=` |
+| `GET` | `/issues/{id}` | Requerida | Obtiene una incidencia por UUID o por clave (`CORE-12`) |
+| `PATCH` | `/issues/{id}/status` | Requerida | Cambia el estado de una incidencia: `open → in_progress → resolved → closed`, with `resolved → in_progress` also allowed |
+| `PATCH` | `/issues/{id}/assign` | Requerida | Asigna una incidencia a un usuario; el asignado debe pertenecer al mismo equipo que el solicitante; de lo contrario, devuelve `403` |
 | `GET` | `/health` | No requerida | Liveness check, mounted at the root path without the `/api/v1` prefix |
 
-Ticket `status`: `open`, `in_progress`, `resolved`, `closed`. Ticket `priority`: `low`, `medium`, `high`, `critical`. Admin-only endpoints require the caller's JWT to carry the `admin` role.
+Issue `status`: `open`, `in_progress`, `resolved`, `closed`. Issue `priority`: `low`, `medium`, `high`, `critical`. Admin-only endpoints require the caller's JWT to carry the `admin` role.
 
 ## Comandos disponibles
 
@@ -452,4 +449,4 @@ El flujo `release.yml` publica una Release con numeración `vX.Y.Z` cada vez que
 * `migrate: command not found`: install [golang-migrate](https://github.com/golang-migrate/migrate).
 * `relation "users" does not exist` con Docker: las migraciones no se aplicaron. Revisa `docker compose logs migrate`.
 * Errores de CORS en el navegador: asegúrate de que `CORS_ALLOWED_ORIGIN` coincida con el origen exacto en el que se ejecuta el frontend, cuyo valor predeterminado es `http://localhost:5173`.
-* `401 Unauthorized` on `/tickets`: the ticket and `/users/me` endpoints require `Authorization: Bearer <token>` from `POST /auth/login`.
+* `401 Unauthorized` on `/issues`: the issue and `/users/me` endpoints require `Authorization: Bearer <token>` from `POST /auth/login`.

@@ -37,7 +37,7 @@ func TestDashboardReaderSummaryPostgres(t *testing.T) {
 	for _, statement := range []string{
 		`CREATE TABLE projects (id UUID PRIMARY KEY, key TEXT NOT NULL, name TEXT NOT NULL, deleted_at TIMESTAMPTZ)`,
 		`CREATE TABLE project_members (project_id UUID NOT NULL, user_id UUID NOT NULL, PRIMARY KEY (project_id, user_id))`,
-		`CREATE TABLE issues (id UUID PRIMARY KEY, project_id UUID NOT NULL REFERENCES projects (id), title TEXT NOT NULL,
+		`CREATE TABLE issues (id UUID PRIMARY KEY, project_id UUID NOT NULL REFERENCES projects (id), summary TEXT NOT NULL,
 			status TEXT NOT NULL, priority TEXT NOT NULL DEFAULT 'medium', assignee_id UUID, due_date TIMESTAMPTZ,
 			updated_at TIMESTAMPTZ NOT NULL DEFAULT now())`,
 		`CREATE TABLE sprints (id UUID PRIMARY KEY, project_id UUID NOT NULL REFERENCES projects (id), name TEXT NOT NULL,
@@ -71,7 +71,7 @@ func TestDashboardReaderSummaryPostgres(t *testing.T) {
 		{foreign, "open", nil, me},
 		{mine, "open", nil, other},
 	} {
-		if _, err := db.Exec(`INSERT INTO issues (id, project_id, title, status, assignee_id, due_date) VALUES ($1, $2, 'x', $3, $4, $5)`,
+		if _, err := db.Exec(`INSERT INTO issues (id, project_id, summary, status, assignee_id, due_date) VALUES ($1, $2, 'x', $3, $4, $5)`,
 			uuid.New(), row.project, row.status, row.owner, row.due); err != nil {
 			t.Fatal(err)
 		}
@@ -92,7 +92,7 @@ func TestDashboardReaderSummaryPostgres(t *testing.T) {
 	if _, err := db.Exec(`INSERT INTO project_members VALUES ($1, $2)`, gone, me); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := db.Exec(`INSERT INTO issues (id, project_id, title, status, assignee_id, due_date) VALUES ($1, $2, 'deleted', 'open', $3, $4)`,
+	if _, err := db.Exec(`INSERT INTO issues (id, project_id, summary, status, assignee_id, due_date) VALUES ($1, $2, 'deleted', 'open', $3, $4)`,
 		uuid.New(), gone, me, past); err != nil {
 		t.Fatal(err)
 	}

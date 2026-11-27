@@ -43,6 +43,8 @@ func buildScale(passwordHash string, issues int) *dataset {
 	}
 
 	org := buildDemoOrg(ds, entries, passwordHash)
-	emitIssues(ds, generateIssues(rng, org, issues))
+	recs := generateIssues(rng, org, issues)
+	emitIssues(ds, recs)
+	syncIssueCounters(ds, recs)
 	return ds
 }

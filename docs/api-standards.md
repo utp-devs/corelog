@@ -13,8 +13,8 @@ Este documento define las directrices obligatorias de diseño, convenciones y pa
 5. **Nomenclatura en JSON**: `snake_case` para todas las claves de los objetos JSON.
 6. **URLs**:
    - Prefijo global: `/api/v1` (salvo `/health` que vive en la raíz).
-   - Rutas en minúsculas y nombres de recursos en **plural** (ej. `/tickets`, `/teams`, `/users`, `/projects`, `/issues`).
-   - Identificadores de recurso mediante parámetros de ruta: `/{resource}/{id}` (ej. `/tickets/{id}/status`).
+   - Rutas en minúsculas y nombres de recursos en **plural** (ej. `/teams`, `/users`, `/projects`, `/issues`).
+   - Identificadores de recurso mediante parámetros de ruta: `/{resource}/{id}` (ej. `/issues/{id}/status`).
 
 ---
 

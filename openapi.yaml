@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: CoreLog API
-  description: Incident management and ticket resolution API for CoreLog.
+  description: Incident and issue management API for CoreLog.
   version: 1.0.0
 servers:
   - url: http://localhost:8080/api/v1
@@ -19,8 +19,10 @@ tags:
     description: Invitations to join an organization
   - name: favorites
     description: Starred elements and recently viewed elements
-  - name: tickets
-    description: Incident and ticket management
+  - name: notes
+    description: Notas personales privadas del usuario
+  - name: issues
+    description: Gestion de incidencias (issues) con clave legible por proyecto
   - name: health
     description: Service liveness
 paths:
@@ -1178,7 +1180,7 @@ paths:
           $ref: '#/components/responses/ValidationError'
   /projects/{id}/board/cards/{issue_id}/move:
     post:
-      tags: [tickets]
+      tags: [issues]
       operationId: moveBoardCard
       summary: Mover una incidencia a otra columna del tablero
       description: La columna destino define el estado de la incidencia (ADR-004). Requiere permiso de edicion de incidencias y respeta el flujo del proyecto y el limite WIP de la columna.
@@ -1223,7 +1225,7 @@ paths:
           $ref: '#/components/responses/ValidationError'
   /projects/{id}/board/columns/{column_id}:
     patch:
-      tags: [tickets]
+      tags: [issues]
       operationId: updateBoardColumnWip
       summary: Fijar o quitar el limite WIP de una columna
       description: Solo el lider del proyecto o el administrador global. Enviar wip_limit null quita el limite.
@@ -1395,25 +1397,25 @@ paths:
           $ref: '#/components/responses/NotFound'
   /issues:
     post:
-      tags: [tickets]
-      summary: Create a ticket
-      operationId: createTicket
+      tags: [issues]
+      summary: Create an issue
+      operationId: createIssue
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CreateTicketRequest'
+              $ref: '#/components/schemas/CreateIssueRequest'
       responses:
         '201':
-          description: Ticket created successfully
+          description: Issue created successfully
           content:
             application/json:
               schema:
                 type: object
                 properties:
                   data:
-                    $ref: '#/components/schemas/Ticket'
+                    $ref: '#/components/schemas/Issue'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
@@ -1421,26 +1423,26 @@ paths:
         '422':
           $ref: '#/components/responses/ValidationError'
     get:
-      tags: [tickets]
-      summary: List tickets
-      operationId: listTickets
+      tags: [issues]
+      summary: List issues
+      operationId: listIssues
       parameters:
         - name: status
           in: query
           required: false
-          description: Filter by ticket status. When absent, tickets of every status are returned.
+          description: Filter by issue status. When absent, issues of every status are returned.
           schema:
-            $ref: '#/components/schemas/TicketStatus'
+            $ref: '#/components/schemas/IssueStatus'
         - name: priority
           in: query
           required: false
-          description: Filter by ticket priority. When absent, tickets of every priority are returned.
+          description: Filter by issue priority. When absent, issues of every priority are returned.
           schema:
-            $ref: '#/components/schemas/TicketPriority'
+            $ref: '#/components/schemas/IssuePriority'
         - name: q
           in: query
           required: false
-          description: Text search across title and description.
+          description: Text search across summary and description.
           schema:
             type: string
         - name: issue_type
@@ -1488,7 +1490,7 @@ paths:
         - name: page_size
           in: query
           required: false
-          description: Number of tickets per page. Defaults to 20 and is capped at 100.
+          description: Number of issues per page. Defaults to 20 and is capped at 100.
           schema:
             type: integer
             minimum: 1
@@ -1496,7 +1498,7 @@ paths:
             default: 20
       responses:
         '200':
-          description: A page of tickets matching the given filters, with the total across all pages
+          description: A page of issues matching the given filters, with the total across all pages
           content:
             application/json:
               schema:
@@ -1505,14 +1507,14 @@ paths:
                   data:
                     type: array
                     items:
-                      $ref: '#/components/schemas/Ticket'
+                      $ref: '#/components/schemas/Issue'
                   meta:
                     $ref: '#/components/schemas/PageMeta'
         '401':
           $ref: '#/components/responses/Unauthorized'
   /backlog:
     get:
-      tags: [tickets]
+      tags: [issues]
       operationId: listBacklog
       summary: Backlog de un proyecto ordenado por rank
       security:
@@ -1533,7 +1535,7 @@ paths:
           description: Sin permiso para ver el proyecto
   /backlog/{issue_id}:
     put:
-      tags: [tickets]
+      tags: [issues]
       operationId: moveInBacklog
       summary: Colocar una incidencia en una posicion del backlog
       description: Requiere permiso de mover tarjetas (lead o contributor). Renumera el rank de las incidencias del proyecto con el orden resultante y devuelve el backlog.
@@ -1543,6 +1545,13 @@ paths:
         - name: issue_id
           in: path
           required: true
+          description: UUID o clave legible de la incidencia (CORE-12); ver el parametro IssueRef.
+          schema:
+            type: string
+        - name: organization_id
+          in: query
+          required: false
+          description: Opcional. Desambigua una clave que existe en varias organizaciones.
           schema:
             type: string
             format: uuid
@@ -1576,7 +1585,7 @@ paths:
           $ref: '#/components/responses/ValidationError'
   /sprints:
     get:
-      tags: [tickets]
+      tags: [issues]
       operationId: listSprints
       summary: Sprints de un proyecto
       description: Requiere poder ver el proyecto.
@@ -1597,7 +1606,7 @@ paths:
         '403':
           description: Sin permiso para ver el proyecto
     post:
-      tags: [tickets]
+      tags: [issues]
       operationId: createSprint
       summary: Planificar un sprint
       description: Solo el lead del proyecto o el administrador global. Las fechas son opcionales; si se dan, el fin no puede ser anterior al inicio.
@@ -1641,7 +1650,7 @@ paths:
           $ref: '#/components/responses/ValidationError'
   /sprints/velocity:
     get:
-      tags: [tickets]
+      tags: [issues]
       operationId: getSprintVelocity
       summary: Velocidad del proyecto en sus ultimos sprints cerrados
       security:
@@ -1670,7 +1679,7 @@ paths:
           description: Sin permiso para ver el proyecto
   /sprints/{id}/start:
     post:
-      tags: [tickets]
+      tags: [issues]
       operationId: startSprint
       summary: Activar un sprint planificado
       description: Un proyecto solo puede tener un sprint activo. Si ya hay otro activo responde 409.
@@ -1702,7 +1711,7 @@ paths:
           description: El sprint no esta planificado o ya hay otro sprint activo
   /sprints/{id}/close:
     post:
-      tags: [tickets]
+      tags: [issues]
       operationId: closeSprint
       summary: Cerrar un sprint activo
       description: unfinished decide que pasa con las incidencias no cerradas. backlog las quita del sprint; sprint las mueve a target_sprint_id, que debe ser un sprint planificado del mismo proyecto.
@@ -1751,7 +1760,7 @@ paths:
           $ref: '#/components/responses/ValidationError'
   /sprints/{id}/issues:
     get:
-      tags: [tickets]
+      tags: [issues]
       operationId: listSprintIssues
       summary: Incidencias de un sprint
       security:
@@ -1778,7 +1787,7 @@ paths:
           description: Sprint no encontrado en el proyecto
   /sprints/{id}/issues/{issue_id}:
     put:
-      tags: [tickets]
+      tags: [issues]
       operationId: assignSprintIssue
       summary: Asignar una incidencia al sprint
       description: Solo lead o administrador global. Un sprint cerrado no admite cambios.
@@ -1813,7 +1822,7 @@ paths:
         '409':
           description: El sprint esta cerrado
     delete:
-      tags: [tickets]
+      tags: [issues]
       operationId: removeSprintIssue
       summary: Quitar una incidencia del sprint
       description: Solo lead o administrador global. La incidencia vuelve al backlog.
@@ -1849,7 +1858,7 @@ paths:
           description: El sprint esta cerrado
   /sprints/{id}/burndown:
     get:
-      tags: [tickets]
+      tags: [issues]
       operationId: getSprintBurndown
       summary: Burndown del sprint por dia
       description: Trabajo restante real frente a la linea ideal que baja a cero. El sprint necesita fechas.
@@ -1879,7 +1888,7 @@ paths:
           description: El sprint no tiene fechas
   /notifications:
     get:
-      tags: [tickets]
+      tags: [issues]
       operationId: listNotifications
       summary: Notificaciones del usuario, las mas recientes primero
       description: Devuelve hasta 50 avisos in-app del usuario autenticado. La interfaz consulta el contador cada 30 segundos (sondeo).
@@ -1892,7 +1901,7 @@ paths:
           $ref: '#/components/responses/Unauthorized'
   /notifications/preferences:
     get:
-      tags: [tickets]
+      tags: [issues]
       summary: Preferencias de avisos del usuario
       operationId: getNotificationPreferences
       security:
@@ -1909,7 +1918,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
     put:
-      tags: [tickets]
+      tags: [issues]
       summary: Actualizar las preferencias de avisos
       description: >-
         Con in_app en false no se guardan avisos nuevos en la aplicacion. El correo electronico
@@ -1935,7 +1944,7 @@ paths:
           $ref: '#/components/responses/ValidationError'
   /notifications/unread-count:
     get:
-      tags: [tickets]
+      tags: [issues]
       operationId: getUnreadNotificationCount
       summary: Numero de notificaciones no leidas
       security:
@@ -1947,7 +1956,7 @@ paths:
           $ref: '#/components/responses/Unauthorized'
   /notifications/{id}/read:
     post:
-      tags: [tickets]
+      tags: [issues]
       operationId: markNotificationRead
       summary: Marcar una notificacion como leida
       description: Solo el dueno puede marcarla. Una notificacion ajena responde no encontrada.
@@ -1969,7 +1978,7 @@ paths:
           description: Notificacion no encontrada para este usuario
   /notifications/read-all:
     post:
-      tags: [tickets]
+      tags: [issues]
       operationId: markAllNotificationsRead
       summary: Marcar todas las notificaciones como leidas
       security:
@@ -1981,7 +1990,7 @@ paths:
           $ref: '#/components/responses/Unauthorized'
   /calendar/events:
     get:
-      tags: [tickets]
+      tags: [issues]
       operationId: listCalendarEvents
       summary: Hitos del proyecto entre dos fechas
       description: Inicio y fin de sprint, y fechas limite de incidencias. El rango puede tener como maximo un ano.
@@ -2017,7 +2026,7 @@ paths:
           $ref: '#/components/responses/ValidationError'
   /search:
     get:
-      tags: [tickets]
+      tags: [issues]
       operationId: globalSearch
       summary: Busqueda global de proyectos e incidencias
       description: Busca por texto en nombre y clave de proyecto, y en titulo y descripcion de incidencia. Solo devuelve lo visible para el usuario (admin global, o miembro del proyecto). Los comodines se buscan literalmente.
@@ -2048,7 +2057,7 @@ paths:
           $ref: '#/components/responses/ValidationError'
   /dashboard/me:
     get:
-      tags: [tickets]
+      tags: [issues]
       operationId: getMyDashboard
       summary: Resumen personal del usuario
       description: Trabajo asignado por estado, incidencias vencidas, proyectos en los que es miembro, sprints activos de esos proyectos y las 5 incidencias abiertas mas urgentes.
@@ -2061,7 +2070,7 @@ paths:
           $ref: '#/components/responses/Unauthorized'
   /workflows:
     get:
-      tags: [tickets]
+      tags: [issues]
       operationId: getDefaultWorkflow
       summary: Flujo por defecto de un proyecto
       description: Devuelve las transiciones de estado permitidas y los roles de proyecto que pueden ejecutarlas. Requiere poder ver el proyecto.
@@ -2113,7 +2122,7 @@ paths:
         '404':
           description: El proyecto no tiene flujo por defecto
     put:
-      tags: [tickets]
+      tags: [issues]
       operationId: updateDefaultWorkflow
       summary: Reemplazar las transiciones del flujo por defecto
       description: Solo el lider del proyecto o el administrador global. Valida estados, roles permitidos (admin, lead, contributor, viewer) y transiciones duplicadas o sin cambio de estado.
@@ -2165,7 +2174,7 @@ paths:
           $ref: '#/components/responses/ValidationError'
   /saved-filters:
     get:
-      tags: [tickets]
+      tags: [issues]
       summary: List the authenticated user's saved issue filters
       operationId: listSavedIssueFilters
       security:
@@ -2185,7 +2194,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
     post:
-      tags: [tickets]
+      tags: [issues]
       summary: Save a personal issue filter
       operationId: createSavedIssueFilter
       security:
@@ -2214,7 +2223,7 @@ paths:
           $ref: '#/components/responses/ValidationError'
   /saved-filters/{filter_id}:
     delete:
-      tags: [tickets]
+      tags: [issues]
       summary: Delete a personal issue filter
       operationId: deleteSavedIssueFilter
       security:
@@ -2235,55 +2244,25 @@ paths:
           $ref: '#/components/responses/NotFound'
   /issues/{id}:
     parameters:
-      - $ref: '#/components/parameters/TicketId'
+      - $ref: '#/components/parameters/IssueRef'
+      - $ref: '#/components/parameters/IssueOrganizationId'
     get:
-      tags: [tickets]
-      summary: Get a ticket by id
-      operationId: getTicket
-      responses:
-        '200':
-          description: The requested ticket
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  data:
-                    $ref: '#/components/schemas/Ticket'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-  /issues/{id}/status:
-    parameters:
-      - $ref: '#/components/parameters/TicketId'
-    patch:
-      tags: [tickets]
-      summary: Transition a ticket's status
+      tags: [issues]
+      summary: Get an issue by key or id
       description: >-
-        The transition must exist in the project's default workflow and be allowed for the
-        authenticated role. Valid transitions are open to in_progress, open to closed,
-        in_progress to resolved, in_progress to closed, resolved to closed, and resolved to
-        in_progress. Any other transition is rejected with 409.
-      operationId: updateTicketStatus
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UpdateTicketStatusRequest'
+        {id} acepta el UUID o la clave legible (CORE-12). Codigos: issue.not_found (404, tambien para claves
+        desconocidas o de proyectos no visibles), issue.key_ambiguous (409), issue.invalid_id (422).
+      operationId: getIssue
       responses:
         '200':
-          description: The ticket with its updated status
+          description: The requested issue
           content:
             application/json:
               schema:
                 type: object
                 properties:
                   data:
-                    $ref: '#/components/schemas/Ticket'
+                    $ref: '#/components/schemas/Issue'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
@@ -2291,7 +2270,46 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
         '409':
-          description: The requested status transition is not allowed from the ticket's current status
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+  /issues/{id}/status:
+    parameters:
+      - $ref: '#/components/parameters/IssueRef'
+      - $ref: '#/components/parameters/IssueOrganizationId'
+    patch:
+      tags: [issues]
+      summary: Transition an issue's status
+      description: >-
+        The transition must exist in the project's default workflow and be allowed for the
+        authenticated role. Valid transitions are open to in_progress, open to closed,
+        in_progress to resolved, in_progress to closed, resolved to closed, and resolved to
+        in_progress. Any other transition is rejected with 409.
+      operationId: updateIssueStatus
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateIssueStatusRequest'
+      responses:
+        '200':
+          description: The issue with its updated status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Issue'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: The requested status transition is not allowed from the issue's current status
           content:
             application/json:
               schema:
@@ -2300,9 +2318,10 @@ paths:
           $ref: '#/components/responses/ValidationError'
   /issues/{id}/assign:
     parameters:
-      - $ref: '#/components/parameters/TicketId'
+      - $ref: '#/components/parameters/IssueRef'
+      - $ref: '#/components/parameters/IssueOrganizationId'
     patch:
-      tags: [tickets]
+      tags: [issues]
       summary: Asignar o desasignar una incidencia
       description: >-
         Asigna la incidencia a un usuario, o la desasigna si assignee_id es null. Asignar una
@@ -2311,23 +2330,23 @@ paths:
         si no responde 403, y se añade a los seguidores de la incidencia en la misma transaccion.
         Desasignar requiere el mismo permiso que asignar, no cambia el estado, no avisa a nadie y
         es idempotente: si la incidencia ya no tiene persona asignada responde 200 sin cambios.
-      operationId: assignTicket
+      operationId: assignIssue
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/AssignTicketRequest'
+              $ref: '#/components/schemas/AssignIssueRequest'
       responses:
         '200':
-          description: The ticket with its updated assignee
+          description: The issue with its updated assignee
           content:
             application/json:
               schema:
                 type: object
                 properties:
                   data:
-                    $ref: '#/components/schemas/Ticket'
+                    $ref: '#/components/schemas/Issue'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
@@ -2338,9 +2357,10 @@ paths:
           $ref: '#/components/responses/ValidationError'
   /issues/{id}/comments:
     parameters:
-      - $ref: '#/components/parameters/TicketId'
+      - $ref: '#/components/parameters/IssueRef'
+      - $ref: '#/components/parameters/IssueOrganizationId'
     get:
-      tags: [tickets]
+      tags: [issues]
       summary: List issue comments
       security:
         - bearerAuth: []
@@ -2361,7 +2381,7 @@ paths:
         '403':
           $ref: '#/components/responses/Forbidden'
     post:
-      tags: [tickets]
+      tags: [issues]
       summary: Create an issue comment
       description: The comment author is added to the issue watchers in the same database transaction.
       security:
@@ -2390,7 +2410,8 @@ paths:
           $ref: '#/components/responses/ValidationError'
   /issues/{id}/comments/{comment_id}:
     parameters:
-      - $ref: '#/components/parameters/TicketId'
+      - $ref: '#/components/parameters/IssueRef'
+      - $ref: '#/components/parameters/IssueOrganizationId'
       - name: comment_id
         in: path
         required: true
@@ -2398,7 +2419,7 @@ paths:
           type: string
           format: uuid
     patch:
-      tags: [tickets]
+      tags: [issues]
       summary: Update a comment owned by the authenticated user
       security:
         - bearerAuth: []
@@ -2427,7 +2448,7 @@ paths:
         '422':
           $ref: '#/components/responses/ValidationError'
     delete:
-      tags: [tickets]
+      tags: [issues]
       summary: Delete a comment owned by the authenticated user
       security:
         - bearerAuth: []
@@ -2442,9 +2463,10 @@ paths:
           $ref: '#/components/responses/NotFound'
   /issues/{id}/activities:
     parameters:
-      - $ref: '#/components/parameters/TicketId'
+      - $ref: '#/components/parameters/IssueRef'
+      - $ref: '#/components/parameters/IssueOrganizationId'
     get:
-      tags: [tickets]
+      tags: [issues]
       summary: List issue activity
       security:
         - bearerAuth: []
@@ -2466,9 +2488,10 @@ paths:
           $ref: '#/components/responses/Forbidden'
   /issues/{id}/attachments:
     parameters:
-      - $ref: '#/components/parameters/TicketId'
+      - $ref: '#/components/parameters/IssueRef'
+      - $ref: '#/components/parameters/IssueOrganizationId'
     get:
-      tags: [tickets]
+      tags: [issues]
       summary: List issue attachments
       security:
         - bearerAuth: []
@@ -2489,7 +2512,7 @@ paths:
         '403':
           $ref: '#/components/responses/Forbidden'
     post:
-      tags: [tickets]
+      tags: [issues]
       summary: Upload an issue attachment
       security:
         - bearerAuth: []
@@ -2522,7 +2545,8 @@ paths:
           $ref: '#/components/responses/ValidationError'
   /issues/{id}/attachments/{attachment_id}:
     parameters:
-      - $ref: '#/components/parameters/TicketId'
+      - $ref: '#/components/parameters/IssueRef'
+      - $ref: '#/components/parameters/IssueOrganizationId'
       - name: attachment_id
         in: path
         required: true
@@ -2530,7 +2554,7 @@ paths:
           type: string
           format: uuid
     get:
-      tags: [tickets]
+      tags: [issues]
       summary: Download an issue attachment
       security:
         - bearerAuth: []
@@ -2574,9 +2598,10 @@ paths:
           $ref: '#/components/responses/NotFound'
   /issues/{id}/watchers:
     parameters:
-      - $ref: '#/components/parameters/TicketId'
+      - $ref: '#/components/parameters/IssueRef'
+      - $ref: '#/components/parameters/IssueOrganizationId'
     get:
-      tags: [tickets]
+      tags: [issues]
       summary: Get the authenticated user's issue watcher state
       security:
         - bearerAuth: []
@@ -2597,7 +2622,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
     post:
-      tags: [tickets]
+      tags: [issues]
       summary: Follow an issue
       description: Idempotently add the authenticated project member as an issue watcher.
       security:
@@ -2619,7 +2644,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
     delete:
-      tags: [tickets]
+      tags: [issues]
       summary: Unfollow an issue
       description: Idempotently remove the authenticated user from the issue watchers.
       security:
@@ -2642,9 +2667,10 @@ paths:
           $ref: '#/components/responses/NotFound'
   /issues/{id}/links:
     parameters:
-      - $ref: '#/components/parameters/TicketId'
+      - $ref: '#/components/parameters/IssueRef'
+      - $ref: '#/components/parameters/IssueOrganizationId'
     get:
-      tags: [tickets]
+      tags: [issues]
       summary: List issue links
       security:
         - bearerAuth: []
@@ -2665,7 +2691,7 @@ paths:
         '403':
           $ref: '#/components/responses/Forbidden'
     post:
-      tags: [tickets]
+      tags: [issues]
       summary: Create an issue link
       security:
         - bearerAuth: []
@@ -2693,7 +2719,8 @@ paths:
           $ref: '#/components/responses/ValidationError'
   /issues/{id}/links/{link_id}:
     parameters:
-      - $ref: '#/components/parameters/TicketId'
+      - $ref: '#/components/parameters/IssueRef'
+      - $ref: '#/components/parameters/IssueOrganizationId'
       - name: link_id
         in: path
         required: true
@@ -2701,7 +2728,7 @@ paths:
           type: string
           format: uuid
     delete:
-      tags: [tickets]
+      tags: [issues]
       summary: Delete an issue link
       security:
         - bearerAuth: []
@@ -2714,9 +2741,10 @@ paths:
           $ref: '#/components/responses/NotFound'
   /issues/{id}/details:
     parameters:
-      - $ref: '#/components/parameters/TicketId'
+      - $ref: '#/components/parameters/IssueRef'
+      - $ref: '#/components/parameters/IssueOrganizationId'
     patch:
-      tags: [tickets]
+      tags: [issues]
       summary: Update complete issue details
       security:
         - bearerAuth: []
@@ -2735,7 +2763,7 @@ paths:
                 type: object
                 properties:
                   data:
-                    $ref: '#/components/schemas/Ticket'
+                    $ref: '#/components/schemas/Issue'
         '404':
           $ref: '#/components/responses/NotFound'
         '403':
@@ -2744,9 +2772,10 @@ paths:
           $ref: '#/components/responses/ValidationError'
   /issues/{id}/rank:
     parameters:
-      - $ref: '#/components/parameters/TicketId'
+      - $ref: '#/components/parameters/IssueRef'
+      - $ref: '#/components/parameters/IssueOrganizationId'
     patch:
-      tags: [tickets]
+      tags: [issues]
       summary: Update issue rank
       security:
         - bearerAuth: []
@@ -2765,7 +2794,7 @@ paths:
                 type: object
                 properties:
                   data:
-                    $ref: '#/components/schemas/Ticket'
+                    $ref: '#/components/schemas/Issue'
         '404':
           $ref: '#/components/responses/NotFound'
         '403':
@@ -2774,9 +2803,10 @@ paths:
           $ref: '#/components/responses/ValidationError'
   /issues/{id}/metadata:
     parameters:
-      - $ref: '#/components/parameters/TicketId'
+      - $ref: '#/components/parameters/IssueRef'
+      - $ref: '#/components/parameters/IssueOrganizationId'
     patch:
-      tags: [tickets]
+      tags: [issues]
       summary: Update rich issue metadata
       operationId: updateIssueMetadata
       security:
@@ -2796,7 +2826,7 @@ paths:
                 type: object
                 properties:
                   data:
-                    $ref: '#/components/schemas/Ticket'
+                    $ref: '#/components/schemas/Issue'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
@@ -3815,6 +3845,266 @@ paths:
                     example: ok
         '405':
           description: Método HTTP no permitido para esta ruta
+  /notes:
+    get:
+      tags: [notes]
+      operationId: listNotes
+      summary: Notas del usuario
+      description: Solo devuelve notas propias, nunca de otros usuarios, tampoco para administradores. Orden - primero las fijadas y luego por fecha de actualizacion descendente. Paginacion por cursor (cursor opaco de la respuesta anterior).
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: q
+          in: query
+          description: Texto buscado en titulo y cuerpo (sin distinguir mayusculas)
+          schema:
+            type: string
+            maxLength: 200
+        - name: tag
+          in: query
+          description: Filtra por una etiqueta
+          schema:
+            type: string
+            maxLength: 30
+        - name: pinned
+          in: query
+          schema:
+            type: boolean
+        - name: issue
+          in: query
+          description: Notas vinculadas a esta incidencia
+          schema:
+            type: string
+            format: uuid
+        - name: project
+          in: query
+          description: Notas vinculadas a este proyecto
+          schema:
+            type: string
+            format: uuid
+        - name: cursor
+          in: query
+          description: Cursor de la pagina siguiente
+          schema:
+            type: string
+        - name: limit
+          in: query
+          description: Notas por pagina (1 a 100)
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 25
+      responses:
+        '200':
+          description: Notas del usuario y cursor de la siguiente pagina
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Note'
+                  meta:
+                    $ref: '#/components/schemas/NoteListMeta'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+    post:
+      tags: [notes]
+      operationId: createNote
+      summary: Crear una nota privada
+      description: Las notas son privadas de su autor. Para vincular una incidencia o un proyecto, el usuario debe poder verlo; si no existe o no puede verlo responde 404 con note.link_forbidden.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NoteInput'
+      responses:
+        '201':
+          description: Nota creada
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Note'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NoteLinkForbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+  /notes/tags:
+    get:
+      tags: [notes]
+      operationId: listNoteTags
+      summary: Etiquetas de mis notas con su cantidad
+      description: Etiquetas distintas de las notas propias no borradas, con el numero de notas que las usan. Ordenadas por cantidad descendente y luego alfabeticamente.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Etiquetas con su cantidad
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/NoteTagCount'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /notes/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: Identificador de la nota
+        schema:
+          type: string
+          format: uuid
+    get:
+      tags: [notes]
+      operationId: getNote
+      summary: Obtener una nota propia
+      description: Las notas de otros usuarios, incluidos los administradores, responden 404.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Nota
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Note'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NoteNotFound'
+    patch:
+      tags: [notes]
+      operationId: updateNote
+      summary: Actualizar una nota (parcial)
+      description: Solo se modifican los campos enviados. issue_id y project_id aceptan null o cadena vacia para quitar el vinculo; si se omiten, el vinculo se conserva. Un vinculo nuevo exige poder ver el elemento.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NotePatch'
+      responses:
+        '200':
+          description: Nota actualizada
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Note'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: La nota no existe o no es propia, o el elemento a vincular no existe o no puede verse (note.not_found o note.link_forbidden)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+    delete:
+      tags: [notes]
+      operationId: deleteNote
+      summary: Borrar una nota (borrado logico)
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: Nota borrada
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NoteNotFound'
+  /notes/{id}/pin:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      tags: [notes]
+      operationId: pinNote
+      summary: Fijar una nota
+      description: Operacion idempotente. Responde la nota actualizada.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Nota fijada
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Note'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NoteNotFound'
+  /notes/{id}/unpin:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      tags: [notes]
+      operationId: unpinNote
+      summary: Quitar la fijacion de una nota
+      description: Operacion idempotente. Responde la nota actualizada.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Nota sin fijar
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Note'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NoteNotFound'
   /favorites:
     get:
       tags: [favorites]
@@ -3945,11 +4235,23 @@ components:
       scheme: bearer
       bearerFormat: JWT
   parameters:
-    TicketId:
+    IssueRef:
       name: id
       in: path
       required: true
-      description: The ticket's unique identifier
+      description: >-
+        UUID o clave legible de la incidencia (por ejemplo CORE-12). Con una clave, la busqueda se limita a las
+        incidencias visibles para el usuario; si la clave existe en varias organizaciones del usuario y no se indica
+        organization_id responde 409 (codigo issue.key_ambiguous). Una clave desconocida responde 404 (issue.not_found)
+        y un valor que no es UUID ni clave responde 422 (issue.invalid_id).
+      schema:
+        type: string
+        example: CORE-12
+    IssueOrganizationId:
+      name: organization_id
+      in: query
+      required: false
+      description: Opcional. Solo se usa cuando {id} es una clave que existe en varias organizaciones del usuario; se ignora cuando es un UUID.
       schema:
         type: string
         format: uuid
@@ -4022,6 +4324,18 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/ErrorResponse'
+    NoteNotFound:
+      description: La nota no existe, fue borrada o pertenece a otro usuario (note.not_found)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    NoteLinkForbidden:
+      description: El elemento a vincular no existe o el usuario no puede verlo (note.link_forbidden)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
     Forbidden:
       description: The authenticated user is not allowed to perform this action
       content:
@@ -4045,10 +4359,10 @@ components:
       type: string
       enum: [admin, user]
       description: Platform role. The first account created on an empty installation is admin; every other account is user.
-    TicketStatus:
+    IssueStatus:
       type: string
       enum: [open, in_progress, resolved, closed]
-    TicketPriority:
+    IssuePriority:
       type: string
       enum: [low, medium, high, critical]
     IssueType:
@@ -4777,6 +5091,128 @@ components:
           description: A signed JWT access token, valid for the duration configured by JWT_EXPIRATION on the server.
         user:
           $ref: '#/components/schemas/User'
+    Note:
+      type: object
+      required: [id, title, body, color, pinned, tags, issue_id, project_id, created_at, updated_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+          maxLength: 120
+        body:
+          type: string
+          maxLength: 20000
+        color:
+          type: string
+          enum: [yellow, blue, green, pink, purple, orange, red, gray]
+        pinned:
+          type: boolean
+        tags:
+          type: array
+          maxItems: 10
+          items:
+            type: string
+            maxLength: 30
+        issue_id:
+          type: string
+          format: uuid
+          nullable: true
+        project_id:
+          type: string
+          format: uuid
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    NoteInput:
+      type: object
+      additionalProperties: false
+      description: Campos de una nota nueva. Las etiquetas se normalizan (recortadas, en minusculas, sin repetir) y no pueden ser mas de 10.
+      properties:
+        title:
+          type: string
+          maxLength: 120
+          description: Opcional
+        body:
+          type: string
+          maxLength: 20000
+          description: Opcional
+        color:
+          type: string
+          enum: [yellow, blue, green, pink, purple, orange, red, gray]
+          default: yellow
+        tags:
+          type: array
+          maxItems: 10
+          items:
+            type: string
+            minLength: 1
+            maxLength: 30
+        pinned:
+          type: boolean
+          default: false
+        issue_id:
+          type: string
+          format: uuid
+          nullable: true
+        project_id:
+          type: string
+          format: uuid
+          nullable: true
+    NotePatch:
+      type: object
+      additionalProperties: false
+      description: Cambios parciales de una nota. Para fijar usar las rutas pin y unpin.
+      properties:
+        title:
+          type: string
+          maxLength: 120
+        body:
+          type: string
+          maxLength: 20000
+        color:
+          type: string
+          enum: [yellow, blue, green, pink, purple, orange, red, gray]
+        tags:
+          type: array
+          maxItems: 10
+          items:
+            type: string
+            minLength: 1
+            maxLength: 30
+        issue_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: null o cadena vacia quita el vinculo
+        project_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: null o cadena vacia quita el vinculo
+    NoteTagCount:
+      type: object
+      required: [tag, count]
+      properties:
+        tag:
+          type: string
+        count:
+          type: integer
+    NoteListMeta:
+      type: object
+      required: [limit, next_cursor]
+      properties:
+        limit:
+          type: integer
+        next_cursor:
+          type: string
+          nullable: true
+          description: Cursor de la pagina siguiente; null en la ultima pagina
     PageMeta:
       type: object
       required: [page, page_size, total]
@@ -4791,12 +5227,12 @@ components:
         total:
           type: integer
           minimum: 0
-          description: Number of tickets matching the filters, across all pages.
-    CreateTicketRequest:
+          description: Number of issues matching the filters, across all pages.
+    CreateIssueRequest:
       type: object
-      required: [title, description, priority]
+      required: [summary, description, priority]
       properties:
-        title:
+        summary:
           type: string
           minLength: 3
           maxLength: 200
@@ -4804,12 +5240,12 @@ components:
           type: string
           minLength: 3
         priority:
-          $ref: '#/components/schemas/TicketPriority'
+          $ref: '#/components/schemas/IssuePriority'
         project_id:
           type: string
           format: uuid
           nullable: true
-          description: Proyecto del ticket. Si se omite, se usa el proyecto por defecto (CORE).
+          description: Proyecto de la incidencia. Si se omite, se usa el proyecto por defecto (CORE).
         issue_type:
           $ref: '#/components/schemas/IssueType'
         parent_id:
@@ -4824,13 +5260,13 @@ components:
           type: number
           format: double
           nullable: true
-    UpdateTicketStatusRequest:
+    UpdateIssueStatusRequest:
       type: object
       required: [status]
       properties:
         status:
-          $ref: '#/components/schemas/TicketStatus'
-    AssignTicketRequest:
+          $ref: '#/components/schemas/IssueStatus'
+    AssignIssueRequest:
       type: object
       required: [assignee_id]
       properties:
@@ -4841,9 +5277,9 @@ components:
           nullable: true
     UpdateIssueDetailsRequest:
       type: object
-      required: [title, description, priority, issue_type]
+      required: [summary, description, priority, issue_type]
       properties:
-        title:
+        summary:
           type: string
           minLength: 3
           maxLength: 200
@@ -4851,7 +5287,7 @@ components:
           type: string
           minLength: 3
         priority:
-          $ref: '#/components/schemas/TicketPriority'
+          $ref: '#/components/schemas/IssuePriority'
         issue_type:
           $ref: '#/components/schemas/IssueType'
         parent_id:
@@ -5071,34 +5507,64 @@ components:
         created_at:
           type: string
           format: date-time
-    Ticket:
+    Issue:
       type: object
       properties:
-        requester_name:
-          type: string
-          description: Display name of the requester.
-        assignee_name:
-          type: string
-          nullable: true
-          description: Display name of the assignee; absent when unassigned.
         id:
           type: string
           format: uuid
-        title:
+        key:
+          type: string
+          example: CORE-12
+          description: Clave legible de la incidencia, la clave del proyecto y un numero correlativo por proyecto.
+        project_id:
+          type: string
+          format: uuid
+        project_key:
+          type: string
+          example: CORE
+        summary:
           type: string
         description:
           type: string
         status:
-          $ref: '#/components/schemas/TicketStatus'
+          $ref: '#/components/schemas/IssueStatus'
         priority:
-          $ref: '#/components/schemas/TicketPriority'
-        requester_id:
+          $ref: '#/components/schemas/IssuePriority'
+        issue_type:
+          $ref: '#/components/schemas/IssueType'
+        parent_id:
           type: string
           format: uuid
+          nullable: true
+        due_date:
+          type: string
+          format: date-time
+          nullable: true
+        story_points:
+          type: number
+          format: double
+          nullable: true
+        rank:
+          type: string
+        closed_at:
+          type: string
+          format: date-time
+          nullable: true
+        reporter_id:
+          type: string
+          format: uuid
+        reporter_name:
+          type: string
+          description: Display name of the reporter.
         assignee_id:
           type: string
           format: uuid
           nullable: true
+        assignee_name:
+          type: string
+          nullable: true
+          description: Display name of the assignee; absent when unassigned.
         created_at:
           type: string
           format: date-time

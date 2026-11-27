@@ -12,7 +12,6 @@ type Config struct {
 	Server   ServerConfig
 	Database DatabaseConfig
 	Auth     AuthConfig
-	Features FeatureConfig
 }
 
 type ServerConfig struct {
@@ -46,10 +45,6 @@ func (d DatabaseConfig) DSN() string {
 type AuthConfig struct {
 	JWTSecret     string        `env:"JWT_SECRET" envDefault:"change-me-in-production"`
 	JWTExpiration time.Duration `env:"JWT_EXPIRATION" envDefault:"24h"`
-}
-
-type FeatureConfig struct {
-	TicketRepository string `env:"TICKET_REPOSITORY" envDefault:"postgres"`
 }
 
 func Load() (*Config, error) {

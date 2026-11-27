@@ -232,9 +232,9 @@ func addDemoNotifications(ds *dataset, recs []issueRec) {
 		uid := userID(email)
 		for j := 0; j < 5; j++ {
 			rec := recs[(ri*17+j*11)%len(recs)]
-			kind, message := "issue_assigned", "Te asignaron "+rec.title
+			kind, message := "issue_assigned", "Te asignaron "+rec.summary
 			if j%2 == 1 {
-				kind, message = "comment_added", "Nuevo comentario en "+rec.title
+				kind, message = "comment_added", "Nuevo comentario en "+rec.summary
 			}
 			created := daysFromBase(-(j + 1))
 			var readAt any

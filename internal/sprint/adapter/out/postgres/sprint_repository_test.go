@@ -50,7 +50,7 @@ func TestSprintRepositoryPostgres(t *testing.T) {
 		`CREATE UNIQUE INDEX idx_sprints_one_active_per_project ON sprints (project_id) WHERE status = 'active'`,
 		`CREATE TABLE issues (
 			id UUID PRIMARY KEY, project_id UUID NOT NULL REFERENCES projects (id),
-			title TEXT NOT NULL, status TEXT NOT NULL, priority TEXT NOT NULL DEFAULT 'medium',
+			summary TEXT NOT NULL, status TEXT NOT NULL, priority TEXT NOT NULL DEFAULT 'medium',
 			rank VARCHAR(64) NOT NULL DEFAULT 'm', story_points DOUBLE PRECISION, closed_at TIMESTAMPTZ,
 			sprint_id UUID REFERENCES sprints (id) ON DELETE SET NULL,
 			updated_at TIMESTAMPTZ NOT NULL DEFAULT now())`,
@@ -111,7 +111,7 @@ func TestSprintRepositoryPostgres(t *testing.T) {
 		status  string
 		points  float64
 	}{{issue, project, "open", 3}, {closedIssue, project, "closed", 5}, {foreign, other, "open", 1}} {
-		if _, err := db.Exec(`INSERT INTO issues (id, project_id, title, status, story_points) VALUES ($1, $2, 'x', $3, $4)`,
+		if _, err := db.Exec(`INSERT INTO issues (id, project_id, summary, status, story_points) VALUES ($1, $2, 'x', $3, $4)`,
 			row.id, row.project, row.status, row.points); err != nil {
 			t.Fatal(err)
 		}
@@ -165,7 +165,7 @@ func TestSprintRepositoryPostgres(t *testing.T) {
 	if _, err := db.Exec(`INSERT INTO sprints (id, project_id, name, status) VALUES ($1, $2, 'Borrado', 'active')`, goneSprint, gone); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := db.Exec(`INSERT INTO issues (id, project_id, title, status, sprint_id) VALUES ($1, $2, 'x', 'open', $3)`, goneIssue, gone, goneSprint); err != nil {
+	if _, err := db.Exec(`INSERT INTO issues (id, project_id, summary, status, sprint_id) VALUES ($1, $2, 'x', 'open', $3)`, goneIssue, gone, goneSprint); err != nil {
 		t.Fatal(err)
 	}
 	if refs, err := repo.ListIssues(ctx, goneSprint); err != nil || len(refs) != 0 {

@@ -288,7 +288,7 @@ func withOrgMigLock(t *testing.T, admin *sql.DB, fn func(ctx context.Context, co
 }
 
 // seedOrgMigLegacy inserts three users (admin, agent, requester), one team with an owner
-// and a member, one project with a member and two tickets, all in the pre-organization shape.
+// and a member, one project with a member and two issues, all in the pre-organization shape.
 func seedOrgMigLegacy(t *testing.T, pool *sql.DB, profileColumns bool) {
 	t.Helper()
 	// Before 000024 the users table has no display_name and accepts the legacy roles.
