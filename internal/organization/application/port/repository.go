@@ -71,6 +71,9 @@ type Repository interface {
 	ListInvitations(ctx context.Context, orgID uuid.UUID, pendingOnly bool) ([]*domain.Invitation, error)
 	// UpdateInvitation persists token_hash, expires_at, accepted_at and revoked_at of an invitation.
 	UpdateInvitation(ctx context.Context, inv *domain.Invitation) error
+	// UserDisplayName returns the display name of an active account (display_name, falling back to name).
+	// A missing or deactivated user returns the empty string and no error.
+	UserDisplayName(ctx context.Context, userID uuid.UUID) (string, error)
 }
 
 // MemberView is a membership with the member's account data, as shown to other members. HasAvatar reports

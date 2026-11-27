@@ -4410,10 +4410,20 @@ components:
               description: URL para aceptar la invitación, ${PUBLIC_URL o el origen de la petición}/invite/<token>.
     InvitationPreview:
       type: object
-      required: [organization_name, role, email, status, expires_at]
+      required: [organization_id, organization_name, has_logo, invited_by, role, email, status, expires_at]
       properties:
+        organization_id:
+          type: string
+          format: uuid
         organization_name:
           type: string
+        has_logo:
+          type: boolean
+          description: Indica si la organización tiene logo. La URL de la imagen es GET /organizations/{org}/logo.
+        invited_by:
+          type: string
+          nullable: true
+          description: Nombre visible (display_name, o name si no tiene) del miembro que creó la invitación. Null si se desconoce o su cuenta fue desactivada.
         role:
           type: string
           enum: [owner, admin, member, guest]

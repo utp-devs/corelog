@@ -3,6 +3,7 @@ package usecase
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/google/uuid"
 
@@ -301,14 +302,36 @@ func (s *OrganizationService) GetInvitationPreview(ctx context.Context, plainTok
 	if err != nil {
 		return nil, notFoundAs(err, domain.ErrInvitationNotFound)
 	}
+	invitedBy, err := s.inviterName(ctx, inv.InvitedBy)
+	if err != nil {
+		return nil, err
+	}
 	return &port.InvitationPreview{
 		OrganizationID:   org.ID,
 		OrganizationName: org.Name,
+		HasLogo:          org.HasLogo,
+		InvitedBy:        invitedBy,
 		Email:            inv.Email,
 		Role:             inv.Role,
 		Status:           inv.Status(s.clock.Now()),
 		ExpiresAt:        inv.ExpiresAt,
 	}, nil
+}
+
+// inviterName returns the display name of the member who created an invitation, or nil when the id is
+// unset or the account is gone.
+func (s *OrganizationService) inviterName(ctx context.Context, invitedBy uuid.UUID) (*string, error) {
+	if invitedBy == uuid.Nil {
+		return nil, nil
+	}
+	name, err := s.repo.UserDisplayName(ctx, invitedBy)
+	if err != nil {
+		return nil, fmt.Errorf("organization: inviter name: %w", err)
+	}
+	if name == "" {
+		return nil, nil
+	}
+	return &name, nil
 }
 
 // AcceptInvitation adds the actor as a member with the invited role and marks the invitation accepted,

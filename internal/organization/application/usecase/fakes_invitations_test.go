@@ -128,3 +128,12 @@ func (r *fakeRepo) UpdateInvitation(_ context.Context, inv *domain.Invitation) e
 	r.invites[inv.ID] = &stored
 	return nil
 }
+
+// UserDisplayName returns the fake account name, or the empty string for an unknown user.
+func (r *fakeRepo) UserDisplayName(_ context.Context, userID uuid.UUID) (string, error) {
+	u, ok := r.users[userID]
+	if !ok {
+		return "", nil
+	}
+	return u.name, nil
+}

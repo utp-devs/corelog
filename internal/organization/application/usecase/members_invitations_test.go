@@ -519,3 +519,30 @@ func newPub(f *fixture) *events.MemoryPublisher {
 	f.pub = p
 	return p
 }
+
+func TestPreviewCarriesOrganizationAndInviter(t *testing.T) {
+	f := newFixture(t)
+	ctx := context.Background()
+	inv := createOne(t, f, f.owner, "new@acme.test", domain.RoleMember)
+
+	preview, err := f.svc.GetInvitationPreview(ctx, inv.PlainToken)
+	if err != nil {
+		t.Fatalf("preview: %v", err)
+	}
+	if preview.OrganizationID != f.org || preview.HasLogo {
+		t.Fatalf("organization id/logo = %s/%v", preview.OrganizationID, preview.HasLogo)
+	}
+	if preview.InvitedBy == nil || *preview.InvitedBy != "Ana Owner" {
+		t.Fatalf("invited_by = %v, want Ana Owner", preview.InvitedBy)
+	}
+
+	f.repo.orgs[f.org].HasLogo = true
+	delete(f.repo.users, f.owner)
+	preview, err = f.svc.GetInvitationPreview(ctx, inv.PlainToken)
+	if err != nil {
+		t.Fatalf("preview after inviter removed: %v", err)
+	}
+	if !preview.HasLogo || preview.InvitedBy != nil {
+		t.Fatalf("with logo and unknown inviter: has_logo=%v invited_by=%v", preview.HasLogo, preview.InvitedBy)
+	}
+}

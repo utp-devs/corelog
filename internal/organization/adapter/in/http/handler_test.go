@@ -245,7 +245,7 @@ func TestPreviewIsPublic(t *testing.T) {
 		t.Fatalf("status %d: %s", rec.Code, rec.Body.String())
 	}
 	keys := dataKeys(t, rec)
-	for _, k := range []string{"organization_name", "role", "email", "status", "expires_at"} {
+	for _, k := range []string{"organization_id", "organization_name", "has_logo", "invited_by", "role", "email", "status", "expires_at"} {
 		if _, ok := keys[k]; !ok {
 			t.Errorf("preview misses %q: %s", k, rec.Body.String())
 		}

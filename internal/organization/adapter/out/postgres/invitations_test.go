@@ -287,3 +287,52 @@ func TestMemberProfileColumns(t *testing.T) {
 		t.Fatalf("deleted org profile: %v", err)
 	}
 }
+
+// TestPreviewCarriesOrganizationAndInviterThroughPostgres checks the preview read model over Postgres:
+// the organization id, the logo flag, and the inviter's display name, which disappears once the
+// inviter's account is deactivated.
+func TestPreviewCarriesOrganizationAndInviterThroughPostgres(t *testing.T) {
+	db := testdb.New(t)
+	ctx := context.Background()
+	svc := newPostgresService(db)
+	owner := newUser(t, db)
+	invitee := newUser(t, db)
+	inviteeEmail := invitee.String() + "@example.test"
+
+	if _, err := db.ExecContext(ctx, `UPDATE users SET display_name = 'Dueña Ana' WHERE id = $1`, owner); err != nil {
+		t.Fatalf("set display name: %v", err)
+	}
+	org, err := svc.CreateOrganization(ctx, owner, port.CreateInput{Name: "Vista Previa", Slug: "vista-previa"})
+	if err != nil {
+		t.Fatalf("create org: %v", err)
+	}
+	res, err := svc.CreateInvitations(ctx, owner, org.ID, []port.InviteInput{{Email: inviteeEmail, Role: domain.RoleMember}})
+	if err != nil {
+		t.Fatalf("invite: %v", err)
+	}
+
+	preview, err := svc.GetInvitationPreview(ctx, res[0].PlainToken)
+	if err != nil {
+		t.Fatalf("preview: %v", err)
+	}
+	if preview.OrganizationID != org.ID || preview.HasLogo {
+		t.Fatalf("organization id/logo = %s/%v", preview.OrganizationID, preview.HasLogo)
+	}
+	if preview.InvitedBy == nil || *preview.InvitedBy != "Dueña Ana" {
+		t.Fatalf("invited_by = %v, want Dueña Ana", preview.InvitedBy)
+	}
+
+	if _, err := db.ExecContext(ctx, `UPDATE organizations SET logo_key = 'logos/preview-test.png' WHERE id = $1`, org.ID); err != nil {
+		t.Fatalf("set logo: %v", err)
+	}
+	if _, err := db.ExecContext(ctx, `UPDATE users SET deactivated_at = now() WHERE id = $1`, owner); err != nil {
+		t.Fatalf("deactivate owner: %v", err)
+	}
+	preview, err = svc.GetInvitationPreview(ctx, res[0].PlainToken)
+	if err != nil {
+		t.Fatalf("preview after deactivation: %v", err)
+	}
+	if !preview.HasLogo || preview.InvitedBy != nil {
+		t.Fatalf("has_logo=%v invited_by=%v, want true and nil", preview.HasLogo, preview.InvitedBy)
+	}
+}

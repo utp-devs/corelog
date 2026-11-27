@@ -255,3 +255,20 @@ SELECT EXISTS (
 	}
 	return found, nil
 }
+
+// UserDisplayName returns the display name of an active account, falling back to the account name when
+// no display name is set. Missing or deactivated accounts return the empty string.
+func (r *Repository) UserDisplayName(ctx context.Context, userID uuid.UUID) (string, error) {
+	var name string
+	err := sqlx.GetContext(ctx, r.exec(ctx), &name, `
+SELECT COALESCE(NULLIF(u.display_name, ''), u.name)
+FROM users u
+WHERE u.id = $1 AND u.deactivated_at IS NULL`, userID)
+	if errors.Is(err, sql.ErrNoRows) {
+		return "", nil
+	}
+	if err != nil {
+		return "", fmt.Errorf("organization: user display name: %w", err)
+	}
+	return name, nil
+}

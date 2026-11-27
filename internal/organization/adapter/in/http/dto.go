@@ -141,7 +141,10 @@ type createInvitationsResponse struct {
 }
 
 type invitationPreviewResponse struct {
+	OrganizationID   string    `json:"organization_id"`
 	OrganizationName string    `json:"organization_name"`
+	HasLogo          bool      `json:"has_logo"`
+	InvitedBy        *string   `json:"invited_by"`
 	Role             string    `json:"role"`
 	Email            string    `json:"email"`
 	Status           string    `json:"status"`

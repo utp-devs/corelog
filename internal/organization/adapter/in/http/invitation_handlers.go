@@ -114,7 +114,10 @@ func (h *Handler) PreviewInvitation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	httpresponse.JSON(w, http.StatusOK, invitationPreviewResponse{
+		OrganizationID:   preview.OrganizationID.String(),
 		OrganizationName: preview.OrganizationName,
+		HasLogo:          preview.HasLogo,
+		InvitedBy:        preview.InvitedBy,
 		Role:             string(preview.Role),
 		Email:            preview.Email,
 		Status:           string(preview.Status),

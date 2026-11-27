@@ -94,8 +94,11 @@ type InvitationResult struct {
 type InvitationPreview struct {
 	OrganizationID   uuid.UUID
 	OrganizationName string
-	Email            string
-	Role             domain.Role
-	Status           domain.InvitationStatus
-	ExpiresAt        time.Time
+	HasLogo          bool
+	// InvitedBy is the display name of the inviter, nil when the inviter is unknown or deactivated.
+	InvitedBy *string
+	Email     string
+	Role      domain.Role
+	Status    domain.InvitationStatus
+	ExpiresAt time.Time
 }
