@@ -7,7 +7,7 @@ import { guardConsole, installViewport } from '@corelog/core/testing';
 import { Observable, throwError, of } from 'rxjs';
 import { type Mock, afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { ticketOf, setupTickets } from '../testing/ticket-test-kit';
+import { projectOf, setupTickets, ticketOf } from '../testing/ticket-test-kit';
 import { NewTicketPage } from './new-ticket-page';
 
 @Component({ selector: 'app-list-stub', template: '<p>Listado de incidencias</p>' })
@@ -70,6 +70,7 @@ describe('NewTicketPage', () => {
   let prompt: Mock<(copy: { title: string }) => Promise<boolean>>;
 
   beforeEach(() => {
+    window.localStorage.clear();
     restoreViewport = installViewport(1280);
     prompt = vi.fn((_copy: { title: string }) => Promise.resolve(false));
   });
@@ -93,7 +94,8 @@ describe('NewTicketPage', () => {
 
     expect(headingNamed('Nueva incidencia')).toBeDefined();
     expect(headingNamed('Datos principales')).toBeDefined();
-    expect(headingNamed('Descripción')).toBeDefined();
+    expect(headingNamed('Clasificación')).toBeDefined();
+    expect(document.querySelector('textarea[aria-label="Descripción"]')).not.toBeNull();
     expect(document.querySelector('input[formcontrolname="title"]')).not.toBeNull();
     expect(buttonByText('Crear incidencia')).toBeDefined();
     // Two columns on desktop: the main fields and the classification side column.
@@ -108,8 +110,44 @@ describe('NewTicketPage', () => {
     clickButton('Crear incidencia');
     harness.fixture.detectChanges();
 
-    expect(document.body.textContent).toContain('El título es demasiado corto');
+    expect(document.body.textContent).toContain('Escribe un título.');
+    expect(document.body.textContent).toContain('Describe la incidencia.');
     expect(setupResult.ticketApi.create).not.toHaveBeenCalled();
+  });
+
+  it('shows no error on untouched empty fields', async () => {
+    setup();
+    await renderPage();
+
+    expect(document.querySelector('.field-row__text--error')).toBeNull();
+    expect(document.querySelector('[aria-invalid="true"]')).toBeNull();
+  });
+
+  it('creates the issue in the preselected project and remembers it', async () => {
+    const setupResult = setup();
+    const harness = await renderPage();
+    fillTitle('Pantalla en blanco');
+    fillDescription('Al abrir el panel');
+    harness.fixture.detectChanges();
+
+    clickButton('Crear incidencia');
+    await harness.fixture.whenStable();
+
+    expect(setupResult.ticketApi.create).toHaveBeenCalledWith(
+      expect.objectContaining({ projectId: 'project-1' }),
+    );
+    expect(window.localStorage.getItem('corelog.create-issue.project')).toBe('project-1');
+  });
+
+  it('preselects the project used last time', async () => {
+    window.localStorage.setItem('corelog.create-issue.project', 'project-2');
+    const setupResult = setup();
+    setupResult.projectApi['list'].mockReturnValue(
+      of([projectOf(), projectOf({ id: 'project-2', name: 'Otro', key: 'OTR' })]),
+    );
+    await renderPage();
+
+    expect(document.body.textContent).toContain('Otro (OTR)');
   });
 
   it('leaves the page without a prompt when nothing was typed', async () => {

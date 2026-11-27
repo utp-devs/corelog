@@ -1,0 +1,196 @@
+<app-section title="Actividad">
+  <div class="ticket-activity">
+    <div class="ticket-activity__tabs" role="tablist" aria-label="Actividad de la incidencia">
+      @for (item of tabs; track item.id) {
+        <button
+          type="button"
+          role="tab"
+          class="ticket-activity__tab"
+          [class.ticket-activity__tab--active]="tab() === item.id"
+          [id]="tabId(item.id)"
+          [attr.aria-selected]="tab() === item.id ? 'true' : 'false'"
+          [attr.aria-controls]="panelId"
+          [attr.tabindex]="tab() === item.id ? 0 : -1"
+          (click)="selectTab(item.id)"
+          (keydown)="onTabKeydown($event)"
+        >
+          {{ item.label }}
+          <span class="ticket-activity__count">{{ counts()[item.id] }}</span>
+        </button>
+      }
+    </div>
+
+    <div
+      class="ticket-activity__panel"
+      role="tabpanel"
+      [id]="panelId"
+      [attr.aria-labelledby]="tabId(tab())"
+    >
+      @if (showComposer()) {
+        @if (currentUser(); as me) {
+          <div class="ticket-activity__composer">
+            <app-user-avatar [id]="me.id" [name]="me.name" [size]="32" />
+            @if (composerOpen()) {
+              <div class="ticket-activity__composer-body">
+                <app-rich-text-editor
+                  ariaLabel="Nuevo comentario"
+                  [formControl]="composerControl"
+                  placeholder="Escribe un comentario. Usa @ para mencionar."
+                  [minRows]="3"
+                  [searchUsers]="searchUsers()"
+                  [submittable]="true"
+                  [disabled]="sending()"
+                  (submitted)="submitComposer()"
+                />
+                <div class="ticket-activity__composer-actions">
+                  <p-button
+                    label="Cancelar"
+                    severity="secondary"
+                    [text]="true"
+                    class="touch-target"
+                    [disabled]="sending()"
+                    (onClick)="cancelComposer()"
+                  />
+                  <p-button
+                    label="Comentar"
+                    class="touch-target"
+                    [disabled]="!canSend()"
+                    [loading]="sending()"
+                    (onClick)="submitComposer()"
+                  />
+                </div>
+              </div>
+            } @else {
+              <button
+                type="button"
+                class="ticket-activity__collapsed"
+                aria-label="Nuevo comentario"
+                (click)="openComposer()"
+              >
+                Escribe un comentario…
+              </button>
+            }
+          </div>
+        }
+      }
+
+      @if (loading()) {
+        <app-loading-skeleton variant="card" />
+      } @else if (entries().length === 0) {
+        <p class="ticket-activity__empty">{{ emptyText() }}</p>
+      } @else {
+        <ol class="ticket-activity__list">
+          @for (entry of entries(); track entry.key) {
+            @if (entry.kind === 'comment') {
+              @let comment = entry.comment;
+              <li class="ticket-activity__item">
+                <app-user-avatar
+                  [id]="comment.authorId"
+                  [name]="nameOf()(comment.authorId)"
+                  [size]="32"
+                />
+                <div class="ticket-activity__content">
+                  <div class="ticket-activity__meta">
+                    <span class="ticket-activity__author">{{ nameOf()(comment.authorId) }}</span>
+                    <time
+                      class="ticket-activity__time"
+                      [attr.datetime]="comment.createdAt"
+                      [appTooltip]="exact(comment.createdAt)"
+                      >{{ ago(comment.createdAt) }}</time
+                    >
+                    @if (isEdited(comment)) {
+                      <span class="ticket-activity__edited">(editado)</span>
+                    }
+                  </div>
+                  @if (editingId() === comment.id) {
+                    <div class="ticket-activity__edit">
+                      <app-rich-text-editor
+                        ariaLabel="Editar comentario"
+                        [formControl]="editControl"
+                        [minRows]="3"
+                        [searchUsers]="searchUsers()"
+                        [submittable]="true"
+                        [disabled]="savingEdit()"
+                        (submitted)="saveEdit(comment)"
+                      />
+                      <div class="ticket-activity__composer-actions">
+                        <p-button
+                          label="Cancelar"
+                          severity="secondary"
+                          [text]="true"
+                          class="touch-target"
+                          [disabled]="savingEdit()"
+                          (onClick)="cancelEdit()"
+                        />
+                        <p-button
+                          label="Guardar"
+                          class="touch-target"
+                          [loading]="savingEdit()"
+                          (onClick)="saveEdit(comment)"
+                        />
+                      </div>
+                    </div>
+                  } @else {
+                    <app-rich-text-view [value]="comment.body" />
+                    @if (isOwn(comment)) {
+                      <div class="ticket-activity__actions">
+                        <p-button
+                          label="Editar"
+                          icon="pi pi-pencil"
+                          severity="secondary"
+                          size="small"
+                          [text]="true"
+                          class="touch-target"
+                          (onClick)="startEdit(comment)"
+                        />
+                        <p-button
+                          label="Eliminar"
+                          icon="pi pi-trash"
+                          severity="danger"
+                          size="small"
+                          [text]="true"
+                          class="touch-target"
+                          (onClick)="askDelete(comment)"
+                        />
+                      </div>
+                    }
+                  }
+                </div>
+              </li>
+            } @else {
+              @let activity = entry.activity;
+              <li class="ticket-activity__item ticket-activity__item--history">
+                <app-user-avatar
+                  [id]="activity.actorId"
+                  [name]="nameOf()(activity.actorId)"
+                  [size]="24"
+                />
+                <p class="ticket-activity__line">
+                  <span class="ticket-activity__author">{{ nameOf()(activity.actorId) }}</span>
+                  {{ activityText(activity) }}
+                  <time
+                    class="ticket-activity__time"
+                    [attr.datetime]="activity.createdAt"
+                    [appTooltip]="exact(activity.createdAt)"
+                    >{{ ago(activity.createdAt) }}</time
+                  >
+                </p>
+              </li>
+            }
+          }
+        </ol>
+      }
+    </div>
+  </div>
+</app-section>
+
+<app-confirm-modal
+  [open]="deletingId() !== null"
+  title="Eliminar comentario"
+  description="El comentario se eliminará de la incidencia y no se podrá recuperar."
+  confirmText="Eliminar"
+  [danger]="true"
+  [loading]="deleteBusy()"
+  (confirmed)="confirmDelete()"
+  (cancelled)="cancelDelete()"
+/>

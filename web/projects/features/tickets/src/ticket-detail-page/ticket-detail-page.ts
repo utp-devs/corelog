@@ -1,4 +1,4 @@
-import { DatePipe } from '@angular/common';
+import { DatePipe, NgTemplateOutlet } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -11,22 +11,20 @@ import {
   untracked,
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { FormControl, FormsModule, ReactiveFormsModule } from '@angular/forms';
+import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { Button } from 'primeng/button';
-import { Message } from 'primeng/message';
-import { Select } from 'primeng/select';
-import { Subscription, firstValueFrom, map } from 'rxjs';
 import {
   AsyncState,
   AuthStore,
+  BreakpointService,
   ISSUE_PRIORITY_LABELS,
+  ISSUES_PATH,
   ISSUE_STATUSES,
   ISSUE_STATUS_META,
   ISSUE_TYPE_LABELS,
+  IssueActivity,
   IssueAttachment,
   IssueComment,
-  IssueActivity,
   IssueLink,
   IssueLinkKind,
   IssuePriority,
@@ -34,6 +32,7 @@ import {
   NotificationService,
   ProjectApiService,
   ProjectMember,
+  ProjectStore,
   Ticket,
   TicketStore,
   UpdateIssueDetailsInput,
@@ -41,32 +40,45 @@ import {
   effectiveProjectRole,
   hasProjectPermission,
   issueKeyOf,
-  ISSUES_PATH,
   issuePath,
 } from '@corelog/core';
+import { BreadcrumbItem, Breadcrumbs } from '@corelog/ui/breadcrumbs';
 import { trackRecent } from '@corelog/ui/command-palette';
-import { EmptyState } from '@corelog/ui/empty-state';
 import { ErrorState } from '@corelog/ui/error-state';
 import { FieldRow } from '@corelog/ui/field-row';
-import { InlineEdit, InlineEditOption } from '@corelog/ui/inline-edit';
+import { InlineEdit, InlineEditOption, InlineEditTone } from '@corelog/ui/inline-edit';
 import { IssueKey } from '@corelog/ui/issue-key';
 import { LoadingSkeleton } from '@corelog/ui/loading-skeleton';
 import { PageContainer, PageSidebar } from '@corelog/ui/page-container';
-import { RichTextEditor } from '@corelog/ui/rich-text-editor';
-import { RichTextView } from '@corelog/ui/rich-text-view';
 import { Section } from '@corelog/ui/section';
+import { SelectField } from '@corelog/ui/select-field';
+import { AppTooltip } from '@corelog/ui/tooltip';
 import { PickableUser, UserPicker } from '@corelog/ui/user-picker';
+import { UserAvatar } from '@corelog/ui/user-avatar';
+import { MenuItem } from 'primeng/api';
+import { Button } from 'primeng/button';
+import { Menu } from 'primeng/menu';
+import { Message } from 'primeng/message';
+import { Subscription, firstValueFrom, map } from 'rxjs';
 
-import { errorMessage } from '../shared/error-message';
-import { MentionSearch } from '../shared/mention-search';
-import { payloadFrom } from '../shared/issue-payload';
 import { injectMemberNames } from '../hooks/member-names';
 import { injectTeammateSearch } from '../hooks/teammate-search';
 import { IssuePicker } from '../issue-picker/issue-picker';
+import { CommentEditApi } from '../shared/comment-edit-api';
+import { errorMessage } from '../shared/error-message';
+import { payloadFrom } from '../shared/issue-payload';
+import { MentionSearch } from '../shared/mention-search';
+import { exactDate, timeAgo } from '../shared/time';
+import { shortIssueKey } from '../ticket-list/relative-time';
+import { TicketActivity } from './ticket-activity';
 import { TicketDescriptionSection } from './ticket-description-section';
 
-const NOT_FOUND_TEXT = 'No se pudo encontrar la incidencia solicitada.';
 const COLLABORATION_ERROR = 'No se pudo cargar toda la información de colaboración.';
+const NO_PERMISSION_TO_ASSIGN = 'No tienes permiso para cambiar el responsable.';
+/** Same breakpoints as the page container: the side panel stacks below 992 px, phones are below 768 px. */
+const STACKED_QUERY = '(max-width: 991.98px)';
+const PHONE_QUERY = '(max-width: 767.98px)';
+
 const LINK_KIND_LABELS: Record<IssueLinkKind, string> = {
   blocks: 'Bloquea a',
   relates: 'Se relaciona con',
@@ -80,6 +92,18 @@ const LINK_KIND_OPTIONS: { value: IssueLinkKind; label: string }[] = [
 const PRIORITY_OPTIONS: InlineEditOption[] = (
   Object.keys(ISSUE_PRIORITY_LABELS) as IssuePriority[]
 ).map((value) => ({ value, label: ISSUE_PRIORITY_LABELS[value] }));
+const PRIORITY_ICONS: Readonly<Record<IssuePriority, string>> = {
+  low: 'pi pi-angle-down',
+  medium: 'pi pi-equals',
+  high: 'pi pi-angle-up',
+  critical: 'pi pi-angle-double-up',
+};
+const STATUS_TONES: Readonly<Record<IssueStatus, InlineEditTone>> = {
+  open: 'neutral',
+  in_progress: 'progress',
+  resolved: 'done',
+  closed: 'done',
+};
 
 interface ProjectMembership {
   readonly projectId: string;
@@ -87,33 +111,36 @@ interface ProjectMembership {
 }
 
 /**
- * Issue detail: inline-editable title, status and priority, description, links, files, comments,
- * history, assignee and follow toggle. Collaboration data is loaded per issue; a late response for
- * another issue is ignored by the store.
+ * Issue detail: breadcrumbs, key and actions in the header, inline-editable title, description,
+ * attachments, links and activity in the main column, and a sticky "Detalles" side panel (a collapsible
+ * block after the title on tablets and phones). Collaboration data is loaded per issue; a late response
+ * for another issue is ignored by the store. A failed load shows one page-level error, never a toast stack.
  */
 @Component({
   selector: 'app-ticket-detail-page',
   imports: [
+    AppTooltip,
+    Breadcrumbs,
     Button,
     DatePipe,
-    EmptyState,
     ErrorState,
     FieldRow,
+    FormsModule,
+    InlineEdit,
     IssueKey,
     IssuePicker,
-    InlineEdit,
     LoadingSkeleton,
-    FormsModule,
+    Menu,
     Message,
+    NgTemplateOutlet,
     PageContainer,
     PageSidebar,
-    ReactiveFormsModule,
-    RichTextEditor,
-    RichTextView,
     RouterLink,
     Section,
-    Select,
+    SelectField,
+    TicketActivity,
     TicketDescriptionSection,
+    UserAvatar,
     UserPicker,
   ],
   templateUrl: './ticket-detail-page.html',
@@ -124,14 +151,18 @@ export class TicketDetailPage {
   private readonly store = inject(TicketStore);
   private readonly auth = inject(AuthStore);
   private readonly projectApi = inject(ProjectApiService);
+  private readonly projects = inject(ProjectStore);
+  private readonly commentApi = inject(CommentEditApi);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   private readonly notify = inject(NotificationService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly breakpoints = inject(BreakpointService);
 
   protected readonly names = injectMemberNames();
   protected readonly teammates = injectTeammateSearch();
   protected readonly mentionSearch = inject(MentionSearch).search;
+  protected readonly nameOf = (userId: string): string => this.names.nameOf(userId);
 
   protected readonly id = toSignal(
     this.route.paramMap.pipe(map((params) => params.get('id') ?? '')),
@@ -147,21 +178,31 @@ export class TicketDetailPage {
     const ticket = this.detail();
     return ticket ? [ticket] : [];
   });
+  /** Id of the issue on screen; only changes when another issue is opened, not on every edit. */
+  private readonly loadedId = computed(() => this.detail()?.id);
   protected readonly showSkeleton = computed(
     () =>
       this.store.selected.loading() ||
       (!this.store.selected.value() && this.store.selected.error() === null),
   );
   protected readonly showError = computed(() => !this.showSkeleton() && !this.detail());
-  protected readonly errorText = computed(() => {
+
+  /** HTTP status of the failed load; null when the failure has no known cause. */
+  protected readonly errorStatus = computed<number | null>(() => {
     const error = this.store.selected.error();
-    return error ? errorMessage(error, NOT_FOUND_TEXT) : NOT_FOUND_TEXT;
+    return error && error.code !== 'unknown' ? error.status : null;
+  });
+  /** A refused or missing issue does not come back by retrying. */
+  protected readonly canRetryLoad = computed(() => {
+    const status = this.errorStatus();
+    return this.id() !== '' && status !== 401 && status !== 403 && status !== 404;
   });
 
   protected readonly issueKeyOf = issueKeyOf;
   protected readonly issueTypeLabels = ISSUE_TYPE_LABELS;
   protected readonly priorityOptions = PRIORITY_OPTIONS;
   protected readonly linkKindOptions = LINK_KIND_OPTIONS;
+  protected readonly noAssignPermission = NO_PERMISSION_TO_ASSIGN;
 
   protected readonly statusOptions = computed<InlineEditOption[]>(() => {
     const ticket = this.detail();
@@ -169,6 +210,46 @@ export class TicketDetailPage {
     return ISSUE_STATUSES.filter(
       (status) => status === ticket.status || canTransitionTo(ticket.status, status),
     ).map((status) => ({ value: status, label: ISSUE_STATUS_META[status].label }));
+  });
+
+  // Layout: details beside the content on desktop, a collapsible block after the title below 992 px.
+  protected readonly compact = this.breakpoints.matches(STACKED_QUERY);
+  private readonly phone = this.breakpoints.matches(PHONE_QUERY);
+  protected readonly detailsOpen = signal(!this.phone());
+
+  protected readonly project = computed(() => {
+    const projectId = this.detail()?.projectId;
+    return projectId ? this.projects.projects().find((item) => item.id === projectId) : undefined;
+  });
+  protected readonly projectPath = computed(() => {
+    const projectId = this.detail()?.projectId;
+    return projectId ? `/projects/${encodeURIComponent(projectId)}/board` : ISSUES_PATH;
+  });
+  protected readonly breadcrumbs = computed<BreadcrumbItem[]>(() => {
+    const ticket = this.detail();
+    if (!ticket) return [];
+    return [
+      { label: this.project()?.name ?? 'Proyecto', to: this.projectPath() },
+      { label: this.shortKeyOf(ticket) },
+    ];
+  });
+  protected readonly menuItems = computed<MenuItem[]>(() => {
+    const ticket = this.detail();
+    if (!ticket) return [];
+    return [
+      { label: 'Copiar clave', icon: 'pi pi-copy', command: () => void this.copyKey(ticket) },
+      {
+        label: 'Ver el proyecto',
+        icon: 'pi pi-folder-open',
+        command: () => void this.router.navigateByUrl(this.projectPath()),
+      },
+      { separator: true },
+      {
+        label: 'Volver a incidencias',
+        icon: 'pi pi-arrow-left',
+        command: () => this.back(),
+      },
+    ];
   });
 
   // Assignee: membership decides whether the change is offered here. The server enforces it too.
@@ -187,24 +268,32 @@ export class TicketDetailPage {
   });
   protected readonly assigning = signal(false);
   protected readonly assignAnnouncement = signal('');
-  protected readonly assigneeHelper = computed(() => {
-    const ticket = this.detail();
-    const current = ticket?.assigneeName ?? 'Sin asignar';
-    return this.canChangeAssignee()
-      ? `Actual: ${current}`
-      : `Actual: ${current}. No tienes permiso para cambiar el responsable.`;
+  protected readonly currentUser = computed(() => {
+    const user = this.auth.user();
+    return user ? { id: user.id, name: user.name } : null;
   });
+  protected readonly canAssignToMe = computed(() => {
+    const user = this.auth.user();
+    return this.canChangeAssignee() && !!user && this.detail()?.assigneeId !== user.id;
+  });
+  /**
+   * People the picker offers: the organization members (loaded when the page opens, so the list is
+   * never empty), plus the remote search results, which add the email, plus the current assignee.
+   */
   protected readonly assigneeUsers = computed<PickableUser[]>(() => {
+    const byId = new Map<string, PickableUser>();
+    for (const member of this.names.members()) byId.set(member.id, { ...member });
+    for (const user of this.teammates.results()) {
+      byId.set(user.id, { id: user.id, name: user.name, email: user.email });
+    }
     const ticket = this.detail();
-    const results = this.teammates.results();
-    const current: PickableUser[] =
-      ticket?.assigneeId && !results.some((user) => user.id === ticket.assigneeId)
-        ? [{ id: ticket.assigneeId, name: ticket.assigneeName ?? ticket.assigneeId }]
-        : [];
-    return [
-      ...current,
-      ...results.map((user) => ({ id: user.id, name: user.name, email: user.email })),
-    ];
+    if (ticket?.assigneeId && !byId.has(ticket.assigneeId)) {
+      byId.set(ticket.assigneeId, {
+        id: ticket.assigneeId,
+        name: ticket.assigneeName ?? this.names.nameOf(ticket.assigneeId),
+      });
+    }
+    return Array.from(byId.values()).sort((a, b) => a.name.localeCompare(b.name, 'es'));
   });
 
   // Watchers.
@@ -274,32 +363,28 @@ export class TicketDetailPage {
   protected readonly linkTarget = signal('');
   protected readonly linkKind = signal<IssueLinkKind>('relates');
 
-  // Comments.
-  protected readonly commentControl = new FormControl('', { nonNullable: true });
-  /** True while a comment is being posted; the editor and the button stay disabled. */
-  protected readonly commentSending = signal(false);
-  private readonly commentBody = toSignal(this.commentControl.valueChanges, { initialValue: '' });
-  protected readonly canComment = computed(
-    () =>
-      !this.collaborationLoading() &&
-      !this.commentSending() &&
-      this.commentBody().trim().length > 0,
-  );
-
   constructor() {
     effect(() => {
       const id = this.id();
       if (id) untracked(() => this.store.fetchTicket(id));
     });
 
+    // The rest of the page loads once the issue itself is known: a refused issue makes one error, not seven.
     effect(() => {
-      const id = this.id();
+      const id = this.loadedId();
       if (id) untracked(() => this.loadCollaboration(id));
     });
 
     effect(() => {
       const projectId = this.projectId();
       if (projectId) untracked(() => this.loadMembership(projectId));
+    });
+
+    // The breadcrumb names the project: the projects list is loaded when it is not there yet.
+    effect(() => {
+      const projectId = this.projectId();
+      const known = this.project() !== undefined;
+      if (projectId && !known) untracked(() => this.projects.fetchProjects());
     });
 
     effect(() => {
@@ -311,6 +396,19 @@ export class TicketDetailPage {
           title: ticket.title,
           subtitle: 'Incidencia',
           link: issuePath(ticket.id),
+        });
+      }
+    });
+
+    effect(() => {
+      const project = this.project();
+      if (project) {
+        trackRecent({
+          kind: 'project',
+          id: project.id,
+          title: project.name,
+          subtitle: project.key,
+          link: `/projects/${encodeURIComponent(project.id)}/board`,
         });
       }
     });
@@ -380,6 +478,10 @@ export class TicketDetailPage {
     });
   }
 
+  protected assignToMe(): void {
+    this.assign(this.auth.user()?.id);
+  }
+
   protected unassign(): void {
     const ticket = this.detail();
     if (!ticket) return;
@@ -422,8 +524,8 @@ export class TicketDetailPage {
 
   // Links.
 
-  protected onLinkKind(kind: IssueLinkKind): void {
-    this.linkKind.set(kind);
+  protected onLinkKind(kind: string | null): void {
+    if (kind) this.linkKind.set(kind as IssueLinkKind);
   }
 
   protected createLink(): void {
@@ -433,10 +535,10 @@ export class TicketDetailPage {
     this.store.createLink(ticket.id, target, this.linkKind()).subscribe({
       next: () => {
         this.linkTarget.set('');
-        this.notify.success('Vinculo creado');
+        this.notify.success('Vínculo creado');
       },
       error: (error: unknown) =>
-        this.notify.error(errorMessage(error, 'No se pudo crear el vinculo')),
+        this.notify.error(errorMessage(error, 'No se pudo crear el vínculo')),
     });
   }
 
@@ -448,47 +550,65 @@ export class TicketDetailPage {
     });
   }
 
-  protected linkLabel(link: IssueLink): string {
-    const otherId = this.otherIssueId(link);
-    return `${LINK_KIND_LABELS[link.kind]}: incidencia ${otherId.slice(0, 8)}`;
+  protected linkKindLabel(link: IssueLink): string {
+    return LINK_KIND_LABELS[link.kind];
+  }
+
+  protected linkKey(link: IssueLink): string {
+    return shortIssueKey(issueKeyOf(this.otherIssueId(link)));
   }
 
   protected linkPath(link: IssueLink): string {
     return issuePath(this.otherIssueId(link));
   }
 
-  // Comments.
+  // Comments. The activity block calls these and reads the result to close its forms.
 
-  protected submitComment(): void {
+  protected readonly createComment = async (body: string): Promise<boolean> => {
     const ticket = this.detail();
-    const body = this.commentControl.value;
-    if (!ticket || !body.trim() || this.commentSending()) return;
-    this.commentSending.set(true);
-    this.commentControl.disable({ emitEvent: false });
-    this.store.createComment(ticket.id, body).subscribe({
-      next: () => {
-        this.commentSending.set(false);
-        this.commentControl.enable({ emitEvent: false });
-        this.store.fetchWatchers(ticket.id);
-        this.commentControl.setValue('');
-        this.notify.success('Comentario agregado');
-      },
-      error: (error: unknown) => {
-        this.commentSending.set(false);
-        this.commentControl.enable({ emitEvent: false });
-        this.notify.error(errorMessage(error, 'No se pudo agregar el comentario'));
-      },
-    });
-  }
+    if (!ticket) return false;
+    try {
+      await firstValueFrom(this.store.createComment(ticket.id, body));
+    } catch (error) {
+      this.notify.error(errorMessage(error, 'No se pudo agregar el comentario'));
+      return false;
+    }
+    this.store.fetchWatchers(ticket.id);
+    this.notify.success('Comentario agregado');
+    return true;
+  };
 
-  protected removeComment(commentId: string): void {
+  protected readonly updateComment = async (commentId: string, body: string): Promise<boolean> => {
     const ticket = this.detail();
-    if (!ticket) return;
-    this.store.deleteComment(ticket.id, commentId).subscribe({
-      next: () => this.notify.success('Comentario eliminado'),
-      error: (error: unknown) => this.notify.error(errorMessage(error, 'No se pudo eliminar')),
-    });
-  }
+    if (!ticket) return false;
+    try {
+      await firstValueFrom(this.commentApi.update(ticket.id, commentId, body));
+    } catch (error) {
+      this.notify.error(errorMessage(error, 'No se pudo guardar el comentario'));
+      return false;
+    }
+    const updatedAt = new Date().toISOString();
+    this.store.comments.update((items) =>
+      items?.map((comment) =>
+        comment.id === commentId ? { ...comment, body, updatedAt } : comment,
+      ),
+    );
+    this.notify.success('Comentario actualizado');
+    return true;
+  };
+
+  protected readonly deleteComment = async (commentId: string): Promise<boolean> => {
+    const ticket = this.detail();
+    if (!ticket) return false;
+    try {
+      await firstValueFrom(this.store.deleteComment(ticket.id, commentId));
+    } catch (error) {
+      this.notify.error(errorMessage(error, 'No se pudo eliminar'));
+      return false;
+    }
+    this.notify.success('Comentario eliminado');
+    return true;
+  };
 
   // Attachments.
 
@@ -518,6 +638,8 @@ export class TicketDetailPage {
     return (bytes / 1024).toFixed(1);
   }
 
+  // Page.
+
   protected retry(): void {
     this.store.fetchTicket(this.id());
   }
@@ -526,16 +648,54 @@ export class TicketDetailPage {
     void this.router.navigateByUrl(ISSUES_PATH);
   }
 
+  protected toggleDetails(): void {
+    this.detailsOpen.update((open) => !open);
+  }
+
+  protected async copyLink(): Promise<void> {
+    await this.copyText(window.location.href, 'Enlace copiado');
+  }
+
+  protected async copyKey(ticket: Ticket): Promise<void> {
+    await this.copyText(issueKeyOf(ticket.id), 'Clave copiada');
+  }
+
   protected pathOf(ticket: Ticket): string {
     return issuePath(ticket.id);
+  }
+
+  protected shortKeyOf(ticket: { readonly id: string }): string {
+    return shortIssueKey(issueKeyOf(ticket.id));
   }
 
   protected isResolved(ticket: Ticket): boolean {
     return ticket.status === 'resolved' || ticket.status === 'closed';
   }
 
-  protected activityText(activity: IssueActivity): string {
-    return activity.fieldName ? `${activity.action} - ${activity.fieldName}` : activity.action;
+  protected statusTone(status: IssueStatus): InlineEditTone {
+    return STATUS_TONES[status];
+  }
+
+  protected priorityIcon(priority: IssuePriority): string {
+    return PRIORITY_ICONS[priority];
+  }
+
+  protected ago(iso: string): string {
+    return timeAgo(iso);
+  }
+
+  protected exact(iso: string): string {
+    return exactDate(iso);
+  }
+
+  private async copyText(text: string, done: string): Promise<void> {
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch {
+      this.notify.error('No se pudo copiar. Cópialo manualmente.');
+      return;
+    }
+    this.notify.success(done);
   }
 
   private settled<T>(state: AsyncState<T>, issueId: Signal<string | null>): boolean {

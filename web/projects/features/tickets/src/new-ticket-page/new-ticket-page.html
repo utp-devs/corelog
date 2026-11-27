@@ -1,13 +1,17 @@
-<app-page-container variant="reading" pageName="issue-new" [ready]="true" [fill]="true">
-  <app-page-header title="Nueva incidencia" subtitle="Registra un nuevo incidente." />
+<app-page-container variant="reading" pageName="issue-new" [ready]="true">
+  <app-page-header
+    title="Nueva incidencia"
+    subtitle="Registra un problema o una tarea para tu equipo."
+  />
 
-  <app-section [fill]="true">
-    <app-ticket-form
-      [form]="form"
-      [isSubmitting]="isSubmitting()"
-      [searchUsers]="searchUsers"
-      (submitted)="submit()"
-      (cancelled)="cancel()"
-    />
-  </app-section>
+  <app-ticket-form
+    [form]="form"
+    [isSubmitting]="isSubmitting()"
+    [projectOptions]="projectOptions()"
+    [projectsLoading]="projectsLoading()"
+    [assigneeUsers]="assigneeUsers()"
+    [searchUsers]="searchUsers"
+    (submitted)="submit()"
+    (cancelled)="cancel()"
+  />
 </app-page-container>

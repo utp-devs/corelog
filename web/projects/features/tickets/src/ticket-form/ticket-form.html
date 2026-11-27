@@ -1,73 +1,98 @@
 <form
-  class="form"
+  class="ticket-form"
   aria-label="Nueva incidencia"
   novalidate
   [formGroup]="form()"
   (ngSubmit)="submit()"
 >
-  <div class="layout">
-    <div class="main">
+  <div class="ticket-form__layout">
+    <div class="ticket-form__main">
       <app-section title="Datos principales">
-        <app-field-row
-          #titleRow
-          label="Título"
-          [required]="true"
-          [error]="titleError()"
-          helper="Describe el problema en una frase."
-        >
-          <input
-            pInputText
-            appFieldControl
-            type="text"
-            formControlName="title"
-            class="full"
-            [maxlength]="titleMaxLength"
-            [attr.aria-invalid]="titleError() ? 'true' : null"
-          />
-        </app-field-row>
-      </app-section>
+        <div class="ticket-form__stack">
+          <app-field-row
+            label="Título"
+            [required]="true"
+            [helper]="titleHelper"
+            [control]="form().controls.title"
+            [messages]="titleMessages"
+            [submitted]="attempted()"
+          >
+            <input
+              pInputText
+              appFieldControl
+              type="text"
+              formControlName="title"
+              autocomplete="off"
+              class="ticket-form__control"
+              [maxlength]="titleMaxLength"
+            />
+          </app-field-row>
 
-      <app-section title="Descripción">
-        <div class="editor">
-          <app-rich-text-editor
-            ariaLabel="Descripción"
-            formControlName="description"
-            placeholder="Describe el problema, los pasos para reproducirlo y el resultado esperado. Usa @ para mencionar."
-            [minRows]="8"
-            [searchUsers]="searchUsers()"
-            [submittable]="true"
-            (submitted)="submit()"
-          />
-          @if (descriptionError(); as message) {
-            <p class="error" role="alert">{{ message }}</p>
-          }
+          <app-field-row
+            label="Descripción"
+            [required]="true"
+            [control]="form().controls.description"
+            [messages]="descriptionMessages"
+            [submitted]="attempted()"
+          >
+            <app-rich-text-editor
+              ariaLabel="Descripción"
+              formControlName="description"
+              placeholder="Describe el problema, los pasos para reproducirlo y el resultado esperado. Usa @ para mencionar."
+              [minRows]="8"
+              [searchUsers]="searchUsers()"
+              [submittable]="true"
+              (submitted)="submit()"
+            />
+          </app-field-row>
         </div>
       </app-section>
     </div>
 
-    <aside class="side" aria-label="Clasificación">
+    <aside class="ticket-form__side" aria-label="Clasificación">
       <app-section title="Clasificación">
-        <div class="stack">
+        <div class="ticket-form__stack">
+          <app-field-row
+            #projectRow
+            label="Proyecto"
+            [required]="true"
+            [control]="form().controls.projectId"
+            [messages]="projectMessages"
+            [submitted]="attempted()"
+          >
+            <app-select-field
+              formControlName="projectId"
+              placeholder="Elige un proyecto"
+              [inputId]="projectRow.controlId"
+              [ariaLabelledBy]="projectRow.labelId"
+              [options]="projectOptions()"
+              [loading]="projectsLoading()"
+              [invalid]="projectRow.invalid()"
+            />
+          </app-field-row>
           <app-field-row #typeRow label="Tipo" [required]="true">
-            <p-select
+            <app-select-field
               formControlName="issueType"
               [inputId]="typeRow.controlId"
               [ariaLabelledBy]="typeRow.labelId"
-              [options]="issueTypeOptions"
-              optionLabel="label"
-              optionValue="value"
-              class="full"
+              [options]="typeOptions"
             />
           </app-field-row>
           <app-field-row #priorityRow label="Prioridad" [required]="true">
-            <p-select
+            <app-select-field
               formControlName="priority"
               [inputId]="priorityRow.controlId"
               [ariaLabelledBy]="priorityRow.labelId"
               [options]="priorityOptions"
-              optionLabel="label"
-              optionValue="value"
-              class="full"
+            />
+          </app-field-row>
+          <app-field-row label="Asignar a" [optional]="true">
+            <app-user-picker
+              ariaLabel="Asignar a"
+              placeholder="Sin asignar"
+              [users]="assigneeUsers()"
+              [value]="form().controls.assigneeId.value"
+              (valueChange)="setAssignee($event)"
             />
           </app-field-row>
         </div>
@@ -75,7 +100,7 @@
     </aside>
   </div>
 
-  <div class="actions">
+  <div class="ticket-form__actions">
     <p-button
       label="Cancelar"
       severity="secondary"

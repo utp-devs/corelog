@@ -30,6 +30,15 @@ function sectionOf(heading: string): HTMLElement {
   return section as HTMLElement;
 }
 
+function rowOf(label: string): HTMLElement {
+  const found = Array.from(document.querySelectorAll<HTMLElement>('.field-row__label')).find(
+    (item) => item.textContent?.trim() === label,
+  );
+  const row = found?.closest<HTMLElement>('.field-row');
+  if (!row) throw new Error(`no field ${label}`);
+  return row;
+}
+
 function buttonIn(root: ParentNode, text: string): HTMLButtonElement | undefined {
   return Array.from(root.querySelectorAll('button')).find(
     (button) => button.textContent?.trim() === text,
@@ -79,21 +88,20 @@ describe('TicketDetailPage', () => {
     vi.useRealTimers();
   });
 
-  it('shows description, details, links, files, comments and history as sections', async () => {
+  it('shows description, details, files, links and activity as sections', async () => {
     setupTickets({ user: userOf({ role: 'admin' }) });
     const harness = await renderDetail();
 
-    for (const heading of ['Detalles', 'Vínculos', 'Adjuntos', 'Comentarios', 'Historial']) {
+    for (const heading of ['Detalles', 'Más información', 'Vínculos', 'Adjuntos', 'Actividad']) {
       expect(sectionOf(heading)).toBeDefined();
     }
     expect(document.body.textContent).toContain('Aún no hay archivos');
     expect(document.body.textContent).toContain('Aún no hay comentarios');
-    expect(document.body.textContent).toContain('Aún no hay actividad');
     expect(document.body.textContent).toContain('Aún no hay vínculos');
     harness.fixture.detectChanges();
   });
 
-  it('lists main content before links and the side panel after the main column on mobile', async () => {
+  it('stacks into one column on tablets and puts the details block right after the title', async () => {
     restoreViewport();
     restoreViewport = installViewport(800);
     setupTickets({ user: userOf({ role: 'admin' }) });
@@ -103,15 +111,28 @@ describe('TicketDetailPage', () => {
       heading.textContent?.trim(),
     );
     const position = (name: string) => headings.indexOf(name);
-    expect(position('Descripción')).toBeGreaterThanOrEqual(0);
-    expect(position('Descripción')).toBeLessThan(position('Detalles'));
-    expect(position('Detalles')).toBeLessThan(position('Vínculos'));
-    expect(position('Vínculos')).toBeLessThan(position('Historial'));
-    expect(position('Historial')).toBeLessThan(position('Estado y prioridad'));
+    expect(position('Detalles')).toBeGreaterThanOrEqual(0);
+    expect(position('Detalles')).toBeLessThan(position('Descripción'));
+    expect(position('Descripción')).toBeLessThan(position('Adjuntos'));
+    expect(position('Adjuntos')).toBeLessThan(position('Vínculos'));
+    expect(position('Vínculos')).toBeLessThan(position('Actividad'));
 
     const page = document.querySelector('[data-page="issue-detail"]');
-    expect(page?.getAttribute('data-stacked')).toBe('true');
-    expect(page?.getAttribute('data-has-sidebar')).toBe('true');
+    expect(page?.getAttribute('data-has-sidebar')).toBe('false');
+  });
+
+  it('collapses the details block on phones until it is opened', async () => {
+    restoreViewport();
+    restoreViewport = installViewport(390);
+    setupTickets({ user: userOf({ role: 'admin' }) });
+    const harness = await renderDetail();
+
+    expect(buttonIn(document, 'Mostrar detalles')).toBeDefined();
+    expect(document.body.textContent).not.toContain('Más información');
+    clickIn(document, 'Mostrar detalles');
+    harness.fixture.detectChanges();
+    expect(buttonIn(document, 'Ocultar detalles')).toBeDefined();
+    expect(document.body.textContent).toContain('Más información');
   });
 
   it('keeps the side panel beside the main column on desktop', async () => {
@@ -136,7 +157,7 @@ describe('TicketDetailPage', () => {
     const harness = await renderDetail();
 
     expect(document.querySelector('[role="alert"]')?.textContent).toContain(
-      'No se pudo encontrar la incidencia solicitada.',
+      'No se pudo cargar la información',
     );
     clickIn(document, 'Reintentar');
     harness.fixture.detectChanges();
@@ -193,7 +214,9 @@ describe('TicketDetailPage', () => {
     });
     await renderDetail();
 
-    expect(sectionOf('Comentarios').querySelector('.author')?.textContent).toBe('Luis Pérez');
+    expect(sectionOf('Actividad').querySelector('.ticket-activity__author')?.textContent).toBe(
+      'Luis Pérez',
+    );
     expect(document.body.textContent).not.toMatch(/Usuario [0-9a-f]{8}/);
     expect(document.body.textContent).toContain('Subido por Usuario desconocido');
   });
@@ -219,7 +242,7 @@ describe('TicketDetailPage', () => {
     harness.fixture.detectChanges();
     expect(ctx.ticketApi.assign).toHaveBeenCalledWith(ISSUE_ID, 'user-2');
     expect(notify).toHaveBeenCalledWith('Incidencia asignada');
-    expect(sectionOf('Responsable').querySelector('[role="status"]')?.textContent).toContain(
+    expect(rowOf('Responsable').querySelector('[role="status"]')?.textContent).toContain(
       'Responsable actualizado',
     );
   });
@@ -233,12 +256,12 @@ describe('TicketDetailPage', () => {
     const notify = vi.spyOn(TestBed.inject(NotificationService), 'success');
     const harness = await renderDetail();
 
-    clickIn(sectionOf('Responsable'), 'Quitar responsable');
+    clickIn(rowOf('Responsable'), 'Quitar responsable');
     await settle(harness);
 
     expect(ctx.ticketApi.assign).toHaveBeenCalledWith(ISSUE_ID, null);
     expect(notify).toHaveBeenCalledWith('Responsable quitado');
-    expect(sectionOf('Responsable').querySelector('[role="status"]')?.textContent).toContain(
+    expect(rowOf('Responsable').querySelector('[role="status"]')?.textContent).toContain(
       'Sin asignar',
     );
   });
@@ -247,7 +270,7 @@ describe('TicketDetailPage', () => {
     setupTickets({ user: userOf({ role: 'admin' }) });
     await renderDetail();
 
-    expect(buttonIn(sectionOf('Responsable'), 'Quitar responsable')).toBeUndefined();
+    expect(buttonIn(rowOf('Responsable'), 'Quitar responsable')).toBeUndefined();
   });
 
   it('keeps the assignee and reports the error when clearing fails', async () => {
@@ -262,11 +285,11 @@ describe('TicketDetailPage', () => {
     const notify = vi.spyOn(TestBed.inject(NotificationService), 'error');
     const harness = await renderDetail();
 
-    clickIn(sectionOf('Responsable'), 'Quitar responsable');
+    clickIn(rowOf('Responsable'), 'Quitar responsable');
     await settle(harness);
 
     expect(notify).toHaveBeenCalledWith('No se pudo quitar el responsable');
-    expect(sectionOf('Responsable').querySelector('[role="status"]')?.textContent).not.toContain(
+    expect(rowOf('Responsable').querySelector('[role="status"]')?.textContent).not.toContain(
       'Sin asignar',
     );
   });
@@ -280,9 +303,9 @@ describe('TicketDetailPage', () => {
     });
     await renderDetail();
 
-    expect(buttonIn(sectionOf('Responsable'), 'Quitar responsable')).toBeUndefined();
-    expect(sectionOf('Responsable').textContent).toContain('Luis Pérez');
-    expect(sectionOf('Responsable').textContent).toContain(
+    expect(buttonIn(rowOf('Responsable'), 'Quitar responsable')).toBeUndefined();
+    expect(rowOf('Responsable').querySelector('input')?.value).toBe('Luis Pérez');
+    expect(rowOf('Responsable').textContent).toContain(
       'No tienes permiso para cambiar el responsable.',
     );
   });
@@ -296,7 +319,7 @@ describe('TicketDetailPage', () => {
     });
     await renderDetail();
 
-    expect(buttonIn(sectionOf('Responsable'), 'Quitar responsable')).toBeDefined();
+    expect(buttonIn(rowOf('Responsable'), 'Quitar responsable')).toBeDefined();
   });
 
   it('records the issue in the recent items once it is shown', async () => {
@@ -308,7 +331,7 @@ describe('TicketDetailPage', () => {
       id: string;
       link: string;
     }[];
-    expect(recent[0]).toMatchObject({
+    expect(recent.find((item) => item.kind === 'issue')).toMatchObject({
       kind: 'issue',
       id: ISSUE_ID,
       link: `/issues/${ISSUE_ID}`,
@@ -350,5 +373,236 @@ describe('TicketDetailPage', () => {
     clickIn(section, 'Editar');
     harness.fixture.detectChanges();
     expect(buttonIn(sectionOf('Descripción'), 'Guardar')).toBeDefined();
+  });
+  it('shows one friendly page-level error for a forbidden issue and loads nothing else', async () => {
+    const forbidden = {
+      status: 403,
+      code: 'http.403',
+      message: 'forbidden project operation',
+      details: [],
+    };
+    const ctx = setupTickets({
+      user: userOf({ role: 'user' }),
+      ticketApi: { getById: () => throwError(() => forbidden) },
+    });
+    const notify = vi.spyOn(TestBed.inject(NotificationService), 'error');
+    await renderDetail();
+
+    const alerts = document.querySelectorAll('[role="alert"]');
+    expect(alerts).toHaveLength(1);
+    expect(alerts[0].textContent).toContain('No tienes acceso a este contenido');
+    expect(document.body.textContent).not.toContain('forbidden');
+    expect(buttonIn(document, 'Reintentar')).toBeUndefined();
+    expect(buttonIn(document, 'Volver a incidencias')).toBeDefined();
+    expect(notify).not.toHaveBeenCalled();
+    expect(ctx.ticketApi.listComments).not.toHaveBeenCalled();
+    expect(ctx.projectApi.listMembers).not.toHaveBeenCalled();
+  });
+
+  it('explains a missing issue without offering a retry', async () => {
+    const missing = { status: 404, code: 'http.404', message: 'not found', details: [] };
+    setupTickets({ ticketApi: { getById: () => throwError(() => missing) } });
+    await renderDetail();
+
+    expect(document.body.textContent).toContain('No encontramos lo que buscas');
+    expect(buttonIn(document, 'Reintentar')).toBeUndefined();
+  });
+
+  it('offers a retry when the server cannot be reached', async () => {
+    const offline = {
+      status: 0,
+      code: 'network.unreachable',
+      message: 'No se pudo conectar',
+      details: [],
+    };
+    setupTickets({ ticketApi: { getById: () => throwError(() => offline) } });
+    await renderDetail();
+
+    expect(document.body.textContent).toContain('Sin conexión');
+    expect(buttonIn(document, 'Reintentar')).toBeDefined();
+  });
+
+  it('records the project of the issue in the recent items', async () => {
+    setupTickets({ user: userOf({ role: 'admin' }) });
+    await renderDetail();
+
+    const recent = JSON.parse(window.localStorage.getItem('corelog.recent') ?? '[]') as {
+      kind: string;
+      id: string;
+      title: string;
+    }[];
+    expect(recent.find((item) => item.kind === 'project')).toMatchObject({
+      id: 'project-1',
+      title: 'Proyecto demo',
+    });
+  });
+
+  it('shows the project and the short issue key in the breadcrumbs', async () => {
+    setupTickets({ user: userOf({ role: 'admin' }) });
+    await renderDetail();
+
+    const trail = document.querySelector('nav[aria-label="Ruta de navegación"]');
+    expect(trail?.textContent).toContain('Proyecto demo');
+    expect(trail?.querySelector('[aria-current="page"]')?.textContent?.trim()).toBe('INC-ISSUE-');
+  });
+
+  it('opens the assignee picker with the organization members already listed', async () => {
+    setupTickets({
+      user: userOf({ role: 'admin' }),
+      memberSource: { listMembers: () => of([LUIS, { userId: 'user-3', name: 'Ana Gómez' }]) },
+    });
+    const harness = await renderDetail();
+    const picker = harness.fixture.debugElement.query((el) => el.name === 'app-user-picker');
+
+    const names = (picker.componentInstance.users() as { name: string }[]).map((user) => user.name);
+    expect(names).toEqual(['Ana Gómez', 'Luis Pérez']);
+  });
+
+  it('assigns the issue to the signed-in user with one click', async () => {
+    const ctx = setupTickets({ user: userOf({ role: 'admin' }) });
+    const harness = await renderDetail();
+
+    clickIn(rowOf('Responsable'), 'Asignarme a mí');
+    await settle(harness);
+
+    expect(ctx.ticketApi.assign).toHaveBeenCalledWith(ISSUE_ID, 'user-1');
+  });
+
+  it('explains why the assignee cannot be changed instead of showing a helper line', async () => {
+    setupTickets({
+      user: userOf({ role: 'user' }),
+      projectApi: { listMembers: () => of([memberOf('user-1', 'viewer')]) },
+    });
+    await renderDetail();
+
+    expect(document.body.textContent).not.toContain('Buscar compañero');
+    expect(document.body.textContent).not.toContain('Actual:');
+    expect(rowOf('Responsable').textContent).toContain(
+      'No tienes permiso para cambiar el responsable.',
+    );
+    expect(buttonIn(rowOf('Responsable'), 'Asignarme a mí')).toBeUndefined();
+  });
+
+  it('writes the history in Spanish with the actor name', async () => {
+    const activities: IssueActivity[] = [
+      {
+        id: 'a1',
+        issueId: ISSUE_ID,
+        actorId: 'user-2',
+        action: 'created',
+        fieldName: null,
+        oldValue: null,
+        newValue: null,
+        createdAt: AT,
+      },
+      {
+        id: 'a2',
+        issueId: ISSUE_ID,
+        actorId: 'user-2',
+        action: 'status_changed',
+        fieldName: 'status',
+        oldValue: 'open',
+        newValue: 'in_progress',
+        createdAt: '2026-01-02T11:00:00Z',
+      },
+    ];
+    setupTickets({
+      user: userOf({ role: 'admin' }),
+      memberSource: { listMembers: () => of([LUIS]) },
+      ticketApi: { listActivities: () => of(activities) },
+    });
+    const harness = await renderDetail();
+    const tab = Array.from(document.querySelectorAll<HTMLElement>('[role="tab"]')).find((item) =>
+      item.textContent?.includes('Historial'),
+    );
+    tab?.click();
+    harness.fixture.detectChanges();
+
+    const text = sectionOf('Actividad').textContent ?? '';
+    expect(text).toContain('Luis Pérez creó la incidencia');
+    expect(text).toContain('Luis Pérez cambió el estado de Abierto a En progreso');
+    expect(text).not.toContain('created');
+    expect(text).not.toContain('status_changed');
+  });
+
+  it('keeps the comment composer to one line until it is focused and clears it after sending', async () => {
+    const saved: IssueComment = {
+      id: 'c9',
+      issueId: ISSUE_ID,
+      authorId: 'user-1',
+      body: 'Mi comentario',
+      createdAt: AT,
+      updatedAt: AT,
+      deletedAt: null,
+    };
+    const ctx = setupTickets({
+      user: userOf({ role: 'admin' }),
+      ticketApi: { createComment: () => of(saved) },
+    });
+    const harness = await renderDetail();
+
+    expect(document.querySelector('app-ticket-activity textarea')).toBeNull();
+    document.querySelector<HTMLButtonElement>('.ticket-activity__collapsed')?.click();
+    harness.fixture.detectChanges();
+
+    const textarea = document.querySelector<HTMLTextAreaElement>('app-ticket-activity textarea');
+    expect(textarea).not.toBeNull();
+    if (!textarea) return;
+    textarea.value = 'Mi comentario';
+    textarea.dispatchEvent(new Event('input'));
+    harness.fixture.detectChanges();
+    clickIn(document, 'Comentar');
+    await settle(harness);
+
+    expect(ctx.ticketApi.createComment).toHaveBeenCalledWith(ISSUE_ID, 'Mi comentario');
+    expect(document.querySelector('app-ticket-activity textarea')).toBeNull();
+  });
+
+  it('lets the author edit a comment and asks before deleting it', async () => {
+    const own: IssueComment = {
+      id: 'c1',
+      issueId: ISSUE_ID,
+      authorId: 'user-1',
+      body: 'Primer texto',
+      createdAt: AT,
+      updatedAt: AT,
+      deletedAt: null,
+    };
+    const other: IssueComment = { ...own, id: 'c2', authorId: 'user-2', body: 'Ajeno' };
+    const ctx = setupTickets({
+      user: userOf({ role: 'admin' }),
+      ticketApi: { listComments: () => of([own, other]) },
+    });
+    const harness = await renderDetail();
+
+    const items = Array.from(document.querySelectorAll<HTMLElement>('.ticket-activity__item'));
+    expect(items).toHaveLength(2);
+    const mine = items.find((item) => item.textContent?.includes('Primer texto'));
+    const theirs = items.find((item) => item.textContent?.includes('Ajeno'));
+    if (!mine || !theirs) throw new Error('comments not rendered');
+    expect(buttonIn(theirs, 'Editar')).toBeUndefined();
+
+    clickIn(mine, 'Editar');
+    harness.fixture.detectChanges();
+    const editor = document.querySelector<HTMLTextAreaElement>(
+      'textarea[aria-label="Editar comentario"]',
+    );
+    if (!editor) throw new Error('no editor');
+    editor.value = 'Texto corregido';
+    editor.dispatchEvent(new Event('input'));
+    harness.fixture.detectChanges();
+    clickIn(document, 'Guardar');
+    await settle(harness);
+    expect(ctx.commentApi.update).toHaveBeenCalledWith(ISSUE_ID, 'c1', 'Texto corregido');
+    expect(document.body.textContent).toContain('Texto corregido');
+
+    const edited = Array.from(
+      document.querySelectorAll<HTMLElement>('.ticket-activity__item'),
+    ).find((item) => item.textContent?.includes('Texto corregido'));
+    if (!edited) throw new Error('edited comment missing');
+    clickIn(edited, 'Eliminar');
+    harness.fixture.detectChanges();
+    expect(ctx.ticketApi.deleteComment).not.toHaveBeenCalled();
+    expect(document.body.textContent).toContain('Eliminar comentario');
   });
 });

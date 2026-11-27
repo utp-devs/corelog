@@ -13,7 +13,10 @@ import {
 import { FormsModule } from '@angular/forms';
 import { AutoComplete } from 'primeng/autocomplete';
 import { Subscription, finalize } from 'rxjs';
-import { Ticket, TicketApiService } from '@corelog/core';
+import { IssueStatus, Ticket, TicketApiService, issueKeyOf } from '@corelog/core';
+import { StatusTag } from '@corelog/ui/status-tag';
+
+import { shortIssueKey } from '../ticket-list/relative-time';
 
 /** Delay before a search is sent, in milliseconds. Keeps one request per pause, not per key. */
 export const ISSUE_SEARCH_DEBOUNCE_MS = 300;
@@ -21,16 +24,21 @@ const PAGE_SIZE = 20;
 
 interface IssueOption {
   readonly value: string;
+  /** Text of the field once chosen: key and title. */
   readonly label: string;
+  readonly key: string;
+  readonly title: string;
+  readonly status: IssueStatus;
 }
 
 /**
- * Issue selector with a title search, used to link issues. Opens with the latest issues.
- * The issue being viewed is never offered as its own link target.
+ * Issue selector with a server search, used to link issues. Opens with the latest issues and lists each
+ * result with its key, title and status. The results are shown exactly as the server returns them (no
+ * second filter on the client), and the issue being viewed is never offered as its own link target.
  */
 @Component({
   selector: 'app-issue-picker',
-  imports: [FormsModule, AutoComplete],
+  imports: [AutoComplete, FormsModule, StatusTag],
   templateUrl: './issue-picker.html',
   styleUrl: './issue-picker.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -54,7 +62,15 @@ export class IssuePicker {
     if (!id) return null;
     const picked = this.picked();
     if (picked?.value === id) return picked;
-    return this.options().find((option) => option.value === id) ?? { value: id, label: id };
+    return (
+      this.options().find((option) => option.value === id) ?? {
+        value: id,
+        label: shortIssueKey(issueKeyOf(id)),
+        key: shortIssueKey(issueKeyOf(id)),
+        title: '',
+        status: 'open',
+      }
+    );
   });
 
   private timer: ReturnType<typeof setTimeout> | undefined;
@@ -92,10 +108,16 @@ export class IssuePicker {
   private toOptions(items: readonly Ticket[]): IssueOption[] {
     return items
       .filter((ticket) => ticket.id !== this.excludeId())
-      .map((ticket) => ({
-        value: ticket.id,
-        label: `${ticket.title} · ${ticket.id.slice(0, 8)}`,
-      }));
+      .map((ticket) => {
+        const key = shortIssueKey(issueKeyOf(ticket.id));
+        return {
+          value: ticket.id,
+          label: `${key} · ${ticket.title}`,
+          key,
+          title: ticket.title,
+          status: ticket.status,
+        };
+      });
   }
 
   private cancelPending(): void {

@@ -1,61 +1,26 @@
 import { ChangeDetectionStrategy, Component, effect, input, output, signal } from '@angular/core';
-import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Button } from 'primeng/button';
-import { InputText } from 'primeng/inputtext';
-import { Select } from 'primeng/select';
+import { ReactiveFormsModule } from '@angular/forms';
 import {
-  ISSUE_PRIORITY_LABELS,
-  ISSUE_TYPE_LABELS,
-  IssuePriority,
-  IssueType,
+  CREATABLE_ISSUE_TYPE_OPTIONS,
+  ISSUE_PRIORITY_OPTIONS,
+  ISSUE_TITLE_MAX_LENGTH,
+  ISSUE_TITLE_MIN_LENGTH,
+  IssueDraftFormGroup,
   MentionUser,
 } from '@corelog/core';
 import { FieldControl, FieldRow } from '@corelog/ui/field-row';
 import { RichTextEditor } from '@corelog/ui/rich-text-editor';
 import { Section } from '@corelog/ui/section';
-
-const TITLE_MAX_LENGTH = 200;
-const TITLE_MIN_LENGTH = 3;
-const DESCRIPTION_MIN_LENGTH = 3;
-const TITLE_ERROR = 'El título es demasiado corto';
-const DESCRIPTION_ERROR = 'La descripción es demasiado corta';
-
-const ISSUE_TYPE_OPTIONS = (Object.keys(ISSUE_TYPE_LABELS) as IssueType[]).map((value) => ({
-  value,
-  label: ISSUE_TYPE_LABELS[value],
-}));
-const PRIORITY_OPTIONS = (Object.keys(ISSUE_PRIORITY_LABELS) as IssuePriority[]).map((value) => ({
-  value,
-  label: ISSUE_PRIORITY_LABELS[value],
-}));
-
-/** Reactive form of the new-issue fields, with the defaults used when the form is opened or reset. */
-export function createTicketForm() {
-  return new FormGroup({
-    title: new FormControl('', {
-      nonNullable: true,
-      validators: [Validators.required, Validators.minLength(TITLE_MIN_LENGTH)],
-    }),
-    description: new FormControl('', {
-      nonNullable: true,
-      validators: [Validators.required, Validators.minLength(DESCRIPTION_MIN_LENGTH)],
-    }),
-    priority: new FormControl<IssuePriority>('medium', {
-      nonNullable: true,
-      validators: [Validators.required],
-    }),
-    issueType: new FormControl<IssueType>('task', {
-      nonNullable: true,
-      validators: [Validators.required],
-    }),
-  });
-}
-
-export type TicketFormGroup = ReturnType<typeof createTicketForm>;
+import { SelectField, SelectFieldOption } from '@corelog/ui/select-field';
+import { PickableUser, UserPicker } from '@corelog/ui/user-picker';
+import { Button } from 'primeng/button';
+import { InputText } from 'primeng/inputtext';
 
 /**
- * New-issue form. From 992 px the main fields sit in the left column and the classification in the
- * right column; below, one column. Errors appear after the first submit attempt.
+ * New-issue form. From 992 px the main fields sit in the left column and the classification (project,
+ * type, priority, assignee) in the right column; below, one column with the actions pinned to the bottom.
+ * A field shows its error only after it was touched or the form was submitted, never while it is empty and
+ * untouched.
  */
 @Component({
   selector: 'app-ticket-form',
@@ -67,7 +32,8 @@ export type TicketFormGroup = ReturnType<typeof createTicketForm>;
     ReactiveFormsModule,
     RichTextEditor,
     Section,
-    Select,
+    SelectField,
+    UserPicker,
   ],
   templateUrl: './ticket-form.html',
   styleUrl: './ticket-form.scss',
@@ -75,18 +41,33 @@ export type TicketFormGroup = ReturnType<typeof createTicketForm>;
 })
 export class TicketForm {
   /** Form owned by the page, so the page can read its dirty state for the unsaved-changes guard. */
-  readonly form = input.required<TicketFormGroup>();
+  readonly form = input.required<IssueDraftFormGroup>();
   readonly isSubmitting = input(false);
+  readonly projectOptions = input<readonly SelectFieldOption[]>([]);
+  readonly projectsLoading = input(false);
+  readonly assigneeUsers = input<PickableUser[]>([]);
   readonly searchUsers = input<(query: string) => Promise<MentionUser[]>>();
 
   /** The user asked to submit a valid form. The page creates the issue. */
   readonly submitted = output<void>();
   readonly cancelled = output<void>();
 
-  protected readonly titleMaxLength = TITLE_MAX_LENGTH;
-  protected readonly issueTypeOptions = ISSUE_TYPE_OPTIONS;
-  protected readonly priorityOptions = PRIORITY_OPTIONS;
-  protected readonly showErrors = signal(false);
+  protected readonly titleMaxLength = ISSUE_TITLE_MAX_LENGTH;
+  protected readonly typeOptions = CREATABLE_ISSUE_TYPE_OPTIONS;
+  protected readonly priorityOptions = ISSUE_PRIORITY_OPTIONS;
+  protected readonly titleMessages = {
+    required: 'Escribe un título.',
+    minlength: 'El título es demasiado corto',
+    maxlength: `El título no puede superar ${ISSUE_TITLE_MAX_LENGTH} caracteres.`,
+  };
+  protected readonly descriptionMessages = {
+    required: 'Describe la incidencia.',
+    minlength: 'La descripción es demasiado corta',
+  };
+  protected readonly projectMessages = { required: 'Elige un proyecto.' };
+  protected readonly titleHelper = `Describe el problema en una frase (mínimo ${ISSUE_TITLE_MIN_LENGTH} caracteres).`;
+  /** True after the first submit attempt: errors of untouched fields become visible. */
+  protected readonly attempted = signal(false);
 
   constructor() {
     // The description editor follows its control: disabled while the page submits the issue.
@@ -100,18 +81,14 @@ export class TicketForm {
     });
   }
 
-  protected titleError(): string | undefined {
-    return this.showErrors() && this.form().controls.title.invalid ? TITLE_ERROR : undefined;
-  }
-
-  protected descriptionError(): string | undefined {
-    return this.showErrors() && this.form().controls.description.invalid
-      ? DESCRIPTION_ERROR
-      : undefined;
+  protected setAssignee(userId: string | undefined): void {
+    const control = this.form().controls.assigneeId;
+    control.setValue(userId);
+    control.markAsDirty();
   }
 
   protected submit(): void {
-    this.showErrors.set(true);
+    this.attempted.set(true);
     const form = this.form();
     if (form.invalid) {
       form.markAllAsTouched();

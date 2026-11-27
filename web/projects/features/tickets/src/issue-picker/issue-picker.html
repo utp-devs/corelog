@@ -1,5 +1,5 @@
 <p-autocomplete
-  class="picker"
+  class="issue-picker"
   [suggestions]="options()"
   optionLabel="label"
   [ngModel]="selectedOption()"
@@ -8,7 +8,16 @@
   [dropdown]="true"
   [showClear]="true"
   [forceSelection]="true"
-  placeholder="Buscar incidencia por título"
+  placeholder="Buscar por título o clave"
   ariaLabel="Incidencia a vincular"
+  appendTo="body"
   [emptyMessage]="loading() ? 'Buscando…' : 'Sin resultados'"
-/>
+>
+  <ng-template #item let-option>
+    <span class="issue-picker__option">
+      <span class="issue-picker__key">{{ option.key }}</span>
+      <span class="issue-picker__title">{{ option.title }}</span>
+      <app-status-tag class="issue-picker__status" [status]="option.status" />
+    </span>
+  </ng-template>
+</p-autocomplete>

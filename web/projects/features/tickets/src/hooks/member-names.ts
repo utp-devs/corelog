@@ -1,11 +1,19 @@
 import { Signal, computed, effect, inject, untracked } from '@angular/core';
 import { OrganizationStore, TicketStore } from '@corelog/core';
 
+/** A member of the active organization. */
+export interface MemberEntry {
+  readonly id: string;
+  readonly name: string;
+}
+
 /** Names of the members of the active organization, keyed by user id. */
 export interface MemberNames {
   /** Member name, a loading placeholder while the list loads, or the unknown-member label. */
   nameOf(userId: string): string;
   readonly isLoading: Signal<boolean>;
+  /** Every member once the list has loaded; empty before. Lets pickers open with people already listed. */
+  readonly members: Signal<readonly MemberEntry[]>;
 }
 
 /**
@@ -25,5 +33,8 @@ export function injectMemberNames(): MemberNames {
   return {
     nameOf: (userId: string) => tickets.memberNameOf(userId),
     isLoading: computed(() => tickets.membersLoading()),
+    members: computed(() =>
+      Array.from(tickets.memberNames.value() ?? [], ([id, name]) => ({ id, name })),
+    ),
   };
 }

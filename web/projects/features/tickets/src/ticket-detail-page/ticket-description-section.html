@@ -14,7 +14,7 @@
 
   @if (editing()) {
     <form
-      class="edit-form"
+      class="ticket-description-section__form"
       aria-label="Editar descripción y datos"
       novalidate
       [formGroup]="form"
@@ -27,30 +27,26 @@
         [searchUsers]="searchUsers()"
       />
 
-      <div class="field-grid">
+      <div class="ticket-description-section__fields">
         <app-field-row #typeRow label="Tipo">
-          <p-select
+          <app-select-field
             formControlName="issueType"
             [inputId]="typeRow.controlId"
             [ariaLabelledBy]="typeRow.labelId"
             [options]="issueTypeOptions"
-            optionLabel="label"
-            optionValue="value"
-            class="full"
           />
         </app-field-row>
-        <app-field-row #dueRow label="Fecha límite">
-          <p-datepicker
+        <app-field-row #dueRow label="Fecha límite" [optional]="true">
+          <app-date-field
             formControlName="dueDate"
             [inputId]="dueRow.controlId"
             [ariaLabelledBy]="dueRow.labelId"
-            dateFormat="dd/mm/yy"
-            [showIcon]="true"
           />
         </app-field-row>
-        <app-field-row #storyRow label="Puntos de historia">
+        <app-field-row #storyRow label="Puntos de historia" [optional]="true">
           <p-inputnumber
             formControlName="storyPoints"
+            class="ticket-description-section__control"
             [inputId]="storyRow.controlId"
             [ariaLabelledBy]="storyRow.labelId"
             [min]="0"
@@ -59,13 +55,20 @@
         </app-field-row>
         <app-field-row
           label="Incidencia padre"
+          [optional]="true"
           helper="Identificador de la incidencia padre, si la hay."
         >
-          <input pInputText appFieldControl type="text" formControlName="parentId" class="full" />
+          <input
+            pInputText
+            appFieldControl
+            type="text"
+            formControlName="parentId"
+            class="ticket-description-section__control"
+          />
         </app-field-row>
       </div>
 
-      <div class="actions">
+      <div class="ticket-description-section__actions">
         <p-button
           label="Cancelar"
           severity="secondary"
@@ -80,9 +83,8 @@
   } @else if (ticket().description.trim()) {
     <app-rich-text-view [value]="ticket().description" />
   } @else {
-    <app-empty-state
-      title="Sin descripción"
-      description="Añade una descripción para dar contexto a la incidencia."
-    />
+    <p class="ticket-description-section__empty">
+      Sin descripción. Añade una para dar contexto a la incidencia.
+    </p>
   }
 </app-section>

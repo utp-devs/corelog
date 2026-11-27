@@ -1,68 +1,62 @@
+@use '../../../../ui/styles/mixins' as m;
+
 :host {
   display: block;
   min-width: 0;
 }
 
-.form {
-  display: flex;
-  flex-direction: column;
-  gap: var(--cl-space-4);
+.ticket-form {
+  @include m.flex-column(4);
   width: 100%;
   min-width: 0;
-}
 
-/* One column below 992 px; from 992 px the main fields and the classification sit side by side. */
-.layout {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: var(--cl-space-4);
-  align-items: start;
-  min-width: 0;
-}
+  // One column below 992 px; from 992 px the main fields and the classification sit side by side.
+  &__layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--cl-space-4);
+    align-items: start;
+    min-width: 0;
 
-.main,
-.side,
-.stack,
-.editor {
-  display: flex;
-  flex-direction: column;
-  gap: var(--cl-space-4);
-  min-width: 0;
-}
-
-.editor {
-  gap: var(--cl-space-2);
-}
-
-.full {
-  width: 100%;
-  min-width: 0;
-}
-
-.error {
-  margin: 0;
-  color: var(--cl-danger);
-}
-
-.actions {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: var(--cl-space-2);
-}
-
-@media (min-width: 992px) {
-  .layout {
-    grid-template-columns: minmax(0, 1fr) minmax(260px, 320px);
-  }
-}
-
-@media (max-width: 767px) {
-  .actions {
-    flex-direction: column-reverse;
+    @include m.respond-up(992px) {
+      grid-template-columns: minmax(0, 1fr) minmax(16rem, 20rem);
+    }
   }
 
-  .actions > * {
+  &__main,
+  &__side {
+    @include m.flex-column(4);
+    min-width: 0;
+  }
+
+  &__stack {
+    @include m.flex-column(4);
+    min-width: 0;
+  }
+
+  &__control {
     width: 100%;
+    min-width: 0;
+  }
+
+  &__actions {
+    @include m.cluster(2, center, flex-end);
+
+    // On phones the actions stay in reach while the long form scrolls.
+    @include m.respond-down(768px) {
+      position: sticky;
+      bottom: 0;
+      z-index: var(--cl-z-header);
+      flex-direction: column-reverse;
+      align-items: stretch;
+      margin-inline: calc(-1 * var(--cl-space-4));
+      padding: var(--cl-space-3) var(--cl-space-4);
+      border-top: 1px solid var(--cl-border);
+      background: var(--cl-bg-surface);
+
+      > * {
+        width: 100%;
+      }
+    }
   }
 }

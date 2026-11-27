@@ -1,10 +1,8 @@
 import { ChangeDetectionStrategy, Component, input, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { Button } from 'primeng/button';
-import { DatePicker } from 'primeng/datepicker';
 import { InputNumber } from 'primeng/inputnumber';
 import { InputText } from 'primeng/inputtext';
-import { Select } from 'primeng/select';
 import {
   ISSUE_TYPE_LABELS,
   IssueType,
@@ -12,11 +10,12 @@ import {
   Ticket,
   UpdateIssueDetailsInput,
 } from '@corelog/core';
-import { EmptyState } from '@corelog/ui/empty-state';
+import { DateField } from '@corelog/ui/date-field';
 import { FieldControl, FieldRow } from '@corelog/ui/field-row';
 import { RichTextEditor } from '@corelog/ui/rich-text-editor';
 import { RichTextView } from '@corelog/ui/rich-text-view';
 import { Section, SectionActions } from '@corelog/ui/section';
+import { SelectField } from '@corelog/ui/select-field';
 
 import { payloadFrom } from '../shared/issue-payload';
 
@@ -33,8 +32,7 @@ const ISSUE_TYPE_OPTIONS = (Object.keys(ISSUE_TYPE_LABELS) as IssueType[]).map((
   selector: 'app-ticket-description-section',
   imports: [
     Button,
-    DatePicker,
-    EmptyState,
+    DateField,
     FieldControl,
     FieldRow,
     InputNumber,
@@ -44,7 +42,7 @@ const ISSUE_TYPE_OPTIONS = (Object.keys(ISSUE_TYPE_LABELS) as IssueType[]).map((
     RichTextView,
     Section,
     SectionActions,
-    Select,
+    SelectField,
   ],
   templateUrl: './ticket-description-section.html',
   styleUrl: './ticket-description-section.scss',
@@ -64,7 +62,7 @@ export class TicketDescriptionSection {
     description: new FormControl('', { nonNullable: true }),
     issueType: new FormControl<IssueType>('task', { nonNullable: true }),
     parentId: new FormControl('', { nonNullable: true }),
-    dueDate: new FormControl<Date | null>(null),
+    dueDate: new FormControl<string | null>(null),
     storyPoints: new FormControl<number | null>(null),
   });
 
@@ -74,10 +72,17 @@ export class TicketDescriptionSection {
       description: ticket.description,
       issueType: ticket.issueType,
       parentId: ticket.parentId ?? '',
-      dueDate: ticket.dueDate ? new Date(ticket.dueDate) : null,
+      dueDate: ticket.dueDate ? ticket.dueDate.slice(0, 10) : null,
       storyPoints: ticket.storyPoints,
     });
     this.editing.set(true);
+  }
+
+  /** The stored value when the day did not change; otherwise the chosen day at midnight UTC. */
+  private dueDatePayload(day: string | null): string | undefined {
+    if (!day) return undefined;
+    const stored = this.ticket().dueDate;
+    return stored && stored.slice(0, 10) === day ? stored : `${day}T00:00:00Z`;
   }
 
   protected cancelEdit(): void {
@@ -95,7 +100,7 @@ export class TicketDescriptionSection {
           description: values.description,
           issueType: values.issueType,
           parentId: values.parentId || undefined,
-          dueDate: values.dueDate?.toISOString(),
+          dueDate: this.dueDatePayload(values.dueDate),
           storyPoints: values.storyPoints ?? undefined,
         }),
       );

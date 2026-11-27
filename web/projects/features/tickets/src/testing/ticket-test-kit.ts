@@ -12,6 +12,7 @@ import {
   MEMBER_NAMES_SOURCE,
   MemberNamesSource,
   OrganizationStore,
+  Project,
   ProjectApiService,
   ProjectMember,
   SavedFilter,
@@ -22,6 +23,7 @@ import {
   User,
   UserDirectoryApiService,
 } from '@corelog/core';
+import { CommentEditApi } from '../shared/comment-edit-api';
 import { provideCorelogTesting } from '@corelog/core/testing';
 import { Observable, of } from 'rxjs';
 import { Mock, vi } from 'vitest';
@@ -85,6 +87,23 @@ export function memberOf(
   return { projectId: PROJECT_ID, userId, role, createdAt: '2026-01-01T00:00:00Z' };
 }
 
+export function projectOf(overrides: Partial<Project> = {}): Project {
+  return {
+    id: PROJECT_ID,
+    organizationId: ORG_ID,
+    key: 'DEM',
+    name: 'Proyecto demo',
+    description: '',
+    type: 'scrum',
+    leadId: ME_ID,
+    visibility: 'private',
+    archivedAt: null,
+    createdAt: '2026-01-01T00:00:00Z',
+    updatedAt: '2026-01-01T00:00:00Z',
+    ...overrides,
+  };
+}
+
 export const COMMENT_AT = '2026-01-02T10:00:00Z';
 
 export interface TicketTestSetup {
@@ -94,6 +113,7 @@ export interface TicketTestSetup {
   readonly projectApi: Fake<ProjectApiService>;
   readonly directoryApi: Fake<UserDirectoryApiService>;
   readonly savedFilterApi: Fake<SavedFilterApiService>;
+  readonly commentApi: Fake<CommentEditApi>;
   readonly auth: { readonly user: WritableSignal<User | null> };
   readonly organizations: { readonly currentOrgId: WritableSignal<string | null> };
 }
@@ -105,6 +125,7 @@ export interface TicketTestOptions {
   readonly projectApi?: Partial<Record<keyof ProjectApiService, Impl>>;
   readonly directoryApi?: Partial<Record<keyof UserDirectoryApiService, Impl>>;
   readonly savedFilterApi?: Partial<Record<keyof SavedFilterApiService, Impl>>;
+  readonly commentApi?: Partial<Record<keyof CommentEditApi, Impl>>;
   readonly memberSource?: MemberNamesSource;
   readonly user?: User | null;
   readonly orgId?: string | null;
@@ -152,10 +173,10 @@ export function setupTickets(options: TicketTestOptions = {}): TicketTestSetup {
     options.watcherApi ?? {},
   );
   const projectApi = fakeOf<ProjectApiService>(
-    { listMembers: () => of([] as ProjectMember[]) } as unknown as Record<
-      keyof ProjectApiService,
-      Impl
-    >,
+    {
+      listMembers: () => of([] as ProjectMember[]),
+      list: () => of([projectOf()]),
+    } as unknown as Record<keyof ProjectApiService, Impl>,
     options.projectApi ?? {},
   );
   const directoryApi = fakeOf<UserDirectoryApiService>(
@@ -174,6 +195,11 @@ export function setupTickets(options: TicketTestOptions = {}): TicketTestSetup {
     options.savedFilterApi ?? {},
   );
 
+  const commentApi = fakeOf<CommentEditApi>(
+    { update: () => of(undefined) } as unknown as Record<keyof CommentEditApi, Impl>,
+    options.commentApi ?? {},
+  );
+
   const auth = { user: signal<User | null>(options.user === undefined ? userOf() : options.user) };
   const organizations = {
     currentOrgId: signal<string | null>(options.orgId === undefined ? ORG_ID : options.orgId),
@@ -189,6 +215,7 @@ export function setupTickets(options: TicketTestOptions = {}): TicketTestSetup {
       { provide: ProjectApiService, useValue: projectApi },
       { provide: UserDirectoryApiService, useValue: directoryApi },
       { provide: SavedFilterApiService, useValue: savedFilterApi },
+      { provide: CommentEditApi, useValue: commentApi },
       { provide: OrganizationStore, useValue: organizations },
       { provide: AuthStore, useValue: auth },
       { provide: MEMBER_NAMES_SOURCE, useValue: memberSource },
@@ -202,6 +229,7 @@ export function setupTickets(options: TicketTestOptions = {}): TicketTestSetup {
     projectApi,
     directoryApi,
     savedFilterApi,
+    commentApi,
     auth,
     organizations,
   };

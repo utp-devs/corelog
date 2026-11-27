@@ -1,15 +1,32 @@
+@use '../../../../ui/styles/mixins' as m;
+
 :host {
   display: block;
   min-width: 0;
 }
 
-.picker {
+.issue-picker {
   width: 100%;
   min-width: 0;
-}
 
-@media (max-width: 767px) {
-  .picker {
-    min-height: 44px;
+  &__option {
+    @include m.flex-row(2);
+    width: 100%;
+    min-width: 0;
+  }
+
+  &__key {
+    flex: none;
+    color: var(--cl-text-subtle);
+    font-weight: var(--cl-weight-medium);
+  }
+
+  &__title {
+    @include m.truncate;
+    flex: 1 1 auto;
+  }
+
+  &__status {
+    flex: none;
   }
 }
