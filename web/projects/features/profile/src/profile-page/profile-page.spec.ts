@@ -409,12 +409,11 @@ describe('ProfilePage', () => {
       expect(radioNamed(harness, 'Claro').checked).toBe(false);
     });
 
-    it('does not offer unavailable features: no two-step stub and no tokens section', async () => {
+    it('does not offer unavailable features: no placeholders and no tokens section', async () => {
       setup();
       const harness = await render('/profile/security');
       await expectText(harness, 'Movil de prueba');
       expect(root(harness).textContent).not.toContain('Próximamente');
-      expect(root(harness).textContent).not.toContain('dos pasos');
     });
 
     it('shows the general section for the removed tokens address', async () => {

@@ -43,6 +43,7 @@
     "marked": "^18.3.0",
     "primeicons": "^8.0.2",
     "primeng": "^21.1.10",
+    "qrcode": "^1.5.4",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0"
   },
@@ -51,6 +52,7 @@
     "@angular/cli": "^21.2.26",
     "@angular/compiler-cli": "^21.2.0",
     "@playwright/test": "^1.65.1",
+    "@types/qrcode": "^1.5.6",
     "jsdom": "^28.0.0",
     "ng-packagr": "^21.2.7",
     "prettier": "^3.8.1",

@@ -24,6 +24,7 @@ import { firstValueFrom } from 'rxjs';
 
 import { messageOr } from '../shared/feature-error';
 import { ProfilePasswordForm } from './password-form';
+import { ProfileTwoFactorSection } from './two-factor-section';
 
 const SESSIONS_PAGE_SIZE = 5;
 const MOBILE_PATTERN = /Android|iPhone|iPad|Mobile/i;
@@ -40,6 +41,7 @@ const MOBILE_PATTERN = /Android|iPhone|iPad|Mobile/i;
     LoadingSkeleton,
     PasswordInput,
     ProfilePasswordForm,
+    ProfileTwoFactorSection,
     ReactiveFormsModule,
     Section,
     SectionActions,

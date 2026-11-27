@@ -1,0 +1,129 @@
+@use '../../../../ui/styles/mixins' as m;
+@use '../../../../ui/field-row/src/control' as c;
+
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.two-factor {
+  &__row {
+    @include m.flex-row(var(--cl-space-4), center, space-between);
+    flex-wrap: wrap;
+    min-width: 0;
+  }
+
+  &__text {
+    @include m.flex-column(var(--cl-space-1));
+    flex: 1 1 18rem;
+    min-width: 0;
+  }
+
+  &__title {
+    @include m.cluster(2);
+    font-weight: var(--cl-weight-semibold);
+  }
+
+  &__hint {
+    margin: 0;
+    color: var(--cl-text-subtle);
+    font-size: var(--cl-font-small);
+  }
+
+  &__actions {
+    @include m.cluster(2);
+  }
+
+  &__alert {
+    padding: var(--cl-space-2) var(--cl-space-3);
+    border-radius: var(--cl-radius-md);
+    background: var(--cl-danger-bg);
+    color: var(--cl-danger-text);
+  }
+
+  &__enroll {
+    @include m.flex-row(var(--cl-space-5), flex-start);
+    flex-wrap: wrap;
+    margin-block-end: var(--cl-space-4);
+  }
+
+  // The code is always drawn dark on white, in both themes, so scanners can read it.
+  &__qr {
+    flex: none;
+    width: 12rem;
+    height: 12rem;
+    border: 1px solid var(--cl-border);
+    border-radius: var(--cl-radius-md);
+  }
+
+  &__qr-bg {
+    fill: #fff;
+  }
+
+  &__qr-dark {
+    fill: #000;
+  }
+
+  &__manual {
+    @include m.flex-column(var(--cl-space-2), flex-start);
+    flex: 1 1 12rem;
+    min-width: 0;
+  }
+
+  &__secret {
+    padding: var(--cl-space-2) var(--cl-space-3);
+    border-radius: var(--cl-radius-md);
+    background: var(--cl-bg-sunken);
+    color: var(--cl-text);
+    font-size: var(--cl-font-body-strong);
+    letter-spacing: 0.08em;
+    overflow-wrap: anywhere;
+  }
+
+  &__code {
+    width: 100%;
+    letter-spacing: 0.12em;
+  }
+
+  &__error {
+    margin: var(--cl-space-3) 0 0;
+    color: var(--cl-danger-text);
+    font-size: var(--cl-font-small);
+  }
+
+  &__codes {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--cl-space-2);
+    margin: 0 0 var(--cl-space-3);
+    padding: var(--cl-space-3);
+    list-style: none;
+    border-radius: var(--cl-radius-md);
+    background: var(--cl-bg-sunken);
+  }
+
+  &__code-item {
+    font-size: var(--cl-font-body-strong);
+    font-weight: var(--cl-weight-medium);
+    letter-spacing: 0.1em;
+  }
+
+  &__ack {
+    @include m.flex-row(var(--cl-space-2));
+    margin-block-start: var(--cl-space-3);
+    min-height: var(--cl-control-h-md);
+  }
+
+  &__link {
+    min-height: var(--cl-control-h-md);
+    border: 0;
+    background: transparent;
+    color: var(--cl-brand);
+    font: inherit;
+    cursor: pointer;
+
+    &:focus-visible {
+      @include c.focus-ring;
+    }
+  }
+}

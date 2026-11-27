@@ -1,0 +1,241 @@
+<app-section
+  title="Verificación en dos pasos"
+  description="Pide un código de tu aplicación de autenticación además de la contraseña al iniciar sesión."
+>
+  @if (statusError(); as message) {
+    <div class="two-factor__alert" role="alert">{{ message }}</div>
+  } @else if (status(); as current) {
+    <div class="two-factor__row" data-testid="two-factor-status">
+      <div class="two-factor__text">
+        <span class="two-factor__title">
+          Estado
+          @if (current.enabled) {
+            <app-tone-tag label="Activada" tone="green" />
+          } @else {
+            <app-tone-tag label="Desactivada" tone="neutral" />
+          }
+        </span>
+        @if (current.enabled) {
+          <p class="two-factor__hint">
+            Activada el {{ current.enabledAt | date: 'dd/MM/yyyy' }}. Te quedan
+            {{ current.recoveryCodesRemaining }} códigos de recuperación sin usar.
+          </p>
+        } @else {
+          <p class="two-factor__hint">
+            Protege tu cuenta aunque alguien conozca tu contraseña. Necesitas una aplicación como
+            Google Authenticator, Authy o 1Password.
+          </p>
+        }
+      </div>
+      <div class="two-factor__actions">
+        @if (current.enabled) {
+          <p-button
+            label="Generar códigos nuevos"
+            severity="secondary"
+            [outlined]="true"
+            data-testid="two-factor-regenerate"
+            (onClick)="openRegenerate()"
+          />
+          <p-button
+            label="Desactivar"
+            severity="danger"
+            [outlined]="true"
+            data-testid="two-factor-disable"
+            (onClick)="openDisable()"
+          />
+        } @else {
+          <p-button
+            label="Activar"
+            icon="pi pi-shield"
+            data-testid="two-factor-enable"
+            (onClick)="startEnrollment()"
+          />
+        }
+      </div>
+    </div>
+  } @else if (statusLoading()) {
+    <p class="two-factor__hint">Cargando...</p>
+  }
+</app-section>
+
+<app-dialog
+  size="md"
+  heading="Activar la verificación en dos pasos"
+  subtitle="Escanea el código con tu aplicación y escribe el código que te muestra."
+  [open]="dialog() === 'enroll'"
+  (closeRequested)="closeEnrollment()"
+>
+  @if (enrollment(); as current) {
+    <div class="two-factor__enroll">
+      <svg
+        class="two-factor__qr"
+        role="img"
+        aria-label="Código QR para añadir CoreLog a tu aplicación de autenticación. Si no puedes escanearlo, usa la clave escrita junto a él."
+        data-testid="two-factor-qr"
+        [attr.viewBox]="'0 0 ' + qrSize() + ' ' + qrSize()"
+        shape-rendering="crispEdges"
+      >
+        <rect class="two-factor__qr-bg" [attr.width]="qrSize()" [attr.height]="qrSize()" />
+        <path class="two-factor__qr-dark" [attr.d]="qrPathData()" />
+      </svg>
+      <div class="two-factor__manual">
+        <p class="two-factor__hint">¿No puedes escanear? Escribe esta clave en tu aplicación:</p>
+        <code class="two-factor__secret" data-testid="two-factor-secret">{{
+          groupedSecret()
+        }}</code>
+        <p-button
+          label="Copiar clave"
+          icon="pi pi-copy"
+          severity="secondary"
+          [outlined]="true"
+          (onClick)="copySecret()"
+        />
+      </div>
+    </div>
+
+    <app-field-row #enrollRow label="Código de 6 dígitos">
+      <input
+        pInputText
+        class="two-factor__code"
+        data-testid="two-factor-confirm-code"
+        [id]="enrollRow.controlId"
+        inputmode="numeric"
+        autocomplete="one-time-code"
+        maxlength="8"
+        [formControl]="code"
+        (keydown.enter)="confirmEnrollment()"
+      />
+    </app-field-row>
+  } @else if (!error()) {
+    <p class="two-factor__hint">Preparando la clave...</p>
+  }
+  @if (error(); as message) {
+    <p class="two-factor__error" role="alert">{{ message }}</p>
+  }
+
+  <p-button dialogFooter label="Cancelar" severity="secondary" (onClick)="closeEnrollment()" />
+  <p-button
+    dialogFooter
+    label="Activar"
+    data-testid="two-factor-confirm"
+    [disabled]="enrollment() === null"
+    [loading]="busy()"
+    (onClick)="confirmEnrollment()"
+  />
+</app-dialog>
+
+<app-dialog
+  size="md"
+  heading="Guarda tus códigos de recuperación"
+  subtitle="Los necesitarás si pierdes tu teléfono. Cada código sirve una sola vez y no volverás a verlos."
+  [dismissable]="false"
+  [open]="dialog() === 'codes'"
+  (closeRequested)="finishCodes()"
+>
+  <ul class="two-factor__codes" data-testid="recovery-codes">
+    @for (item of recoveryCodes() ?? []; track item) {
+      <li class="two-factor__code-item">{{ item }}</li>
+    }
+  </ul>
+  <div class="two-factor__actions">
+    <p-button
+      label="Copiar"
+      icon="pi pi-copy"
+      severity="secondary"
+      [outlined]="true"
+      (onClick)="copyCodes()"
+    />
+    <p-button
+      label="Descargar"
+      icon="pi pi-download"
+      severity="secondary"
+      [outlined]="true"
+      (onClick)="downloadCodes()"
+    />
+  </div>
+  <label class="two-factor__ack">
+    <input type="checkbox" [checked]="saved()" (change)="saved.set(!saved())" />
+    Ya guardé mis códigos en un lugar seguro
+  </label>
+
+  <p-button
+    dialogFooter
+    label="Listo"
+    data-testid="recovery-done"
+    [disabled]="!saved()"
+    (onClick)="finishCodes()"
+  />
+</app-dialog>
+
+<app-dialog
+  size="sm"
+  heading="Generar códigos nuevos"
+  subtitle="Los códigos anteriores dejarán de funcionar. Confirma con un código de tu aplicación."
+  [open]="dialog() === 'regenerate'"
+  (closeRequested)="close()"
+>
+  <app-field-row #regenRow label="Código de 6 dígitos">
+    <input
+      pInputText
+      class="two-factor__code"
+      data-testid="two-factor-regen-code"
+      [id]="regenRow.controlId"
+      inputmode="numeric"
+      autocomplete="one-time-code"
+      maxlength="8"
+      [formControl]="code"
+      (keydown.enter)="regenerate()"
+    />
+  </app-field-row>
+  @if (error(); as message) {
+    <p class="two-factor__error" role="alert">{{ message }}</p>
+  }
+  <p-button dialogFooter label="Cancelar" severity="secondary" (onClick)="close()" />
+  <p-button dialogFooter label="Generar" [loading]="busy()" (onClick)="regenerate()" />
+</app-dialog>
+
+<app-dialog
+  size="sm"
+  heading="Desactivar la verificación en dos pasos"
+  subtitle="Tu cuenta quedará protegida solo por la contraseña."
+  [open]="dialog() === 'disable'"
+  (closeRequested)="close()"
+>
+  <app-field-row #disablePassRow label="Contraseña actual">
+    <app-password-input
+      [inputId]="disablePassRow.controlId"
+      autocomplete="current-password"
+      [formControl]="password"
+    />
+  </app-field-row>
+  <app-field-row
+    #disableCodeRow
+    [label]="useRecovery() ? 'Código de recuperación' : 'Código de 6 dígitos'"
+  >
+    <input
+      pInputText
+      class="two-factor__code"
+      data-testid="two-factor-disable-code"
+      [id]="disableCodeRow.controlId"
+      autocomplete="one-time-code"
+      [attr.inputmode]="useRecovery() ? 'text' : 'numeric'"
+      [formControl]="code"
+      (keydown.enter)="disable()"
+    />
+  </app-field-row>
+  <button type="button" class="two-factor__link" (click)="toggleRecovery()">
+    {{ useRecovery() ? 'Usar el código de mi aplicación' : 'Usar un código de recuperación' }}
+  </button>
+  @if (error(); as message) {
+    <p class="two-factor__error" role="alert">{{ message }}</p>
+  }
+  <p-button dialogFooter label="Cancelar" severity="secondary" (onClick)="close()" />
+  <p-button
+    dialogFooter
+    label="Desactivar"
+    severity="danger"
+    data-testid="two-factor-disable-confirm"
+    [loading]="busy()"
+    (onClick)="disable()"
+  />
+</app-dialog>
