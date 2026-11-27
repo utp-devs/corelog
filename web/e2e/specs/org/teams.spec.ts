@@ -51,12 +51,12 @@ test.describe('equipos (S-25)', () => {
     ).toBeVisible();
   });
 
-  test('pestanas de la pagina de equipo', async ({ as, api, data }) => {
+  test('la pagina de equipo muestra la seccion de miembros', async ({ as, api, data }) => {
     const acme = await orgIdBySlug(await api('member'), 'acme');
     const team = await data.createTeam('member', acme, 'tabs');
     const page = await as('member');
     await page.goto(appPath(`/teams/${team.id}`));
-    await expect(page.getByRole('tab', { name: 'Miembros' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Miembros' })).toBeVisible();
   });
 
   test('guest ve los equipos en solo lectura', async ({ as }) => {

@@ -19,9 +19,9 @@ test.describe('onboarding de cuentas nuevas', () => {
     const email = `e2e.ui.${Date.now().toString(36)}@corelog.test`;
     try {
       await page.goto(appPath('/register'));
-      await page.getByLabel('Nombre', { exact: true }).fill('Registro UI');
+      await page.getByLabel(/^Nombre( |$)/).fill('Registro UI');
       await page.getByLabel('Correo electrónico').fill(email);
-      await page.getByLabel('Contraseña', { exact: true }).fill(password ?? '');
+      await page.getByLabel(/^Contraseña/).fill(password ?? '');
       await page.getByRole('button', { name: 'Crear cuenta' }).click();
       await expect(page).toHaveURL(/\/onboarding/);
     } finally {
