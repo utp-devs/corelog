@@ -164,6 +164,7 @@ func buildDemo(passwordHash string) *dataset {
 	assignDemoSprints(recs, core.id, sprint11, sprint12)
 	emitIssues(ds, recs)
 	syncIssueCounters(ds, recs)
+	addDemoWorklogs(ds, recs)
 	addDemoLinks(ds, rng, recs, org.users[0])
 	addDemoVotes(ds, rng, recs, org.users)
 	addDemoFilters(ds)

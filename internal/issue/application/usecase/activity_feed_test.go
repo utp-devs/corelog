@@ -59,7 +59,7 @@ type memFeed struct {
 	labels *memLabels
 }
 
-func (m *memFeed) FeedRefs(_ context.Context, issueID uuid.UUID, filter string, after *domain.ActivityCursor, limit int) ([]port.FeedRef, error) {
+func (m *memFeed) FeedRefs(_ context.Context, issueID uuid.UUID, filter string, viewer domain.CommentLevel, after *domain.ActivityCursor, limit int) ([]port.FeedRef, error) {
 	var refs []port.FeedRef
 	if filter != domain.ActivityFilterComments {
 		units := map[uuid.UUID]*port.FeedRef{}
@@ -86,7 +86,7 @@ func (m *memFeed) FeedRefs(_ context.Context, issueID uuid.UUID, filter string, 
 	}
 	if filter != domain.ActivityFilterHistory {
 		for _, c := range m.collab.comments {
-			if c.IssueID == issueID && c.DeletedAt == nil {
+			if c.IssueID == issueID && (c.Visibility == domain.CommentVisibilityPublic || domain.CanReadComment(viewer, c.Visibility, c.InternalRole)) {
 				refs = append(refs, port.FeedRef{Kind: domain.FeedKindComment, ID: c.ID, At: c.CreatedAt})
 			}
 		}
@@ -217,9 +217,7 @@ func TestActivityFeed_NewestFirstAndCommentsMerged(t *testing.T) {
 		t.Fatal(err)
 	}
 	f.clock.Advance(time.Minute)
-	if _, err := f.svc.CreateComment(ctx, port.CreateCommentInput{IssueID: f.issue.ID, AuthorID: f.lead, GlobalRole: "user", Body: "Hola"}); err != nil {
-		t.Fatal(err)
-	}
+	seedComment(t, f, f.lead, "Hola")
 	page := listFeed(t, f, f.lead, port.ActivityQuery{})
 	if len(page.Entries) != 2 || page.Entries[0].Kind != domain.FeedKindComment || page.Entries[1].Kind != domain.FeedKindHistory {
 		t.Fatalf("entries = %+v, want comment then history", page.Entries)
@@ -234,9 +232,7 @@ func TestActivityFeed_CursorPagesWithEqualTimestamps(t *testing.T) {
 	ctx := context.Background()
 	// The fixed clock gives every row the same timestamp: the order must still be total and stable.
 	for i := 0; i < 3; i++ {
-		if _, err := f.svc.CreateComment(ctx, port.CreateCommentInput{IssueID: f.issue.ID, AuthorID: f.lead, GlobalRole: "user", Body: "c"}); err != nil {
-			t.Fatal(err)
-		}
+		seedComment(t, f, f.lead, "c")
 	}
 	for _, summary := range []string{"a", "b"} {
 		if _, err := f.svc.Patch(ctx, f.issue.ID, f.lead, "user", port.PatchInput{Summary: port.Some(summary)}); err != nil {
@@ -271,9 +267,7 @@ func TestActivityFeed_CursorPagesWithEqualTimestamps(t *testing.T) {
 func TestActivityFeed_FilterSelectsKinds(t *testing.T) {
 	f, _, _ := feedFixture(t)
 	ctx := context.Background()
-	if _, err := f.svc.CreateComment(ctx, port.CreateCommentInput{IssueID: f.issue.ID, AuthorID: f.lead, GlobalRole: "user", Body: "c"}); err != nil {
-		t.Fatal(err)
-	}
+	seedComment(t, f, f.lead, "c")
 	if _, err := f.svc.Patch(ctx, f.issue.ID, f.lead, "user", port.PatchInput{Summary: port.Some("x")}); err != nil {
 		t.Fatal(err)
 	}
@@ -419,5 +413,59 @@ func TestActivityCursor_RoundTrip(t *testing.T) {
 	}
 	if !got.At.Equal(want.At) || got.Kind != want.Kind || got.ID != want.ID {
 		t.Errorf("round trip = %+v, want %+v", got, want)
+	}
+}
+
+// seedComment stores a public comment through the in-memory collaboration store.
+func seedComment(t *testing.T, f *patchFixture, author uuid.UUID, body string) {
+	t.Helper()
+	comment, err := domain.NewComment(f.issue.ID, author, body, f.clock.Now())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := f.collab.SaveComment(context.Background(), comment); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestActivityFeed_DeletedCommentsShowPlaceholderAndInternalOnesFollowRole(t *testing.T) {
+	f, _, _ := feedFixture(t)
+	ctx := context.Background()
+	seedComment(t, f, f.lead, "Visible y luego borrado")
+	internal, err := domain.NewComment(f.issue.ID, f.lead, "Nota interna", f.clock.Now())
+	if err != nil {
+		t.Fatal(err)
+	}
+	internal.Visibility = domain.CommentVisibilityInternal
+	internal.InternalRole = domain.CommentLevelContributor
+	if err := f.collab.SaveComment(ctx, internal); err != nil {
+		t.Fatal(err)
+	}
+	for _, c := range f.collab.comments {
+		if c.Body == "Visible y luego borrado" {
+			f.clock.Advance(time.Minute)
+			c.Delete(f.clock.Now())
+		}
+	}
+
+	// The fixture actor is a lead, so it reads the internal comment too; the placeholder replaces the deleted body.
+	page := listFeed(t, f, f.lead, port.ActivityQuery{})
+	if len(page.Entries) != 2 {
+		t.Fatalf("entries = %d, want the placeholder and the internal comment", len(page.Entries))
+	}
+	var placeholder, internalSeen bool
+	for _, entry := range page.Entries {
+		if entry.Comment == nil {
+			t.Fatalf("unexpected entry %+v", entry)
+		}
+		if entry.Comment.Deleted && entry.Comment.Body == domain.CommentDeletedPlaceholder {
+			placeholder = true
+		}
+		if entry.Comment.Visibility == string(domain.CommentVisibilityInternal) && entry.Comment.Body == "Nota interna" {
+			internalSeen = true
+		}
+	}
+	if !placeholder || !internalSeen {
+		t.Fatalf("placeholder=%v internal=%v in %+v", placeholder, internalSeen, page.Entries)
 	}
 }

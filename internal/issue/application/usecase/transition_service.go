@@ -379,12 +379,9 @@ func (s *IssueService) transitionComments(ctx context.Context, issue *domain.Iss
 	}
 	bodies = append(bodies, plan.Comments...)
 	for _, body := range bodies {
-		comment, err := domain.NewComment(issue.ID, actorID, body)
+		// Transition comments are public and carry no mentions: they are written by the workflow, not by a person.
+		comment, err := domain.NewComment(issue.ID, actorID, body, s.now())
 		if err != nil {
-			return err
-		}
-		comment.CreatedAt, comment.UpdatedAt = s.now(), s.now()
-		if comment.Mentions, err = s.collaboration.FindMentionIDs(ctx, issue.ID, extractMentionNames(body)); err != nil {
 			return err
 		}
 		if err := s.collaboration.SaveComment(ctx, comment); err != nil {

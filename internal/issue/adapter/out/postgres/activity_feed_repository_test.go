@@ -53,7 +53,7 @@ func TestActivityFeedGroupsBatchesAndPagesWithEqualTimestamps(t *testing.T) {
 	insertFeedActivity(t, e, issue.ID, uuid.Nil, "assignee_id", at)
 	insertFeedComment(t, e, issue.ID, at)
 	insertFeedComment(t, e, issue.ID, at)
-	// A deleted comment never shows.
+	// A deleted comment stays as a placeholder entry.
 	deleted := insertFeedComment(t, e, issue.ID, at)
 	if _, err := e.db.Exec(`UPDATE comments SET deleted_at = $1 WHERE id = $2`, at, deleted); err != nil {
 		t.Fatal(err)
@@ -63,7 +63,7 @@ func TestActivityFeedGroupsBatchesAndPagesWithEqualTimestamps(t *testing.T) {
 	var cursor *domain.ActivityCursor
 	pages := 0
 	for {
-		refs, err := reader.FeedRefs(ctx, issue.ID, domain.ActivityFilterAll, cursor, 2)
+		refs, err := reader.FeedRefs(ctx, issue.ID, domain.ActivityFilterAll, domain.CommentLevelLead, cursor, 2)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -80,15 +80,15 @@ func TestActivityFeedGroupsBatchesAndPagesWithEqualTimestamps(t *testing.T) {
 		last := refs[len(refs)-1]
 		cursor = &domain.ActivityCursor{At: last.At, Kind: last.Kind, ID: last.ID}
 	}
-	// 2 comments + 1 batch + 1 standalone row = 4 entries.
-	if len(seen) != 4 {
-		t.Fatalf("entries = %d, want 4 (batch grouped, deleted comment hidden)", len(seen))
+	// 2 comments + 1 deleted comment + 1 batch + 1 standalone row = 5 entries.
+	if len(seen) != 5 {
+		t.Fatalf("entries = %d, want 5 (batch grouped, deleted comment as placeholder)", len(seen))
 	}
 	if !seen[batch] {
 		t.Error("the batch must be one entry keyed by its batch id")
 	}
 
-	refs, err := reader.FeedRefs(ctx, issue.ID, domain.ActivityFilterHistory, nil, 10)
+	refs, err := reader.FeedRefs(ctx, issue.ID, domain.ActivityFilterHistory, domain.CommentLevelLead, nil, 10)
 	if err != nil || len(refs) != 2 {
 		t.Fatalf("history filter: refs=%d err=%v, want 2", len(refs), err)
 	}
@@ -111,7 +111,7 @@ func TestActivityFeedStatementCountDoesNotGrowWithEntries(t *testing.T) {
 
 	measure := func() int64 {
 		counter.n.Store(0)
-		refs, err := reader.FeedRefs(ctx, issue.ID, domain.ActivityFilterAll, nil, 100)
+		refs, err := reader.FeedRefs(ctx, issue.ID, domain.ActivityFilterAll, domain.CommentLevelLead, nil, 100)
 		if err != nil {
 			t.Fatal(err)
 		}

@@ -3,6 +3,7 @@ package domain
 import (
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/google/uuid"
 
@@ -11,43 +12,81 @@ import (
 
 var ErrInvalidComment = apperror.WithCode(apperror.KindValidation, "issue.invalid_comment", "comment body is required")
 
+// CommentMaxLength is the longest comment body, in characters.
+const CommentMaxLength = 20000
+
 type Comment struct {
-	ID        uuid.UUID
-	IssueID   uuid.UUID
-	AuthorID  uuid.UUID
-	Body      string
+	ID       uuid.UUID
+	IssueID  uuid.UUID
+	AuthorID uuid.UUID
+	// ParentID is the root comment of the thread when the comment is a reply; threads have a single level.
+	ParentID   *uuid.UUID
+	Body       string
+	Visibility CommentVisibility
+	// InternalRole is the lowest project role that can read an internal comment. It is CommentLevelNone for
+	// public comments.
+	InternalRole CommentLevel
+	// Mentions are the users mentioned by the body that were valid when the body was saved.
 	Mentions  []uuid.UUID
 	CreatedAt time.Time
 	UpdatedAt time.Time
+	EditedAt  *time.Time
 	DeletedAt *time.Time
 }
 
-func NewComment(issueID, authorID uuid.UUID, body string) (*Comment, error) {
+// NewComment builds a public root comment. The body is trimmed; it must not be empty and must fit CommentMaxLength.
+func NewComment(issueID, authorID uuid.UUID, body string, at time.Time) (*Comment, error) {
 	body = strings.TrimSpace(body)
 	if issueID == uuid.Nil || authorID == uuid.Nil || body == "" {
 		return nil, ErrInvalidComment
 	}
-	now := time.Now().UTC()
+	if utf8.RuneCountInString(body) > CommentMaxLength {
+		return nil, ErrCommentTooLong
+	}
+	at = at.UTC()
 	return &Comment{
-		IssueID: issueID, AuthorID: authorID, Body: body,
-		CreatedAt: now, UpdatedAt: now,
+		IssueID: issueID, AuthorID: authorID, Body: body, Visibility: CommentVisibilityPublic,
+		CreatedAt: at, UpdatedAt: at,
 	}, nil
 }
 
-func (c *Comment) Update(body string) error {
+// Update replaces the body and marks the comment as edited at the given time.
+func (c *Comment) Update(body string, at time.Time) error {
 	body = strings.TrimSpace(body)
 	if body == "" {
 		return ErrInvalidComment
 	}
+	if utf8.RuneCountInString(body) > CommentMaxLength {
+		return ErrCommentTooLong
+	}
+	at = at.UTC()
 	c.Body = body
-	c.UpdatedAt = time.Now().UTC()
+	c.UpdatedAt = at
+	c.EditedAt = &at
 	return nil
 }
 
-func (c *Comment) Delete() {
-	now := time.Now().UTC()
-	c.DeletedAt = &now
-	c.UpdatedAt = now
+// Delete soft-deletes the comment. The body is cleared: the thread keeps the place with a placeholder.
+func (c *Comment) Delete(at time.Time) {
+	at = at.UTC()
+	c.Body = ""
+	c.DeletedAt = &at
+	c.UpdatedAt = at
+}
+
+// IsDeleted reports whether the comment was soft-deleted.
+func (c *Comment) IsDeleted() bool {
+	return c.DeletedAt != nil
+}
+
+// IsReply reports whether the comment belongs to a thread (it has a root).
+func (c *Comment) IsReply() bool {
+	return c.ParentID != nil
+}
+
+// IsEdited reports whether the body was changed after creation.
+func (c *Comment) IsEdited() bool {
+	return c.EditedAt != nil
 }
 
 // NewAssigneeActivity registra un cambio de persona asignada. previous y next son nil cuando no hay persona

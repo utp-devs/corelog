@@ -45,7 +45,7 @@ func (r *IssueRepository) ViewExtras(ctx context.Context, issueID uuid.UUID) (do
 	var row viewExtrasRow
 	err := sqlx.GetContext(ctx, database.Executor(ctx, r.db), &row, `
 		SELECT
-		  (SELECT COUNT(*) FROM comments c WHERE c.issue_id = i.id AND c.deleted_at IS NULL)::int AS comments,
+		  (SELECT COUNT(*) FROM comments c WHERE c.issue_id = i.id AND c.deleted_at IS NULL AND c.visibility = 'public')::int AS comments,
 		  (SELECT COUNT(*) FROM attachments a WHERE a.issue_id = i.id)::int AS attachments,
 		  (SELECT COUNT(*) FROM issues ch WHERE ch.parent_id = i.id AND ch.deleted_at IS NULL)::int AS children,
 		  (SELECT COUNT(*) FROM issue_links l WHERE l.source_issue_id = i.id OR l.target_issue_id = i.id)::int AS links,

@@ -3,8 +3,6 @@ package usecase
 import (
 	"context"
 	"fmt"
-	"regexp"
-	"strings"
 
 	"github.com/google/uuid"
 
@@ -501,110 +499,6 @@ func setLegacyType(patch *port.PatchInput, legacy domain.IssueType, id *uuid.UUI
 	}
 }
 
-func extractMentionNames(body string) []string {
-	re := regexp.MustCompile(`@([a-zA-Z0-9._-]+)`)
-	matches := re.FindAllStringSubmatch(body, -1)
-	names := make([]string, 0, len(matches))
-	seen := make(map[string]struct{}, len(matches))
-	for _, match := range matches {
-		name := strings.ToLower(strings.TrimSpace(match[1]))
-		if name == "" {
-			continue
-		}
-		if _, ok := seen[name]; ok {
-			continue
-		}
-		seen[name] = struct{}{}
-		names = append(names, name)
-	}
-	return names
-}
-
-func (s *IssueService) ListComments(ctx context.Context, issueID, actorID uuid.UUID, globalRole string) ([]*domain.Comment, error) {
-	issue, err := s.repo.FindByID(ctx, issueID)
-	if err != nil {
-		return nil, err
-	}
-	if err := s.requireIssueView(ctx, issue.ProjectID, actorID, globalRole); err != nil {
-		return nil, err
-	}
-	if s.collaboration == nil {
-		return []*domain.Comment{}, nil
-	}
-	return s.collaboration.FindComments(ctx, issueID)
-}
-
-func (s *IssueService) CreateComment(ctx context.Context, in port.CreateCommentInput) (*domain.Comment, error) {
-	if s.collaboration == nil {
-		return nil, domain.ErrInvalidComment
-	}
-	issue, err := s.repo.FindByID(ctx, in.IssueID)
-	if err != nil {
-		return nil, err
-	}
-	if err := s.requireComment(ctx, issue.ProjectID, in.AuthorID, in.GlobalRole); err != nil {
-		return nil, err
-	}
-	comment, err := domain.NewComment(in.IssueID, in.AuthorID, in.Body)
-	if err != nil {
-		return nil, err
-	}
-	comment.Mentions, err = s.collaboration.FindMentionIDs(ctx, in.IssueID, extractMentionNames(in.Body))
-	if err != nil {
-		return nil, err
-	}
-	if err := s.collaboration.SaveComment(ctx, comment); err != nil {
-		return nil, err
-	}
-	return comment, nil
-}
-
-func (s *IssueService) UpdateComment(ctx context.Context, commentID, actorID uuid.UUID, globalRole, body string) (*domain.Comment, error) {
-	if s.collaboration == nil {
-		return nil, domain.ErrInvalidComment
-	}
-	existing, err := s.collaboration.FindComment(ctx, commentID)
-	if err != nil {
-		return nil, err
-	}
-	issue, err := s.repo.FindByID(ctx, existing.IssueID)
-	if err != nil {
-		return nil, err
-	}
-	if err := s.requireComment(ctx, issue.ProjectID, actorID, globalRole); err != nil {
-		return nil, err
-	}
-	comment := &domain.Comment{ID: commentID, AuthorID: actorID}
-	if err := comment.Update(body); err != nil {
-		return nil, err
-	}
-	comment.Mentions, _ = s.collaboration.FindMentionIDs(ctx, uuid.Nil, extractMentionNames(body))
-	if err := s.collaboration.UpdateComment(ctx, comment); err != nil {
-		return nil, err
-	}
-	return comment, nil
-}
-
-func (s *IssueService) DeleteComment(ctx context.Context, commentID, actorID uuid.UUID, globalRole string) error {
-	if s.collaboration == nil {
-		return domain.ErrInvalidComment
-	}
-	existing, err := s.collaboration.FindComment(ctx, commentID)
-	if err != nil {
-		return err
-	}
-	issue, err := s.repo.FindByID(ctx, existing.IssueID)
-	if err != nil {
-		return err
-	}
-	if err := s.requireComment(ctx, issue.ProjectID, actorID, globalRole); err != nil {
-		return err
-	}
-	comment := &domain.Comment{ID: commentID, AuthorID: actorID}
-	comment.Delete()
-	return s.collaboration.DeleteComment(ctx, comment)
-}
-
 func (s *IssueService) ListActivities(ctx context.Context, issueID, actorID uuid.UUID, globalRole string) ([]*domain.Activity, error) {
 	issue, err := s.repo.FindByID(ctx, issueID)
 	if err != nil {
@@ -646,10 +540,6 @@ func (s *IssueService) requireIssueView(ctx context.Context, projectID, actorID 
 
 func (s *IssueService) requireIssueCreate(ctx context.Context, projectID, actorID uuid.UUID, globalRole string) error {
 	return s.authorize(ctx, "create_issue", projectID, actorID, globalRole)
-}
-
-func (s *IssueService) requireComment(ctx context.Context, projectID, actorID uuid.UUID, globalRole string) error {
-	return s.authorize(ctx, "comment", projectID, actorID, globalRole)
 }
 
 // authorize delega la decision de acceso al autorizador del proyecto. Sin autorizador se deniega.

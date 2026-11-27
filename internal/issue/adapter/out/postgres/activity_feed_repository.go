@@ -3,6 +3,7 @@ package postgres
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -40,8 +41,9 @@ var referenceTables = map[string]string{
 }
 
 // FeedRefs lists the entries of the feed. A history entry is the group of activity rows that share a batch id
-// (rows without a batch form an entry of their own, keyed by their id).
-func (r *ActivityFeedRepository) FeedRefs(ctx context.Context, issueID uuid.UUID, filter string, after *domain.ActivityCursor, limit int) ([]port.FeedRef, error) {
+// (rows without a batch form an entry of their own, keyed by their id). Comments the viewer cannot read are left
+// out; deleted comments stay, to show the placeholder.
+func (r *ActivityFeedRepository) FeedRefs(ctx context.Context, issueID uuid.UUID, filter string, viewer domain.CommentLevel, after *domain.ActivityCursor, limit int) ([]port.FeedRef, error) {
 	var parts []string
 	if filter != domain.ActivityFilterComments {
 		parts = append(parts, `
@@ -51,10 +53,11 @@ func (r *ActivityFeedRepository) FeedRefs(ctx context.Context, issueID uuid.UUID
 			GROUP BY COALESCE(a.batch_id, a.id)`)
 	}
 	if filter != domain.ActivityFilterHistory {
+		// The viewer level is an enum value of the domain, so it is written as a literal.
 		parts = append(parts, `
 			SELECT 'comment' AS kind, c.id AS item_id, c.created_at AS at
 			FROM comments c
-			WHERE c.issue_id = $1 AND c.deleted_at IS NULL`)
+			WHERE c.issue_id = $1 AND `+readableSQL("c", strconv.Itoa(int(viewer))))
 	}
 	if len(parts) == 0 {
 		return nil, apperror.New(apperror.KindValidation, "invalid activity filter")
@@ -85,36 +88,26 @@ func (r *ActivityFeedRepository) FeedContent(ctx context.Context, issueID uuid.U
 		Comments:   map[uuid.UUID]*domain.Comment{},
 		Activities: map[uuid.UUID][]*domain.Activity{},
 	}
-	var commentIDs, batchIDs []string
+	var commentIDs, batchIDs []uuid.UUID
 	for _, ref := range refs {
 		if ref.Kind == domain.FeedKindComment {
-			commentIDs = append(commentIDs, ref.ID.String())
+			commentIDs = append(commentIDs, ref.ID)
 		} else {
-			batchIDs = append(batchIDs, ref.ID.String())
+			batchIDs = append(batchIDs, ref.ID)
 		}
 	}
-	if len(commentIDs) > 0 {
-		var rows []commentRow
-		if err := r.db.SelectContext(ctx, &rows, `
-			SELECT id, issue_id, author_id, body, created_at, updated_at, deleted_at
-			FROM comments
-			WHERE issue_id = $1 AND id = ANY($2::uuid[])`, issueID, commentIDs); err != nil {
-			return content, apperror.Wrap(apperror.KindInternal, "failed to load comments", err)
-		}
-		for _, row := range rows {
-			content.Comments[row.ID] = &domain.Comment{
-				ID: row.ID, IssueID: row.IssueID, AuthorID: row.AuthorID, Body: row.Body,
-				CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt, DeletedAt: row.DeletedAt,
-			}
-		}
+	comments, err := loadCommentRows(ctx, r.db, issueID, commentIDs)
+	if err != nil {
+		return content, err
 	}
+	content.Comments = comments
 	if len(batchIDs) > 0 {
 		var rows []activityRow
 		if err := r.db.SelectContext(ctx, &rows, `
 			SELECT id, issue_id, actor_id, action, field_name, old_value, new_value, batch_id, created_at
 			FROM activities
 			WHERE issue_id = $1 AND COALESCE(batch_id, id) = ANY($2::uuid[])
-			ORDER BY created_at ASC, id ASC`, issueID, batchIDs); err != nil {
+			ORDER BY created_at ASC, id ASC`, issueID, commentIDStrings(batchIDs)); err != nil {
 			return content, apperror.Wrap(apperror.KindInternal, "failed to load activity", err)
 		}
 		for _, row := range rows {

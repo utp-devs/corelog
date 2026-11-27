@@ -41,10 +41,12 @@ type ActivityEntry struct {
 
 // ActivityComment is the body of a comment entry.
 type ActivityComment struct {
-	ID        uuid.UUID
-	Body      string
-	UpdatedAt time.Time
-	Edited    bool
+	ID         uuid.UUID
+	Body       string
+	UpdatedAt  time.Time
+	Edited     bool
+	Deleted    bool
+	Visibility string
 }
 
 // ActivityChange is one field change rendered for people: the field name is translated and ids are resolved
@@ -59,8 +61,9 @@ type ActivityChange struct {
 
 // ActivityFeedReader is the out-port that reads the rows behind the feed. Every method works on one issue.
 type ActivityFeedReader interface {
-	// FeedRefs returns up to limit entries ordered newest first, after the cursor when it is not nil.
-	FeedRefs(ctx context.Context, issueID uuid.UUID, filter string, after *domain.ActivityCursor, limit int) ([]FeedRef, error)
+	// FeedRefs returns up to limit entries ordered newest first, after the cursor when it is not nil. Comments the viewer
+	// cannot read are left out; deleted comments stay as placeholders.
+	FeedRefs(ctx context.Context, issueID uuid.UUID, filter string, viewer domain.CommentLevel, after *domain.ActivityCursor, limit int) ([]FeedRef, error)
 	// FeedContent loads the comments and activity rows of the given entries in a fixed number of statements.
 	FeedContent(ctx context.Context, issueID uuid.UUID, refs []FeedRef) (FeedContent, error)
 	// ReferenceNames returns the current names of catalog rows. kind is one of the ReferenceKind constants.

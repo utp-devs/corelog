@@ -37,10 +37,12 @@ type activityActorResponse struct {
 }
 
 type activityCommentResponse struct {
-	ID        string    `json:"id"`
-	Body      string    `json:"body"`
-	UpdatedAt time.Time `json:"updated_at"`
-	Edited    bool      `json:"edited"`
+	ID         string    `json:"id"`
+	Body       string    `json:"body"`
+	UpdatedAt  time.Time `json:"updated_at"`
+	Edited     bool      `json:"edited"`
+	Deleted    bool      `json:"deleted"`
+	Visibility string    `json:"visibility"`
 }
 
 type activityChangeResponse struct {
@@ -125,6 +127,7 @@ func toActivityEntryResponses(entries []port.ActivityEntry) []activityEntryRespo
 			item.Comment = &activityCommentResponse{
 				ID: entry.Comment.ID.String(), Body: entry.Comment.Body,
 				UpdatedAt: entry.Comment.UpdatedAt, Edited: entry.Comment.Edited,
+				Deleted: entry.Comment.Deleted, Visibility: entry.Comment.Visibility,
 			}
 		}
 		for _, change := range entry.Changes {

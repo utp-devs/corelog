@@ -7,9 +7,7 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/jhonsferg/corelog/internal/issue/application/port"
 	"github.com/jhonsferg/corelog/internal/issue/domain"
-	"github.com/jhonsferg/corelog/internal/platform/apperror"
 )
 
 // memCollab guarda comentarios, actividad y menciones en memoria.
@@ -61,36 +59,6 @@ func (m *memCollab) FindMentionIDs(_ context.Context, _ uuid.UUID, names []strin
 		return nil, nil
 	}
 	return m.mentionIDs, nil
-}
-
-func TestIssueServiceCommentsAndMentions(t *testing.T) {
-	ctx := context.Background()
-	repo := newFakeIssueRepo()
-	collab := &memCollab{mentionIDs: []uuid.UUID{uuid.New()}}
-	svc := NewIssueService(repo, newFakeUserDirectory(), collab, contributorRoleResolver())
-	issue, _ := svc.Create(ctx, port.CreateInput{Summary: "Comentarios", Description: "Desc", Priority: domain.PriorityLow, ReporterID: uuid.New()})
-	author := uuid.New()
-
-	if _, err := svc.CreateComment(ctx, port.CreateCommentInput{IssueID: issue.ID, AuthorID: author, GlobalRole: "agent", Body: "  "}); !errors.Is(err, domain.ErrInvalidComment) {
-		t.Fatalf("empty comment: got %v", err)
-	}
-	created, err := svc.CreateComment(ctx, port.CreateCommentInput{IssueID: issue.ID, AuthorID: author, GlobalRole: "agent", Body: "Revisar con @ana y @luis"})
-	if err != nil {
-		t.Fatalf("CreateComment: %v", err)
-	}
-	if len(created.Mentions) != 1 {
-		t.Fatalf("mentions = %v, want the resolved ids", created.Mentions)
-	}
-
-	listed, err := svc.ListComments(ctx, issue.ID, author, "agent")
-	if err != nil || len(listed) != 1 {
-		t.Fatalf("ListComments = %d, %v; want 1", len(listed), err)
-	}
-	outsiders := NewIssueService(repo, newFakeUserDirectory(), collab, fakeProjectRoleResolver{})
-	if _, err := outsiders.ListComments(ctx, issue.ID, uuid.New(), "requester"); apperror.KindOf(err) != apperror.KindForbidden {
-		t.Fatalf("non member lists comments: got %v", err)
-	}
-
 }
 
 func TestIssueServiceUserNamesResolvesOnlyRequestedPeople(t *testing.T) {

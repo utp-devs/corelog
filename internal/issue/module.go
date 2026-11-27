@@ -90,3 +90,9 @@ func (m *Module) WithVersionLinks(r port.VersionLinkRepository) *Module {
 	m.service.WithVersionLinks(r)
 	return m
 }
+
+// WithComments wires the comment use cases behind the comment routes.
+func (m *Module) WithComments(comments port.CommentService) *Module {
+	m.Handler.WithComments(comments)
+	return m
+}

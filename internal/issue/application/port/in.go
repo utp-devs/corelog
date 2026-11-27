@@ -59,13 +59,6 @@ type UpdateDetailsInput struct {
 	Custom map[string]json.RawMessage
 }
 
-type CreateCommentInput struct {
-	IssueID    uuid.UUID
-	AuthorID   uuid.UUID
-	GlobalRole string
-	Body       string
-}
-
 type ListFilter struct {
 	ProjectIDs []uuid.UUID
 	Status     domain.Status
@@ -105,10 +98,6 @@ type Service interface {
 	Unassign(ctx context.Context, id, actorID uuid.UUID, globalRole string) (*domain.Issue, error)
 	UpdateMetadata(ctx context.Context, id, actorID uuid.UUID, globalRole string, input UpdateMetadataInput) (*domain.Issue, error)
 	UpdateDetails(ctx context.Context, id, actorID uuid.UUID, globalRole string, input UpdateDetailsInput) (*domain.Issue, error)
-	ListComments(ctx context.Context, issueID, actorID uuid.UUID, globalRole string) ([]*domain.Comment, error)
-	CreateComment(ctx context.Context, in CreateCommentInput) (*domain.Comment, error)
-	UpdateComment(ctx context.Context, commentID, actorID uuid.UUID, globalRole, body string) (*domain.Comment, error)
-	DeleteComment(ctx context.Context, commentID, actorID uuid.UUID, globalRole string) error
 	ListActivities(ctx context.Context, issueID, actorID uuid.UUID, globalRole string) ([]*domain.Activity, error)
 	AuthorizeIssueEdit(ctx context.Context, issueID, actorID uuid.UUID, globalRole string) error
 	GetWatcherState(ctx context.Context, issueID, actorID uuid.UUID, globalRole string) (WatcherState, error)

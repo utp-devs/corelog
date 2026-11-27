@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 	_ "github.com/jackc/pgx/v5/stdlib"
@@ -68,7 +69,7 @@ func TestWatcherRepositoryAndCommentAutoFollowPostgres(t *testing.T) {
 	if err != nil || state.Count != 0 || state.IsWatching {
 		t.Fatalf("initial state=%+v err=%v", state, err)
 	}
-	comment, err := domain.NewComment(issueID, authorID, "Following automatically")
+	comment, err := domain.NewComment(issueID, authorID, "Following automatically", time.Now())
 	if err != nil {
 		t.Fatal(err)
 	}

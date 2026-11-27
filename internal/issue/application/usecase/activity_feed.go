@@ -57,8 +57,12 @@ func (s *IssueService) ListActivityFeed(ctx context.Context, issueID, actorID uu
 	if s.feed == nil {
 		return page, nil
 	}
+	level, err := commentLevelOf(ctx, s.perms, actorID, globalRole, issue.ProjectID)
+	if err != nil {
+		return nil, err
+	}
 	// One extra row tells whether an older page exists.
-	refs, err := s.feed.FeedRefs(ctx, issueID, filter, after, limit+1)
+	refs, err := s.feed.FeedRefs(ctx, issueID, filter, level, after, limit+1)
 	if err != nil {
 		return nil, err
 	}
@@ -162,12 +166,17 @@ func (b *nameBook) entry(ref port.FeedRef, content port.FeedContent) (port.Activ
 		if !ok {
 			return port.ActivityEntry{}, false
 		}
+		body := comment.Body
+		if comment.IsDeleted() {
+			body = domain.CommentDeletedPlaceholder
+		}
 		return port.ActivityEntry{
 			ID: ref.ID, Kind: domain.FeedKindComment, At: ref.At,
 			ActorID: comment.AuthorID, ActorName: b.userName(comment.AuthorID),
 			Comment: &port.ActivityComment{
-				ID: comment.ID, Body: comment.Body, UpdatedAt: comment.UpdatedAt,
-				Edited: comment.UpdatedAt.After(comment.CreatedAt),
+				ID: comment.ID, Body: body, UpdatedAt: comment.UpdatedAt,
+				Edited: comment.IsEdited(), Deleted: comment.IsDeleted(),
+				Visibility: string(comment.Visibility),
 			},
 		}, true
 	}

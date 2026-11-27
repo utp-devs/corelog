@@ -46,6 +46,14 @@ func (h *Handler) RegisterRoutes(r chi.Router) {
 		r.Post("/{id}/watchers", h.WatchIssue)
 		r.Delete("/{id}/watchers", h.UnwatchIssue)
 	})
+	r.Route("/comments", func(r chi.Router) {
+		r.Use(appmw.Authenticate(h.jwtSecret))
+		r.Patch("/{comment_id}", h.UpdateComment)
+		r.Delete("/{comment_id}", h.DeleteComment)
+		r.Get("/{comment_id}/revisions", h.ListCommentRevisions)
+		r.Put("/{comment_id}/reactions/{emoji}", h.PutCommentReaction)
+		r.Delete("/{comment_id}/reactions/{emoji}", h.DeleteCommentReaction)
+	})
 	r.Route("/backlog", func(r chi.Router) {
 		r.Use(appmw.Authenticate(h.jwtSecret))
 		r.Get("/", h.ListBacklog)

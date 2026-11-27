@@ -24,6 +24,7 @@ import (
 	issuefilesystem "github.com/jhonsferg/corelog/internal/issue/adapter/out/filesystem"
 	issuepostgres "github.com/jhonsferg/corelog/internal/issue/adapter/out/postgres"
 	issueport "github.com/jhonsferg/corelog/internal/issue/application/port"
+	issueusecase "github.com/jhonsferg/corelog/internal/issue/application/usecase"
 	"github.com/jhonsferg/corelog/internal/note"
 	notepostgres "github.com/jhonsferg/corelog/internal/note/adapter/out/postgres"
 	"github.com/jhonsferg/corelog/internal/notification"
@@ -55,6 +56,8 @@ import (
 	userport "github.com/jhonsferg/corelog/internal/user/application/port"
 	"github.com/jhonsferg/corelog/internal/workflow"
 	workflowpostgres "github.com/jhonsferg/corelog/internal/workflow/adapter/out/postgres"
+	"github.com/jhonsferg/corelog/internal/worklog"
+	worklogpostgres "github.com/jhonsferg/corelog/internal/worklog/adapter/out/postgres"
 )
 
 // buildRouter assembles the HTTP router with every module mounted under /api/v1. It only constructs
@@ -134,6 +137,9 @@ func buildRouter(cfg *config.Config, db *sqlx.DB, log *slog.Logger) (chi.Router,
 	wireSearch(searchModule, db, noteModule.Search)
 	calendarModule := calendar.NewModule(calendarpostgres.NewCalendarRepository(db), projectAuthorizer, cfg.Auth.JWTSecret)
 	sprintModule := sprint.NewModule(sprintpostgres.NewSprintRepository(db), projectAuthorizer, database.NewTxManager(db), clock.RealClock{}, cfg.Auth.JWTSecret)
+	worklogModule := worklog.NewModule(worklogpostgres.NewRepository(db), projectAuthorizer, database.NewTxManager(db),
+		events.NewPostgresPublisher(func(ctx context.Context) sqlx.ExtContext { return database.Executor(ctx, db) }),
+		clock.RealClock{}, cfg.Auth.JWTSecret)
 	releaseModule := release.NewModule(release.Dependencies{
 		Repository: releasepostgres.NewRepository(db),
 		Authorizer: projectAuthorizer,
@@ -160,6 +166,7 @@ func buildRouter(cfg *config.Config, db *sqlx.DB, log *slog.Logger) (chi.Router,
 		WithClock(clock.RealClock{})
 	catalogModule := issue.NewCatalogModule(issueCatalogRepo, orgCatalogRoleChecker{svc: orgModule.Service}, projectAuthorizer, database.NewTxManager(db), clock.RealClock{}, cfg.Auth.JWTSecret)
 	issueModule.Handler.WithAttachments(attachmentRepo, fileStorage)
+	issueModule.WithComments(issueusecase.NewCommentService(issueRepo, issuepostgres.NewCommentRepository(db), issuePermissionChecker{authorizer: authorizer}, projectAuthorizer, userDirectory, database.NewTxManager(db), events.NewPostgresPublisher(func(ctx context.Context) sqlx.ExtContext { return database.Executor(ctx, db) }), clock.RealClock{}))
 	customFieldModule := issue.NewCustomFieldModule(issuepostgres.NewCustomFieldRepository(db), orgCatalogRoleChecker{svc: orgModule.Service}, projectAuthorizer, database.NewTxManager(db), clock.RealClock{}, cfg.Auth.JWTSecret)
 	issueModule.WithCustomFields(customFieldModule.Service, projectBrowseChecker{authorizer: projectAuthorizer})
 	issueModule.Handler.WithFieldScope(customFieldModule.Service)
@@ -176,7 +183,7 @@ func buildRouter(cfg *config.Config, db *sqlx.DB, log *slog.Logger) (chi.Router,
 		logo.RegisterRoutes(r)
 		catalogModule.Handler.RegisterCatalogRoutes(r)
 		customFieldModule.Handler.RegisterCustomFieldRoutes(r)
-		httpserver.Mount(r, userModule.Handler, teamModule.Handler, projectModule.Handler, boardModule.Handler, issueModule.Handler, sprintModule.Handler, notificationModule.Handler, calendarModule.Handler, searchModule.Handler, dashboardModule.Handler, favoriteModule.Handler, noteModule.Handler, orgModule.Handler, workflowAdmin.Handler, releaseModule.Handler)
+		httpserver.Mount(r, userModule.Handler, teamModule.Handler, projectModule.Handler, boardModule.Handler, issueModule.Handler, sprintModule.Handler, notificationModule.Handler, calendarModule.Handler, searchModule.Handler, dashboardModule.Handler, favoriteModule.Handler, noteModule.Handler, orgModule.Handler, workflowAdmin.Handler, releaseModule.Handler, worklogModule.Handler)
 	})
 	return router, nil
 }

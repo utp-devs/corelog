@@ -28,14 +28,10 @@ type UserDirectory interface {
 }
 
 type CollaborationRepository interface {
-	FindComment(ctx context.Context, commentID uuid.UUID) (*domain.Comment, error)
+	// SaveComment stores a public comment written by a workflow transition, with its activity in the same transaction.
 	SaveComment(ctx context.Context, comment *domain.Comment) error
-	FindComments(ctx context.Context, issueID uuid.UUID) ([]*domain.Comment, error)
-	UpdateComment(ctx context.Context, comment *domain.Comment) error
-	DeleteComment(ctx context.Context, comment *domain.Comment) error
 	SaveActivity(ctx context.Context, activity *domain.Activity) error
 	FindActivities(ctx context.Context, issueID uuid.UUID) ([]*domain.Activity, error)
-	FindMentionIDs(ctx context.Context, issueID uuid.UUID, names []string) ([]uuid.UUID, error)
 }
 
 // ActionManageWorkflow es la accion del autorizador para editar el flujo de un proyecto.

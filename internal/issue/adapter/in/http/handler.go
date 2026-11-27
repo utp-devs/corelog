@@ -25,6 +25,13 @@ type Handler struct {
 	fieldScope  port.CustomFieldScopeReader
 	ops         port.IssueOperations
 	transitions port.TransitionService
+	comments    port.CommentService
+}
+
+// WithComments fixes the comment service behind the comment routes.
+func (h *Handler) WithComments(comments port.CommentService) *Handler {
+	h.comments = comments
+	return h
 }
 
 // WithFieldScope fixes the reader that lists the custom fields of an issue in its responses.
@@ -385,105 +392,6 @@ func parseOptionalUUID(value string) *uuid.UUID {
 		return nil
 	}
 	return &id
-}
-
-func (h *Handler) ListComments(w http.ResponseWriter, r *http.Request) {
-	actorID, ok := appmw.UserIDFromContext(r.Context())
-	if !ok {
-		httpresponse.Error(w, apperror.New(apperror.KindUnauthorized, "not authenticated"))
-		return
-	}
-	globalRole, _ := appmw.RoleFromContext(r.Context())
-	issueID, err := h.issueRef(r, "id")
-	if err != nil {
-		httpresponse.Error(w, err)
-		return
-	}
-	comments, err := h.service.ListComments(r.Context(), issueID, actorID, globalRole)
-	if err != nil {
-		httpresponse.Error(w, err)
-		return
-	}
-	httpresponse.JSON(w, http.StatusOK, toCommentResponses(comments))
-}
-
-func (h *Handler) CreateComment(w http.ResponseWriter, r *http.Request) {
-	issueID, err := h.issueRef(r, "id")
-	if err != nil {
-		httpresponse.Error(w, err)
-		return
-	}
-	authorID, ok := appmw.UserIDFromContext(r.Context())
-	if !ok {
-		httpresponse.Error(w, apperror.New(apperror.KindUnauthorized, "not authenticated"))
-		return
-	}
-	globalRole, _ := appmw.RoleFromContext(r.Context())
-	var req createCommentRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		httpresponse.Error(w, apperror.New(apperror.KindValidation, "invalid request body"))
-		return
-	}
-	if err := validation.Struct(req); err != nil {
-		httpresponse.Error(w, validation.Failed(req, err))
-		return
-	}
-	comment, err := h.service.CreateComment(r.Context(), port.CreateCommentInput{
-		IssueID: issueID, AuthorID: authorID, GlobalRole: globalRole, Body: req.Body,
-	})
-	if err != nil {
-		httpresponse.Error(w, err)
-		return
-	}
-	httpresponse.JSON(w, http.StatusCreated, toCommentResponse(comment))
-}
-
-func (h *Handler) UpdateComment(w http.ResponseWriter, r *http.Request) {
-	commentID, err := uuid.Parse(chi.URLParam(r, "comment_id"))
-	if err != nil {
-		httpresponse.Error(w, apperror.New(apperror.KindValidation, "invalid comment id"))
-		return
-	}
-	actorID, ok := appmw.UserIDFromContext(r.Context())
-	if !ok {
-		httpresponse.Error(w, apperror.New(apperror.KindUnauthorized, "not authenticated"))
-		return
-	}
-	globalRole, _ := appmw.RoleFromContext(r.Context())
-	var req updateCommentRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		httpresponse.Error(w, apperror.New(apperror.KindValidation, "invalid request body"))
-		return
-	}
-	if err := validation.Struct(req); err != nil {
-		httpresponse.Error(w, validation.Failed(req, err))
-		return
-	}
-	comment, err := h.service.UpdateComment(r.Context(), commentID, actorID, globalRole, req.Body)
-	if err != nil {
-		httpresponse.Error(w, err)
-		return
-	}
-	httpresponse.JSON(w, http.StatusOK, toCommentResponse(comment))
-}
-
-func (h *Handler) DeleteComment(w http.ResponseWriter, r *http.Request) {
-	commentID, err := uuid.Parse(chi.URLParam(r, "comment_id"))
-	if err != nil {
-		httpresponse.Error(w, apperror.New(apperror.KindValidation, "invalid comment id"))
-		return
-	}
-	actorID, ok := appmw.UserIDFromContext(r.Context())
-	if !ok {
-		httpresponse.Error(w, apperror.New(apperror.KindUnauthorized, "not authenticated"))
-		return
-	}
-	globalRole, _ := appmw.RoleFromContext(r.Context())
-	if err := h.service.DeleteComment(r.Context(), commentID, actorID, globalRole); err != nil {
-		httpresponse.Error(w, err)
-		return
-	}
-	httpresponse.JSON(w, http.StatusNoContent, nil)
 }
 
 func (h *Handler) ListActivities(w http.ResponseWriter, r *http.Request) {

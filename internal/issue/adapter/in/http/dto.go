@@ -68,26 +68,12 @@ type updateDetailsRequest struct {
 	Custom      map[string]json.RawMessage `json:"custom"`
 }
 
-type createCommentRequest struct {
-	Body string `json:"body" validate:"required,min=1,max=5000"`
-}
-
 type updateCommentRequest struct {
 	Body string `json:"body" validate:"required,min=1,max=5000"`
 }
 
 type updateRankRequest struct {
 	Rank string `json:"rank" validate:"required,max=64"`
-}
-
-type commentResponse struct {
-	ID        string     `json:"id"`
-	IssueID   string     `json:"issue_id"`
-	AuthorID  string     `json:"author_id"`
-	Body      string     `json:"body"`
-	CreatedAt time.Time  `json:"created_at"`
-	UpdatedAt time.Time  `json:"updated_at"`
-	DeletedAt *time.Time `json:"deleted_at,omitempty"`
 }
 
 type activityResponse struct {
@@ -239,22 +225,6 @@ func personIDs(issues ...*domain.Issue) []uuid.UUID {
 		}
 	}
 	return ids
-}
-
-func toCommentResponse(comment *domain.Comment) commentResponse {
-	return commentResponse{
-		ID: comment.ID.String(), IssueID: comment.IssueID.String(), AuthorID: comment.AuthorID.String(),
-		Body: comment.Body, CreatedAt: comment.CreatedAt, UpdatedAt: comment.UpdatedAt,
-		DeletedAt: comment.DeletedAt,
-	}
-}
-
-func toCommentResponses(comments []*domain.Comment) []commentResponse {
-	out := make([]commentResponse, 0, len(comments))
-	for _, comment := range comments {
-		out = append(out, toCommentResponse(comment))
-	}
-	return out
 }
 
 func toActivityResponses(activities []*domain.Activity) []activityResponse {

@@ -53,6 +53,15 @@ func run() error {
 		return err
 	}
 
+	// Comment mentions and replies become in-app notifications through the domain event outbox.
+	dispatchCtx, stopDispatch := context.WithCancel(context.Background())
+	defer stopDispatch()
+	go func() {
+		if err := startCommentMentionDispatcher(dispatchCtx, db, log); err != nil {
+			log.Error("comment mention dispatcher stopped", "error", err)
+		}
+	}()
+
 	server := httpserver.New(cfg.Server, router)
 
 	serverErrors := make(chan error, 1)

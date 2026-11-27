@@ -230,7 +230,7 @@ func setupIssueRouter() (*chi.Mux, string, *memoryIssueRepo, *memoryDirectory) {
 	repo := newMemoryIssueRepo()
 	dir := newMemoryDirectory()
 	service := usecase.NewIssueService(repo, dir, projectRoleResolver{}, &memorySavedFilterRepository{})
-	handler := issuehttp.NewHandler(service, jwtSecret)
+	handler := issuehttp.NewHandler(service, jwtSecret).WithComments(newStubComments())
 
 	r := chi.NewRouter()
 	handler.RegisterRoutes(r)

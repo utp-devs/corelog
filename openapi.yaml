@@ -29,6 +29,8 @@ tags:
     description: Tableros por proyecto, columnas, carriles, filtros rapidos y movimiento de tarjetas
   - name: workflows
     description: Flujo de trabajo por proyecto, plantillas y catalogo de estados de la organizacion
+  - name: worklogs
+    description: Registro de tiempo, estimaciones de incidencias, hoja de tiempo personal y resumen de tiempo por proyecto
   - name: health
     description: Service liveness
 paths:
@@ -2934,6 +2936,265 @@ paths:
         '404': {$ref: '#/components/responses/NotFound'}
         '409': {$ref: '#/components/responses/Conflict'}
         '422': {$ref: '#/components/responses/ValidationError'}
+  /issues/{issue}/worklogs:
+    get:
+      tags: [worklogs]
+      operationId: listIssueWorklogs
+      summary: Registros de tiempo de una incidencia
+      description: Devuelve los registros vivos (los mas recientes primero) y los totales de la incidencia (estimacion original, restante y tiempo registrado). Requiere ver el proyecto; una incidencia borrada o de un proyecto borrado responde 404.
+      security:
+        - bearerAuth: []
+      parameters:
+        - {name: issue, in: path, required: true, schema: {type: string, format: uuid}}
+      responses:
+        '200':
+          description: Registros y totales
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      worklogs: {type: array, items: {$ref: '#/components/schemas/Worklog'}}
+                      totals: {$ref: '#/components/schemas/WorklogTotals'}
+              example:
+                data:
+                  worklogs:
+                    - id: 7d1c2f0e-3a4b-4c5d-8e6f-112233445566
+                      issue_id: 3b9a1c2d-0e1f-4a2b-9c3d-445566778899
+                      issue_key: COR-12
+                      author_id: 1f2e3d4c-5b6a-4978-8a9b-0c1d2e3f4a5b
+                      author_name: Ana Lopez
+                      started_at: '2026-11-27T14:00:00Z'
+                      time_spent_seconds: 5400
+                      time_spent: 1h 30m
+                      description: Revision del flujo de login
+                      remaining_mode: auto
+                      remaining_adjust_seconds: 5400
+                      created_at: '2026-11-27T15:00:00Z'
+                      updated_at: '2026-11-27T15:00:00Z'
+                  totals:
+                    original_estimate_seconds: 28800
+                    original_estimate: 1d
+                    remaining_estimate_seconds: 23400
+                    remaining_estimate: 6h 30m
+                    time_spent_seconds: 5400
+                    time_spent: 1h 30m
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+    post:
+      tags: [worklogs]
+      operationId: logIssueWork
+      summary: Registrar tiempo en una incidencia
+      description: Exactamente uno de time_spent (texto como 1w 2d 3h 30m, usando horas por dia y dias por semana de la organizacion) o time_spent_seconds es obligatorio. La duracion debe estar entre 1 segundo y 3 dias de 24 horas. started_at por defecto es ahora y no puede estar mas de un dia en el futuro. remaining indica como cambia la estimacion restante; auto la reduce por el tiempo registrado sin bajar de cero (por defecto), set la reemplaza por value, reduce la reduce en value y leave no la toca. Requiere log_work; con mode distinto de leave requiere tambien edit_issue. Proyecto archivado responde 409 project.archived.
+      security:
+        - bearerAuth: []
+      parameters:
+        - {name: issue, in: path, required: true, schema: {type: string, format: uuid}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                time_spent: {type: string, maxLength: 60}
+                time_spent_seconds: {type: integer, minimum: 1, maximum: 259200}
+                started_at: {type: string, format: date-time}
+                description: {type: string, maxLength: 5000}
+                remaining:
+                  type: object
+                  additionalProperties: false
+                  properties:
+                    mode: {type: string, enum: [auto, set, reduce, leave]}
+                    value: {type: string, maxLength: 60, description: Duracion para set (puede ser 0m) o reduce}
+                    value_seconds: {type: integer, minimum: 0}
+            example:
+              time_spent: 1h 30m
+              started_at: '2026-11-27T14:00:00Z'
+              description: Revision del flujo de login
+              remaining: {mode: auto}
+      responses:
+        '201':
+          description: Registro creado con los totales actualizados
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      worklog: {$ref: '#/components/schemas/Worklog'}
+                      totals: {$ref: '#/components/schemas/WorklogTotals'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+  /issues/{issue}/estimates:
+    put:
+      tags: [worklogs]
+      operationId: updateIssueEstimates
+      summary: Cambiar la estimacion original y restante de una incidencia
+      description: Cada campo es opcional. Un texto de duracion (1w 2d 3h 30m, 0m permitido) fija el valor; null lo borra. Las duraciones se leen con las horas por dia de la organizacion. Requiere edit_issue. Cada cambio queda en el historial de la incidencia.
+      security:
+        - bearerAuth: []
+      parameters:
+        - {name: issue, in: path, required: true, schema: {type: string, format: uuid}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                original: {type: string, nullable: true, maxLength: 60}
+                remaining: {type: string, nullable: true, maxLength: 60}
+            example: {original: 3d, remaining: 2d 4h}
+      responses:
+        '200':
+          description: Totales de la incidencia
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: {$ref: '#/components/schemas/WorklogTotals'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+  /worklogs/{id}:
+    patch:
+      tags: [worklogs]
+      operationId: updateWorklog
+      summary: Editar un registro de tiempo
+      description: El autor edita su registro con log_work; cualquier otro usuario necesita manage_worklogs (lead del proyecto, o propietario o admin de la organizacion). Si cambia el tiempo de un registro con modo auto, la estimacion restante se recalcula desde el valor anterior. Proyecto archivado responde 409.
+      security:
+        - bearerAuth: []
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                time_spent: {type: string, maxLength: 60}
+                time_spent_seconds: {type: integer, minimum: 1, maximum: 259200}
+                started_at: {type: string, format: date-time}
+                description: {type: string, maxLength: 5000}
+            example: {time_spent: 2h, description: Corregido el tiempo}
+      responses:
+        '200':
+          description: Registro actualizado con los totales
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      worklog: {$ref: '#/components/schemas/Worklog'}
+                      totals: {$ref: '#/components/schemas/WorklogTotals'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+    delete:
+      tags: [worklogs]
+      operationId: deleteWorklog
+      summary: Borrar un registro de tiempo
+      description: Mismas reglas de permiso que la edicion. Devuelve al estimado restante el ajuste que el registro le quito (modos auto y reduce).
+      security:
+        - bearerAuth: []
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+      responses:
+        '204': {description: Registro borrado}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+  /me/timesheet:
+    get:
+      tags: [worklogs]
+      operationId: getMyTimesheet
+      summary: Hoja de tiempo por dia
+      description: Registros del usuario entre from y to (ambas fechas incluidas, AAAA-MM-DD, maximo 366 dias) agrupados por dia local de la organizacion del proyecto. Con user= (otro usuario) solo aparecen los registros de proyectos donde el llamador gestiona registros (lead o admin de la organizacion). Rango invalido responde 422 worklog.range_invalid.
+      security:
+        - bearerAuth: []
+      parameters:
+        - {name: from, in: query, required: true, schema: {type: string, format: date}}
+        - {name: to, in: query, required: true, schema: {type: string, format: date}}
+        - {name: user, in: query, required: false, schema: {type: string, format: uuid}}
+      responses:
+        '200':
+          description: Dias con registros y totales
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      from: {type: string, format: date}
+                      to: {type: string, format: date}
+                      total_seconds: {type: integer}
+                      total: {type: string, example: 1d 2h}
+                      days:
+                        type: array
+                        items: {$ref: '#/components/schemas/TimesheetDay'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+  /projects/{project}/time-summary:
+    get:
+      tags: [worklogs]
+      operationId: getProjectTimeSummary
+      summary: Resumen de tiempo de un proyecto
+      description: Totales de registros del proyecto entre from y to agrupados por user, issue o day (dia local de la organizacion). Requiere view_reports. Un proyecto ajeno responde 403.
+      security:
+        - bearerAuth: []
+      parameters:
+        - {name: project, in: path, required: true, schema: {type: string, format: uuid}}
+        - {name: from, in: query, required: true, schema: {type: string, format: date}}
+        - {name: to, in: query, required: true, schema: {type: string, format: date}}
+        - {name: group_by, in: query, required: false, schema: {type: string, enum: [user, issue, day], default: user}}
+      responses:
+        '200':
+          description: Grupos con totales
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      group_by: {type: string, enum: [user, issue, day]}
+                      from: {type: string, format: date}
+                      to: {type: string, format: date}
+                      total_seconds: {type: integer}
+                      total: {type: string}
+                      count: {type: integer}
+                      groups:
+                        type: array
+                        items: {$ref: '#/components/schemas/TimeSummaryGroup'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/ValidationError'}
   /notifications:
     get:
       tags: [issues]
@@ -4166,29 +4427,104 @@ paths:
       - $ref: '#/components/parameters/IssueOrganizationId'
     get:
       tags: [issues]
-      summary: List issue comments
+      summary: Listar comentarios de una incidencia en hilos
+      description: >-
+        Devuelve los comentarios raiz con sus respuestas (replies) y reply_count, en paginas por cursor. Orden por
+        fecha de creacion: asc por defecto, sort=desc para el mas reciente primero. Las respuestas cuelgan siempre de
+        la raiz del hilo (un nivel). Los comentarios internos solo aparecen a quien tiene el rol minimo del comentario;
+        quien no ve la incidencia recibe 404. Un comentario eliminado se muestra como marcador (deleted=true, body
+        "Comentario eliminado") mientras tenga respuestas visibles; si no, desaparece del listado.
+      operationId: listIssueComments
       security:
         - bearerAuth: []
+      parameters:
+        - name: sort
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: asc
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
       responses:
         '200':
-          description: Comments ordered by creation time
+          description: Hilos de la pagina y datos de paginacion.
           content:
             application/json:
               schema:
                 type: object
+                required: [data, meta]
                 properties:
                   data:
                     type: array
                     items:
-                      $ref: '#/components/schemas/IssueComment'
+                      $ref: '#/components/schemas/IssueCommentThread'
+                  meta:
+                    $ref: '#/components/schemas/CommentPageMeta'
+              example:
+                data:
+                  - id: 9d2c1e4a-0000-4000-8000-0000000000c1
+                    issue_id: 3f0c9b3e-6a53-4d0c-9a4e-2c1f5a7d8e90
+                    parent_id: null
+                    author_id: 6f1b2c3d-0000-4000-8000-0000000000a1
+                    author: {id: 6f1b2c3d-0000-4000-8000-0000000000a1, name: Ana Torres}
+                    body: Revisar con @[Luis Paredes](user:6f1b2c3d-0000-4000-8000-0000000000a2)
+                    visibility: public
+                    internal_role: null
+                    mentions: [6f1b2c3d-0000-4000-8000-0000000000a2]
+                    reactions: [{emoji: thumbs_up, count: 2, viewer_reacted: true}]
+                    edited: false
+                    edited_at: null
+                    deleted: false
+                    created_at: '2026-11-27T10:00:00Z'
+                    updated_at: '2026-11-27T10:00:00Z'
+                    reply_count: 1
+                    replies:
+                      - id: 9d2c1e4a-0000-4000-8000-0000000000c2
+                        issue_id: 3f0c9b3e-6a53-4d0c-9a4e-2c1f5a7d8e90
+                        parent_id: 9d2c1e4a-0000-4000-8000-0000000000c1
+                        author_id: 6f1b2c3d-0000-4000-8000-0000000000a2
+                        author: {id: 6f1b2c3d-0000-4000-8000-0000000000a2, name: Luis Paredes}
+                        body: Hecho, lo reviso hoy.
+                        visibility: public
+                        internal_role: null
+                        mentions: []
+                        reactions: []
+                        edited: false
+                        edited_at: null
+                        deleted: false
+                        created_at: '2026-11-27T10:05:00Z'
+                        updated_at: '2026-11-27T10:05:00Z'
+                meta: {limit: 50, next_cursor: null}
         '401':
           $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
     post:
       tags: [issues]
-      summary: Create an issue comment
-      description: The comment author is added to the issue watchers in the same database transaction.
+      summary: Crear un comentario o una respuesta
+      description: >-
+        Crea un comentario publico o interno. Con parent_id crea una respuesta en el hilo de la raiz (una respuesta a una
+        respuesta se guarda en la raiz). Una respuesta a un comentario interno debe ser interna. Las menciones usan la
+        sintaxis @[Nombre](user:UUID); solo cuentan las personas que pueden ver el proyecto (y, en comentarios internos,
+        el rol minimo del comentario). Las menciones no validas se mantienen como texto y se devuelven en warnings. El
+        autor sigue la incidencia en la misma transaccion. Quien no ve la incidencia recibe 404; quien la ve sin permiso
+        de comentar recibe 403; un proyecto archivado responde 409.
+      operationId: createIssueComment
       security:
         - bearerAuth: []
       requestBody:
@@ -4199,18 +4535,22 @@ paths:
               $ref: '#/components/schemas/CreateIssueCommentRequest'
       responses:
         '201':
-          description: Comment created
+          description: Comentario creado, con las advertencias de menciones.
           content:
             application/json:
               schema:
                 type: object
                 properties:
                   data:
-                    $ref: '#/components/schemas/IssueComment'
+                    $ref: '#/components/schemas/IssueCommentWrite'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
         '422':
           $ref: '#/components/responses/ValidationError'
   /issues/{id}/comments/{comment_id}:
@@ -4225,7 +4565,9 @@ paths:
           format: uuid
     patch:
       tags: [issues]
-      summary: Update a comment owned by the authenticated user
+      summary: Editar un comentario (ruta heredada de /comments/{comment_id})
+      description: Misma operacion que PATCH /comments/{comment_id}; el identificador de la incidencia se ignora.
+      operationId: updateIssueComment
       security:
         - bearerAuth: []
       requestBody:
@@ -4236,36 +4578,207 @@ paths:
               $ref: '#/components/schemas/UpdateIssueCommentRequest'
       responses:
         '200':
-          description: Comment updated
+          description: Comentario editado.
           content:
             application/json:
               schema:
                 type: object
                 properties:
                   data:
-                    $ref: '#/components/schemas/IssueComment'
+                    $ref: '#/components/schemas/IssueCommentWrite'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
         '422':
           $ref: '#/components/responses/ValidationError'
     delete:
       tags: [issues]
-      summary: Delete a comment owned by the authenticated user
+      summary: Eliminar un comentario (ruta heredada de /comments/{comment_id})
+      description: Misma operacion que DELETE /comments/{comment_id}.
+      operationId: deleteIssueComment
       security:
         - bearerAuth: []
       responses:
         '204':
-          description: Comment deleted
+          description: Comentario eliminado.
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /comments/{comment_id}:
+    parameters:
+      - name: comment_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    patch:
+      tags: [issues]
+      summary: Editar un comentario
+      description: >-
+        Solo el autor (edit_own_comment) o quien gestiona comentarios (manage_comments) puede editar. Cada edicion guarda
+        el texto anterior como revision y marca edited_at. Solo se notifican las menciones nuevas. Un comentario eliminado
+        responde 404. Quien no puede ver el comentario recibe 404; sin permiso, 403.
+      operationId: updateComment
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateIssueCommentRequest'
+      responses:
+        '200':
+          description: Comentario editado, con las advertencias de menciones.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/IssueCommentWrite'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+    delete:
+      tags: [issues]
+      summary: Eliminar un comentario
+      description: >-
+        Borrado logico para el autor (delete_own_comment) o quien gestiona comentarios (manage_comments). Si el comentario
+        tiene respuestas visibles conserva su lugar como marcador; si no, desaparece. Se borran sus revisiones, reacciones
+        y menciones.
+      operationId: deleteComment
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: Comentario eliminado.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /comments/{comment_id}/revisions:
+    parameters:
+      - name: comment_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      tags: [issues]
+      summary: Historial de ediciones de un comentario
+      description: Textos anteriores del comentario, el mas reciente primero. Solo el autor o quien gestiona comentarios.
+      operationId: listCommentRevisions
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Revisiones del comentario.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/CommentRevision'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /comments/{comment_id}/reactions/{emoji}:
+    parameters:
+      - name: comment_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: emoji
+        in: path
+        required: true
+        schema:
+          $ref: '#/components/schemas/CommentReactionEmoji'
+    put:
+      tags: [issues]
+      summary: Reaccionar a un comentario
+      description: Añade la reaccion del usuario. Repetir la peticion deja el mismo estado. Requiere comentar en el proyecto.
+      operationId: addCommentReaction
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Resumen de reacciones del comentario.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/CommentReactions'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+    delete:
+      tags: [issues]
+      summary: Quitar la reaccion del usuario
+      description: Quita la reaccion del usuario. Repetir la peticion deja el mismo estado.
+      operationId: removeCommentReaction
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Resumen de reacciones del comentario.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/CommentReactions'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
   /issues/{id}/activity:
     parameters:
       - $ref: '#/components/parameters/IssueRef'
@@ -9365,6 +9878,7 @@ components:
           nullable: true
     IssueComment:
       type: object
+      required: [id, issue_id, author_id, author, body, visibility, mentions, reactions, edited, deleted, created_at, updated_at]
       properties:
         id:
           type: string
@@ -9372,11 +9886,45 @@ components:
         issue_id:
           type: string
           format: uuid
+        parent_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: Raiz del hilo cuando el comentario es una respuesta.
         author_id:
           type: string
           format: uuid
+        author:
+          $ref: '#/components/schemas/CommentAuthor'
         body:
           type: string
+          description: Markdown. Un comentario eliminado devuelve el marcador "Comentario eliminado".
+        visibility:
+          type: string
+          enum: [public, internal]
+        internal_role:
+          type: string
+          nullable: true
+          enum: [contributor, lead, null]
+          description: Rol minimo que puede leer un comentario interno; null en los publicos.
+        mentions:
+          type: array
+          items:
+            type: string
+            format: uuid
+          description: Personas mencionadas validas en el ultimo guardado del cuerpo.
+        reactions:
+          type: array
+          items:
+            $ref: '#/components/schemas/CommentReaction'
+        edited:
+          type: boolean
+        edited_at:
+          type: string
+          format: date-time
+          nullable: true
+        deleted:
+          type: boolean
         created_at:
           type: string
           format: date-time
@@ -9387,6 +9935,132 @@ components:
           type: string
           format: date-time
           nullable: true
+    IssueCommentThread:
+      allOf:
+        - $ref: '#/components/schemas/IssueComment'
+        - type: object
+          required: [reply_count, replies]
+          properties:
+            reply_count:
+              type: integer
+              minimum: 0
+            replies:
+              type: array
+              items:
+                $ref: '#/components/schemas/IssueComment'
+    IssueCommentWrite:
+      allOf:
+        - $ref: '#/components/schemas/IssueComment'
+        - type: object
+          required: [warnings]
+          properties:
+            warnings:
+              type: array
+              description: Menciones que se guardaron como texto porque la persona no puede verse en este comentario.
+              items:
+                $ref: '#/components/schemas/CommentMentionWarning'
+    CommentAuthor:
+      type: object
+      required: [id, name]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+    CommentReaction:
+      type: object
+      required: [emoji, count, viewer_reacted]
+      properties:
+        emoji:
+          $ref: '#/components/schemas/CommentReactionEmoji'
+        count:
+          type: integer
+          minimum: 1
+        viewer_reacted:
+          type: boolean
+    CommentReactions:
+      type: object
+      required: [comment_id, reactions]
+      properties:
+        comment_id:
+          type: string
+          format: uuid
+        reactions:
+          type: array
+          items:
+            $ref: '#/components/schemas/CommentReaction'
+    CommentReactionEmoji:
+      type: string
+      enum: [thumbs_up, heart, tada, eyes, rocket, check]
+    CommentRevision:
+      type: object
+      required: [id, body, edited_by, edited_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        body:
+          type: string
+          description: Texto anterior a la edicion.
+        edited_by:
+          type: string
+          format: uuid
+        edited_at:
+          type: string
+          format: date-time
+    CommentMentionWarning:
+      type: object
+      required: [user_id, code, message]
+      properties:
+        user_id:
+          type: string
+          format: uuid
+        code:
+          type: string
+          enum: [issue.comment_mention_invalid]
+        message:
+          type: string
+    CommentPageMeta:
+      type: object
+      required: [limit, next_cursor]
+      properties:
+        limit:
+          type: integer
+        next_cursor:
+          type: string
+          nullable: true
+    CreateIssueCommentRequest:
+      type: object
+      required: [body]
+      additionalProperties: false
+      properties:
+        body:
+          type: string
+          minLength: 1
+          maxLength: 20000
+        parent_id:
+          type: string
+          format: uuid
+          nullable: true
+        visibility:
+          type: string
+          enum: [public, internal]
+          default: public
+        internal_role:
+          type: string
+          enum: [contributor, lead]
+          default: contributor
+          description: Solo para comentarios internos.
+    UpdateIssueCommentRequest:
+      type: object
+      required: [body]
+      additionalProperties: false
+      properties:
+        body:
+          type: string
+          minLength: 1
+          maxLength: 20000
     IssueAttachment:
       type: object
       required: [id, issue_id, uploader_id, file_name, content_type, size_bytes, created_at]
@@ -9469,22 +10143,6 @@ components:
           format: date-time
         updated_at:
           type: string
-    CreateIssueCommentRequest:
-      type: object
-      required: [body]
-      properties:
-        body:
-          type: string
-          minLength: 1
-          maxLength: 5000
-    UpdateIssueCommentRequest:
-      type: object
-      required: [body]
-      properties:
-        body:
-          type: string
-          minLength: 1
-          maxLength: 5000
     IssueLinkEntry:
       type: object
       description: Enlace visto desde la incidencia consultada.
@@ -9956,6 +10614,62 @@ components:
       properties:
         id: {type: string, format: uuid}
         name: {type: string}
+    Worklog:
+      type: object
+      description: Registro de tiempo de una persona sobre una incidencia. Las duraciones textuales usan las horas por dia y dias por semana de la organizacion.
+      properties:
+        id: {type: string, format: uuid}
+        issue_id: {type: string, format: uuid}
+        issue_key: {type: string, example: COR-12}
+        author_id: {type: string, format: uuid}
+        author_name: {type: string}
+        started_at: {type: string, format: date-time}
+        time_spent_seconds: {type: integer, minimum: 1}
+        time_spent: {type: string, example: 1h 30m}
+        description: {type: string, maxLength: 5000}
+        remaining_mode: {type: string, enum: [auto, set, reduce, leave]}
+        remaining_adjust_seconds: {type: integer, minimum: 0, description: Segundos que este registro quito a la estimacion restante}
+        created_at: {type: string, format: date-time}
+        updated_at: {type: string, format: date-time}
+    WorklogTotals:
+      type: object
+      description: Totales de tiempo de una incidencia.
+      properties:
+        original_estimate_seconds: {type: integer, nullable: true}
+        original_estimate: {type: string, nullable: true, example: 1d}
+        remaining_estimate_seconds: {type: integer, nullable: true}
+        remaining_estimate: {type: string, nullable: true, example: 6h 30m}
+        time_spent_seconds: {type: integer, minimum: 0}
+        time_spent: {type: string, example: 1h 30m}
+    TimesheetDay:
+      type: object
+      properties:
+        date: {type: string, format: date}
+        total_seconds: {type: integer}
+        total: {type: string, example: 7h}
+        capacity_seconds: {type: integer, description: Horas por dia de la organizacion en segundos}
+        entries:
+          type: array
+          items:
+            type: object
+            properties:
+              id: {type: string, format: uuid}
+              issue_id: {type: string, format: uuid}
+              issue_key: {type: string}
+              issue_title: {type: string}
+              author_id: {type: string, format: uuid}
+              started_at: {type: string, format: date-time}
+              time_spent_seconds: {type: integer}
+              time_spent: {type: string}
+              description: {type: string}
+    TimeSummaryGroup:
+      type: object
+      properties:
+        key: {type: string, description: Identificador del grupo (usuario, incidencia o fecha AAAA-MM-DD)}
+        label: {type: string}
+        total_seconds: {type: integer}
+        total: {type: string}
+        count: {type: integer}
     ErrorResponse:
       type: object
       properties:

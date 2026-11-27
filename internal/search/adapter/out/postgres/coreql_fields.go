@@ -447,7 +447,7 @@ func (b *builder) commentMatch(f resolved, v coreql.Value) string {
 		return b.badValue(v, f)
 	}
 	ph := b.bindText(t)
-	return "EXISTS (SELECT 1 FROM comments c WHERE c.issue_id = i.id AND c.deleted_at IS NULL AND (" +
+	return "EXISTS (SELECT 1 FROM comments c WHERE c.issue_id = i.id AND c.deleted_at IS NULL AND c.visibility = 'public' AND (" +
 		"to_tsvector('spanish', c.body) @@ websearch_to_tsquery('spanish', " + ph + ") OR c.body ILIKE " + b.bindText(likePattern(t)) + " ESCAPE '\\'))"
 }
 
@@ -462,7 +462,7 @@ func (b *builder) fullTextMatch(f resolved, v coreql.Value) string {
 	ph := b.bindText(t)
 	return "(i.search_vector @@ (websearch_to_tsquery('spanish', " + ph + ") || websearch_to_tsquery('simple', " + ph + "))" +
 		" OR i.summary ILIKE " + b.bindText(likePattern(t)) + " ESCAPE '\\'" +
-		" OR EXISTS (SELECT 1 FROM comments c WHERE c.issue_id = i.id AND c.deleted_at IS NULL AND to_tsvector('spanish', c.body) @@ websearch_to_tsquery('spanish', " + ph + ")))"
+		" OR EXISTS (SELECT 1 FROM comments c WHERE c.issue_id = i.id AND c.deleted_at IS NULL AND c.visibility = 'public' AND to_tsvector('spanish', c.body) @@ websearch_to_tsquery('spanish', " + ph + ")))"
 }
 
 func (b *builder) numberCompare(col string, op coreql.Op, v coreql.Value, f resolved) string {
@@ -526,7 +526,7 @@ func (b *builder) emptySQL(f resolved, span coreql.Span) string {
 	case cWatcher:
 		return "NOT EXISTS (SELECT 1 FROM watchers w WHERE w.issue_id = i.id)"
 	case cComment:
-		return "NOT EXISTS (SELECT 1 FROM comments c WHERE c.issue_id = i.id AND c.deleted_at IS NULL)"
+		return "NOT EXISTS (SELECT 1 FROM comments c WHERE c.issue_id = i.id AND c.deleted_at IS NULL AND c.visibility = 'public')"
 	case cSprint:
 		return "i.sprint_id IS NULL"
 	case cEpic, cParent:

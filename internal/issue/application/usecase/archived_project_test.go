@@ -109,9 +109,6 @@ func TestIssueServiceArchivedProjectIsReadOnly(t *testing.T) {
 	_, err = svc.Create(ctx, port.CreateInput{Summary: "New", Description: "Desc", Priority: domain.PriorityMedium, ReporterID: actor, ProjectID: &projectID})
 	assertArchived(t, "create issue", err)
 
-	_, err = svc.CreateComment(ctx, port.CreateCommentInput{IssueID: seed.ID, AuthorID: actor, Body: "Hola", GlobalRole: "user"})
-	assertArchived(t, "create comment", err)
-
 	if _, err := svc.Get(ctx, seed.ID, actor, "user"); err != nil {
 		t.Fatalf("read issue on archived project: %v", err)
 	}
@@ -120,9 +117,6 @@ func TestIssueServiceArchivedProjectIsReadOnly(t *testing.T) {
 	after := NewIssueService(repo, dir, restored, collab)
 	if _, err := after.Create(ctx, port.CreateInput{Summary: "After restore", Description: "Desc", Priority: domain.PriorityMedium, ReporterID: actor, ProjectID: &projectID}); err != nil {
 		t.Fatalf("create after restore: %v", err)
-	}
-	if _, err := after.CreateComment(ctx, port.CreateCommentInput{IssueID: seed.ID, AuthorID: actor, Body: "Hola", GlobalRole: "user"}); err != nil {
-		t.Fatalf("comment after restore: %v", err)
 	}
 }
 
