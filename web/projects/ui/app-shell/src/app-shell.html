@@ -21,7 +21,13 @@
 
   <div class="app-shell__body">
     @if (showSidebar()) {
-      <app-context-sidebar [title]="sidebarTitle()" [items]="items()" [currentPath]="pathname()" />
+      <app-context-sidebar
+        [title]="sidebarTitle()"
+        [items]="items()"
+        [currentPath]="activePath()"
+        [project]="sidebarProject()"
+        [loading]="sidebarLoading()"
+      />
     }
 
     <main id="main-content" #main tabindex="-1" class="app-shell__main">
@@ -35,7 +41,7 @@
       [menus]="topMenus()"
       [sidebarTitle]="sidebarTitle()"
       [items]="items()"
-      [currentPath]="pathname()"
+      [currentPath]="activePath()"
       [showOrgSwitcher]="isMobile()"
       [orgSwitcher]="orgSwitcher()"
     />

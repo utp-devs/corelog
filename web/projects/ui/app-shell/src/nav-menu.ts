@@ -1,6 +1,7 @@
 import { NgTemplateOutlet } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
+import { ProjectAvatar } from '@corelog/ui/project-avatar';
 
 import { DropdownMenu } from './dropdown-menu';
 import type { MenuEntry } from './menu-model';
@@ -22,7 +23,7 @@ export function hrefOf(entry: MenuEntry): string {
  */
 @Component({
   selector: 'app-nav-menu',
-  imports: [DropdownMenu, NgTemplateOutlet, RouterLink, RouterLinkActive, ShellIcon],
+  imports: [DropdownMenu, NgTemplateOutlet, ProjectAvatar, RouterLink, RouterLinkActive, ShellIcon],
   templateUrl: './nav-menu.html',
   styleUrl: './nav-menu.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -42,6 +43,7 @@ export class TopMenu {
     return !this.menu().external && (current === path || current.startsWith(`${path}/`));
   });
   protected readonly hrefOf = hrefOf;
+  protected readonly skeletonRows = [1, 2, 3];
 
   protected onOpened(): void {
     this.data.refresh(this.menu());

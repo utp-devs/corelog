@@ -111,3 +111,30 @@
     transform: translateY(calc(-1 * var(--cl-space-1)));
   }
 }
+
+/// Placeholder block shown while a menu reads its rows.
+@mixin menu-bone {
+  display: block;
+  border-radius: var(--cl-radius-sm);
+  background: linear-gradient(
+    90deg,
+    var(--cl-bg-sunken) 25%,
+    var(--cl-bg-hover) 37%,
+    var(--cl-bg-sunken) 63%
+  );
+  background-size: 400% 100%;
+  animation: menu-shimmer 1.4s ease infinite;
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+}
+
+@keyframes menu-shimmer {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: 0 0;
+  }
+}

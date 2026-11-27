@@ -6,6 +6,9 @@ import {
   LOCATION_ASSIGN,
   AuthStore,
   AvatarApiService,
+  CurrentProjectStore,
+  FavoritesStore,
+  NotificationService,
   NotificationStore,
   ProjectStore,
   SearchApiService,
@@ -116,6 +119,12 @@ function routesFor(host: Type<unknown>): Routes {
           component: RoutePage,
           data: { text: 'Tablero del proyecto' },
         },
+        {
+          path: 'projects/:id/backlog',
+          component: RoutePage,
+          data: { text: 'Backlog del proyecto' },
+        },
+        { path: 'projects/new', component: RoutePage, data: { text: 'Nuevo proyecto' } },
         { path: 'profile', component: RoutePage, data: { text: 'Perfil' } },
         {
           path: 'profile/security',
@@ -139,11 +148,31 @@ interface Fakes {
     projects: ReturnType<typeof signal<Project[]>>;
     fetchProjects: ReturnType<typeof vi.fn>;
   };
+  current: {
+    project: ReturnType<typeof signal<Project | null>>;
+    error: ReturnType<typeof signal<unknown>>;
+    isArchived: ReturnType<typeof signal<boolean>>;
+    navItems: ReturnType<typeof signal<{ key: string; label: string; path: string }[]>>;
+  };
+  favorites: {
+    starred: ReturnType<typeof signal<string[]>>;
+    star: ReturnType<typeof vi.fn>;
+    unstar: ReturnType<typeof vi.fn>;
+    fetchFavorites: ReturnType<typeof vi.fn>;
+  };
 }
 
 async function render(
   path: string,
-  options: { host?: Type<unknown>; width?: number; projects?: Project[]; user?: User | null } = {},
+  options: {
+    host?: Type<unknown>;
+    width?: number;
+    projects?: Project[];
+    user?: User | null;
+    /** Project of the project store: null leaves it loading. */
+    current?: Project | null;
+    archived?: boolean;
+  } = {},
 ): Promise<{ root: HTMLElement; fakes: Fakes; harness: RouterTestingHarness }> {
   setViewport(options.width ?? 1440);
   const fakes: Fakes = {
@@ -157,6 +186,22 @@ async function render(
       projects: signal<Project[]>(options.projects ?? [demoProject]),
       fetchProjects: vi.fn(),
     },
+    current: {
+      project: signal<Project | null>(options.current ?? null),
+      error: signal<unknown>(null),
+      isArchived: signal(options.archived ?? false),
+      navItems: signal([
+        { key: 'board', label: 'Tablero', path: '/projects/DEM/board' },
+        { key: 'backlog', label: 'Backlog', path: '/projects/DEM/backlog' },
+        { key: 'sprints', label: 'Sprints', path: '/projects/DEM/sprints' },
+      ]),
+    },
+    favorites: {
+      starred: signal<string[]>([]),
+      star: vi.fn(() => of(undefined)),
+      unstar: vi.fn(() => of(undefined)),
+      fetchFavorites: vi.fn(),
+    },
   };
   TestBed.configureTestingModule({
     providers: [
@@ -164,6 +209,24 @@ async function render(
       { provide: AuthStore, useValue: fakes.auth },
       { provide: LOCATION_ASSIGN, useValue: fakes.assign },
       { provide: ProjectStore, useValue: fakes.projects },
+      { provide: CurrentProjectStore, useValue: fakes.current },
+      {
+        provide: FavoritesStore,
+        useValue: {
+          favorites: signal([]),
+          recent: signal([]),
+          favoritesLoading: signal(false),
+          recentLoading: signal(false),
+          favoritesError: signal(null),
+          recentError: signal(null),
+          isStarred: (id: string) => fakes.favorites.starred().includes(id),
+          star: fakes.favorites.star,
+          unstar: fakes.favorites.unstar,
+          fetchFavorites: fakes.favorites.fetchFavorites,
+          fetchRecent: vi.fn(),
+        },
+      },
+      { provide: NotificationService, useValue: { error: vi.fn() } },
       { provide: TeamStore, useValue: { teams: signal([]), fetchTeams: vi.fn() } },
       {
         provide: NotificationStore,
@@ -238,10 +301,67 @@ describe('AppShell', () => {
     expect(byLabel(aside as HTMLElement, 'a', 'General')?.hasAttribute('aria-current')).toBe(false);
   });
 
-  it('has no sidebar in the project pages, which carry their own tabs', async () => {
-    const { root } = await render('/projects/p1/board');
-    expect(root.querySelector('aside')).toBeNull();
+  it('shows the project header and its sections in the project pages', async () => {
+    const { root } = await render('/projects/DEM/board', { current: demoProject });
+    const aside = root.querySelector('aside') as HTMLElement;
+    expect(aside.getAttribute('aria-label')).toBe('Proyecto demo');
+    expect(aside.querySelector('[data-testid="sidebar-project-name"]')?.textContent).toContain(
+      'Proyecto demo',
+    );
+    expect(aside.querySelector('[data-testid="sidebar-project-key"]')?.textContent).toContain(
+      'DEM',
+    );
+    const links = Array.from(aside.querySelectorAll('nav a')).map((a) => a.textContent?.trim());
+    expect(links).toEqual(['Tablero', 'Backlog', 'Sprints']);
+    expect(aside.querySelector('[aria-current="page"]')?.textContent).toContain('Tablero');
     expect(root.textContent).toContain('Tablero del proyecto');
+  });
+
+  it('marks the active section when the project is opened by its id', async () => {
+    const { root } = await render('/projects/p1/backlog', { current: demoProject });
+    const aside = root.querySelector('aside') as HTMLElement;
+    expect(aside.querySelector('[aria-current="page"]')?.textContent).toContain('Backlog');
+  });
+
+  it('shows a placeholder, not a stale header, while the project loads', async () => {
+    const { root } = await render('/projects/DEM/board');
+    const aside = root.querySelector('aside') as HTMLElement;
+    expect(aside.querySelector('[data-testid="sidebar-loading"]')).not.toBeNull();
+    expect(aside.querySelector('[data-testid="sidebar-project"]')).toBeNull();
+  });
+
+  it('shows the archived badge of an archived project', async () => {
+    const { root } = await render('/projects/DEM/board', { current: demoProject, archived: true });
+    expect(root.querySelector('[data-testid="sidebar-project-archived"]')).not.toBeNull();
+  });
+
+  it('stars and unstars the project from the sidebar header', async () => {
+    const { root, fakes, harness } = await render('/projects/DEM/board', { current: demoProject });
+    expect(fakes.favorites.fetchFavorites).toHaveBeenCalled();
+    const star = (): HTMLElement =>
+      root.querySelector<HTMLElement>('[data-testid="sidebar-project-star"]') as HTMLElement;
+    expect(star().getAttribute('aria-pressed')).toBe('false');
+    star().click();
+    expect(fakes.favorites.star).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'p1', key: 'DEM' }),
+    );
+    fakes.favorites.starred.set(['p1']);
+    harness.fixture.detectChanges();
+    expect(star().getAttribute('aria-pressed')).toBe('true');
+    star().click();
+    expect(fakes.favorites.unstar).toHaveBeenCalledWith('p1');
+  });
+
+  it('has no sidebar when the project cannot be opened', async () => {
+    const { root, fakes, harness } = await render('/projects/DEM/board');
+    fakes.current.error.set({ status: 404 });
+    harness.fixture.detectChanges();
+    expect(root.querySelector('aside')).toBeNull();
+  });
+
+  it('treats /projects/new as a global page', async () => {
+    const { root } = await render('/projects/new');
+    expect(root.querySelector('aside')).toBeNull();
   });
 
   it('has no sidebar in the global context', async () => {
@@ -274,13 +394,16 @@ describe('AppShell', () => {
     expect(drawer?.textContent).toContain('Seguridad');
   });
 
-  it('lists no context links in the phone drawer on project pages', async () => {
-    const { root, harness } = await render('/projects/p1/board', { width: 390 });
+  it('lists the project sections in the phone drawer on project pages', async () => {
+    const { root, harness } = await render('/projects/DEM/board', {
+      width: 390,
+      current: demoProject,
+    });
     byLabel(root, 'button', 'Abrir menú de navegación')?.click();
     harness.fixture.detectChanges();
     const drawer = document.querySelector<HTMLElement>('nav[aria-label="Navegación móvil"]');
     expect(drawer).not.toBeNull();
-    expect(drawer?.querySelector('[aria-label="Proyecto"]')).toBeNull();
+    expect(drawer?.querySelector('[aria-label="Proyecto demo"]')?.textContent).toContain('Backlog');
   });
 
   it('groups the drawer: the four menus expand with real entries and the context links follow', async () => {
@@ -473,13 +596,8 @@ describe('AppShell project context', () => {
     delete (window as Partial<Window>).matchMedia;
   });
 
-  it('loads the projects list when the URL points at a project that is not loaded', async () => {
-    const { fakes } = await render('/projects/p1/board', { projects: [] });
-    expect(fakes.projects.fetchProjects).toHaveBeenCalledTimes(1);
-  });
-
-  it('does not fetch the projects in the global context', async () => {
-    const { fakes } = await render('/issues', { projects: [] });
-    expect(fakes.projects.fetchProjects).not.toHaveBeenCalled();
+  it('does not read the starred projects outside a project', async () => {
+    const { fakes } = await render('/issues');
+    expect(fakes.favorites.fetchFavorites).not.toHaveBeenCalled();
   });
 });

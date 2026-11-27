@@ -36,7 +36,8 @@ export type ShellIconName =
   | 'lifebuoy'
   | 'density'
   | 'building'
-  | 'external';
+  | 'external'
+  | 'star';
 
 /** Stroke paths on a 24 px grid. Each icon may use several paths. */
 export const ICON_PATHS: Readonly<Record<ShellIconName, readonly string[]>> = {
@@ -111,4 +112,5 @@ export const ICON_PATHS: Readonly<Record<ShellIconName, readonly string[]>> = {
   density: ['M4 6h16', 'M4 10h16', 'M4 14h16', 'M4 18h16'],
   building: ['M5 21V4h9v17', 'M14 9h5v12', 'M3 21h18', 'M8 8h2M8 12h2M8 16h2'],
   external: ['M14 4h6v6', 'M20 4l-9 9', 'M18 14v6H4V6h6'],
+  star: ['M12 3.5l2.6 5.3 5.9.9-4.2 4.1 1 5.8L12 16.9l-5.3 2.7 1-5.8L3.5 9.7l5.9-.9z'],
 };

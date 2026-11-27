@@ -13,5 +13,7 @@ export type { ShellIconName } from './shell-icon-paths';
 })
 export class ShellIcon {
   readonly name = input.required<ShellIconName>();
+  /** Fills the shape with the current color (a starred star). */
+  readonly filled = input(false);
   protected readonly paths = computed(() => ICON_PATHS[this.name()]);
 }

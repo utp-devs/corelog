@@ -85,7 +85,7 @@ export const DEFAULT_SHELL_NAV_CONFIG: ShellNavConfig = {
     },
   ],
   sidebars: {
-    // The project pages carry their own tabs under the project header, so the shell lists nothing here.
+    // The project sidebar is built by the shell from the project in view (template and permissions), so no static items.
     project: [],
     'org-admin': [
       {
@@ -140,7 +140,8 @@ export function buildTopNav(
 /** Pure route-to-context mapping. The sidebar is shown only for contexts other than global. */
 export function resolveSidebarContext(pathname: string): SidebarContext {
   const [first, second] = pathname.split('/').filter(Boolean);
-  if (first === 'projects' && second) {
+  // /projects/new is the creation page, not a project.
+  if (first === 'projects' && second && second !== 'new') {
     return { kind: 'project', projectId: safeDecode(second) };
   }
   if (first === 'organization') return { kind: 'org-admin' };

@@ -52,6 +52,38 @@
 
   &__empty {
     @include menu.menu-empty;
+
+    &--error {
+      color: var(--cl-danger-text);
+    }
+  }
+
+  &__skeleton-heading {
+    @include menu.menu-bone;
+    width: 40%;
+    height: var(--cl-space-3);
+    margin: var(--cl-space-2) var(--cl-space-3) var(--cl-space-1);
+    padding: 0;
+  }
+
+  &__skeleton-row {
+    @include m.flex-row(3);
+    min-height: var(--cl-menu-item-h);
+    padding: 0 var(--cl-space-3);
+  }
+
+  &__skeleton-avatar {
+    @include menu.menu-bone;
+    flex: none;
+    width: var(--cl-space-6);
+    height: var(--cl-space-6);
+    border-radius: var(--cl-radius-md);
+  }
+
+  &__skeleton-text {
+    @include menu.menu-bone;
+    flex: 1 1 auto;
+    height: var(--cl-space-3);
   }
 
   &__separator {

@@ -1,4 +1,10 @@
-<svg class="shell-icon__svg" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+<svg
+  class="shell-icon__svg"
+  [class.shell-icon__svg--filled]="filled()"
+  viewBox="0 0 24 24"
+  aria-hidden="true"
+  focusable="false"
+>
   @for (d of paths(); track $index) {
     <path [attr.d]="d" />
   }

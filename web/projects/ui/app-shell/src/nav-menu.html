@@ -11,15 +11,40 @@
   </button>
 
   @if (open()) {
-    @for (section of model().sections; track section.key) {
-      <div class="nav-menu__section" role="group" [attr.aria-label]="section.title">
-        <p class="nav-menu__heading" aria-hidden="true">{{ section.title }}</p>
-        @for (entry of section.entries; track entry.key) {
-          <ng-container *ngTemplateOutlet="row; context: { $implicit: entry }" />
-        } @empty {
-          <p class="nav-menu__empty">{{ section.emptyText }}</p>
+    @switch (model().status) {
+      @case ('loading') {
+        <div
+          class="nav-menu__section"
+          role="status"
+          aria-label="Cargando"
+          data-testid="nav-menu-loading"
+        >
+          <p class="nav-menu__heading nav-menu__skeleton-heading" aria-hidden="true"></p>
+          @for (row of skeletonRows; track row) {
+            <div class="nav-menu__skeleton-row" aria-hidden="true">
+              <span class="nav-menu__skeleton-avatar"></span>
+              <span class="nav-menu__skeleton-text"></span>
+            </div>
+          }
+        </div>
+      }
+      @case ('error') {
+        <p class="nav-menu__empty nav-menu__empty--error" role="alert" data-testid="nav-menu-error">
+          No se pudo cargar la lista. Puedes verlos todos desde el enlace de abajo.
+        </p>
+      }
+      @default {
+        @for (section of model().sections; track section.key) {
+          <div class="nav-menu__section" role="group" [attr.aria-label]="section.title">
+            <p class="nav-menu__heading" aria-hidden="true">{{ section.title }}</p>
+            @for (entry of section.entries; track entry.key) {
+              <ng-container *ngTemplateOutlet="row; context: { $implicit: entry }" />
+            } @empty {
+              <p class="nav-menu__empty">{{ section.emptyText }}</p>
+            }
+          </div>
         }
-      </div>
+      }
     }
 
     <div class="nav-menu__separator" role="separator"></div>
@@ -71,7 +96,9 @@
 </ng-template>
 
 <ng-template #rowContent let-entry>
-  @if (entry.icon) {
+  @if (entry.avatar; as avatar) {
+    <app-project-avatar [name]="avatar.name" [projectKey]="avatar.key" [size]="24" />
+  } @else if (entry.icon) {
     <app-shell-icon class="nav-menu__icon" [name]="entry.icon" />
   }
   <span class="nav-menu__label">{{ entry.label }}</span>

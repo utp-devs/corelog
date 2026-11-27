@@ -1,7 +1,16 @@
 import { signal } from '@angular/core';
 import { TestBed, type ComponentFixture } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
-import { AuthStore, ProjectStore, TeamStore, pushRecent, type User } from '@corelog/core';
+import {
+  AuthStore,
+  FavoritesStore,
+  OrganizationStore,
+  TeamStore,
+  pushRecent,
+  type FavoriteItem,
+  type RecentProjectItem,
+  type User,
+} from '@corelog/core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { NavMenu } from './navigation';
@@ -15,18 +24,43 @@ const teamsMenu: NavMenu = {
   extras: [{ key: 'people', label: 'Ver personas', path: '/people' }],
 };
 
+function projectItem(id: string, name: string, key: string): FavoriteItem & RecentProjectItem {
+  return {
+    type: 'project',
+    id,
+    name,
+    key,
+    color: '',
+    createdAt: '2026-01-01T00:00:00Z',
+    viewedAt: '2026-01-02T00:00:00Z',
+  };
+}
+
 const platformAdmin = { id: 'u1', role: 'admin' } as User;
 const plainUser = { id: 'u2', role: 'user' } as User;
 
 interface Setup {
   fixture: ComponentFixture<TopMenu>;
   el: HTMLElement;
-  fetchProjects: ReturnType<typeof vi.fn>;
+  fetchFavorites: ReturnType<typeof vi.fn>;
+  fetchRecent: ReturnType<typeof vi.fn>;
+  favorites: ReturnType<typeof signal<FavoriteItem[]>>;
+  recent: ReturnType<typeof signal<RecentProjectItem[]>>;
+  loading: ReturnType<typeof signal<boolean>>;
+  failed: ReturnType<typeof signal<unknown>>;
   fetchTeams: ReturnType<typeof vi.fn>;
 }
 
-function setup(menu: NavMenu, options: { user?: User; currentPath?: string } = {}): Setup {
-  const fetchProjects = vi.fn();
+function setup(
+  menu: NavMenu,
+  options: { user?: User; currentPath?: string; canCreateProject?: boolean } = {},
+): Setup {
+  const fetchFavorites = vi.fn();
+  const fetchRecent = vi.fn();
+  const favorites = signal<FavoriteItem[]>([]);
+  const recent = signal<RecentProjectItem[]>([]);
+  const loading = signal(false);
+  const failed = signal<unknown>(null);
   const fetchTeams = vi.fn();
   TestBed.configureTestingModule({
     providers: [
@@ -35,7 +69,25 @@ function setup(menu: NavMenu, options: { user?: User; currentPath?: string } = {
         provide: AuthStore,
         useValue: { user: signal(options.user ?? plainUser), isAuthenticated: signal(true) },
       },
-      { provide: ProjectStore, useValue: { projects: signal([]), fetchProjects } },
+      {
+        provide: OrganizationStore,
+        useValue: {
+          canCreateProject: signal(options.canCreateProject ?? options.user === platformAdmin),
+        },
+      },
+      {
+        provide: FavoritesStore,
+        useValue: {
+          favorites,
+          recent,
+          favoritesLoading: loading,
+          recentLoading: loading,
+          favoritesError: failed,
+          recentError: failed,
+          fetchFavorites,
+          fetchRecent,
+        },
+      },
       {
         provide: TeamStore,
         useValue: {
@@ -49,7 +101,17 @@ function setup(menu: NavMenu, options: { user?: User; currentPath?: string } = {
   fixture.componentRef.setInput('menu', menu);
   fixture.componentRef.setInput('currentPath', options.currentPath ?? '');
   fixture.detectChanges();
-  return { fixture, el: fixture.nativeElement as HTMLElement, fetchProjects, fetchTeams };
+  return {
+    fixture,
+    el: fixture.nativeElement as HTMLElement,
+    fetchFavorites,
+    fetchRecent,
+    favorites,
+    recent,
+    loading,
+    failed,
+    fetchTeams,
+  };
 }
 
 const trigger = (el: HTMLElement): HTMLButtonElement =>
@@ -88,21 +150,59 @@ describe('TopMenu', () => {
     expect(trigger(s.el).getAttribute('aria-controls')).toBe(menu.id);
   });
 
-  it('lists the recently visited projects with their key', () => {
-    pushRecent({
-      kind: 'project',
-      id: 'p1',
-      title: 'Proyecto demo',
-      subtitle: 'DEM',
-      link: '/projects/p1/board',
-    });
-    pushRecent({ kind: 'issue', id: 'i1', title: 'Falla', subtitle: 'DEM-1', link: '/issues/i1' });
-    const menu = open(setup(projectsMenu));
+  it('lists the starred and the recent projects with avatar, name and key', () => {
+    const s = setup(projectsMenu);
+    s.favorites.set([projectItem('p1', 'Proyecto demo', 'DEM')]);
+    s.recent.set([projectItem('p2', 'Otro proyecto', 'OTR')]);
+    const menu = open(s);
+    expect(menu.textContent).toContain('Destacados');
     expect(menu.textContent).toContain('Recientes');
     expect(menu.textContent).toContain('Proyecto demo');
-    expect(menu.textContent).toContain('DEM');
-    expect(menu.textContent).not.toContain('Falla');
+    expect(menu.textContent).toContain('OTR');
+    expect(menu.querySelectorAll('app-project-avatar')).toHaveLength(2);
     expect(menu.textContent).toContain('Ver todos los proyectos');
+    const hrefs = rows(menu).map((row) => row.getAttribute('href'));
+    expect(hrefs).toContain('/projects/DEM');
+    expect(hrefs).toContain('/projects/OTR');
+  });
+
+  it('does not repeat a starred project among the recent ones', () => {
+    const s = setup(projectsMenu);
+    s.favorites.set([projectItem('p1', 'Proyecto demo', 'DEM')]);
+    s.recent.set([projectItem('p1', 'Proyecto demo', 'DEM')]);
+    const menu = open(s);
+    expect(menu.querySelectorAll('app-project-avatar')).toHaveLength(1);
+    expect(menu.textContent).not.toContain('Recientes');
+  });
+
+  it('shows the empty text, the footer and no skeleton when nothing was visited', () => {
+    const menu = open(setup(projectsMenu));
+    expect(menu.textContent).toContain('Aún no has visitado proyectos');
+    expect(menu.textContent).toContain('Ver todos los proyectos');
+    expect(menu.querySelector('[data-testid="nav-menu-loading"]')).toBeNull();
+  });
+
+  it('shows a skeleton while the lists load', () => {
+    const s = setup(projectsMenu);
+    s.loading.set(true);
+    const menu = open(s);
+    expect(menu.querySelector('[data-testid="nav-menu-loading"]')).not.toBeNull();
+    expect(menu.textContent).not.toContain('Aún no has visitado proyectos');
+  });
+
+  it('shows an error line but keeps the footer actions when the lists fail', () => {
+    const s = setup(projectsMenu, { user: platformAdmin });
+    s.failed.set({ status: 500 });
+    const menu = open(s);
+    expect(menu.querySelector('[data-testid="nav-menu-error"]')).not.toBeNull();
+    expect(menu.textContent).toContain('Ver todos los proyectos');
+    expect(menu.textContent).toContain('Crear proyecto');
+  });
+
+  it('links the create action to the new project page', () => {
+    const menu = open(setup(projectsMenu, { user: platformAdmin }));
+    const create = menu.querySelector('.nav-menu__create');
+    expect(create?.getAttribute('href')).toBe('/projects/new');
   });
 
   it('says so when there is nothing recent for the filters menu', () => {
@@ -125,6 +225,11 @@ describe('TopMenu', () => {
     );
     TestBed.resetTestingModule();
     expect(open(setup(projectsMenu)).textContent).not.toContain('Crear proyecto');
+  });
+
+  it('offers the create action to an organization member allowed by the policy', () => {
+    const menu = open(setup(projectsMenu, { canCreateProject: true }));
+    expect(menu.textContent).toContain('Crear proyecto');
   });
 
   it('marks the menu of the current area as active', () => {
@@ -185,9 +290,10 @@ describe('TopMenu', () => {
     expect(s.el.querySelector('[role="menu"]')).toBeNull();
   });
 
-  it('loads the projects when the menu opens and none are known', () => {
+  it('reads the starred and recent projects each time the menu opens', () => {
     const s = setup(projectsMenu);
     open(s);
-    expect(s.fetchProjects).toHaveBeenCalledTimes(1);
+    expect(s.fetchFavorites).toHaveBeenCalledTimes(1);
+    expect(s.fetchRecent).toHaveBeenCalledTimes(1);
   });
 });

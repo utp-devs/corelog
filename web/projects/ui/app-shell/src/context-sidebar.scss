@@ -1,4 +1,5 @@
 @use '../../styles/mixins' as m;
+@use './menu' as menu;
 
 /* The sidebar is as tall as the content area and scrolls on its own when the list is long. */
 :host {
@@ -39,6 +40,122 @@
       justify-content: center;
       padding-right: 0;
       padding-left: 0;
+    }
+  }
+
+  &__project {
+    @include m.flex-row(3);
+    min-height: var(--cl-row-h);
+    padding: var(--cl-space-3) var(--cl-space-4);
+    border-bottom: 1px solid var(--cl-divider);
+
+    .context-sidebar--collapsed & {
+      justify-content: center;
+      padding-right: 0;
+      padding-left: 0;
+    }
+  }
+
+  &__project-text {
+    @include m.flex-column(0);
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  &__project-name {
+    @include m.truncate;
+    color: var(--cl-text);
+    font-weight: var(--cl-weight-semibold);
+  }
+
+  &__project-meta {
+    @include m.flex-row(2);
+    color: var(--cl-text-subtle);
+    font-size: var(--cl-font-small);
+  }
+
+  &__badge {
+    padding: 0 var(--cl-space-2);
+    border-radius: var(--cl-radius-sm);
+    background: var(--cl-bg-sunken);
+    color: var(--cl-text-subtle);
+    font-size: var(--cl-font-caption);
+    font-weight: var(--cl-weight-semibold);
+  }
+
+  &__star {
+    @include m.flex-row(0, center, center);
+    flex: none;
+    box-sizing: border-box;
+    width: var(--cl-control-h-md);
+    height: var(--cl-control-h-md);
+    padding: 0;
+    border: 0;
+    border-radius: var(--cl-radius-md);
+    background: transparent;
+    color: var(--cl-text-subtle);
+    cursor: pointer;
+
+    @media (pointer: coarse) {
+      width: var(--cl-control-h-lg);
+      height: var(--cl-control-h-lg);
+    }
+
+    &:hover {
+      background: var(--cl-bg-hover);
+      color: var(--cl-text);
+    }
+
+    &:focus-visible {
+      outline: none;
+      box-shadow: var(--cl-shadow-focus);
+    }
+
+    &--on {
+      color: var(--cl-warning-text);
+    }
+  }
+
+  &__bone {
+    @include menu.menu-bone;
+
+    &--avatar {
+      width: var(--cl-space-10);
+      height: var(--cl-space-10);
+      border-radius: var(--cl-radius-md);
+    }
+
+    &--name {
+      width: 70%;
+      height: var(--cl-space-4);
+    }
+
+    &--meta {
+      width: 30%;
+      height: var(--cl-space-3);
+      margin-top: var(--cl-space-1);
+    }
+
+    &--icon {
+      flex: none;
+      width: var(--cl-space-5);
+      height: var(--cl-space-5);
+    }
+
+    &--label {
+      flex: 1 1 auto;
+      height: var(--cl-space-3);
+    }
+  }
+
+  &__bone-row {
+    @include m.flex-row(3);
+    min-height: var(--cl-control-h-md);
+    padding: 0 var(--cl-space-3);
+
+    .context-sidebar--collapsed & {
+      justify-content: center;
+      padding: 0;
     }
   }
 

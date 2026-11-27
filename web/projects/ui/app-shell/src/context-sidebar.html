@@ -4,14 +4,82 @@
   [attr.aria-label]="title()"
   [attr.data-collapsed]="collapsed() ? 'true' : 'false'"
 >
-  <div class="context-sidebar__header">
-    @if (!collapsed()) {
-      <span class="context-sidebar__title">{{ title() }}</span>
-    }
-  </div>
+  @if (project(); as project) {
+    <div class="context-sidebar__project" data-testid="sidebar-project">
+      <app-project-avatar
+        [name]="project.name"
+        [projectKey]="project.key"
+        [size]="collapsed() ? 32 : 40"
+        [appTooltip]="collapsed() ? project.name + ' (' + project.key + ')' : ''"
+        appTooltipPosition="right"
+      />
+      @if (!collapsed()) {
+        <div class="context-sidebar__project-text">
+          <span class="context-sidebar__project-name" data-testid="sidebar-project-name">{{
+            project.name
+          }}</span>
+          <span class="context-sidebar__project-meta">
+            <span data-testid="sidebar-project-key">{{ project.key }}</span>
+            @if (project.archived) {
+              <span class="context-sidebar__badge" data-testid="sidebar-project-archived"
+                >Archivado</span
+              >
+            }
+          </span>
+        </div>
+        <button
+          type="button"
+          class="context-sidebar__star"
+          [class.context-sidebar__star--on]="starred()"
+          [attr.aria-pressed]="starred()"
+          [attr.aria-label]="
+            starred()
+              ? 'Quitar de favoritos ' + project.name
+              : 'Marcar como favorito ' + project.name
+          "
+          [appTooltip]="starred() ? 'Quitar de favoritos' : 'Marcar como favorito'"
+          data-testid="sidebar-project-star"
+          (click)="toggleStar(project)"
+        >
+          <app-shell-icon name="star" [filled]="starred()" />
+        </button>
+      }
+    </div>
+  } @else if (loading()) {
+    <div
+      class="context-sidebar__project"
+      role="status"
+      aria-label="Cargando proyecto"
+      data-testid="sidebar-loading"
+    >
+      <span class="context-sidebar__bone context-sidebar__bone--avatar"></span>
+      @if (!collapsed()) {
+        <div class="context-sidebar__project-text" aria-hidden="true">
+          <span class="context-sidebar__bone context-sidebar__bone--name"></span>
+          <span class="context-sidebar__bone context-sidebar__bone--meta"></span>
+        </div>
+      }
+    </div>
+  } @else {
+    <div class="context-sidebar__header">
+      @if (!collapsed()) {
+        <span class="context-sidebar__title">{{ title() }}</span>
+      }
+    </div>
+  }
 
   <nav class="context-sidebar__nav" [attr.aria-label]="'Navegación: ' + title()">
     <ul class="context-sidebar__list">
+      @if (loading() && !project()) {
+        @for (row of skeletonRows; track row) {
+          <li class="context-sidebar__bone-row" aria-hidden="true">
+            <span class="context-sidebar__bone context-sidebar__bone--icon"></span>
+            @if (!collapsed()) {
+              <span class="context-sidebar__bone context-sidebar__bone--label"></span>
+            }
+          </li>
+        }
+      }
       @for (item of items(); track item.key) {
         <li>
           @if (item.external) {

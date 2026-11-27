@@ -8,6 +8,7 @@ import {
   API_URL,
   AuthStore,
   AvatarApiService,
+  FavoritesStore,
   NotificationStore,
   ProjectStore,
   SearchApiService,
@@ -96,6 +97,19 @@ describe('TopBar', () => {
         {
           provide: ProjectStore,
           useValue: { projects: signal([]), status: signal('idle'), fetchProjects: vi.fn() },
+        },
+        {
+          provide: FavoritesStore,
+          useValue: {
+            favorites: signal([]),
+            recent: signal([]),
+            favoritesLoading: signal(false),
+            recentLoading: signal(false),
+            favoritesError: signal(null),
+            recentError: signal(null),
+            fetchFavorites: vi.fn(),
+            fetchRecent: vi.fn(),
+          },
         },
         { provide: TeamStore, useValue: { teams: signal([]), fetchTeams: vi.fn() } },
         {
@@ -234,6 +248,19 @@ describe('TopBar responsive layout', () => {
         {
           provide: ProjectStore,
           useValue: { projects: signal([]), status: signal('idle'), fetchProjects: vi.fn() },
+        },
+        {
+          provide: FavoritesStore,
+          useValue: {
+            favorites: signal([]),
+            recent: signal([]),
+            favoritesLoading: signal(false),
+            recentLoading: signal(false),
+            favoritesError: signal(null),
+            recentError: signal(null),
+            fetchFavorites: vi.fn(),
+            fetchRecent: vi.fn(),
+          },
         },
         { provide: TeamStore, useValue: { teams: signal([]), fetchTeams: vi.fn() } },
         {
