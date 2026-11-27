@@ -1,0 +1,20 @@
+@if (src(); as url) {
+  <img
+    class="image"
+    [class.size-24]="size() === 24"
+    [class.size-32]="size() === 32"
+    [src]="url"
+    alt=""
+    data-testid="org-logo"
+  />
+} @else {
+  <span
+    aria-hidden="true"
+    class="tile"
+    [class.size-24]="size() === 24"
+    [class.size-32]="size() === 32"
+    [attr.data-palette]="palette()"
+    data-testid="org-logo-fallback"
+    >{{ initials() }}</span
+  >
+}

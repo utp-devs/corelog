@@ -1,0 +1,135 @@
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.bar {
+  position: relative;
+  z-index: var(--cl-z-header);
+  display: flex;
+  align-items: center;
+  gap: var(--cl-space-2);
+  flex: none;
+  height: var(--cl-topbar-h);
+  min-width: 0;
+  padding: 0 var(--cl-space-4);
+  border-bottom: 1px solid var(--cl-border);
+  background: var(--cl-bg-surface);
+}
+
+button {
+  font: inherit;
+  cursor: pointer;
+}
+
+.menu-button,
+.nav-button,
+.create,
+.create-icon {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--cl-space-2);
+  flex: none;
+  min-height: 32px;
+  padding: 0 var(--cl-space-3);
+  border: 0;
+  border-radius: var(--cl-radius-sm);
+  background: transparent;
+  color: var(--cl-text);
+  font-weight: 500;
+}
+
+.menu-button:hover,
+.nav-button:hover {
+  background: var(--cl-bg-sunken);
+}
+
+.menu-button:focus-visible,
+.nav-button:focus-visible,
+.create:focus-visible,
+.brand:focus-visible {
+  outline: none;
+  box-shadow: var(--cl-shadow-focus);
+}
+
+.create,
+.create-icon {
+  background: var(--cl-brand);
+  color: var(--cl-bg-surface);
+}
+
+.create:hover,
+.create-icon:hover {
+  background: var(--cl-brand-hover);
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  flex: none;
+  margin-right: var(--cl-space-2);
+  border-radius: var(--cl-radius-sm);
+}
+
+.brand-banner {
+  display: block;
+  height: auto;
+}
+
+.brand-icon {
+  display: block;
+  width: 32px;
+  height: 32px;
+}
+
+.nav {
+  display: flex;
+  align-items: center;
+  gap: var(--cl-space-1);
+  flex: none;
+}
+
+.caret {
+  font-size: var(--cl-font-caption);
+  color: var(--cl-text-subtle);
+}
+
+.spacer {
+  flex: 1 1 auto;
+  min-width: var(--cl-space-2);
+}
+
+.org {
+  display: inline-flex;
+  align-items: center;
+  flex: none;
+  max-width: 220px;
+  overflow: hidden;
+  color: var(--cl-text-subtle);
+}
+
+.org-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 1024-1279 px: the full menu row needs the room, so the organization name is shorter. */
+@media (max-width: 1279.98px) {
+  .org {
+    max-width: 160px;
+  }
+}
+
+/* Phones: tap targets of 44 px, tighter gutters, every control inside the bar. */
+@media (max-width: 767.98px) {
+  .bar {
+    gap: var(--cl-space-1);
+    padding: 0 var(--cl-space-3);
+  }
+
+  .bar button {
+    min-width: 44px;
+    min-height: 44px;
+  }
+}

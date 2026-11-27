@@ -1,0 +1,59 @@
+<aside
+  class="sidebar"
+  [class.collapsed]="collapsed()"
+  [attr.aria-label]="title()"
+  [attr.data-collapsed]="collapsed() ? 'true' : 'false'"
+>
+  <div class="header">
+    @if (project(); as current) {
+      <div class="project">
+        <app-project-avatar [name]="current.name" [projectKey]="current.key" [size]="32" />
+        @if (!collapsed()) {
+          <span class="project-text">
+            <span class="project-name">{{ current.name }}</span>
+            <span class="project-key">{{ current.key }}</span>
+          </span>
+        }
+      </div>
+    } @else if (!collapsed()) {
+      <span class="title">{{ title() }}</span>
+    }
+  </div>
+
+  <nav class="nav" [attr.aria-label]="'Navegación: ' + title()">
+    <ul class="list">
+      @for (item of items(); track item.key) {
+        <li>
+          <a
+            class="link"
+            [class.active]="isActive(item)"
+            [routerLink]="item.path"
+            [attr.aria-label]="item.label"
+            [attr.aria-current]="isActive(item) ? 'page' : null"
+            [attr.title]="collapsed() ? item.label : null"
+          >
+            <app-shell-icon [name]="item.icon" />
+            @if (!collapsed()) {
+              <span class="label">{{ item.label }}</span>
+            }
+          </a>
+        </li>
+      }
+    </ul>
+  </nav>
+
+  <div class="footer">
+    <button
+      type="button"
+      class="toggle"
+      [attr.aria-expanded]="!collapsed()"
+      [attr.aria-label]="collapsed() ? 'Expandir menú lateral' : 'Contraer menú lateral'"
+      (click)="toggle()"
+    >
+      <app-shell-icon [name]="collapsed() ? 'unfold' : 'fold'" />
+      @if (!collapsed()) {
+        <span>Contraer menú</span>
+      }
+    </button>
+  </div>
+</aside>

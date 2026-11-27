@@ -1,0 +1,35 @@
+@if (org(); as current) {
+  <button
+    type="button"
+    class="trigger"
+    aria-haspopup="menu"
+    [attr.aria-label]="'Organización actual: ' + current.name"
+    (click)="toggle($event)"
+  >
+    <app-org-logo
+      [orgId]="current.id"
+      [name]="current.name"
+      [hasLogo]="current.hasLogo"
+      [revision]="logoRevision()"
+    />
+    <span class="name">{{ current.name }}</span>
+    <i class="pi pi-chevron-down caret" aria-hidden="true"></i>
+  </button>
+
+  <p-menu #menu [model]="items()" [popup]="true" appendTo="body">
+    <ng-template pTemplate="item" let-item>
+      @if (item.disabled) {
+        <span class="group-label">{{ item.label }}</span>
+      } @else {
+        <span class="menu-row">
+          @if (item.current) {
+            <i class="pi pi-check" role="img" aria-label="Organización actual"></i>
+          } @else if (item.icon) {
+            <i [class]="item.icon" aria-hidden="true"></i>
+          }
+          <span class="menu-label">{{ item.label }}</span>
+        </span>
+      }
+    </ng-template>
+  </p-menu>
+}

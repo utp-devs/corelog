@@ -1,0 +1,54 @@
+.trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--cl-space-2);
+  max-width: 220px;
+  min-height: var(--cl-space-12);
+  padding: 0 var(--cl-space-2);
+  border: 0;
+  border-radius: var(--cl-radius-md);
+  background: transparent;
+  color: var(--cl-text);
+  cursor: pointer;
+  font: inherit;
+}
+
+.trigger:hover {
+  background: var(--cl-bg-sunken);
+}
+
+.trigger:focus-visible {
+  outline: none;
+  box-shadow: var(--cl-shadow-focus);
+}
+
+.name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+}
+
+.caret {
+  font-size: var(--cl-font-small);
+  color: var(--cl-text-subtle);
+}
+
+.group-label {
+  display: block;
+  padding: var(--cl-space-2) var(--cl-space-3);
+  color: var(--cl-text-subtle);
+  font-size: var(--cl-font-small);
+  font-weight: 600;
+}
+
+.menu-row {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--cl-space-2);
+  min-width: 0;
+}
+
+.menu-label {
+  overflow-wrap: anywhere;
+}

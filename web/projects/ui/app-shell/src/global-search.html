@@ -1,0 +1,63 @@
+@if (compact()) {
+  <button
+    type="button"
+    class="icon-search"
+    aria-label="Buscar"
+    title="Buscar (Ctrl+K)"
+    (click)="openPalette()"
+  >
+    <app-shell-icon name="search" />
+  </button>
+} @else {
+  <div class="field-wrap">
+    <input
+      type="search"
+      class="field"
+      placeholder="Buscar…"
+      aria-label="Buscar proyectos e incidencias"
+      autocomplete="off"
+      [value]="query()"
+      (input)="onInput($event)"
+      (keydown)="onKeydown($event)"
+    />
+
+    @if (panelOpen()) {
+      <div class="panel">
+        <div class="results" role="region" aria-label="Resultados de búsqueda">
+          @if (message(); as text) {
+            <p class="message" role="status">{{ text }}</p>
+          }
+          @for (section of sections(); track section.name) {
+            <div class="section" role="group" [attr.aria-label]="section.name">
+              <div class="section-title" aria-hidden="true">{{ section.name }}</div>
+              <ul class="list">
+                @for (hit of section.items; track hit.kind + hit.id) {
+                  <li>
+                    <button type="button" class="result" (click)="choose(hit)">
+                      <span class="title">{{ hit.title }}</span>
+                      <span class="subtitle">{{ hit.subtitle }}</span>
+                    </button>
+                  </li>
+                }
+              </ul>
+            </div>
+          }
+        </div>
+        <div class="footer">
+          <button type="button" class="palette-link" (click)="openFullPalette()">
+            <app-shell-icon name="search" />
+            <span>Abrir paleta de comandos</span>
+          </button>
+          <span class="shortcut">Ctrl+K</span>
+        </div>
+      </div>
+    }
+  </div>
+}
+
+<app-command-palette
+  [(open)]="paletteOpen"
+  [seed]="paletteSeed()"
+  [search]="searchPalette"
+  (openHit)="onPaletteHit($event)"
+/>

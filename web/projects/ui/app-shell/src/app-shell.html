@@ -1,6 +1,87 @@
-<header class="shell-topbar">
-  <span class="shell-brand">CoreLog</span>
-</header>
-<main class="shell-content" id="contenido">
-  <router-outlet />
-</main>
+<div class="shell">
+  <a href="#main-content" class="skip" (click)="skipToContent($event)">Saltar al contenido</a>
+
+  <app-top-bar
+    [menus]="topMenus()"
+    [canCreate]="canCreate()"
+    [orgName]="orgName()"
+    [orgSwitcher]="orgSwitcher()"
+    [createSlot]="createSlot()"
+    [brand]="brand()"
+    [showMenuButton]="collapsedNav()"
+    [docsUrl]="docsUrl()"
+    (openMenu)="openDrawer()"
+    (openShortcuts)="helpOpen.set(true)"
+  />
+
+  <div class="body">
+    @if (showSidebar()) {
+      <app-context-sidebar
+        [title]="sidebarTitle()"
+        [items]="items()"
+        [project]="project()"
+        [currentPath]="pathname()"
+      />
+    }
+
+    <main id="main-content" #main tabindex="-1" class="main">
+      <router-outlet />
+    </main>
+  </div>
+
+  @if (collapsedNav()) {
+    <p-drawer
+      [visible]="drawerOpen()"
+      (visibleChange)="onDrawerVisible($event)"
+      position="left"
+      header="Navegación"
+      styleClass="cl-shell-drawer"
+    >
+      <nav aria-label="Navegación móvil" class="drawer-nav">
+        @if (isMobile() && orgSwitcher(); as switcher) {
+          <section class="drawer-org" aria-label="Organización">
+            <p class="drawer-title">Organización</p>
+            <ng-container *ngTemplateOutlet="switcher" />
+          </section>
+        }
+
+        <ul class="drawer-list">
+          @for (menu of topMenus(); track menu.key) {
+            <li>
+              <a class="drawer-link" [routerLink]="menu.path" (click)="closeDrawer()">
+                {{ menu.label }}
+              </a>
+            </li>
+          }
+        </ul>
+
+        @if (items().length > 0) {
+          <p class="drawer-title">{{ sidebarTitle() }}</p>
+          <ul class="drawer-list">
+            @for (item of items(); track item.key) {
+              <li>
+                <a
+                  class="drawer-link"
+                  [class.active]="isItemActive(item)"
+                  [routerLink]="item.path"
+                  [attr.aria-current]="isItemActive(item) ? 'page' : null"
+                  (click)="closeDrawer()"
+                >
+                  <app-shell-icon [name]="item.icon" />
+                  <span>{{ item.label }}</span>
+                </a>
+              </li>
+            }
+          </ul>
+        }
+      </nav>
+    </p-drawer>
+  }
+
+  <p class="announcer" role="status" aria-live="polite">{{ announcement() }}</p>
+
+  <app-shortcuts-dialog [(open)]="helpOpen" [hotkeys]="hotkeys.registered()" />
+
+  <ng-template #orgSwitcherTpl><ng-content select="[appShellOrgSwitcher]" /></ng-template>
+  <ng-template #createTpl><ng-content select="[appShellCreate]" /></ng-template>
+</div>

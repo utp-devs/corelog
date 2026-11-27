@@ -1,0 +1,18 @@
+@if (user(); as current) {
+  <button
+    type="button"
+    class="trigger"
+    [attr.aria-label]="'Menú de ' + current.name"
+    aria-haspopup="menu"
+    (click)="toggle($event)"
+  >
+    <app-avatar
+      [id]="current.id"
+      [name]="current.name"
+      [src]="photo()"
+      [size]="32"
+      data-testid="user-menu-avatar"
+    />
+  </button>
+  <p-menu #menu [model]="items()" [popup]="true" appendTo="body" />
+}

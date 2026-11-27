@@ -1,0 +1,10 @@
+<button
+  type="button"
+  class="trigger"
+  aria-label="Ayuda"
+  aria-haspopup="menu"
+  (click)="toggle($event)"
+>
+  <app-shell-icon name="help" />
+</button>
+<p-menu #menu [model]="items()" [popup]="true" appendTo="body" />

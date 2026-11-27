@@ -1,0 +1,27 @@
+:host {
+  display: inline-flex;
+  flex: none;
+}
+
+.trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  border-radius: var(--cl-radius-full);
+  background: transparent;
+  cursor: pointer;
+}
+
+.trigger:focus-visible {
+  outline: none;
+  box-shadow: var(--cl-shadow-focus);
+}
+
+@media (max-width: 767.98px) {
+  .trigger {
+    width: 44px;
+    height: 44px;
+  }
+}

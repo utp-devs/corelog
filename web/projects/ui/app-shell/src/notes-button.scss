@@ -1,0 +1,21 @@
+.notes {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--cl-radius-sm);
+  background: transparent;
+  color: var(--cl-text-disabled);
+  cursor: not-allowed;
+}
+
+@media (max-width: 767.98px) {
+  .notes {
+    width: 44px;
+    height: 44px;
+  }
+}

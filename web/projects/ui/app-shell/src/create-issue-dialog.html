@@ -1,0 +1,22 @@
+<p-dialog
+  header="Crear incidencia"
+  [visible]="open()"
+  (visibleChange)="open.set($event)"
+  [modal]="true"
+  [draggable]="false"
+  [resizable]="false"
+  styleClass="cl-create-issue-dialog"
+>
+  <p class="copy">
+    El asistente rápido para crear incidencias llegará en una próxima versión. Por ahora puedes usar
+    el formulario completo.
+  </p>
+  <ng-template pTemplate="footer">
+    <div class="actions">
+      <button type="button" class="btn" (click)="close()">Cancelar</button>
+      <button type="button" class="btn primary" (click)="goToForm()">
+        Ir al formulario de incidencia
+      </button>
+    </div>
+  </ng-template>
+</p-dialog>

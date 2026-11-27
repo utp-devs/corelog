@@ -1,0 +1,40 @@
+<p-overlaybadge [value]="badgeValue()" [badgeDisabled]="count() === 0" severity="danger">
+  <button
+    type="button"
+    class="bell"
+    [attr.aria-label]="label()"
+    aria-haspopup="dialog"
+    (click)="panel.toggle($event)"
+  >
+    <app-shell-icon name="bell" />
+  </button>
+</p-overlaybadge>
+
+<p-popover #panel (onShow)="onShow()">
+  <div class="panel">
+    <div class="header">
+      <span class="heading">Notificaciones</span>
+      <button type="button" class="link" [disabled]="count() === 0" (click)="markAll()">
+        Marcar todas
+      </button>
+    </div>
+    @if (items().length === 0) {
+      <p class="empty">Sin notificaciones</p>
+    } @else {
+      <ul class="list">
+        @for (item of items(); track item.id) {
+          <li>
+            <button
+              type="button"
+              class="item"
+              [class.unread]="!item.read"
+              (click)="open(item, panel)"
+            >
+              {{ item.message }}
+            </button>
+          </li>
+        }
+      </ul>
+    }
+  </div>
+</p-popover>

@@ -1,30 +1,118 @@
+/* Structure: the page does not scroll. The top bar is sticky; only the main area scrolls. */
 :host {
+  display: block;
+  height: 100vh;
+  height: 100dvh;
+  min-width: 0;
+}
+
+.shell {
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
+  height: 100%;
+  overflow: hidden;
   background: var(--cl-bg-page);
-  color: var(--cl-text);
 }
 
-.shell-topbar {
+.skip {
+  position: absolute;
+  top: var(--cl-space-2);
+  left: var(--cl-space-2);
+  z-index: var(--cl-z-modal);
+  padding: var(--cl-space-2) var(--cl-space-4);
+  border-radius: var(--cl-radius-sm);
+  background: var(--cl-bg-surface);
+  color: var(--cl-brand);
+  transform: translateY(-200%);
+}
+
+.skip:focus {
+  transform: none;
+  box-shadow: var(--cl-shadow-focus);
+}
+
+.body {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.main {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.main:focus {
+  outline: none;
+}
+
+.announcer {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+:host ::ng-deep .cl-shell-drawer {
+  width: 272px;
+  max-width: 100vw;
+}
+
+.drawer-nav {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cl-space-3);
+}
+
+.drawer-org {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cl-space-2);
+  min-width: 0;
+}
+
+.drawer-list {
+  display: grid;
+  gap: var(--cl-space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.drawer-title {
+  margin: var(--cl-space-3) 0 0;
+  color: var(--cl-text-subtle);
+  font-size: var(--cl-font-caption);
+  text-transform: uppercase;
+}
+
+.drawer-link {
   display: flex;
   align-items: center;
-  height: var(--cl-topbar-h);
-  padding: 0 var(--cl-gutter);
-  background: var(--cl-bg-surface);
-  border-bottom: 1px solid var(--cl-border);
+  gap: var(--cl-space-3);
+  min-height: 44px;
+  padding: 0 var(--cl-space-3);
+  border-radius: var(--cl-radius-sm);
+  color: var(--cl-text);
+  text-decoration: none;
 }
 
-.shell-brand {
-  font-size: var(--cl-font-body-strong);
-  font-weight: 600;
+.drawer-link:hover {
+  background: var(--cl-bg-sunken);
+}
+
+.drawer-link.active {
+  background: var(--cl-brand-subtle);
   color: var(--cl-brand);
+  font-weight: 600;
 }
 
-.shell-content {
-  flex: 1;
-  width: 100%;
-  max-width: var(--cl-content-max);
-  margin: 0 auto;
-  padding: var(--cl-space-6) var(--cl-gutter);
+.drawer-link:focus-visible {
+  outline: none;
+  box-shadow: var(--cl-shadow-focus);
 }
