@@ -11,8 +11,8 @@
 
 - [ ] `go test ./...` ejecuta todas las pruebas unitarias y de integración (código de salida 0).
 - [ ] `make test-coverage` supera el umbral mínimo definido para la fase (mínimo 40% en F0).
-- [ ] `npm test` en `ui/` ejecuta las pruebas de frontend sin errores.
-- [ ] `npm run lint` y `npm run build` en `ui/` compilan sin errores ni warnings.
+- [ ] `npm run test:all` en `web/` ejecuta las pruebas de frontend sin errores.
+- [ ] `npm run format:check` y `npm run build:all` en `web/` compilan sin errores ni warnings.
 - [ ] Migraciones PostgreSQL ejecutadas limpiamente (`up` y `down`).
 - [ ] `openapi.yaml` refleja fielmente los endpoints añadidos o modificados.
 

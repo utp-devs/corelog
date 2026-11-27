@@ -80,7 +80,7 @@ gh secret set VPS_SSH_KEY     --env production -R $R < "$D/deploy"
 gh secret set VPS_KNOWN_HOSTS --env production -R $R < "$D/known_hosts"
 gh secret set VPS_HOST        --env production -R $R --body "<IP_DEL_VPS>"
 gh secret set VPS_USER        --env production -R $R --body "github"
-gh variable set VITE_API_BASE_URL -R $R --body "https://api.example.com/api/v1"
+gh variable set WEB_BUILD_CONFIGURATION -R $R --body "production"
 
 shred -u "$D/deploy" "$D/deploy.pub" 2>/dev/null || rm -f "$D/deploy" "$D/deploy.pub"
 rm -rf "$D"
@@ -92,7 +92,7 @@ gh secret list --env production -R $R
 | `VPS_HOST`, `VPS_USER` | Secret (entorno `production`) | Destino SSH |
 | `VPS_SSH_KEY` | Secret (entorno `production`) | Llave privada de despliegue |
 | `VPS_KNOWN_HOSTS` | Secret (entorno `production`) | Huella del servidor (`StrictHostKeyChecking yes`) |
-| `VITE_API_BASE_URL` | Variable de repositorio | URL de la API incrustada en el frontend al compilar |
+| `WEB_BUILD_CONFIGURATION` | Variable de repositorio | Configuración de entorno de Angular al compilar (por defecto `production`) |
 
 Los secrets del **entorno** solo los ven los jobs que declaran `environment: production`; y el entorno admite revisores obligatorios (sección 6).
 

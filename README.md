@@ -16,17 +16,9 @@
   <img alt="golang-jwt" src="https://img.shields.io/badge/golang--jwt-v5.3.1-000000?style=for-the-badge&logo=jsonwebtokens&logoColor=white">
   <img alt="go-playground validator" src="https://img.shields.io/badge/go--playground_validator-v10.30.5-007ec6?style=for-the-badge">
   <img alt="godotenv" src="https://img.shields.io/badge/godotenv-v1.5.1-007ec6?style=for-the-badge">
-  <img alt="React" src="https://img.shields.io/badge/React-19.3.1-61DAFB?style=for-the-badge&logo=react&logoColor=black">
+  <img alt="Angular" src="https://img.shields.io/badge/Angular-21-DD0031?style=for-the-badge&logo=angular&logoColor=white">
+  <img alt="PrimeNG" src="https://img.shields.io/badge/PrimeNG-21-007ec6?style=for-the-badge">
   <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-6.0.3-3178C6?style=for-the-badge&logo=typescript&logoColor=white">
-  <img alt="Vite" src="https://img.shields.io/badge/Vite-8.3.5-646CFF?style=for-the-badge&logo=vite&logoColor=white">
-  <img alt="Ant Design" src="https://img.shields.io/badge/Ant_Design-6.6.7-0170FE?style=for-the-badge&logo=antdesign&logoColor=white">
-  <img alt="React Router" src="https://img.shields.io/badge/React_Router-7.18.4-CA4245?style=for-the-badge&logo=reactrouter&logoColor=white">
-  <img alt="Zustand" src="https://img.shields.io/badge/Zustand-5.0.15-007ec6?style=for-the-badge">
-  <img alt="Axios" src="https://img.shields.io/badge/Axios-1.20.0-5A29E7?style=for-the-badge&logo=axios&logoColor=white">
-  <img alt="React Hook Form" src="https://img.shields.io/badge/React_Hook_Form-7.90.0-EC5990?style=for-the-badge&logo=reacthookform&logoColor=white">
-  <img alt="Zod" src="https://img.shields.io/badge/Zod-4.6.7-1E40AF?style=for-the-badge&logo=zod&logoColor=white">
-  <img alt="ESLint" src="https://img.shields.io/badge/ESLint-10.13.0-4B32C3?style=for-the-badge&logo=eslint&logoColor=white">
-  <img alt="CSS Modules" src="https://img.shields.io/badge/CSS_Modules-367599?style=for-the-badge">
   <img alt="PostgreSQL" src="https://img.shields.io/badge/PostgreSQL-17-4169E1?style=for-the-badge&logo=postgresql&logoColor=white">
   <img alt="Docker" src="https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white">
   <img alt="Docker Compose" src="https://img.shields.io/badge/Docker_Compose-v2-2496ED?style=for-the-badge&logo=docker&logoColor=white">
@@ -78,7 +70,7 @@ Estado actual:
 
 ## Arquitectura
 
-Tanto el backend como el frontend siguen una arquitectura hexagonal, es decir, basada en puertos y adaptadores. La lógica de negocio, incluido el dominio y los casos de uso, no tiene conocimiento de mecanismos de entrega como HTTP, SQL, React o Axios. Los adaptadores se conectan al núcleo mediante interfaces explícitas llamadas puertos.
+Tanto el backend como el frontend siguen una arquitectura hexagonal, es decir, basada en puertos y adaptadores. La lógica de negocio, incluido el dominio y los casos de uso, no tiene conocimiento de mecanismos de entrega como HTTP, SQL o Angular. Los adaptadores se conectan al núcleo mediante interfaces explícitas llamadas puertos.
 
 
 ```
@@ -104,7 +96,7 @@ corelog/
 ├── docker-compose.yaml           PostgreSQL, migraciones automáticas, API y UI con un solo comando
 ├── openapi.yaml                  Contrato AbreAPI 3 para toda la API, mantenido sincronizado con la referencia de API de abajo
 ├── scripts/                      setup.sh and setup.ps1, comandos de configuración del entorno, compilación y empaquetado
-└── ui/                           frontend React y TS, con estructura hexagonal, documentado en ui/README.md
+└── web/                          frontend Angular (portal, workspace y admin), documentado en web/README.md
 
 ```
 
@@ -148,7 +140,7 @@ There is no dedicated admin bootstrap step: the very first account ever register
 
 ## Tecnologías del frontend
 
-See [`ui/README.md`](ui/README.md) for the frontend's hexagonal layout. Stack: React plus TypeScript and Vite, React Router, Zustand, Axios, React Hook Form plus Zod, Ant Design, CSS Modules.
+Consulta [`web/README.md`](web/README.md) para la estructura del frontend. Stack: Angular 21 con TypeScript, componentes standalone y signals, PrimeNG, chart.js, Angular CDK y SCSS con tokens propios.
 
 ## Prerequisitos de trabajo
 
@@ -159,7 +151,7 @@ See [`ui/README.md`](ui/README.md) for the frontend's hexagonal layout. Stack: R
 
 ## Primeros pasos
 
-Ejecutar CoreLog localmente significa ejecutar dos procesos al mismo tiempo: la API de Go y el frontend de React. Usa dos ventanas o pestañas de terminal separadas, una para el backend y otra para el frontend, y mantén ambos procesos ejecutándose mientras trabajas.
+Ejecutar CoreLog localmente significa ejecutar dos procesos al mismo tiempo: la API de Go y el frontend de Angular. Usa dos ventanas o pestañas de terminal separadas, una para el backend y otra para el frontend, y mantén ambos procesos ejecutándose mientras trabajas.
 
 ### 1. Iniciar el backend
 
@@ -177,14 +169,13 @@ La API queda escuchando en `http://localhost:8080` y el frontend en `http://loca
 Abre una segunda terminal, mantén el backend del paso 1 ejecutándose y, desde la raíz del repositorio, ejecuta:
 
 ```sh
-cd ui
-cp .env.example .env
+cd web
 npm install
-npm run dev
+npm run start:portal
 
 ```
 
-`ui/.env.example` sets `VITE_API_BASE_URL=http://localhost:8080/api/v1`, matching the backend from step 1, so no further edits are required for a default local setup. Deja este proceso ejecutándose: el servidor de desarrollo del frontend ahora está escuchando en `http://localhost:5173`.
+El frontend llama a la API en `/api/v1`; el servidor de desarrollo la redirige al backend del paso 1 (`proxy.conf.json`). Deja este proceso ejecutándose: el portal queda escuchando en `http://localhost:4200`.
 
 ### 3. Verificar que ambos estén ejecutándose
 
@@ -206,12 +197,12 @@ Esto devuelve `{"status":"ok"}` cuando la API es accesible.
 | Comando | Descripción |
 | --- | --- |
 | `check` | Indica si Go, Node, npm, Docker y golang-migrate están disponibles |
-| `env` | Create `.env` and `ui/.env` from their example files if missing, without overwriting existing ones |
+| `env` | Create `.env` from its example file if missing, without overwriting it |
 | `dev` | Prepare a local development environment backed by PostgreSQL: runs `env`, starts PostgreSQL and migrations, downloads Go modules and installs frontend dependencies |
 | `prod` | Prepare a producción environment backed by PostgreSQL via Docker: verifies Docker, runs `env`, starts the `db` and `api` containers and applies migrations |
-| `build` | Compila el binario del backend en `bin/api`, `bin/api.exe` on Windows, y compila el frontend en `ui/dist` |
+| `build` | Compila el binario del backend en `bin/api`, `bin/api.exe` on Windows, y compila el frontend en `web/dist` |
 | `package` | Run `build`, then assemble a distributable archive under `dist/` que contiene el binario del backend, las migraciones de PostgreSQL y la compilación del frontend, y comprímelo como `corelog-package.tar.gz` in bash or `corelog-package.zip` in PowerShell |
-| `clean` | Elimina `bin/`, `ui/dist/`, `dist/`, and the packaged archive |
+| `clean` | Elimina `bin/`, `web/dist/`, `dist/`, and the packaged archive |
 
 Ejemplos:
 
@@ -264,7 +255,7 @@ Las pruebas de la siembra necesitan PostgreSQL: con `CORELOG_TEST_DATABASE_URL` 
 
 ## Variables de entorno
 
-All variables live in `.env`, copied from `.env.example`. See [`ui/.env.example`](https://www.google.com/search?q=ui/.env.example&utm_source=gemini) para ver las variables del frontend.
+All variables live in `.env`, copied from `.env.example`.
 
 | Variable | Predeterminado | Descripción |
 | --- | --- | --- |
@@ -324,9 +315,9 @@ Backend, from the `Makefile` at the repo root:
 | `make docker-up`, `make docker-down`, `make docker-logs` | Administra el stack de Docker Compose de PostgreSQL y la API |
 | `make migrate-up`, `make migrate-down` | Aplica o revierte las migraciones de PostgreSQL |
 | `make migrate-create name=<name>` | Genera el par de archivos de una nueva migración de PostgreSQL |
-| `make ui-install`, `make ui-dev`, `make ui-build`, `make ui-lint` | Reenvía a los scripts npm del frontend |
+| `make ui-install`, `make ui-dev`, `make ui-build`, `make ui-lint`, `make ui-test` | Reenvía a los scripts npm del frontend (`web/`) |
 
-Frontend, from `ui/package.json`, run inside `ui/`: `npm run dev`, `npm run build`, `npm run lint`, `npm run preview`.
+Frontend, desde `web/package.json`, dentro de `web/`: `npm run start:portal`, `npm run build:libs`, `npm run build:all`, `npm run test:all`, `npm run format:check`, `npm run e2e`.
 
 ## Docker
 
@@ -344,7 +335,7 @@ docker compose up -d --build
 | `api` | API de Go; arranca solo después de que `migrate` terminó bien |
 | `ui` | Contenedor nginx que sirve el build de producción del frontend en `http://localhost:5173` |
 
-El frontend se compila con `VITE_API_BASE_URL`, cuyo valor por defecto es `http://localhost:8080/api/v1`. Para usar otra URL, defínela en `.env` antes de construir.
+El frontend se compila con la configuración de entorno de Angular (`BUILD_CONFIGURATION`, por defecto `production` en `docker-compose.yaml` y `local` en `docker-compose.local.yaml`) y llama a la API en `/api/v1` a través de nginx, que la redirige a `API_UPSTREAM` (por defecto `http://api:8080`).
 
 Para ejecutar todo el proyecto en local con una configuración y volúmenes independientes, usa `docker-compose.local.yaml`:
 
@@ -449,10 +440,10 @@ El flujo `release.yml` publica una Release con numeración `vX.Y.Z` cada vez que
 
 ## Convenciones del proyecto
 
-* No comments in source code. Names, small functions, and the hexagonal layering carry the intent; this file and `ui/README.md` are where narrative documentation belongs.
-* Ports before adapters. Every use case depends on an interface declared in `application/port`, never directly on `adapter/out/*`. The composition root is the only place concrete adapters are chosen: `cmd/api/main.go` on the backend, `adapters/in/state/*.store.ts` on the frontend.
+* No comments in source code. Names, small functions, and the hexagonal layering carry the intent; this file and `web/README.md` are where narrative documentation belongs.
+* Ports before adapters. Every use case depends on an interface declared in `application/port`, never directly on `adapter/out/*`. The composition root is the only place concrete adapters are chosen: `cmd/api/main.go` on the backend, `provideCorelog` in `web/projects/core` on the frontend.
 * Un adaptador, una responsabilidad de persistencia. `adapter/out/postgres` mapea sus filas al dominio sin almacenar datos fuera de PostgreSQL.
-* Frontend imports use the `@/` alias, mapped to `ui/src`, for anything crossing a top-level boundary such as `app`, `core`, `adapters`, or `shared`. Same-directory and one-level-up imports stay relative. See `ui/README.md`.
+* Frontend imports use the workspace aliases (`@corelog/core`, `@corelog/ui/<name>`, `@corelog/features/<name>`); see `web/README.md`.
 
 ## Solución de problemas
 

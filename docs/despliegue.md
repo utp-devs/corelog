@@ -28,7 +28,7 @@ Workflow: `.github/workflows/deploy.yml`, se ejecuta en cada push a `main` (y ma
 | Secret (entorno `production`) | `VPS_HOST`, `VPS_USER` | Destino SSH |
 | Secret (entorno `production`) | `VPS_SSH_KEY` | Llave privada de despliegue |
 | Secret (entorno `production`) | `VPS_KNOWN_HOSTS` | Huella del servidor (evita MITM) |
-| Variable | `VITE_API_BASE_URL` | URL de la API incrustada en el frontend en el build |
+| Variable | `WEB_BUILD_CONFIGURATION` | Configuración de entorno de Angular del build (opcional, por defecto `production`) |
 
 Recomendado: activar *required reviewers* en el entorno `production` para que un merge no despliegue sin aprobación.
 
