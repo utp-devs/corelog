@@ -2,7 +2,7 @@
 
 Toma el banner y el icono originales, recorta los margenes transparentes y genera
 las variantes de tamano que usan el README (docs/assets) y la aplicacion React
-(ui/public/brand).
+(web/public/brand).
 
 Uso (desde la raiz del repo, con el entorno de uv):
     .venv\\Scripts\\python.exe scripts\\images\\process_brand.py
@@ -26,24 +26,24 @@ MASTER_ICON = "corelog-icon.png"
 # (ruta relativa a la raiz, ancho maximo en px)
 BANNER_TARGETS = [
     ("docs/assets/corelog-banner.png", 1200),
-    ("ui/public/brand/corelog-banner-480.png", 480),
-    ("ui/public/brand/corelog-banner-960.png", 960),
+    ("web/public/brand/corelog-banner-480.png", 480),
+    ("web/public/brand/corelog-banner-960.png", 960),
 ]
 ICON_TARGETS = [
     ("docs/assets/corelog-icon.png", 512),
-    ("ui/public/brand/corelog-icon-64.png", 64),
-    ("ui/public/brand/corelog-icon-128.png", 128),
-    ("ui/public/brand/corelog-icon-256.png", 256),
+    ("web/public/brand/corelog-icon-64.png", 64),
+    ("web/public/brand/corelog-icon-128.png", 128),
+    ("web/public/brand/corelog-icon-256.png", 256),
 ]
 # Favicon: mismo icono sin letras, sin margen, en los tamanos que piden navegadores y SO.
 FAVICON_TARGETS = [
-    ("ui/public/brand/favicon-16.png", 16),
-    ("ui/public/brand/favicon-32.png", 32),
-    ("ui/public/brand/apple-touch-icon.png", 180),
-    ("ui/public/brand/android-chrome-192.png", 192),
-    ("ui/public/brand/android-chrome-512.png", 512),
+    ("web/public/brand/favicon-16.png", 16),
+    ("web/public/brand/favicon-32.png", 32),
+    ("web/public/brand/apple-touch-icon.png", 180),
+    ("web/public/brand/android-chrome-192.png", 192),
+    ("web/public/brand/android-chrome-512.png", 512),
 ]
-FAVICON_ICO = "ui/public/favicon.ico"
+FAVICON_ICO = "web/public/favicon.ico"
 FAVICON_ICO_SIZES = [16, 32, 48]
 
 

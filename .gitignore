@@ -84,7 +84,7 @@ id_ecdsa
 **/playwright/.auth/
 
 # ---------------------------------------------------------------------
-# Node.js, npm and Vite (see ui/.gitignore for the frontend-specific set)
+# Node.js, npm and Vite (see web/.gitignore for the frontend-specific set)
 # ---------------------------------------------------------------------
 node_modules/
 .pnpm-store/
@@ -153,10 +153,10 @@ backups/
 # ---------------------------------------------------------------------
 # Playwright artifacts (screenshots of failed runs, traces, HTML report)
 # ---------------------------------------------------------------------
-/ui/test-results/
-/ui/playwright-report/
-/ui/blob-report/
-/ui/playwright/.cache/
+/web/test-results/
+/web/playwright-report/
+/web/blob-report/
+/web/playwright/.cache/
 
 # ---------------------------------------------------------------------
 # Python tooling (scripts/ with uv-managed virtualenv)

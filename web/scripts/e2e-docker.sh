@@ -2,12 +2,12 @@
 # Runs the Playwright suite inside a CPU-limited container so the browsers do not saturate the host.
 # Usage: scripts/e2e-docker.sh [playwright test arguments], e.g. scripts/e2e-docker.sh --project=desktop e2e/specs/auth
 # The app under test is the dev stack on the host (host ports 5173 and 8080 are forwarded to the container localhost: secure context, so the clipboard works).
-# The e2e password comes from the git-ignored ui/.env.e2e (or E2E_ENV_FILE) passed with --env-file, never echoed.
+# The e2e password comes from the git-ignored web/.env.e2e (or E2E_ENV_FILE) passed with --env-file, never echoed.
 # Limits (override with env): DOCKER_CPUS (default 4), DOCKER_MEMORY (default 6g), PW_WORKERS (default 2),
 # PW_OUT (host dir receiving test-results; default web/test-results), PW_IMAGE (default mcr.microsoft.com/playwright:v1.65.1-noble), E2E_BASE_URL, E2E_API_URL.
 set -eu
 ROOT="$(cd "$(dirname "$0")/.." && pwd -W 2>/dev/null || pwd)"
-ENV_FILE="${E2E_ENV_FILE:-$ROOT/../ui/.env.e2e}"
+ENV_FILE="${E2E_ENV_FILE:-$ROOT/.env.e2e}"
 exec docker run --rm --ipc=host \
   --cpus="${DOCKER_CPUS:-4}" --memory="${DOCKER_MEMORY:-6g}" \
   --env-file "$ENV_FILE" \

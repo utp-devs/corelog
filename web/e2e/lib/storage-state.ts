@@ -1,12 +1,12 @@
 import { readFileSync } from 'node:fs';
 
-/** localStorage key used by the UI (ui/src/adapters/out/storage/token-storage.ts). */
+/** localStorage key used by the UI (session storage of the web app). */
 export const TOKEN_STORAGE_KEY = 'corelog.auth.token';
 
 /** localStorage key of the theme preference (the web app stores "light" or "dark" under it). */
 export const THEME_STORAGE_KEY = 'corelog.theme';
 
-/** localStorage key of the active organization id (ui/src/adapters/in/state/org.store.ts). */
+/** localStorage key of the active organization id (organization store of the web app). */
 export const CURRENT_ORG_STORAGE_KEY = 'corelog.currentOrg';
 
 export interface StorageStateFile {

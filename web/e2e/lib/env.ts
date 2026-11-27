@@ -3,7 +3,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const DEFAULT_BASE_URL = 'http://localhost:4300';
-// Same prefix the UI uses (VITE_API_BASE_URL default and openapi.yaml servers).
+// Same prefix the web app uses (openapi.yaml servers).
 const DEFAULT_API_URL = 'http://localhost:8080/api/v1';
 
 export interface E2eEnv {
@@ -39,14 +39,12 @@ export function parseEnvFile(text: string): Record<string, string> {
 }
 
 /**
- * Git-ignored env files, first match wins for each key: E2E_ENV_FILE when set, then web/.env.e2e,
- * then the env file of the React suite (the seeded accounts are shared by both suites).
+ * Git-ignored env files, first match wins for each key: E2E_ENV_FILE when set, then web/.env.e2e.
  */
 function readLocalEnvFile(): Record<string, string> {
   const candidates = [
     process.env.E2E_ENV_FILE,
     fileURLToPath(new URL('../../.env.e2e', import.meta.url)),
-    fileURLToPath(new URL('../../../ui/.env.e2e', import.meta.url)),
   ].filter((file): file is string => Boolean(file));
   const merged: Record<string, string> = {};
   for (const file of candidates) {
@@ -58,7 +56,7 @@ function readLocalEnvFile(): Record<string, string> {
   return merged;
 }
 
-/** Resolves the e2e settings: process environment first, then ui/.env.e2e, then defaults. */
+/** Resolves the e2e settings: process environment first, then web/.env.e2e, then defaults. */
 export function readE2eEnv(): E2eEnv {
   const fromFile = readLocalEnvFile();
   const pick = (key: string): string | undefined => process.env[key] || fromFile[key] || undefined;

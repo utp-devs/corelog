@@ -1,5 +1,5 @@
 /**
- * Known-violations baseline for the smoke journey (ui/e2e/known-violations.json).
+ * Known-violations baseline for the smoke journey (web/e2e/known-violations.json).
  *
  * Shape: { "<screen>|<viewport>": ["<rule id>", ...] } where the rule id is the audit rule of a
  * violation ("dead space", "overlap", "clipped text", "tap targets", "width", "card heights",

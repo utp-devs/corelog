@@ -7,7 +7,7 @@ param(
 $ErrorActionPreference = "Continue"
 
 $RootDir = Split-Path -Parent $PSScriptRoot
-$UiDir = Join-Path $RootDir "ui"
+$UiDir = Join-Path $RootDir "web"
 $BinDir = Join-Path $RootDir "bin"
 $DistDir = Join-Path $RootDir "dist"
 
@@ -103,7 +103,6 @@ function New-EnvFile {
 
 function Invoke-Env {
     New-EnvFile (Join-Path $RootDir ".env.example") (Join-Path $RootDir ".env") "Backend .env"
-    New-EnvFile (Join-Path $UiDir ".env.example") (Join-Path $UiDir ".env") "Frontend .env"
 }
 
 function Invoke-Dev {
@@ -134,7 +133,7 @@ function Invoke-Dev {
     else {
         Write-Log "dev" "Skipping frontend dependency install, Node or npm not found"
     }
-    Write-Log "dev" "Environment ready. Run 'go run ./cmd/api' in one terminal and 'cd ui; npm run dev' in another"
+    Write-Log "dev" "Environment ready. Run 'go run ./cmd/api' in one terminal and 'cd web; npm run start:portal' in another"
 }
 
 function Invoke-Prod {
@@ -189,10 +188,12 @@ function Invoke-Build {
         Push-Location $UiDir
         npm install
         Assert-LastExitCode "npm install failed"
-        npm run build
-        Assert-LastExitCode "npm run build failed"
+        npm run build:libs
+        Assert-LastExitCode "npm run build:libs failed"
+        npm run build:all:local
+        Assert-LastExitCode "npm run build:all:local failed"
         Pop-Location
-        Write-Log "build" "Frontend build written to ui/dist"
+        Write-Log "build" "Frontend build written to web/dist"
     }
     else {
         Write-Log "build" "Skipping frontend build, Node or npm not found"
@@ -226,7 +227,7 @@ function Invoke-Clean {
     Remove-Item -Recurse -Force -ErrorAction SilentlyContinue (Join-Path $UiDir "dist")
     Remove-Item -Recurse -Force -ErrorAction SilentlyContinue $DistDir
     Remove-Item -Force -ErrorAction SilentlyContinue (Join-Path $RootDir "corelog-package.zip")
-    Write-Log "clean" "Removed bin, ui/dist, dist, and the packaged archive"
+    Write-Log "clean" "Removed bin, web/dist, dist, and the packaged archive"
 }
 
 function Show-Usage {
@@ -234,7 +235,7 @@ function Show-Usage {
     Write-Host ""
     Write-Host "Commands:"
     Write-Host "  check     Report whether Go, Node, npm, Docker, and golang-migrate are available"
-    Write-Host "  env       Create .env and ui/.env from their example files if missing"
+    Write-Host "  env       Create .env from its example file if missing"
     Write-Host "      dev       Prepare a PostgreSQL development environment with Docker"
     Write-Host "  prod      Prepare a production-like environment backed by PostgreSQL via Docker"
     Write-Host "  build     Compile the backend binary and build the frontend"

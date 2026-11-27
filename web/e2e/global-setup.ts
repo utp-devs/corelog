@@ -19,7 +19,9 @@ interface OrgSummary {
 setup('API is healthy and every role has a saved session', async () => {
   const env = readE2eEnv();
   if (!env.password) {
-    throw new Error('E2E_USER_PASSWORD is not set: define it in the environment or in ui/.env.e2e');
+    throw new Error(
+      'E2E_USER_PASSWORD is not set: define it in the environment or in web/.env.e2e',
+    );
   }
 
   const api = await request.newContext({ baseURL: `${env.apiURL}/` });

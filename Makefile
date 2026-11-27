@@ -20,7 +20,7 @@ seed:
 	go run ./cmd/seed
 
 e2e:
-	cd ui && npm run e2e
+	cd web && npm run e2e
 
 stack-up:
 	docker compose -f docker-compose.local.yaml -f docker-compose.dev.yaml up -d --build
@@ -56,16 +56,16 @@ migrate-create:
 	migrate create -ext sql -dir migrations/postgres -seq $(name)
 
 ui-install:
-	cd ui && npm install
+	cd web && npm install
 
 ui-dev:
-	cd ui && npm run dev
+	cd web && npm run start:portal
 
 ui-build:
-	cd ui && npm run build
+	cd web && npm run build:libs && npm run build:all:local
 
 ui-lint:
-	cd ui && npm run lint
+	cd web && npm run format:check
 
 ui-test:
-	cd ui && npm test
+	cd web && npm test

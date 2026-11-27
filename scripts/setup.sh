@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-UI_DIR="$ROOT_DIR/ui"
+UI_DIR="$ROOT_DIR/web"
 BIN_DIR="$ROOT_DIR/bin"
 DIST_DIR="$ROOT_DIR/dist"
 
@@ -88,7 +88,6 @@ create_env_file() {
 
 cmd_env() {
   create_env_file "$ROOT_DIR/.env.example" "$ROOT_DIR/.env" "Backend .env"
-  create_env_file "$UI_DIR/.env.example" "$UI_DIR/.env" "Frontend .env"
 }
 
 cmd_dev() {
@@ -105,7 +104,7 @@ cmd_dev() {
   else
     log dev "Skipping frontend dependency install, Node or npm not found"
   fi
-  log dev "Environment ready. Run 'make run' in one terminal and 'cd ui && npm run dev' in another"
+  log dev "Environment ready. Run 'make run' in one terminal and 'cd web && npm run start:portal' in another"
 }
 
 cmd_prod() {
@@ -142,8 +141,8 @@ cmd_build() {
   log build "Backend binary written to bin/api${goexe}"
   if check_node; then
     log build "Building the frontend"
-    (cd "$UI_DIR" && npm install && npm run build)
-    log build "Frontend build written to ui/dist"
+    (cd "$UI_DIR" && npm ci && npm run build:libs && npm run build:all:local)
+    log build "Frontend build written to web/dist"
   else
     log build "Skipping frontend build, Node or npm not found"
   fi
@@ -168,7 +167,7 @@ cmd_package() {
 
 cmd_clean() {
   rm -rf "$BIN_DIR" "$UI_DIR/dist" "$DIST_DIR" "$ROOT_DIR/corelog-package.tar.gz"
-  log clean "Removed bin, ui/dist, dist, and the packaged archive"
+  log clean "Removed bin, web/dist, dist, and the packaged archive"
 }
 
 usage() {
@@ -177,7 +176,7 @@ Usage: scripts/setup.sh <command>
 
 Commands:
   check     Report whether Go, Node, npm, Docker, and golang-migrate are available
-  env       Create .env and ui/.env from their example files if missing
+  env       Create .env from its example file if missing
   dev       Prepare a PostgreSQL development environment with Docker
   prod      Prepare a production-like environment backed by PostgreSQL via Docker
   build     Compile the backend binary and build the frontend
