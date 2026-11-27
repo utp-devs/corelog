@@ -115,7 +115,7 @@ export class GlobalSearch {
       this.commands.register({
         id: 'nav-issues',
         title: 'Ir a Incidencias',
-        keywords: ['issues', 'tickets'],
+        keywords: ['issues', 'incidencias'],
         group: 'Navegación',
         run: () => this.go('/issues'),
       }),

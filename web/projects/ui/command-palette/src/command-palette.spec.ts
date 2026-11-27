@@ -10,7 +10,7 @@ const PALETTE_DEBOUNCE_MS = 150;
 
 const hits: SearchHit[] = [
   { kind: 'project', id: 'p-1', title: 'Proyecto Core', subtitle: 'CORE', link: '/projects/p-1' },
-  { kind: 'issue', id: 'i-1', title: 'Exportar datos', subtitle: 'CORE-12', link: '/issues/i-1' },
+  { kind: 'issue', id: 'i-1', title: 'Exportar datos', subtitle: 'CORE-12', link: '/browse/i-1' },
 ];
 
 interface SetupOptions {
@@ -230,7 +230,7 @@ describe('CommandPalette', () => {
     window.localStorage.setItem(
       RECENT_STORAGE_KEY,
       JSON.stringify([
-        { kind: 'issue', id: 'r-1', title: 'Reciente X', subtitle: 'CORE-3', link: '/issues/r-1' },
+        { kind: 'issue', id: 'r-1', title: 'Reciente X', subtitle: 'CORE-3', link: '/browse/r-1' },
       ]),
     );
     const { fixture, el, openHit } = setup();
@@ -241,7 +241,7 @@ describe('CommandPalette', () => {
     recentOption.dispatchEvent(new MouseEvent('mouseenter'));
     keyDown(fixture, dialogOf(el), 'Enter');
     expect(openHit).toHaveBeenCalledWith(
-      expect.objectContaining({ id: 'r-1', link: '/issues/r-1' }),
+      expect.objectContaining({ id: 'r-1', link: '/browse/r-1' }),
     );
   });
 

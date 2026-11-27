@@ -21,8 +21,8 @@ import {
   CREATABLE_ISSUE_TYPE_OPTIONS,
   ISSUE_DESCRIPTION_MIN_LENGTH,
   ISSUE_PRIORITY_OPTIONS,
-  ISSUE_TITLE_MAX_LENGTH,
-  ISSUE_TITLE_MIN_LENGTH,
+  ISSUE_SUMMARY_MAX_LENGTH,
+  ISSUE_SUMMARY_MIN_LENGTH,
   MentionUser,
   NotificationService,
   ORGANIZATION_ID_PROVIDER,
@@ -30,8 +30,8 @@ import {
   OrganizationStore,
   ProjectStore,
   StorageService,
-  Ticket,
-  TicketStore,
+  Issue,
+  IssueStore,
   UNSAVED_CANCEL_TEXT,
   UNSAVED_CONFIRM_TEXT,
   UNSAVED_DESCRIPTION,
@@ -63,7 +63,7 @@ const FILTERABLE_PROJECTS = 8;
  * Body and actions of the quick create-issue dialog. It lives in its own component so the stores it
  * needs are only created when the dialog is opened. The user picks the project (the one in view or the
  * last used by default), type, summary, description, priority and assignee; the issue is created through
- * the ticket store, then the dialog offers to open it or to create another one.
+ * the issue store, then the dialog offers to open it or to create another one.
  */
 @Component({
   selector: 'app-create-issue-form',
@@ -88,7 +88,7 @@ export class CreateIssueForm {
   private readonly destroyRef = inject(DestroyRef);
   private readonly router = inject(Router);
   private readonly projects = inject(ProjectStore);
-  private readonly tickets = inject(TicketStore);
+  private readonly issues = inject(IssueStore);
   private readonly notify = inject(NotificationService);
   private readonly auth = inject(AuthStore);
   private readonly organizations = inject(OrganizationStore);
@@ -103,17 +103,17 @@ export class CreateIssueForm {
   protected readonly form = createIssueDraftForm();
   protected readonly typeOptions = CREATABLE_ISSUE_TYPE_OPTIONS;
   protected readonly priorityOptions = ISSUE_PRIORITY_OPTIONS;
-  protected readonly titleMessages = {
+  protected readonly summaryMessages = {
     required: 'Escribe un resumen.',
-    minlength: `El resumen debe tener al menos ${ISSUE_TITLE_MIN_LENGTH} caracteres.`,
-    maxlength: `El resumen no puede superar ${ISSUE_TITLE_MAX_LENGTH} caracteres.`,
+    minlength: `El resumen debe tener al menos ${ISSUE_SUMMARY_MIN_LENGTH} caracteres.`,
+    maxlength: `El resumen no puede superar ${ISSUE_SUMMARY_MAX_LENGTH} caracteres.`,
   };
   protected readonly descriptionMessages = {
     required: 'Describe la incidencia.',
     minlength: `La descripción debe tener al menos ${ISSUE_DESCRIPTION_MIN_LENGTH} caracteres.`,
   };
   protected readonly projectMessages = { required: 'Elige un proyecto.' };
-  protected readonly titleMaxLength = ISSUE_TITLE_MAX_LENGTH;
+  protected readonly summaryMaxLength = ISSUE_SUMMARY_MAX_LENGTH;
 
   protected readonly unsavedTitle = UNSAVED_TITLE;
   protected readonly unsavedDescription = UNSAVED_DESCRIPTION;
@@ -124,7 +124,7 @@ export class CreateIssueForm {
   protected readonly submitting = signal(false);
   protected readonly serverError = signal<string | null>(null);
   /** The issue just created: while it is set, the dialog offers to open it or to create another. */
-  protected readonly created = signal<Ticket | null>(null);
+  protected readonly created = signal<Issue | null>(null);
   protected readonly discardOpen = signal(false);
   protected readonly assigneeCandidates = signal<PickableUser[]>([]);
 
@@ -177,11 +177,11 @@ export class CreateIssueForm {
     this.created() ? 'Incidencia creada' : 'Crear incidencia',
   );
   protected readonly createdKey = computed(() => {
-    const ticket = this.created();
-    return ticket ? issueKeyOf(ticket.id) : '';
+    const issue = this.created();
+    return issue ? issueKeyOf(issue) : '';
   });
 
-  private readonly titleField = viewChild<ElementRef<HTMLInputElement>>('titleField');
+  private readonly summaryField = viewChild<ElementRef<HTMLInputElement>>('summaryField');
 
   /** Teammates for the @ mention menu of the description. */
   protected readonly searchUsers = (query: string): Promise<MentionUser[]> => {
@@ -201,7 +201,7 @@ export class CreateIssueForm {
     effect(() => {
       if (this.view() === 'form') {
         untracked(() =>
-          afterNextRender(() => this.titleField()?.nativeElement.focus(), {
+          afterNextRender(() => this.summaryField()?.nativeElement.focus(), {
             injector: this.injector,
           }),
         );
@@ -248,26 +248,26 @@ export class CreateIssueForm {
 
     const values = this.form.getRawValue();
     this.submitting.set(true);
-    this.tickets
-      .createTicket({
+    this.issues
+      .createIssue({
         projectId: values.projectId,
-        title: values.title.trim(),
+        summary: values.summary.trim(),
         description: values.description,
         priority: values.priority,
         issueType: values.issueType,
       })
       .pipe(
-        switchMap((ticket) =>
-          values.assigneeId ? this.assign(ticket, values.assigneeId) : of(ticket),
+        switchMap((issue) =>
+          values.assigneeId ? this.assign(issue, values.assigneeId) : of(issue),
         ),
         takeUntilDestroyed(this.destroyRef),
       )
       .subscribe({
-        next: (ticket) => {
+        next: (issue) => {
           this.submitting.set(false);
           this.storage.setItem(LAST_CREATE_PROJECT_KEY, values.projectId);
-          this.notify.success(`Incidencia ${issueKeyOf(ticket.id)} creada`);
-          this.created.set(ticket);
+          this.notify.success(`Incidencia ${issueKeyOf(issue)} creada`);
+          this.created.set(issue);
         },
         error: (error: unknown) => {
           this.submitting.set(false);
@@ -277,9 +277,9 @@ export class CreateIssueForm {
   }
 
   protected openCreated(): void {
-    const ticket = this.created();
+    const issue = this.created();
     this.closed.emit();
-    if (ticket) void this.router.navigateByUrl(issuePath(ticket.id));
+    if (issue) void this.router.navigateByUrl(issuePath(issue.key));
   }
 
   /** Back to an empty form that keeps the project, type and priority of the last issue. */
@@ -289,13 +289,13 @@ export class CreateIssueForm {
       projectId,
       issueType,
       priority,
-      title: '',
+      summary: '',
       description: '',
       assigneeId: undefined,
     });
     this.submitted.set(false);
     this.created.set(null);
-    afterNextRender(() => this.titleField()?.nativeElement.focus(), { injector: this.injector });
+    afterNextRender(() => this.summaryField()?.nativeElement.focus(), { injector: this.injector });
   }
 
   protected goToProjects(): void {
@@ -304,11 +304,11 @@ export class CreateIssueForm {
   }
 
   /** The issue exists even if the assignee could not be set: say so instead of failing the creation. */
-  private assign(ticket: Ticket, assigneeId: string): Observable<Ticket> {
-    return this.tickets.assign(ticket.id, assigneeId).pipe(
+  private assign(issue: Issue, assigneeId: string): Observable<Issue> {
+    return this.issues.assign(issue.id, assigneeId).pipe(
       catchError(() => {
         this.notify.info('La incidencia se creó, pero no se pudo asignar.');
-        return of(ticket);
+        return of(issue);
       }),
     );
   }

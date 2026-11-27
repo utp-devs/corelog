@@ -8,11 +8,11 @@ import {
   OrganizationStore,
   ProjectStore,
   StorageService,
-  TicketStore,
+  IssueStore,
   UserDirectoryApiService,
   type IssueDraftFormGroup,
   type Project,
-  type Ticket,
+  type Issue,
 } from '@corelog/core';
 import { Observable, of, throwError } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -40,7 +40,11 @@ function projectOf(
   };
 }
 
-const TICKET = { id: '1234abcd-0000-4000-8000-000000000000', title: 'Falla el login' } as Ticket;
+const ISSUE = {
+  id: '1234abcd-0000-4000-8000-000000000000',
+  key: 'CORE-7',
+  summary: 'Falla el login',
+} as Issue;
 
 interface Options {
   projects?: Project[];
@@ -48,8 +52,8 @@ interface Options {
   url?: string;
   role?: 'owner' | 'admin' | 'member' | 'guest' | null;
   policy?: 'members' | 'admins';
-  create?: (input: unknown) => Observable<Ticket>;
-  assign?: (id: string, assigneeId: string | null) => Observable<Ticket>;
+  create?: (input: unknown) => Observable<Issue>;
+  assign?: (id: string, assigneeId: string | null) => Observable<Issue>;
   stored?: string;
 }
 
@@ -61,8 +65,8 @@ function setup(options: Options = {}) {
   const projects = signal(options.projects ?? [projectOf('p-1', 'Core', 'CORE')]);
   const status = signal<'idle' | 'loading' | 'error'>(options.status ?? 'idle');
   const fetchProjects = vi.fn();
-  const createTicket = vi.fn(options.create ?? (() => of(TICKET)));
-  const assign = vi.fn(options.assign ?? (() => of(TICKET)));
+  const createIssue = vi.fn(options.create ?? (() => of(ISSUE)));
+  const assign = vi.fn(options.assign ?? (() => of(ISSUE)));
   const router = { url: options.url ?? '/issues', navigateByUrl: vi.fn() };
   const notify = { success: vi.fn(), info: vi.fn(), error: vi.fn() };
   const storage = new Map<string, string>();
@@ -72,7 +76,7 @@ function setup(options: Options = {}) {
     providers: [
       { provide: Router, useValue: router },
       { provide: ProjectStore, useValue: { projects, status, fetchProjects } },
-      { provide: TicketStore, useValue: { createTicket, assign } },
+      { provide: IssueStore, useValue: { createIssue, assign } },
       { provide: NotificationService, useValue: notify },
       { provide: AuthStore, useValue: { user: signal({ role: 'user' }) } },
       {
@@ -97,7 +101,7 @@ function setup(options: Options = {}) {
   const closed = vi.fn();
   fixture.componentInstance.closed.subscribe(closed);
   fixture.detectChanges();
-  return { fixture, createTicket, assign, router, notify, closed, fetchProjects, storage };
+  return { fixture, createIssue, assign, router, notify, closed, fetchProjects, storage };
 }
 
 function el(fixture: ComponentFixture<unknown>): HTMLElement {
@@ -117,8 +121,8 @@ function formOf(fixture: ComponentFixture<CreateIssueForm>): IssueDraftFormGroup
   return (fixture.componentInstance as unknown as FormAccess).form;
 }
 
-function fill(fixture: ComponentFixture<CreateIssueForm>, title = 'Falla el login'): void {
-  formOf(fixture).patchValue({ title, description: 'No se puede iniciar sesión.' });
+function fill(fixture: ComponentFixture<CreateIssueForm>, summary = 'Falla el login'): void {
+  formOf(fixture).patchValue({ summary, description: 'No se puede iniciar sesión.' });
   fixture.detectChanges();
 }
 
@@ -158,25 +162,25 @@ describe('CreateIssueForm', () => {
   });
 
   it('does not create and shows messages when the form is incomplete', () => {
-    const { fixture, createTicket } = setup();
+    const { fixture, createIssue } = setup();
     buttonNamed(fixture, 'Crear incidencia')?.click();
     fixture.detectChanges();
 
-    expect(createTicket).not.toHaveBeenCalled();
+    expect(createIssue).not.toHaveBeenCalled();
     expect(el(fixture).textContent).toContain('Escribe un resumen.');
     expect(el(fixture).textContent).toContain('Describe la incidencia.');
   });
 
-  it('creates the issue in the chosen project through the ticket store', () => {
-    const { fixture, createTicket, notify, storage } = setup();
+  it('creates the issue in the chosen project through the issue store', () => {
+    const { fixture, createIssue, notify, storage } = setup();
     fill(fixture);
     formOf(fixture).patchValue({ issueType: 'bug', priority: 'high' });
     buttonNamed(fixture, 'Crear incidencia')?.click();
     fixture.detectChanges();
 
-    expect(createTicket).toHaveBeenCalledWith({
+    expect(createIssue).toHaveBeenCalledWith({
       projectId: 'p-1',
-      title: 'Falla el login',
+      summary: 'Falla el login',
       description: 'No se puede iniciar sesión.',
       priority: 'high',
       issueType: 'bug',
@@ -194,7 +198,7 @@ describe('CreateIssueForm', () => {
     formOf(fixture).controls.assigneeId.setValue('u-9');
     buttonNamed(fixture, 'Crear incidencia')?.click();
 
-    expect(assign).toHaveBeenCalledWith(TICKET.id, 'u-9');
+    expect(assign).toHaveBeenCalledWith(ISSUE.id, 'u-9');
   });
 
   it('keeps the created issue and warns when the assignment fails', () => {
@@ -216,7 +220,7 @@ describe('CreateIssueForm', () => {
     buttonNamed(fixture, 'Ver incidencia')?.click();
 
     expect(closed).toHaveBeenCalled();
-    expect(router.navigateByUrl).toHaveBeenCalledWith(`/issues/${TICKET.id}`);
+    expect(router.navigateByUrl).toHaveBeenCalledWith(`/browse/${ISSUE.key}`);
   });
 
   it('offers to create another one with the project and type kept', () => {
@@ -229,7 +233,7 @@ describe('CreateIssueForm', () => {
     fixture.detectChanges();
 
     const form = formOf(fixture);
-    expect(form.controls.title.value).toBe('');
+    expect(form.controls.summary.value).toBe('');
     expect(form.controls.description.value).toBe('');
     expect(form.controls.projectId.value).toBe('p-1');
     expect(form.controls.issueType.value).toBe('story');
@@ -250,7 +254,7 @@ describe('CreateIssueForm', () => {
 
   it('asks before discarding typed text', () => {
     const { fixture, closed } = setup();
-    formOf(fixture).controls.title.markAsDirty();
+    formOf(fixture).controls.summary.markAsDirty();
     el(fixture)
       .querySelector('[role="dialog"]')
       ?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));

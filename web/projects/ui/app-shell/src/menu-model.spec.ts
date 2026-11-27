@@ -30,7 +30,7 @@ function recent(kind: 'project' | 'issue', index: number): RecentItem {
     id: `${kind}-${index}`,
     title: `${kind} ${index}`,
     subtitle: `K-${index}`,
-    link: kind === 'project' ? `/projects/${kind}-${index}/board` : `/issues/${kind}-${index}`,
+    link: kind === 'project' ? `/projects/${kind}-${index}/board` : `/browse/${kind}-${index}`,
   };
 }
 

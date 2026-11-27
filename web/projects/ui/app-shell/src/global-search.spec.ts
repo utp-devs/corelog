@@ -9,7 +9,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { GlobalSearch, HEADER_SEARCH_DEBOUNCE_MS } from './global-search';
 
 const hits: SearchHit[] = [
-  { kind: 'issue', id: 'i-1', title: 'Exportar datos', subtitle: 'CORE', link: '/issues/i-1' },
+  { kind: 'issue', id: 'i-1', title: 'Exportar datos', subtitle: 'CORE', link: '/browse/i-1' },
 ];
 
 describe('GlobalSearch', () => {
@@ -130,7 +130,7 @@ describe('GlobalSearch', () => {
     hit?.dispatchEvent(new MouseEvent('mouseenter'));
     paletteDialog()?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
     fixture.detectChanges();
-    expect(navigate).toHaveBeenCalledWith('/issues/i-1');
+    expect(navigate).toHaveBeenCalledWith('/browse/i-1');
   });
 
   it('shows only the icon button on narrow layouts and opens the palette from it', () => {
@@ -152,7 +152,7 @@ describe('GlobalSearch under the workspace base href', () => {
     TestBed.configureTestingModule({
       imports: [GlobalSearch],
       providers: [
-        provideRouter([{ path: 'issues/:id', children: [] }]),
+        provideRouter([{ path: 'browse/:id', children: [] }]),
         { provide: APP_BASE_HREF, useValue: '/workspace/' },
         { provide: SearchApiService, useValue: { search } },
       ],
@@ -161,7 +161,7 @@ describe('GlobalSearch under the workspace base href', () => {
     fixture.detectChanges();
     const router = TestBed.inject(Router);
     await router.navigateByUrl(hits[0].link);
-    expect(router.url).toBe('/issues/i-1');
-    expect(TestBed.inject(PlatformLocation).pathname).toBe('/workspace/issues/i-1');
+    expect(router.url).toBe('/browse/i-1');
+    expect(TestBed.inject(PlatformLocation).pathname).toBe('/workspace/browse/i-1');
   });
 });
