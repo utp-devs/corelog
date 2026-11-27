@@ -10,6 +10,7 @@ const PORTAL_PATHS = ['/login', '/register', '/invite', '/onboarding'] as const;
 /** Work pages served by the workspace app under /workspace. */
 const WORKSPACE_PATHS = [
   '/issues',
+  '/browse',
   '/projects',
   '/dashboard',
   '/teams',

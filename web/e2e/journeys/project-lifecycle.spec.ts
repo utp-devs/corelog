@@ -58,7 +58,7 @@ async function addMember(
 function createIssue(client: APIRequestContext, project: ApiProject): Promise<APIResponse> {
   return client.post('issues', {
     data: {
-      title: 'Incidencia del ciclo de vida',
+      summary: 'Incidencia del ciclo de vida',
       description: 'Creada por el recorrido del proyecto.',
       priority: 'medium',
       project_id: project.id,
@@ -226,9 +226,9 @@ test.describe('ciclo de vida de un proyecto', () => {
     await expect(page.getByText('project.archived')).toHaveCount(0);
     await expect(page.getByRole('button', { name: /^Mover .* a columna$/ })).toHaveCount(0);
 
-    await page.goto(appPath(`/issues/${issueId}`));
+    await page.goto(appPath(`/browse/${issueId}`));
     await expect(page.getByTestId('archived-notice')).toBeVisible();
-    await expect(page.getByRole('button', { name: /^Editar Título/ })).toBeDisabled();
+    await expect(page.getByRole('button', { name: /^Editar Resumen/ })).toBeDisabled();
     await expect(page.getByText('project.archived')).toHaveCount(0);
 
     // A manager restores it from the notice and writes work again.

@@ -51,7 +51,7 @@ const screens: readonly Screen[] = [
   { name: 'dashboard', path: () => '/dashboard', template: 'fluid' },
   { name: 'issues', path: () => '/issues', template: 'wide' },
   { name: 'issue-new', path: () => '/issues/new', template: 'reading' },
-  { name: 'issue-detail', path: (ids) => `/issues/${ids.issueId}`, template: 'reading' },
+  { name: 'issue-detail', path: (ids) => `/browse/${ids.issueId}`, template: 'reading' },
   { name: 'projects', path: () => '/projects', template: 'wide' },
   { name: 'project-board', path: (ids) => `/projects/${ids.projectId}/board`, template: 'fluid' },
   {
@@ -208,7 +208,7 @@ async function smokeIds(client: APIRequestContext, orgId: string): Promise<Ids> 
   if (issues.length === 0 && projectId !== missing) {
     const created = await client.post('issues', {
       data: {
-        title: 'e2e smoke issue',
+        summary: 'e2e smoke issue',
         description: 'Incidencia del smoke test de pantallas.',
         priority: 'medium',
         project_id: projectId,
