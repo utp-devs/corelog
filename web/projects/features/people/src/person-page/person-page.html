@@ -1,11 +1,21 @@
 @let v = view();
 
 @if (v.kind === 'no-org') {
-  <app-error-page [variant]="404" [title]="notFoundTitle" [description]="notFoundDescription" />
+  <app-error-page
+    [framed]="true"
+    [variant]="404"
+    [title]="notFoundTitle"
+    [description]="notFoundDescription"
+  />
 } @else if (v.kind === 'forbidden') {
-  <app-error-page [variant]="403" />
+  <app-error-page [framed]="true" [variant]="403" />
 } @else if (v.kind === 'not-found') {
-  <app-error-page [variant]="404" [title]="notFoundTitle" [description]="notFoundDescription" />
+  <app-error-page
+    [framed]="true"
+    [variant]="404"
+    [title]="notFoundTitle"
+    [description]="notFoundDescription"
+  />
 } @else if (v.kind === 'loading') {
   <app-page-container variant="wide" pageName="person" [ready]="false">
     <app-section ariaLabel="Cargando persona">

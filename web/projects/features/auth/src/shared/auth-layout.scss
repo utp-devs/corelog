@@ -29,14 +29,20 @@
   }
 
   &__main {
-    display: grid;
-    grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
     min-height: 100vh;
     min-height: 100dvh;
 
     &:focus {
       outline: none;
     }
+  }
+
+  // The page measured by the layout audit: the brand panel and the form side by side.
+  &__page {
+    display: grid;
+    grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
+    min-height: 100vh;
+    min-height: 100dvh;
   }
 
   // Brand panel: logo, value proposition and soft shapes made of tokens.
@@ -173,13 +179,13 @@
 
   // Tablet and phone: the brand panel becomes a compact header and the form follows.
   @include m.respond-down(1024px) {
-    &__main {
+    &__page {
       grid-template-columns: minmax(0, 1fr);
       grid-template-rows: auto 1fr;
     }
 
     &__brand {
-      padding: var(--cl-space-5) var(--cl-gutter);
+      padding: var(--cl-space-10) var(--cl-gutter);
     }
 
     &__brand-inner {

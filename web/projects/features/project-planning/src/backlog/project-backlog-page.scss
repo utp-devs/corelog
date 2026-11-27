@@ -6,8 +6,10 @@
     margin: 0;
   }
 
+  /* The stack takes the free height and its last block grows with it, so a short backlog never leaves a blank area. */
   &__stack {
     @include m.flex-column(4);
+    flex: 1 1 auto;
     min-width: 0;
   }
 
@@ -15,6 +17,10 @@
     border: 1px solid var(--cl-border);
     border-radius: var(--cl-radius-lg);
     background: var(--cl-bg-surface);
+
+    &:last-child {
+      flex: 1 1 auto;
+    }
   }
 
   &__block-title {
@@ -143,6 +149,11 @@
     color: var(--cl-text);
     font-weight: var(--cl-weight-medium);
     text-decoration: none;
+
+    /* A tap target on phones. */
+    @include m.respond-down(768px) {
+      padding-block: var(--cl-space-2);
+    }
 
     &:hover {
       color: var(--cl-brand);

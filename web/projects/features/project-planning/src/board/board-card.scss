@@ -43,6 +43,11 @@
     -webkit-line-clamp: 2;
     overflow-wrap: anywhere;
 
+    /* A tap target on phones. */
+    @include m.respond-down(768px) {
+      min-height: var(--cl-control-h-md);
+    }
+
     &:hover {
       color: var(--cl-brand);
       text-decoration: underline;

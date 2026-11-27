@@ -1,6 +1,6 @@
 @if (accessVariant(); as variant) {
   <app-page-container variant="wide" pageName="backlog" [fill]="true">
-    <app-error-page [variant]="variant" />
+    <app-error-page [variant]="variant" [framed]="true" />
   </app-page-container>
 } @else {
   <app-page-container variant="wide" pageName="backlog" [ready]="ready()" [fill]="true">

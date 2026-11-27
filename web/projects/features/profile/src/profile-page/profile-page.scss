@@ -14,8 +14,14 @@
   // Forms stay at a readable line length instead of stretching across the whole content area.
   &__content {
     @include m.flex-column(6);
+    flex: 1 1 auto;
     width: 100%;
     max-width: var(--cl-dialog-w-lg);
     min-width: 0;
+
+    // The general section places its cards side by side, so it uses the full content width.
+    &--wide {
+      max-width: none;
+    }
   }
 }

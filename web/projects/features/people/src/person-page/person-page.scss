@@ -42,8 +42,14 @@
   }
 
   &__email {
+    display: inline-block;
     color: var(--cl-brand);
     overflow-wrap: anywhere;
+
+    /* A tap target on phones. */
+    @include m.respond-down(768px) {
+      padding-block: var(--cl-space-2);
+    }
   }
 
   &__details {

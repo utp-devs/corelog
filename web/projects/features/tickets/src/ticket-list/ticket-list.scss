@@ -35,6 +35,11 @@
       overflow: visible;
       white-space: normal;
       overflow-wrap: anywhere;
+
+      /* The card link is a tap target: it gets vertical room on phones. */
+      @include m.respond-down(768px) {
+        padding-block: var(--cl-space-2);
+      }
     }
   }
 

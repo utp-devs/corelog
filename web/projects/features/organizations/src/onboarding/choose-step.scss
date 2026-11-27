@@ -15,6 +15,11 @@
     border: 1px solid var(--cl-border);
     border-radius: var(--cl-radius-lg);
     background: var(--cl-bg-surface);
+
+    // Roomy cards on tall windows, so the wizard fills the screen instead of floating in it.
+    @include m.respond-up(768px) {
+      min-height: min(60dvh, 46rem);
+    }
   }
 
   &__icon {

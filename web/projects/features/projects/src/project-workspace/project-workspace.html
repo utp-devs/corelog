@@ -1,7 +1,7 @@
 <div class="project-workspace">
   @if (accessVariant(); as variant) {
     <app-page-container variant="wide" pageName="project-access" [ready]="true" [fill]="true">
-      <app-error-page [variant]="variant" />
+      <app-error-page [variant]="variant" [framed]="true" />
     </app-page-container>
   } @else {
     @if (state().status === 'loading') {

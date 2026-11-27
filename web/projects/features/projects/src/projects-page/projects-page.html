@@ -1,6 +1,6 @@
 @if (accessVariant(); as variant) {
   <app-page-container variant="wide" pageName="projects" [fill]="true">
-    <app-error-page [variant]="variant" />
+    <app-error-page [variant]="variant" [framed]="true" />
   </app-page-container>
 } @else {
   <app-page-container
@@ -89,7 +89,7 @@
         />
       </app-section>
     } @else {
-      <app-card-grid ariaLabel="Proyectos" [minCardWidth]="280">
+      <app-card-grid ariaLabel="Proyectos" [minCardWidth]="280" [fill]="true">
         @for (project of visible(); track project.id) {
           <article
             class="projects-page__card"

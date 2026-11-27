@@ -1,7 +1,7 @@
 @if (accessVariant(); as variant) {
   <app-page-container variant="fluid" pageName="calendar" [fill]="true">
     <div class="project-calendar">
-      <app-error-page [variant]="variant" />
+      <app-error-page [variant]="variant" [framed]="true" />
     </div>
   </app-page-container>
 } @else {

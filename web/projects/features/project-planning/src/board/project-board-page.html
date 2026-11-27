@@ -1,7 +1,7 @@
 @if (accessVariant(); as variant) {
   <app-page-container variant="fluid" pageName="board" [fill]="true">
     <div class="project-board">
-      <app-error-page [variant]="variant" />
+      <app-error-page [variant]="variant" [framed]="true" />
     </div>
   </app-page-container>
 } @else {
@@ -65,7 +65,12 @@
           </div>
 
           @if (isMobile()) {
-            <div class="project-board__switcher" role="tablist" aria-label="Columnas del tablero">
+            <div
+              class="project-board__switcher"
+              role="tablist"
+              aria-label="Columnas del tablero"
+              data-scroll-x=""
+            >
               @for (column of columns(); track column.id) {
                 <button
                   type="button"

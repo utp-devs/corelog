@@ -3,7 +3,10 @@
     <div class="profile-page">
       <app-page-header [title]="meta().title" [subtitle]="meta().description" />
 
-      <div class="profile-page__content">
+      <div
+        class="profile-page__content"
+        [class.profile-page__content--wide]="section() === 'general'"
+      >
         @switch (section()) {
           @case ('general') {
             <app-profile-general-section

@@ -7,7 +7,7 @@
 >
   <div class="ticket-form__layout">
     <div class="ticket-form__main">
-      <app-section title="Datos principales">
+      <app-section title="Datos principales" [fill]="true">
         <div class="ticket-form__stack">
           <app-field-row
             label="Título"
@@ -100,7 +100,7 @@
     </aside>
   </div>
 
-  <div class="ticket-form__actions">
+  <div class="ticket-form__actions" data-overlay>
     <p-button
       label="Cancelar"
       severity="secondary"

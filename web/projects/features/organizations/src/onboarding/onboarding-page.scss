@@ -1,6 +1,10 @@
 @use '../../../../ui/styles/mixins' as m;
 
 .onboarding {
+  // The wizard sits in the vertical middle of the window, so a short step never leaves a blank band below.
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
   min-height: 100vh;
   min-height: 100dvh;
   background: var(--cl-bg-page);

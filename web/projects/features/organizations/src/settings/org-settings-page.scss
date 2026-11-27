@@ -5,14 +5,13 @@
   min-width: 0;
 }
 
-// One column of cards at a readable width; every card is separated by the same 24 px.
+// Cards sit side by side while each keeps a readable width (one column on narrow screens); every card is separated by the same 24 px.
 .org-settings-page {
   @include m.flex-column(6);
-  max-width: var(--cl-dialog-w-lg);
   min-width: 0;
 
   &__form {
-    @include m.flex-column(6);
+    @include m.grid-auto(26rem, 6);
     min-width: 0;
   }
 
@@ -48,6 +47,7 @@
 
   &__actions {
     @include m.cluster(2, center, flex-end);
+    grid-column: 1 / -1;
 
     @include m.respond-down(768px) {
       > * {

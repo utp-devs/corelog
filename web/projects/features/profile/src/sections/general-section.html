@@ -2,6 +2,7 @@
   <app-section
     title="Foto de perfil"
     description="Así te ven tus compañeros en incidencias y menciones."
+    [fill]="true"
   >
     <app-profile-avatar-uploader [user]="user()" (userChange)="userChange.emit($event)">
       <div class="general-section__identity" aria-label="Resumen de la cuenta" role="group">
@@ -20,6 +21,7 @@
   <app-section
     title="Datos personales"
     description="Tu nombre y tu cargo son los que ven tus compañeros."
+    [fill]="true"
   >
     <app-profile-form
       [user]="user()"

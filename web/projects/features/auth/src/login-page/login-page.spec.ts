@@ -141,6 +141,14 @@ describe('LoginPage landmarks and labels', () => {
     expect(el.querySelector('aside')).toBeNull();
   });
 
+  it('marks the page that holds the brand and form panels as the first child of main', () => {
+    const { el } = setup();
+    const page = el.querySelector('main#auth-main')?.firstElementChild;
+    expect(page?.getAttribute('data-page')).toBe('auth');
+    expect(page?.querySelector('.auth-layout__brand')).not.toBeNull();
+    expect(page?.querySelector('.auth-layout__panel')).not.toBeNull();
+  });
+
   it('renders the brand banner in the brand panel beside the form panel', () => {
     const { el } = setup();
     const brand = el.querySelector('main#auth-main .auth-layout__brand');
