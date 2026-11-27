@@ -1,6 +1,13 @@
 <header class="page-header">
-  <h1 class="page-title">{{ title() }}</h1>
-  @if (subtitle()) {
-    <p class="page-subtitle">{{ subtitle() }}</p>
+  <div class="heading">
+    <h1 class="page-title">{{ title() }}</h1>
+    @if (subtitle()) {
+      <p class="page-subtitle">{{ subtitle() }}</p>
+    }
+  </div>
+  @if (hasActions()) {
+    <div class="page-actions">
+      <ng-content select="[appPageHeaderActions]" />
+    </div>
   }
 </header>

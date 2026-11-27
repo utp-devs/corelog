@@ -1,0 +1,19 @@
+<div
+  class="root"
+  [class]="variant()"
+  [attr.data-variant]="variant()"
+  [attr.data-ready]="ready() ? 'true' : 'false'"
+  [attr.data-page]="pageName()"
+  [attr.data-fill]="fill() ? 'true' : 'false'"
+  [attr.data-has-sidebar]="hasSidebar() ? 'true' : 'false'"
+  [attr.data-stacked]="hasSidebar() && stacked() ? 'true' : 'false'"
+>
+  <div class="content">
+    <ng-content />
+  </div>
+  @if (hasSidebar()) {
+    <aside class="sidebar" aria-label="Panel lateral">
+      <ng-content select="[appPageSidebar]" />
+    </aside>
+  }
+</div>

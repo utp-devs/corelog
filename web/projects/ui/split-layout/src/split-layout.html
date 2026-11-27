@@ -1,0 +1,12 @@
+<div
+  class="layout"
+  [attr.data-stacked]="stacked() ? 'true' : 'false'"
+  [attr.data-side-width]="sideWidth()"
+>
+  <div class="main">
+    <ng-content select="[appSplitMain]" />
+  </div>
+  <aside class="side" [attr.aria-label]="sideLabel()">
+    <ng-content select="[appSplitSide]" />
+  </aside>
+</div>

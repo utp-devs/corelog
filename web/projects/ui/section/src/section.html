@@ -1,0 +1,46 @@
+<ng-template #titleText>{{ title() }}</ng-template>
+
+<section
+  class="section"
+  [attr.data-fill]="fill() ? 'true' : 'false'"
+  [attr.aria-labelledby]="title() !== undefined ? titleId : null"
+  [attr.aria-label]="title() === undefined ? ariaLabel() : null"
+>
+  @if (hasHeader()) {
+    <header class="header">
+      <div class="title-block">
+        @if (title() !== undefined) {
+          @switch (headingLevel()) {
+            @case (3) {
+              <h3 [id]="titleId" class="title"><ng-container *ngTemplateOutlet="titleText" /></h3>
+            }
+            @case (4) {
+              <h4 [id]="titleId" class="title"><ng-container *ngTemplateOutlet="titleText" /></h4>
+            }
+            @default {
+              <h2 [id]="titleId" class="title"><ng-container *ngTemplateOutlet="titleText" /></h2>
+            }
+          }
+        }
+        @if (description() !== undefined) {
+          <p class="description">{{ description() }}</p>
+        }
+      </div>
+      @if (hasActions()) {
+        <div class="actions">
+          <ng-content select="[appSectionActions]" />
+        </div>
+      }
+    </header>
+  }
+
+  <div class="body" [class.body-flush]="!bodyPadded()" [class.grow]="fill()">
+    <ng-content />
+  </div>
+
+  @if (hasFooter()) {
+    <footer class="footer">
+      <ng-content select="[appSectionFooter]" />
+    </footer>
+  }
+</section>

@@ -1,0 +1,55 @@
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cl-space-1);
+  min-width: 0;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--cl-space-2);
+  font-size: var(--cl-font-small);
+  color: var(--cl-text-subtle);
+}
+
+.track {
+  height: 8px;
+  overflow: hidden;
+  border-radius: var(--cl-radius-full);
+  background: var(--cl-bg-sunken);
+}
+
+.fill-track-item {
+  width: var(--cl-progress, 0%);
+  height: 100%;
+  border-radius: inherit;
+  transition: width 150ms ease-out;
+}
+
+.brand {
+  background: var(--cl-brand);
+}
+
+.success {
+  background: var(--cl-success);
+}
+
+.warning {
+  background: var(--cl-warning);
+}
+
+.danger {
+  background: var(--cl-danger);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fill-track-item {
+    transition: none;
+  }
+}

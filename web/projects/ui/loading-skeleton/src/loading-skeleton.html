@@ -1,0 +1,12 @@
+<div class="container" role="status" aria-busy="true" aria-label="Cargando">
+  @for (block of blocks(); track $index) {
+    <div class="block">
+      @if (block.title) {
+        <span class="bone title" aria-hidden="true"></span>
+      }
+      @for (line of block.lines; track line; let last = $last) {
+        <span class="bone line" [class.short]="last" aria-hidden="true"></span>
+      }
+    </div>
+  }
+</div>

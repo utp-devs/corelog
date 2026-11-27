@@ -1,0 +1,17 @@
+@if (items().length > 0) {
+  <nav class="nav" aria-label="Ruta de navegación">
+    <ol class="list">
+      @for (item of items(); track $index; let last = $last) {
+        <li class="item" [class.middle]="isMiddle($index)">
+          @if (last) {
+            <span class="current" aria-current="page">{{ item.label }}</span>
+          } @else if (item.to !== undefined) {
+            <a class="link" [routerLink]="item.to">{{ item.label }}</a>
+          } @else {
+            <span class="plain">{{ item.label }}</span>
+          }
+        </li>
+      }
+    </ol>
+  </nav>
+}

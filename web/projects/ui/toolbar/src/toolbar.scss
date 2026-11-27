@@ -1,0 +1,115 @@
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--cl-space-3);
+  min-width: 0;
+  padding: var(--cl-space-2) 0;
+}
+
+.toolbar[data-sticky='true'] {
+  position: sticky;
+  top: var(--cl-topbar-h);
+  z-index: var(--cl-z-header);
+  background: var(--cl-bg-page);
+}
+
+.left,
+.right {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--cl-space-2);
+  min-width: 0;
+}
+
+.left {
+  flex: 1 1 auto;
+}
+
+.right {
+  margin-left: auto;
+  justify-content: flex-end;
+}
+
+/* Toolbar children wrap their label instead of being cut when the bar is narrow. */
+.left > *,
+.right > *,
+.inline-secondary > *,
+.menu > * {
+  max-width: 100%;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.inline-secondary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--cl-space-2);
+}
+
+.more {
+  position: relative;
+  display: inline-flex;
+}
+
+.more-button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--cl-space-1);
+  min-height: 32px;
+  padding: var(--cl-space-1) var(--cl-space-3);
+  border: 1px solid var(--cl-border);
+  border-radius: var(--cl-radius-md);
+  background: var(--cl-bg-surface);
+  color: var(--cl-text);
+  font: inherit;
+  font-size: var(--cl-font-body);
+  cursor: pointer;
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.more-button:hover {
+  border-color: var(--cl-border-strong);
+}
+
+.more-button:focus-visible {
+  outline: none;
+  box-shadow: var(--cl-shadow-focus);
+}
+
+.more-icon {
+  flex: none;
+}
+
+/* Phones: the overflow trigger is a 44 px touch target. */
+@media (max-width: 767.98px) {
+  .more-button {
+    min-height: 44px;
+  }
+}
+
+.menu {
+  position: absolute;
+  top: calc(100% + var(--cl-space-1));
+  right: 0;
+  z-index: var(--cl-z-dropdown);
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--cl-space-1);
+  padding: var(--cl-space-2);
+  min-width: 200px;
+  background: var(--cl-bg-surface);
+  border-radius: var(--cl-radius-md);
+  box-shadow: var(--cl-shadow-3);
+}

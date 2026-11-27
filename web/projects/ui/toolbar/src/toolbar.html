@@ -1,0 +1,57 @@
+<ng-template #secondaryActions>
+  <ng-content select="[appToolbarSecondary]" />
+</ng-template>
+
+<div
+  class="toolbar"
+  role="toolbar"
+  aria-label="Barra de acciones"
+  [attr.data-sticky]="sticky() ? 'true' : 'false'"
+>
+  @if (hasLeft()) {
+    <div class="left">
+      <ng-content select="[appToolbarLeft]" />
+    </div>
+  }
+  @if (hasRight() || hasSecondary()) {
+    <div class="right">
+      <ng-content select="[appToolbarRight]" />
+      @if (hasSecondary() && !moveToMenu()) {
+        <div class="inline-secondary">
+          <ng-container *ngTemplateOutlet="secondaryActions" />
+        </div>
+      }
+      @if (moveToMenu()) {
+        <div class="more">
+          <button
+            #trigger
+            type="button"
+            class="more-button"
+            aria-haspopup="true"
+            [attr.aria-expanded]="menuOpen()"
+            (click)="toggleMenu()"
+          >
+            <svg
+              class="more-icon"
+              viewBox="0 0 16 16"
+              width="14"
+              height="14"
+              aria-hidden="true"
+              focusable="false"
+            >
+              <circle cx="3" cy="8" r="1.5" fill="currentColor" />
+              <circle cx="8" cy="8" r="1.5" fill="currentColor" />
+              <circle cx="13" cy="8" r="1.5" fill="currentColor" />
+            </svg>
+            <span>Más</span>
+          </button>
+          @if (menuOpen()) {
+            <div class="menu">
+              <ng-container *ngTemplateOutlet="secondaryActions" />
+            </div>
+          }
+        </div>
+      }
+    </div>
+  }
+</div>

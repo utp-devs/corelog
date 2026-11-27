@@ -1,0 +1,16 @@
+<div class="wrapper" [attr.data-testid]="testId() || null">
+  <div class="header">
+    <span>{{ label() }}</span>
+    <span>{{ percent() }}%</span>
+  </div>
+  <div
+    class="track"
+    role="progressbar"
+    [attr.aria-label]="label()"
+    aria-valuemin="0"
+    aria-valuemax="100"
+    [attr.aria-valuenow]="percent()"
+  >
+    <div class="fill-track-item" [class]="tone()" [style.--cl-progress]="percent() + '%'"></div>
+  </div>
+</div>
