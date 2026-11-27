@@ -10,30 +10,10 @@
   gap: var(--cl-space-1);
 
   &__glyph {
-    display: inline-flex;
+    font-size: var(--cl-font-body);
   }
 
   &__hidden-label {
     @include m.visually-hidden;
-  }
-
-  &--task {
-    color: var(--cl-type-task);
-  }
-
-  &--bug {
-    color: var(--cl-type-bug);
-  }
-
-  &--story {
-    color: var(--cl-type-story);
-  }
-
-  &--epic {
-    color: var(--cl-type-epic);
-  }
-
-  &--subtask {
-    color: var(--cl-type-subtask);
   }
 }

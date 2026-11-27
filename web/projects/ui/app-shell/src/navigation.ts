@@ -103,6 +103,13 @@ export const DEFAULT_SHELL_NAV_CONFIG: ShellNavConfig = {
         permission: 'org.admin',
       },
       {
+        key: 'org-catalogs',
+        label: 'Incidencias',
+        path: '/organization/catalogs',
+        icon: 'issue',
+        permission: 'org.admin',
+      },
+      {
         key: 'org-invitations',
         label: 'Invitaciones',
         path: '/organization/invitations',

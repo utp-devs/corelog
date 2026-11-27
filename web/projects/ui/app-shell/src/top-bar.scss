@@ -52,6 +52,10 @@
     }
   }
 
+  &__notes {
+    @include ib.icon-button;
+  }
+
   &__brand {
     @include m.flex-row(0);
     flex: none;

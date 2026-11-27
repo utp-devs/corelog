@@ -222,7 +222,7 @@ export function buildMenuModel(menu: NavMenu, context: MenuContext): MenuModel {
       label: link.label,
       path: link.path,
       external: link.external,
-      icon: link.key === 'people' ? 'members' : undefined,
+      icon: link.key === 'people' ? 'members' : link.key === 'notes' ? 'note' : undefined,
     })),
   ];
   const status = menu.key === 'projects' ? context.projectsStatus : 'ready';

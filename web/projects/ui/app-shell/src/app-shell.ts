@@ -24,6 +24,7 @@ import {
   projectPath,
 } from '@corelog/core';
 import { trackRecent } from '@corelog/ui/command-palette';
+import { ScratchpadDrawer } from '@corelog/ui/scratchpad-drawer';
 import { ShortcutsDialog } from '@corelog/ui/shortcuts-dialog';
 import { filter, map } from 'rxjs';
 
@@ -63,7 +64,7 @@ const PROJECT_SECTION_ICONS: Readonly<Record<string, ShellIconName>> = {
  */
 @Component({
   selector: 'app-shell',
-  imports: [ContextSidebar, NavDrawer, RouterOutlet, ShortcutsDialog, TopBar],
+  imports: [ContextSidebar, NavDrawer, RouterOutlet, ScratchpadDrawer, ShortcutsDialog, TopBar],
   templateUrl: './app-shell.html',
   styleUrl: './app-shell.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -185,6 +186,7 @@ export class AppShell {
   protected readonly orgName = computed(() => this.nav().orgName);
 
   protected readonly helpOpen = signal(false);
+  protected readonly notesOpen = signal(false);
   protected readonly drawerOpen = signal(false);
   protected readonly announcement = signal('');
   private routeCount = 0;
@@ -199,6 +201,7 @@ export class AppShell {
         // Without the Crear button there is no dialog to open: the shortcut then opens the page.
         onCreate: this.canCreate() ? () => this.createLauncher.open() : undefined,
         onHelp: () => this.helpOpen.update((open) => !open),
+        onNotes: this.workPages() ? () => this.notesOpen.update((open) => !open) : undefined,
       });
       onCleanup(unregister);
     });

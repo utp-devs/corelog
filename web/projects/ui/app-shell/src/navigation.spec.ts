@@ -100,6 +100,7 @@ describe('buildSidebar', () => {
     expect(buildSidebar({ kind: 'org-admin' }, adminPerms).map((i) => i.path)).toEqual([
       '/organization/settings',
       '/organization/members',
+      '/organization/catalogs',
       '/organization/invitations',
     ]);
   });

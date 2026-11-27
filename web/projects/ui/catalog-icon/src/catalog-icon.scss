@@ -1,0 +1,51 @@
+:host {
+  display: inline-flex;
+  flex: none;
+  color: var(--cl-hue-gray);
+
+  &[data-color='red'] {
+    color: var(--cl-hue-red);
+  }
+
+  &[data-color='orange'] {
+    color: var(--cl-hue-orange);
+  }
+
+  &[data-color='amber'] {
+    color: var(--cl-hue-amber);
+  }
+
+  &[data-color='green'] {
+    color: var(--cl-hue-green);
+  }
+
+  &[data-color='teal'] {
+    color: var(--cl-hue-teal);
+  }
+
+  &[data-color='blue'] {
+    color: var(--cl-hue-blue);
+  }
+
+  &[data-color='indigo'] {
+    color: var(--cl-hue-indigo);
+  }
+
+  &[data-color='purple'] {
+    color: var(--cl-hue-purple);
+  }
+
+  &[data-color='pink'] {
+    color: var(--cl-hue-pink);
+  }
+}
+
+.catalog-icon {
+  width: 1.15em;
+  height: 1.15em;
+  fill: none;
+  stroke: currentcolor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}

@@ -22,7 +22,7 @@ function create(inputs: {
   issueKey: string;
   href?: string;
   summary?: string;
-  type?: 'bug';
+  type?: { name: string; icon: string; color: string };
   resolved?: boolean;
   testId?: string;
 }): HTMLElement {
@@ -59,7 +59,11 @@ describe('IssueKey', () => {
   });
 
   it('renders the key as a link to the issue', () => {
-    const el = create({ issueKey: 'CL-120', href: '/incidencias/CL-120', type: 'bug' });
+    const el = create({
+      issueKey: 'CL-120',
+      href: '/incidencias/CL-120',
+      type: { name: 'Error', icon: 'bug', color: 'red' },
+    });
     const link = el.querySelector('a');
     expect(link?.getAttribute('href')).toBe('/incidencias/CL-120');
     expect(link?.textContent?.trim()).toBe('CL-120');

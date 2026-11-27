@@ -12,4 +12,11 @@
   &--compact {
     min-height: var(--cl-row-h-compact);
   }
+
+  &__option {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--cl-space-2);
+    min-width: 0;
+  }
 }

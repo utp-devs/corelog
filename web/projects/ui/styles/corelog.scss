@@ -30,6 +30,24 @@
   --cl-brand-hover: #0747a6;
   --cl-brand-pressed: #053a85;
   --cl-brand-subtle: #deebff;
+
+  /* Personal note colors: card background and the stronger swatch color of each. Text on the card uses --cl-text. */
+  --cl-note-yellow: #fff4c2;
+  --cl-note-yellow-accent: #946f00;
+  --cl-note-blue: #dbeafe;
+  --cl-note-blue-accent: #0c66e4;
+  --cl-note-green: #d3f5df;
+  --cl-note-green-accent: #1f845a;
+  --cl-note-pink: #fcdcec;
+  --cl-note-pink-accent: #c9358a;
+  --cl-note-purple: #e8defa;
+  --cl-note-purple-accent: #6e5dc6;
+  --cl-note-orange: #ffe3c7;
+  --cl-note-orange-accent: #c25100;
+  --cl-note-red: #ffd9d6;
+  --cl-note-red-accent: #c9372c;
+  --cl-note-gray: #ebedf0;
+  --cl-note-gray-accent: #626f86;
   --cl-success: #22a06b;
   --cl-success-bg: #e3fcef;
   --cl-success-text: #216e4e;
@@ -153,6 +171,18 @@
   --cl-prio-low: #0055cc;
   --cl-prio-lowest: #5e6c84;
 
+  /* Catalog palette: foreground hues for icons and swatches, AA on the surface of each theme. */
+  --cl-hue-gray: #5e6c84;
+  --cl-hue-red: #ae2a19;
+  --cl-hue-orange: #a54800;
+  --cl-hue-amber: #8a6500;
+  --cl-hue-green: #216e4e;
+  --cl-hue-teal: #1a7480;
+  --cl-hue-blue: #0055cc;
+  --cl-hue-indigo: #4338ca;
+  --cl-hue-purple: #5e4db2;
+  --cl-hue-pink: #ae4787;
+
   /* Custom palette, same hues in both themes (ColorPicker). */
   --cl-palette-1-bg: #ffd5d2;
   --cl-palette-1-text: #5d1f1a;
@@ -225,6 +255,23 @@
   --cl-brand-hover: #79b8ff;
   --cl-brand-pressed: #3a8dff;
   --cl-brand-subtle: #0c2849;
+
+  --cl-note-yellow: #4a3d0f;
+  --cl-note-yellow-accent: #e0b72a;
+  --cl-note-blue: #12315a;
+  --cl-note-blue-accent: #4c9aff;
+  --cl-note-green: #123f2a;
+  --cl-note-green-accent: #4bce97;
+  --cl-note-pink: #4d1f38;
+  --cl-note-pink-accent: #f06eb5;
+  --cl-note-purple: #35275c;
+  --cl-note-purple-accent: #a78bfa;
+  --cl-note-orange: #4f2e0e;
+  --cl-note-orange-accent: #f5933c;
+  --cl-note-red: #4f1d1a;
+  --cl-note-red-accent: #f87168;
+  --cl-note-gray: #2f353b;
+  --cl-note-gray-accent: #8590a2;
   --cl-success: #4bce97;
   --cl-success-bg: #1b3b2e;
   --cl-success-text: #7ee2b8;
@@ -273,6 +320,17 @@
   --cl-prio-medium: #f5cd47;
   --cl-prio-low: #4c9aff;
   --cl-prio-lowest: #9fadbc;
+
+  --cl-hue-gray: #9fadbc;
+  --cl-hue-red: #ff8f73;
+  --cl-hue-orange: #ff991f;
+  --cl-hue-amber: #f5cd47;
+  --cl-hue-green: #7ee2b8;
+  --cl-hue-teal: #60c6d2;
+  --cl-hue-blue: #85b8ff;
+  --cl-hue-indigo: #a5b4fc;
+  --cl-hue-purple: #b8acf6;
+  --cl-hue-pink: #f797d2;
 }
 
 @media (max-width: 767.98px) {

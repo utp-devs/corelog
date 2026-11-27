@@ -1,23 +1,15 @@
-import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
-import { ISSUE_PRIORITY_LABELS, IssuePriority } from '@corelog/core';
+import { ChangeDetectionStrategy, Component, input } from '@angular/core';
+import { PriorityRef } from '@corelog/core';
+import { CatalogIcon } from '@corelog/ui/catalog-icon';
 
-const ICON_BY_PRIORITY: Readonly<Record<IssuePriority, string>> = {
-  low: 'pi pi-angle-down',
-  medium: 'pi pi-equals',
-  high: 'pi pi-angle-up',
-  critical: 'pi pi-angle-double-up',
-};
-
-/** Issue priority: a colored icon followed by the label in regular text color. */
+/** Issue priority: the icon of its catalog entry in the entry color, followed by the name in regular text color. */
 @Component({
   selector: 'app-priority-tag',
+  imports: [CatalogIcon],
   templateUrl: './priority-tag.html',
   styleUrl: './priority-tag.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class PriorityTag {
-  readonly priority = input.required<IssuePriority>();
-
-  protected readonly label = computed(() => ISSUE_PRIORITY_LABELS[this.priority()]);
-  protected readonly icon = computed(() => ICON_BY_PRIORITY[this.priority()]);
+  readonly priority = input.required<Pick<PriorityRef, 'name' | 'icon' | 'color'>>();
 }

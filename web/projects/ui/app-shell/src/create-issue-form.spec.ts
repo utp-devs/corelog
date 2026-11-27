@@ -3,6 +3,8 @@ import { TestBed, type ComponentFixture } from '@angular/core/testing';
 import { Router } from '@angular/router';
 import {
   AuthStore,
+  CatalogStore,
+  type CatalogItem,
   NotificationService,
   OrganizationApiService,
   OrganizationStore,
@@ -46,6 +48,34 @@ const ISSUE = {
   summary: 'Falla el login',
 } as Issue;
 
+function catalogItem(id: string, name: string, extra: Partial<CatalogItem> = {}): CatalogItem {
+  return {
+    id,
+    name,
+    description: '',
+    icon: 'task',
+    color: 'blue',
+    hierarchyLevel: 0,
+    position: 0,
+    isDefault: false,
+    usageCount: 0,
+    createdAt: '',
+    updatedAt: '',
+    ...extra,
+  };
+}
+
+const TYPES = [
+  catalogItem('type-task', 'Tarea', { isDefault: true }),
+  catalogItem('type-bug', 'Error', { icon: 'bug', color: 'red' }),
+  catalogItem('type-story', 'Historia'),
+  catalogItem('type-sub', 'Subtarea', { hierarchyLevel: -1 }),
+];
+const PRIORITIES = [
+  catalogItem('prio-high', 'Alta', { icon: 'arrow-up' }),
+  catalogItem('prio-medium', 'Media', { isDefault: true }),
+];
+
 interface Options {
   projects?: Project[];
   status?: 'idle' | 'loading' | 'error';
@@ -84,6 +114,16 @@ function setup(options: Options = {}) {
         useValue: {
           currentRole: signal(options.role ?? 'member'),
           currentOrg: signal({ settings: { whoCanCreateProjects: options.policy ?? 'admins' } }),
+        },
+      },
+      {
+        provide: CatalogStore,
+        useValue: {
+          issueTypes: signal(TYPES),
+          priorities: signal(PRIORITIES),
+          defaultPriority: signal(PRIORITIES[1]),
+          ensureLoaded: vi.fn(),
+          projectIssueTypes: () => of({ items: TYPES.slice(0, 3), configured: true }),
         },
       },
       { provide: OrganizationApiService, useValue: { listMembers: () => of([]) } },
@@ -161,6 +201,17 @@ describe('CreateIssueForm', () => {
     expect(formOf(fixture).controls.projectId.value).toBe('p-2');
   });
 
+  it('preselects the default type and priority and offers the project types without subtasks', () => {
+    const { fixture } = setup();
+    const form = formOf(fixture);
+    expect(form.controls.issueTypeId.value).toBe('type-task');
+    expect(form.controls.priorityId.value).toBe('prio-medium');
+    const options = (fixture.componentInstance as unknown as { typeOptions: () => CatalogItem[] })
+      .typeOptions()
+      .map((item) => item.name);
+    expect(options).toEqual(['Tarea', 'Error', 'Historia']);
+  });
+
   it('does not create and shows messages when the form is incomplete', () => {
     const { fixture, createIssue } = setup();
     buttonNamed(fixture, 'Crear incidencia')?.click();
@@ -174,7 +225,7 @@ describe('CreateIssueForm', () => {
   it('creates the issue in the chosen project through the issue store', () => {
     const { fixture, createIssue, notify, storage } = setup();
     fill(fixture);
-    formOf(fixture).patchValue({ issueType: 'bug', priority: 'high' });
+    formOf(fixture).patchValue({ issueTypeId: 'type-bug', priorityId: 'prio-high' });
     buttonNamed(fixture, 'Crear incidencia')?.click();
     fixture.detectChanges();
 
@@ -182,8 +233,8 @@ describe('CreateIssueForm', () => {
       projectId: 'p-1',
       summary: 'Falla el login',
       description: 'No se puede iniciar sesión.',
-      priority: 'high',
-      issueType: 'bug',
+      priorityId: 'prio-high',
+      issueTypeId: 'type-bug',
     });
     expect(notify.success).toHaveBeenCalled();
     expect(storage.get(LAST_CREATE_PROJECT_KEY)).toBe('p-1');
@@ -226,7 +277,7 @@ describe('CreateIssueForm', () => {
   it('offers to create another one with the project and type kept', () => {
     const { fixture } = setup();
     fill(fixture);
-    formOf(fixture).patchValue({ issueType: 'story' });
+    formOf(fixture).patchValue({ issueTypeId: 'type-story' });
     buttonNamed(fixture, 'Crear incidencia')?.click();
     fixture.detectChanges();
     buttonNamed(fixture, 'Crear otra')?.click();
@@ -236,7 +287,7 @@ describe('CreateIssueForm', () => {
     expect(form.controls.summary.value).toBe('');
     expect(form.controls.description.value).toBe('');
     expect(form.controls.projectId.value).toBe('p-1');
-    expect(form.controls.issueType.value).toBe('story');
+    expect(form.controls.issueTypeId.value).toBe('type-story');
     expect(buttonNamed(fixture, 'Crear incidencia')).toBeDefined();
   });
 

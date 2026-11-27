@@ -25,4 +25,21 @@
   [ngModel]="value()"
   (ngModelChange)="onValueChange($event)"
   (onBlur)="onBlur()"
-/>
+>
+  <ng-template #selectedItem let-option>
+    <span class="select-field__option">
+      @if (option.icon) {
+        <app-catalog-icon [icon]="option.icon" [color]="option.color" />
+      }
+      {{ option.label }}
+    </span>
+  </ng-template>
+  <ng-template #item let-option>
+    <span class="select-field__option">
+      @if (option.icon) {
+        <app-catalog-icon [icon]="option.icon" [color]="option.color" />
+      }
+      {{ option.label }}
+    </span>
+  </ng-template>
+</p-select>

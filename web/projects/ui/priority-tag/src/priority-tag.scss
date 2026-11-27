@@ -13,30 +13,12 @@
   white-space: nowrap;
 
   &__icon {
-    flex: none;
     font-size: var(--cl-font-body);
-    color: var(--cl-prio-lowest);
   }
 
   &__label {
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
-  }
-
-  &[data-priority='critical'] &__icon {
-    color: var(--cl-prio-highest);
-  }
-
-  &[data-priority='high'] &__icon {
-    color: var(--cl-prio-high);
-  }
-
-  &[data-priority='medium'] &__icon {
-    color: var(--cl-prio-medium);
-  }
-
-  &[data-priority='low'] &__icon {
-    color: var(--cl-prio-low);
   }
 }

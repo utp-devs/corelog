@@ -71,4 +71,10 @@
     color: var(--cl-text);
     overflow-wrap: anywhere;
   }
+
+  &__option {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--cl-space-2);
+  }
 }

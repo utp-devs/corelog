@@ -100,6 +100,17 @@
   }
 
   <app-global-search [compact]="iconSearch()" />
+  @if (showNotes()) {
+    <button
+      type="button"
+      class="top-bar__notes"
+      aria-label="Mis apuntes"
+      appTooltip="Mis apuntes (n)"
+      (click)="openNotes.emit()"
+    >
+      <app-shell-icon name="note" />
+    </button>
+  }
   <app-notifications-bell />
   <app-help-menu
     [docsUrl]="docsUrl()"

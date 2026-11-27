@@ -65,6 +65,10 @@ export class TopBar {
 
   readonly openMenu = output<void>();
   readonly openShortcuts = output<void>();
+  /** Opens the personal scratchpad. */
+  readonly openNotes = output<void>();
+  /** Shows the scratchpad button (apps that mount the work pages). */
+  readonly showNotes = input(false);
 
   protected readonly isMobile = this.breakpoints.matches(MOBILE_QUERY);
   protected readonly collapsedNav = this.breakpoints.matches(COLLAPSED_NAV_QUERY);

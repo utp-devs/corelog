@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { IssueType, NotificationService } from '@corelog/core';
+import { IssueTypeRef, NotificationService } from '@corelog/core';
 import { IssueTypeIcon } from '@corelog/ui/issue-type-icon';
 import { AppTooltip } from '@corelog/ui/tooltip';
 import { Tooltip } from 'primeng/tooltip';
@@ -28,7 +28,7 @@ export class IssueKey {
   readonly displayKey = input<string>();
   /** Summary shown in the tooltip. */
   readonly summary = input<string>();
-  readonly type = input<IssueType>();
+  readonly type = input<Pick<IssueTypeRef, 'name' | 'icon' | 'color'>>();
   /** Resolved or closed: the key is muted (never struck through). */
   readonly resolved = input(false);
   /** Whether the copy button and the link can take keyboard focus. */

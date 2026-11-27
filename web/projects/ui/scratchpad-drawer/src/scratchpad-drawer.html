@@ -1,0 +1,78 @@
+<app-side-panel
+  [open]="open()"
+  heading="Mis apuntes"
+  subtitle="Solo tú puedes ver tus notas."
+  (closeRequested)="close()"
+>
+  <section class="scratchpad-drawer__composer" aria-label="Escribir una nota">
+    <label class="scratchpad-drawer__label" for="scratchpad-draft">Nota rápida</label>
+    <textarea
+      id="scratchpad-draft"
+      #field
+      pTextarea
+      class="scratchpad-drawer__field"
+      data-autofocus
+      rows="4"
+      placeholder="Escribe algo para no olvidarlo…"
+      [fluid]="true"
+      [maxlength]="maxLength"
+      [ngModel]="draft()"
+      (ngModelChange)="draft.set($event)"
+      (keydown)="onKeydown($event)"
+    ></textarea>
+    <div class="scratchpad-drawer__actions">
+      <span class="scratchpad-drawer__hint">Ctrl + Enter para guardar</span>
+      <p-button
+        label="Guardar nota"
+        icon="pi pi-check"
+        [disabled]="!canSave()"
+        (onClick)="save()"
+      />
+    </div>
+  </section>
+
+  <section class="scratchpad-drawer__recent" aria-labelledby="scratchpad-recent-title">
+    <div class="scratchpad-drawer__recent-head">
+      <h3 id="scratchpad-recent-title" class="scratchpad-drawer__recent-title">Recientes</h3>
+      <button type="button" class="scratchpad-drawer__all" (click)="openAll()">Ver todas</button>
+    </div>
+
+    @if (recent().length === 0) {
+      <p class="scratchpad-drawer__empty">Aún no tienes notas. Escribe la primera arriba.</p>
+    } @else {
+      <ul class="scratchpad-drawer__list">
+        @for (note of recent(); track note.id) {
+          <li class="scratchpad-drawer__item" [attr.data-color]="note.color">
+            <button
+              type="button"
+              class="scratchpad-drawer__open"
+              [attr.aria-label]="'Abrir la nota ' + headline(note)"
+              (click)="openNote(note)"
+            >
+              <span class="scratchpad-drawer__item-title">{{ headline(note) }}</span>
+              @if (preview(note); as text) {
+                <span class="scratchpad-drawer__item-text">{{ text }}</span>
+              }
+            </button>
+            <button
+              type="button"
+              class="scratchpad-drawer__pin"
+              [class.scratchpad-drawer__pin--on]="note.pinned"
+              [attr.aria-label]="note.pinned ? 'Quitar la fijación de la nota' : 'Fijar la nota'"
+              [attr.aria-pressed]="note.pinned"
+              [appTooltip]="note.pinned ? 'Quitar fijación' : 'Fijar'"
+              (click)="togglePin(note)"
+            >
+              <i
+                class="pi"
+                [class.pi-bookmark-fill]="note.pinned"
+                [class.pi-bookmark]="!note.pinned"
+                aria-hidden="true"
+              ></i>
+            </button>
+          </li>
+        }
+      </ul>
+    }
+  </section>
+</app-side-panel>

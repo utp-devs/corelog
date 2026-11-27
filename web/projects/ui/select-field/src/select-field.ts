@@ -7,12 +7,17 @@ import {
   signal,
 } from '@angular/core';
 import { ControlValueAccessor, FormsModule, NG_VALUE_ACCESSOR } from '@angular/forms';
+import { CatalogIcon } from '@corelog/ui/catalog-icon';
 import { Select } from 'primeng/select';
 
 export interface SelectFieldOption {
   readonly value: string;
   readonly label: string;
   readonly disabled?: boolean;
+  /** Catalog icon key drawn before the label (issue types and priorities). */
+  readonly icon?: string | null;
+  /** Catalog color key of the icon. */
+  readonly color?: string | null;
 }
 
 /** Lists with more options than this get a filter box in the panel. */
@@ -27,7 +32,7 @@ export const SELECT_FILTER_THRESHOLD = 8;
  */
 @Component({
   selector: 'app-select-field',
-  imports: [FormsModule, Select],
+  imports: [CatalogIcon, FormsModule, Select],
   templateUrl: './select-field.html',
   styleUrl: './select-field.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

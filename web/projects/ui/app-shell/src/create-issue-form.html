@@ -76,15 +76,28 @@
 
           <app-field-row #typeRow label="Tipo" [required]="true">
             <p-select
-              formControlName="issueType"
+              formControlName="issueTypeId"
               appendTo="body"
               [inputId]="typeRow.controlId"
               [ariaLabelledBy]="typeRow.labelId"
-              [options]="typeOptions"
-              optionLabel="label"
-              optionValue="value"
+              [options]="typeOptions()"
+              optionLabel="name"
+              optionValue="id"
               class="create-issue-form__control"
-            />
+            >
+              <ng-template #selectedItem let-option>
+                <span class="create-issue-form__option">
+                  <app-catalog-icon [icon]="option.icon" [color]="option.color" />
+                  {{ option.name }}
+                </span>
+              </ng-template>
+              <ng-template #item let-option>
+                <span class="create-issue-form__option">
+                  <app-catalog-icon [icon]="option.icon" [color]="option.color" />
+                  {{ option.name }}
+                </span>
+              </ng-template>
+            </p-select>
           </app-field-row>
         </div>
 
@@ -131,15 +144,28 @@
         <div class="create-issue-form__row">
           <app-field-row #priorityRow label="Prioridad" [required]="true">
             <p-select
-              formControlName="priority"
+              formControlName="priorityId"
               appendTo="body"
               [inputId]="priorityRow.controlId"
               [ariaLabelledBy]="priorityRow.labelId"
-              [options]="priorityOptions"
-              optionLabel="label"
-              optionValue="value"
+              [options]="priorityOptions()"
+              optionLabel="name"
+              optionValue="id"
               class="create-issue-form__control"
-            />
+            >
+              <ng-template #selectedItem let-option>
+                <span class="create-issue-form__option">
+                  <app-catalog-icon [icon]="option.icon" [color]="option.color" />
+                  {{ option.name }}
+                </span>
+              </ng-template>
+              <ng-template #item let-option>
+                <span class="create-issue-form__option">
+                  <app-catalog-icon [icon]="option.icon" [color]="option.color" />
+                  {{ option.name }}
+                </span>
+              </ng-template>
+            </p-select>
           </app-field-row>
 
           <app-field-row #assigneeRow label="Asignar a" [optional]="true">

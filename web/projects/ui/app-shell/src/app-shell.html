@@ -16,7 +16,9 @@
     [whatsNewUrl]="whatsNewUrl()"
     [supportUrl]="supportUrl()"
     (openMenu)="openDrawer()"
+    [showNotes]="workPages()"
     (openShortcuts)="helpOpen.set(true)"
+    (openNotes)="notesOpen.set(true)"
   />
 
   <div class="app-shell__body">
@@ -48,6 +50,10 @@
   }
 
   <p class="app-shell__announcer" role="status" aria-live="polite">{{ announcement() }}</p>
+
+  @if (workPages()) {
+    <app-scratchpad-drawer [(open)]="notesOpen" />
+  }
 
   <app-shortcuts-dialog [(open)]="helpOpen" [hotkeys]="hotkeys.registered()" />
 

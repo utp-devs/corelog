@@ -18,9 +18,7 @@ import { ReactiveFormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import {
   AuthStore,
-  CREATABLE_ISSUE_TYPE_OPTIONS,
   ISSUE_DESCRIPTION_MIN_LENGTH,
-  ISSUE_PRIORITY_OPTIONS,
   ISSUE_SUMMARY_MAX_LENGTH,
   ISSUE_SUMMARY_MIN_LENGTH,
   MentionUser,
@@ -38,6 +36,7 @@ import {
   UNSAVED_TITLE,
   UserDirectoryApiService,
   createIssueDraftForm,
+  injectIssueCatalogOptions,
   issueKeyOf,
   issuePath,
   toMentionUsers,
@@ -45,6 +44,7 @@ import {
 } from '@corelog/core';
 import { ConfirmModal } from '@corelog/ui/confirm-modal';
 import { Dialog } from '@corelog/ui/dialog';
+import { CatalogIcon } from '@corelog/ui/catalog-icon';
 import { FieldControl, FieldRow } from '@corelog/ui/field-row';
 import { RichTextEditor } from '@corelog/ui/rich-text-editor';
 import { PickableUser, UserPicker } from '@corelog/ui/user-picker';
@@ -70,6 +70,7 @@ const FILTERABLE_PROJECTS = 8;
   imports: [
     ReactiveFormsModule,
     Button,
+    CatalogIcon,
     ConfirmModal,
     Dialog,
     FieldControl,
@@ -101,8 +102,13 @@ export class CreateIssueForm {
   readonly closed = output<void>();
 
   protected readonly form = createIssueDraftForm();
-  protected readonly typeOptions = CREATABLE_ISSUE_TYPE_OPTIONS;
-  protected readonly priorityOptions = ISSUE_PRIORITY_OPTIONS;
+  private readonly projectId = signal('');
+  private readonly catalog = injectIssueCatalogOptions(() => this.projectId(), {
+    type: this.form.controls.issueTypeId,
+    priority: this.form.controls.priorityId,
+  });
+  protected readonly typeOptions = this.catalog.typeOptions;
+  protected readonly priorityOptions = this.catalog.priorityOptions;
   protected readonly summaryMessages = {
     required: 'Escribe un resumen.',
     minlength: `El resumen debe tener al menos ${ISSUE_SUMMARY_MIN_LENGTH} caracteres.`,
@@ -195,6 +201,9 @@ export class CreateIssueForm {
   };
 
   constructor() {
+    this.form.controls.projectId.valueChanges
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((id) => this.projectId.set(id));
     this.reloadProjects();
     this.loadAssignees();
     // The form appears once the projects are known: the summary field takes the focus then.
@@ -253,8 +262,8 @@ export class CreateIssueForm {
         projectId: values.projectId,
         summary: values.summary.trim(),
         description: values.description,
-        priority: values.priority,
-        issueType: values.issueType,
+        priorityId: values.priorityId || undefined,
+        issueTypeId: values.issueTypeId || undefined,
       })
       .pipe(
         switchMap((issue) =>
@@ -284,11 +293,11 @@ export class CreateIssueForm {
 
   /** Back to an empty form that keeps the project, type and priority of the last issue. */
   protected createAnother(): void {
-    const { projectId, issueType, priority } = this.form.getRawValue();
+    const { projectId, issueTypeId, priorityId } = this.form.getRawValue();
     this.form.reset({
       projectId,
-      issueType,
-      priority,
+      issueTypeId,
+      priorityId,
       summary: '',
       description: '',
       assigneeId: undefined,

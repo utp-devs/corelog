@@ -1,24 +1,8 @@
-<span class="issue-type-icon" [class]="'issue-type-icon--' + type()" [attr.title]="label()">
-  <span aria-hidden="true" class="issue-type-icon__glyph">
-    @if (type() === 'bug') {
-      <svg viewBox="0 0 16 16" width="14" height="14" focusable="false">
-        <circle cx="8" cy="3.5" r="1.6" fill="currentColor" />
-        <ellipse cx="8" cy="9.5" rx="3.6" ry="4.6" fill="currentColor" />
-        <path
-          d="M4.4 7H1.5M4.4 10H1.5M4.6 13l-2.2 1.2M11.6 7h2.9M11.6 10h2.9M11.4 13l2.2 1.2"
-          stroke="currentColor"
-          stroke-width="1.2"
-          stroke-linecap="round"
-          fill="none"
-        />
-      </svg>
-    } @else {
-      <i [class]="iconClass()"></i>
-    }
-  </span>
+<span class="issue-type-icon" [attr.title]="type().name">
+  <app-catalog-icon class="issue-type-icon__glyph" [icon]="type().icon" [color]="type().color" />
   @if (showLabel()) {
-    <span>{{ label() }}</span>
+    <span>{{ type().name }}</span>
   } @else {
-    <span class="issue-type-icon__hidden-label">{{ label() }}</span>
+    <span class="issue-type-icon__hidden-label">{{ type().name }}</span>
   }
 </span>
