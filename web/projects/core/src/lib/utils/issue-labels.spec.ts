@@ -4,9 +4,9 @@ import {
   ISSUE_TYPE_LABELS,
   issueKeyOf,
   shortIssueKeyOf,
-} from './ticket-labels';
+} from './issue-labels';
 
-describe('ticket labels', () => {
+describe('issue labels', () => {
   it('maps every status to a Spanish label and a category', () => {
     expect(ISSUE_STATUS_META.open).toEqual({ label: 'Abierto', category: 'todo' });
     expect(ISSUE_STATUS_META.in_progress).toEqual({ label: 'En progreso', category: 'progress' });
@@ -20,13 +20,16 @@ describe('ticket labels', () => {
     expect(ISSUE_TYPE_LABELS.subtask).toBe('Subtarea');
   });
 
-  it('derives the visible key from the first eight characters of the id', () => {
-    expect(issueKeyOf('11111111-1111-4111-8111-111111111111')).toBe('INC-11111111');
-    expect(issueKeyOf('ab12')).toBe('INC-AB12');
+  it('uses the server key when the payload carries one', () => {
+    expect(issueKeyOf({ id: '11111111-1111-4111-8111-111111111111', key: 'CORE-12' })).toBe(
+      'CORE-12',
+    );
+    expect(shortIssueKeyOf({ id: 'ab12', key: 'CORE-12' })).toBe('CORE-12');
   });
 
-  it('shortens the key to the prefix and six characters of the identifier', () => {
-    expect(shortIssueKeyOf('11111111-1111-4111-8111-111111111111')).toBe('INC-111111');
-    expect(shortIssueKeyOf('ab12')).toBe('INC-AB12');
+  it('falls back to a prefix of the id when there is no key', () => {
+    expect(issueKeyOf({ id: '11111111-1111-4111-8111-111111111111' })).toBe('INC-11111111');
+    expect(issueKeyOf({ id: 'ab12', key: null })).toBe('INC-AB12');
+    expect(shortIssueKeyOf({ id: '11111111-1111-4111-8111-111111111111' })).toBe('INC-111111');
   });
 });

@@ -8,7 +8,7 @@ export * from './current-project.store';
 export * from './project-permissions.store';
 export * from './favorites.store';
 export * from './team.store';
-export * from './ticket.store';
+export * from './issue.store';
 export * from './board.store';
 export * from './sprint.store';
 export * from './backlog.store';

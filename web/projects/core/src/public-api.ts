@@ -44,7 +44,7 @@ export * from './lib/utils/external-route';
 export * from './lib/utils/user-agent';
 export * from './lib/utils/mentions';
 export * from './lib/utils/recent-items';
-export * from './lib/utils/ticket-labels';
+export * from './lib/utils/issue-labels';
 export * from './lib/guards/require-org-admin.guard';
 export * from './lib/guards/require-org.guard';
 export * from './lib/utils/org-context';

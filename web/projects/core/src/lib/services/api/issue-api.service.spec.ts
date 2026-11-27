@@ -5,9 +5,9 @@ import { provideHttpClient } from '@angular/common/http';
 
 import { SKIP_ERROR_NOTIFICATION } from '../../config/http-context';
 import { provideCorelogTesting } from '../../../testing';
-import { TicketPage } from '../../models/ticket.model';
+import { IssuePage } from '../../models/issue.model';
 import { asApiError } from '../../utils/api-error';
-import { TicketApiService } from './ticket-api.service';
+import { IssueApiService } from './issue-api.service';
 
 const ISSUE_ID = '11111111-1111-4111-8111-111111111111';
 const ASSIGNEE_ID = '33333333-3333-4333-8333-333333333333';
@@ -15,7 +15,9 @@ const ASSIGNEE_ID = '33333333-3333-4333-8333-333333333333';
 const issue = {
   id: ISSUE_ID,
   project_id: '00000000-0000-4000-8000-000000000001',
-  title: 'Error al exportar',
+  key: 'CORE-12',
+  project_key: 'CORE',
+  summary: 'Error al exportar',
   description: 'Detalle',
   status: 'open',
   priority: 'high',
@@ -25,22 +27,22 @@ const issue = {
   story_points: null,
   rank: 'm',
   closed_at: null,
-  requester_id: '22222222-2222-4222-8222-222222222222',
-  requester_name: 'Ana Torres',
+  reporter_id: '22222222-2222-4222-8222-222222222222',
+  reporter_name: 'Ana Torres',
   assignee_id: null,
   created_at: '2026-11-22T00:00:00Z',
   updated_at: '2026-11-22T00:00:00Z',
 };
 
-describe('TicketApiService', () => {
-  let service: TicketApiService;
+describe('IssueApiService', () => {
+  let service: IssueApiService;
   let httpMock: HttpTestingController;
 
   beforeEach(() => {
     TestBed.configureTestingModule({
       providers: [provideCorelogTesting(), provideHttpClient(), provideHttpClientTesting()],
     });
-    service = TestBed.inject(TicketApiService);
+    service = TestBed.inject(IssueApiService);
     httpMock = TestBed.inject(HttpTestingController);
   });
 
@@ -48,7 +50,7 @@ describe('TicketApiService', () => {
 
   describe('list', () => {
     it('maps the page items and the pagination meta to camelCase', () => {
-      let result: TicketPage | undefined;
+      let result: IssuePage | undefined;
       service.list({ page: 2, pageSize: 20 }).subscribe((page) => (result = page));
 
       httpMock
@@ -62,7 +64,8 @@ describe('TicketApiService', () => {
       expect(page?.items).toHaveLength(1);
       expect(page?.items[0]).toMatchObject({
         id: ISSUE_ID,
-        title: 'Error al exportar',
+        key: 'CORE-12',
+        summary: 'Error al exportar',
         status: 'open',
       });
     });
@@ -77,8 +80,8 @@ describe('TicketApiService', () => {
       request.flush({ data: [], meta: { page: 3, page_size: 10, total: 0 } });
     });
 
-    it('maps the requester and assignee display names', () => {
-      let names: { requesterName?: string; assigneeName?: string | null } | undefined;
+    it('maps the reporter and assignee display names', () => {
+      let names: { reporterName?: string; assigneeName?: string | null } | undefined;
       service.list({ page: 1, pageSize: 20 }).subscribe((page) => (names = page.items[0]));
 
       httpMock
@@ -88,7 +91,7 @@ describe('TicketApiService', () => {
           meta: { page: 1, page_size: 20, total: 1 },
         });
 
-      expect(names?.requesterName).toBe('Ana Torres');
+      expect(names?.reporterName).toBe('Ana Torres');
       expect(names?.assigneeName).toBe('Luis Paredes');
     });
 
@@ -112,7 +115,7 @@ describe('TicketApiService', () => {
   describe('assign', () => {
     it('sends the assignee id to the assign endpoint', () => {
       let assigneeId: string | null | undefined;
-      service.assign(ISSUE_ID, ASSIGNEE_ID).subscribe((ticket) => (assigneeId = ticket.assigneeId));
+      service.assign(ISSUE_ID, ASSIGNEE_ID).subscribe((issue) => (assigneeId = issue.assigneeId));
 
       const request = httpMock.expectOne(`/api/v1/issues/${ISSUE_ID}/assign`);
       expect(request.request.method).toBe('PATCH');
@@ -124,7 +127,7 @@ describe('TicketApiService', () => {
 
     it('sends null to clear the assignee and maps the unassigned issue', () => {
       let result: { assigneeId: string | null; assigneeName: string | null } | undefined;
-      service.assign(ISSUE_ID, null).subscribe((ticket) => (result = ticket));
+      service.assign(ISSUE_ID, null).subscribe((issue) => (result = issue));
 
       const request = httpMock.expectOne(`/api/v1/issues/${ISSUE_ID}/assign`);
       expect(request.request.body).toEqual({ assignee_id: null });
@@ -157,7 +160,7 @@ describe('TicketApiService', () => {
     it('maps the camelCase details to the snake_case body', () => {
       service
         .updateDetails(ISSUE_ID, {
-          title: 'Nuevo',
+          summary: 'Nuevo',
           description: 'Texto',
           priority: 'low',
           issueType: 'story',
@@ -167,7 +170,7 @@ describe('TicketApiService', () => {
 
       const request = httpMock.expectOne(`/api/v1/issues/${ISSUE_ID}/details`);
       expect(request.request.body).toEqual({
-        title: 'Nuevo',
+        summary: 'Nuevo',
         description: 'Texto',
         priority: 'low',
         issue_type: 'story',
@@ -184,14 +187,14 @@ describe('TicketApiService', () => {
       expect(metadata.request.body).toMatchObject({ issue_type: 'epic', due_date: '2026-12-01' });
       metadata.flush({ data: issue });
 
-      let created: { title: string } | undefined;
+      let created: { summary: string } | undefined;
       service
-        .create({ title: 'Nueva', description: '', priority: 'medium', issueType: 'task' })
-        .subscribe((ticket) => (created = ticket));
+        .create({ summary: 'Nueva', description: '', priority: 'medium', issueType: 'task' })
+        .subscribe((issue) => (created = issue));
       const post = httpMock.expectOne('/api/v1/issues');
-      expect(post.request.body).toMatchObject({ title: 'Nueva', issue_type: 'task' });
-      post.flush({ data: { ...issue, title: 'Nueva' } });
-      expect(created?.title).toBe('Nueva');
+      expect(post.request.body).toMatchObject({ summary: 'Nueva', issue_type: 'task' });
+      post.flush({ data: { ...issue, summary: 'Nueva' } });
+      expect(created?.summary).toBe('Nueva');
     });
   });
 

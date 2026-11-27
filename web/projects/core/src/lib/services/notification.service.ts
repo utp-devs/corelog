@@ -54,6 +54,31 @@ const ENGLISH_PATTERNS: readonly (readonly [RegExp, ToastCopy])[] = [
   [/invalid|validation|required|must be|malformed/i, VALIDATION],
 ];
 
+/** Copy of the issue failures that deserve their own sentence. */
+const ISSUE_CODE_COPY: Readonly<Record<string, ToastCopy>> = {
+  'issue.summary_required': {
+    summary: 'Falta el resumen',
+    detail: 'Escribe un resumen para la incidencia.',
+  },
+  'issue.reporter_required': {
+    summary: 'Falta quien reporta',
+    detail: 'Indica quién reporta la incidencia.',
+  },
+  'issue.reporter_not_found': {
+    summary: 'Persona no encontrada',
+    detail: 'No encontramos a la persona que reporta la incidencia.',
+  },
+  'issue.key_ambiguous': {
+    summary: 'Clave repetida',
+    detail:
+      'Esa clave existe en varias organizaciones. Abre la incidencia desde la organización que corresponde.',
+  },
+  'issue.invalid_id': {
+    summary: 'Incidencia no válida',
+    detail: 'El identificador no es una clave ni un código de incidencia válido.',
+  },
+};
+
 function copyForStatus(status: number): ToastCopy | null {
   if (status === 0) return NETWORK;
   if (status === 403) return FORBIDDEN;
@@ -64,6 +89,8 @@ function copyForStatus(status: number): ToastCopy | null {
 
 function copyForCode(code: string): ToastCopy | null {
   if (code === 'project.archived') return ARCHIVED;
+  const issueCopy = ISSUE_CODE_COPY[code];
+  if (issueCopy) return issueCopy;
   if (/forbidden|permission|not_allowed/i.test(code)) return FORBIDDEN;
   if (/not_found/i.test(code)) return NOT_FOUND;
   if (/^network\./i.test(code)) return NETWORK;

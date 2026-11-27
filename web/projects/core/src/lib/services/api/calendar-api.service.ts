@@ -3,6 +3,7 @@ import { Injectable, inject } from '@angular/core';
 import { Observable, map } from 'rxjs';
 
 import { API_URL } from '../../config/api.config';
+import { normalizeIssueLink } from '../../config/issue-paths';
 import type { CalendarEvent, CalendarEventKind, CalendarRange } from '../../models/calendar.model';
 import { silentRequest } from '../../utils/silent-request';
 
@@ -37,7 +38,7 @@ export class CalendarApiService {
             date: event.date,
             title: event.title,
             sourceId: event.source_id,
-            link: event.link,
+            link: normalizeIssueLink(event.link),
           })),
         ),
       );

@@ -44,7 +44,7 @@ describe('CalendarApiService', () => {
         date: '2026-11-05',
         title: 'Entregar',
         sourceId: 'issue-1',
-        link: '/issues/issue-1',
+        link: '/browse/issue-1',
       },
     ]);
     backend.verify();

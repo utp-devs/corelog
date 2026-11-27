@@ -112,6 +112,14 @@ describe('toastCopyOf', () => {
     expect(copy.detail).toContain('solo lectura');
   });
 
+  it('knows the renamed issue error codes', () => {
+    expect(toastCopyOf(api(422, 'issue.summary_required')).summary).toBe('Falta el resumen');
+    expect(toastCopyOf(api(422, 'issue.reporter_required')).summary).toBe('Falta quien reporta');
+    expect(toastCopyOf(api(404, 'issue.reporter_not_found')).summary).toBe('Persona no encontrada');
+    expect(toastCopyOf(api(409, 'issue.key_ambiguous')).summary).toBe('Clave repetida');
+    expect(toastCopyOf(api(422, 'issue.invalid_id')).summary).toBe('Incidencia no válida');
+  });
+
   it('maps by error code before the status', () => {
     expect(toastCopyOf(api(400, 'project.forbidden')).summary).toBe('Sin permiso');
   });

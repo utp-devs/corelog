@@ -33,6 +33,6 @@ describe('SearchApiService', () => {
       ],
     });
 
-    expect(hits[0]).toMatchObject({ kind: 'issue', link: '/issues/i-1' });
+    expect(hits[0]).toMatchObject({ kind: 'issue', link: '/browse/i-1' });
   });
 });

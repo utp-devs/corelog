@@ -3,6 +3,7 @@ import { Injectable, inject } from '@angular/core';
 import { Observable, map } from 'rxjs';
 
 import { API_URL } from '../../config/api.config';
+import { normalizeIssueLink } from '../../config/issue-paths';
 import type { AppNotification, NotificationPreferences } from '../../models/notification.model';
 import { backgroundRequest, silentRequest } from '../../utils/silent-request';
 
@@ -28,7 +29,7 @@ function toNotification(dto: NotificationDto): AppNotification {
     id: dto.id,
     kind: dto.kind,
     message: dto.message,
-    link: dto.link,
+    link: normalizeIssueLink(dto.link),
     read: dto.read,
     createdAt: dto.created_at,
   };

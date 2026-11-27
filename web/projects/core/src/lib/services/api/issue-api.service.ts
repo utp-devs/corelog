@@ -4,7 +4,7 @@ import { Observable, map } from 'rxjs';
 
 import { API_URL } from '../../config/api.config';
 import {
-  CreateTicketInput,
+  CreateIssueInput,
   IssueActivity,
   IssueComment,
   IssueLink,
@@ -12,18 +12,20 @@ import {
   IssuePriority,
   IssueStatus,
   IssueType,
-  ListTicketsFilter,
-  Ticket,
-  TicketPage,
+  ListIssuesFilter,
+  Issue,
+  IssuePage,
   UpdateIssueDetailsInput,
   UpdateIssueMetadataInput,
-} from '../../models/ticket.model';
+} from '../../models/issue.model';
 import { silentRequest } from '../../utils/silent-request';
 
-interface TicketDto {
+interface IssueDto {
   id: string;
   project_id: string;
-  title: string;
+  key: string;
+  project_key: string;
+  summary: string;
   description: string;
   status: IssueStatus;
   priority: IssuePriority;
@@ -33,8 +35,8 @@ interface TicketDto {
   story_points: number | null;
   rank: string;
   closed_at: string | null;
-  requester_id: string;
-  requester_name: string;
+  reporter_id: string;
+  reporter_name: string;
   assignee_id: string | null;
   assignee_name?: string | null;
   created_at: string;
@@ -80,11 +82,13 @@ interface PagedEnvelope<T> {
   meta: { page: number; page_size: number; total: number };
 }
 
-function toTicket(dto: TicketDto): Ticket {
+function toIssue(dto: IssueDto): Issue {
   return {
     id: dto.id,
     projectId: dto.project_id,
-    title: dto.title,
+    key: dto.key,
+    projectKey: dto.project_key,
+    summary: dto.summary,
     description: dto.description,
     status: dto.status,
     priority: dto.priority,
@@ -94,8 +98,8 @@ function toTicket(dto: TicketDto): Ticket {
     storyPoints: dto.story_points,
     rank: dto.rank,
     closedAt: dto.closed_at,
-    requesterId: dto.requester_id,
-    requesterName: dto.requester_name,
+    reporterId: dto.reporter_id,
+    reporterName: dto.reporter_name,
     assigneeId: dto.assignee_id ?? null,
     assigneeName: dto.assignee_name ?? null,
     createdAt: dto.created_at,
@@ -153,11 +157,11 @@ function toParams(
 }
 
 @Injectable({ providedIn: 'root' })
-export class TicketApiService {
+export class IssueApiService {
   private readonly http = inject(HttpClient);
   private readonly baseUrl = `${inject(API_URL)}/issues`;
 
-  list(filter: ListTicketsFilter = {}): Observable<TicketPage> {
+  list(filter: ListIssuesFilter = {}): Observable<IssuePage> {
     const params = toParams({
       status: filter.status,
       priority: filter.priority,
@@ -170,9 +174,9 @@ export class TicketApiService {
       page: filter.page,
       page_size: filter.pageSize,
     });
-    return this.http.get<PagedEnvelope<TicketDto[]>>(this.baseUrl, { params }).pipe(
+    return this.http.get<PagedEnvelope<IssueDto[]>>(this.baseUrl, { params }).pipe(
       map((body) => ({
-        items: body.data.map(toTicket),
+        items: body.data.map(toIssue),
         total: body.meta.total,
         page: body.meta.page,
         pageSize: body.meta.page_size,
@@ -180,17 +184,17 @@ export class TicketApiService {
     );
   }
 
-  getById(id: string): Observable<Ticket> {
+  getById(id: string): Observable<Issue> {
     return this.http
-      .get<Envelope<TicketDto>>(`${this.baseUrl}/${id}`, { context: silentRequest() })
-      .pipe(map((body) => toTicket(body.data)));
+      .get<Envelope<IssueDto>>(`${this.baseUrl}/${id}`, { context: silentRequest() })
+      .pipe(map((body) => toIssue(body.data)));
   }
 
-  create(input: CreateTicketInput): Observable<Ticket> {
+  create(input: CreateIssueInput): Observable<Issue> {
     return this.http
-      .post<Envelope<TicketDto>>(this.baseUrl, {
+      .post<Envelope<IssueDto>>(this.baseUrl, {
         project_id: input.projectId,
-        title: input.title,
+        summary: input.summary,
         description: input.description,
         priority: input.priority,
         issue_type: input.issueType,
@@ -198,37 +202,37 @@ export class TicketApiService {
         due_date: input.dueDate,
         story_points: input.storyPoints,
       })
-      .pipe(map((body) => toTicket(body.data)));
+      .pipe(map((body) => toIssue(body.data)));
   }
 
-  updateStatus(id: string, status: IssueStatus): Observable<Ticket> {
+  updateStatus(id: string, status: IssueStatus): Observable<Issue> {
     return this.http
-      .patch<Envelope<TicketDto>>(`${this.baseUrl}/${id}/status`, { status })
-      .pipe(map((body) => toTicket(body.data)));
+      .patch<Envelope<IssueDto>>(`${this.baseUrl}/${id}/status`, { status })
+      .pipe(map((body) => toIssue(body.data)));
   }
 
   /** Passing null clears the assignee (the issue becomes unassigned). */
-  assign(id: string, assigneeId: string | null): Observable<Ticket> {
+  assign(id: string, assigneeId: string | null): Observable<Issue> {
     return this.http
-      .patch<Envelope<TicketDto>>(`${this.baseUrl}/${id}/assign`, { assignee_id: assigneeId })
-      .pipe(map((body) => toTicket(body.data)));
+      .patch<Envelope<IssueDto>>(`${this.baseUrl}/${id}/assign`, { assignee_id: assigneeId })
+      .pipe(map((body) => toIssue(body.data)));
   }
 
-  updateMetadata(id: string, input: UpdateIssueMetadataInput): Observable<Ticket> {
+  updateMetadata(id: string, input: UpdateIssueMetadataInput): Observable<Issue> {
     return this.http
-      .patch<Envelope<TicketDto>>(`${this.baseUrl}/${id}/metadata`, {
+      .patch<Envelope<IssueDto>>(`${this.baseUrl}/${id}/metadata`, {
         issue_type: input.issueType,
         parent_id: input.parentId,
         due_date: input.dueDate,
         story_points: input.storyPoints,
       })
-      .pipe(map((body) => toTicket(body.data)));
+      .pipe(map((body) => toIssue(body.data)));
   }
 
-  updateDetails(id: string, input: UpdateIssueDetailsInput): Observable<Ticket> {
+  updateDetails(id: string, input: UpdateIssueDetailsInput): Observable<Issue> {
     return this.http
-      .patch<Envelope<TicketDto>>(`${this.baseUrl}/${id}/details`, {
-        title: input.title,
+      .patch<Envelope<IssueDto>>(`${this.baseUrl}/${id}/details`, {
+        summary: input.summary,
         description: input.description,
         priority: input.priority,
         issue_type: input.issueType,
@@ -236,7 +240,7 @@ export class TicketApiService {
         due_date: input.dueDate,
         story_points: input.storyPoints,
       })
-      .pipe(map((body) => toTicket(body.data)));
+      .pipe(map((body) => toIssue(body.data)));
   }
 
   listComments(id: string): Observable<IssueComment[]> {
@@ -289,9 +293,9 @@ export class TicketApiService {
     return this.http.delete<void>(`${this.baseUrl}/${id}/links/${linkId}`);
   }
 
-  updateRank(id: string, rank: string): Observable<Ticket> {
+  updateRank(id: string, rank: string): Observable<Issue> {
     return this.http
-      .patch<Envelope<TicketDto>>(`${this.baseUrl}/${id}/rank`, { rank })
-      .pipe(map((body) => toTicket(body.data)));
+      .patch<Envelope<IssueDto>>(`${this.baseUrl}/${id}/rank`, { rank })
+      .pipe(map((body) => toIssue(body.data)));
   }
 }

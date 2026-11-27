@@ -4,7 +4,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { TestBed } from '@angular/core/testing';
 
 import { provideCorelogTesting } from '../../../testing';
-import { IssueAttachment } from '../../models/ticket.model';
+import { IssueAttachment } from '../../models/issue.model';
 import { AttachmentApiService } from './attachment-api.service';
 
 const dto = {

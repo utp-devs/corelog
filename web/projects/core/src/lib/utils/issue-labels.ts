@@ -1,4 +1,4 @@
-import { IssuePriority, IssueStatus, IssueType } from '../models/ticket.model';
+import { IssuePriority, IssueStatus, IssueType } from '../models/issue.model';
 
 /** Visual category of a status badge. The UI maps each category to a design token. */
 export type IssueStatusCategory = 'todo' | 'progress' | 'done';
@@ -30,12 +30,21 @@ export const ISSUE_TYPE_LABELS: Readonly<Record<IssueType, string>> = {
   subtask: 'Subtarea',
 };
 
-/** Visible key of an issue. Issues have no own key, so it is derived from the identifier. */
-export function issueKeyOf(id: string): string {
-  return `INC-${id.slice(0, 8).toUpperCase()}`;
+/** What is needed to label an issue: its server key when the payload carries one, else its id. */
+export interface IssueKeyRef {
+  readonly id: string;
+  readonly key?: string | null;
 }
 
-/** Readable short key of an issue: the prefix and the first six characters of its identifier. */
-export function shortIssueKeyOf(id: string): string {
-  return `INC-${id.slice(0, 6).toUpperCase()}`;
+/**
+ * Visible key of an issue (for example CORE-12). The server key is used whenever the payload carries
+ * it; payloads that only know the identifier fall back to a prefix of the id.
+ */
+export function issueKeyOf(issue: IssueKeyRef): string {
+  return issue.key ? issue.key : `INC-${issue.id.slice(0, 8).toUpperCase()}`;
+}
+
+/** Compact key for dense lists: the server key when present, else a shorter prefix of the id. */
+export function shortIssueKeyOf(issue: IssueKeyRef): string {
+  return issue.key ? issue.key : `INC-${issue.id.slice(0, 6).toUpperCase()}`;
 }

@@ -9,7 +9,7 @@ import { ORGANIZATION_ID_PROVIDER } from '../utils/org-id-provider';
 import { OrganizationStore } from './organization.store';
 import { ProjectStore } from './project.store';
 import { TeamStore } from './team.store';
-import { TicketStore } from './ticket.store';
+import { IssueStore } from './issue.store';
 
 describe('session reset', () => {
   beforeEach(() => localStorage.clear());
@@ -23,7 +23,7 @@ describe('session reset', () => {
     const org = TestBed.inject(OrganizationStore);
     const projects = TestBed.inject(ProjectStore);
     const teams = TestBed.inject(TeamStore);
-    const tickets = TestBed.inject(TicketStore);
+    const issues = TestBed.inject(IssueStore);
     TestBed.tick();
 
     org.setCurrentOrg('o1');
@@ -36,7 +36,7 @@ describe('session reset', () => {
     expect(getOrgId()).toBeNull();
     expect(projects.projects()).toEqual([]);
     expect(teams.teams()).toEqual([]);
-    expect(tickets.list.value()).toBeUndefined();
+    expect(issues.list.value()).toBeUndefined();
   });
 
   it('exposes the active organization through the organization id provider token', () => {

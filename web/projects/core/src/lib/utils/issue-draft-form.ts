@@ -1,10 +1,10 @@
 import { FormControl, FormGroup, Validators } from '@angular/forms';
 
 import { IssuePriority, IssueType } from '../models';
-import { ISSUE_PRIORITY_LABELS, ISSUE_TYPE_LABELS } from './ticket-labels';
+import { ISSUE_PRIORITY_LABELS, ISSUE_TYPE_LABELS } from './issue-labels';
 
-export const ISSUE_TITLE_MAX_LENGTH = 200;
-export const ISSUE_TITLE_MIN_LENGTH = 3;
+export const ISSUE_SUMMARY_MAX_LENGTH = 200;
+export const ISSUE_SUMMARY_MIN_LENGTH = 3;
 export const ISSUE_DESCRIPTION_MIN_LENGTH = 3;
 
 /** Types offered when an issue is created on its own: a subtask needs a parent, so it is not listed. */
@@ -34,12 +34,12 @@ export function createIssueDraftForm() {
       nonNullable: true,
       validators: [Validators.required],
     }),
-    title: new FormControl('', {
+    summary: new FormControl('', {
       nonNullable: true,
       validators: [
         Validators.required,
-        Validators.minLength(ISSUE_TITLE_MIN_LENGTH),
-        Validators.maxLength(ISSUE_TITLE_MAX_LENGTH),
+        Validators.minLength(ISSUE_SUMMARY_MIN_LENGTH),
+        Validators.maxLength(ISSUE_SUMMARY_MAX_LENGTH),
       ],
     }),
     description: new FormControl('', {

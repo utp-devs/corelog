@@ -3,7 +3,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { TestBed } from '@angular/core/testing';
 
 import { provideCorelogTesting } from '../../../testing';
-import { SavedFilter } from '../../models/ticket.model';
+import { SavedFilter } from '../../models/issue.model';
 import { SavedFilterApiService } from './saved-filter-api.service';
 
 const dto = {

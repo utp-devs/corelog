@@ -24,7 +24,7 @@ import { providePrimeNG } from 'primeng/config';
 
 import { OrganizationApiService } from '../services/api/organization-api.service';
 import { AuthStore } from '../state/auth.store';
-import { MEMBER_NAMES_SOURCE } from '../state/ticket.store';
+import { MEMBER_NAMES_SOURCE } from '../state/issue.store';
 import { ORGANIZATION_ID_PROVIDER } from '../utils/org-id-provider';
 import { getOrgId } from '../utils/org-context';
 import { authInterceptor } from '../interceptors/auth.interceptor';

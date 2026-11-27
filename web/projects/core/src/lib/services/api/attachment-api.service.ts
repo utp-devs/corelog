@@ -3,7 +3,7 @@ import { DOCUMENT, Injectable, inject } from '@angular/core';
 import { Observable, map } from 'rxjs';
 
 import { API_URL } from '../../config/api.config';
-import { IssueAttachment } from '../../models/ticket.model';
+import { IssueAttachment } from '../../models/issue.model';
 import { silentRequest } from '../../utils/silent-request';
 
 interface AttachmentDto {

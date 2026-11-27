@@ -4,7 +4,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { TestBed } from '@angular/core/testing';
 
 import { provideCorelogTesting } from '../../../testing';
-import { IssueWatcherState } from '../../models/ticket.model';
+import { IssueWatcherState } from '../../models/issue.model';
 import { IssueWatcherApiService } from './issue-watcher-api.service';
 
 describe('IssueWatcherApiService', () => {

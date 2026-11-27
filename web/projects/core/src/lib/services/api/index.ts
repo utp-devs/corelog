@@ -17,5 +17,5 @@ export * from './saved-filter-api.service';
 export * from './search-api.service';
 export * from './sprint-api.service';
 export * from './team-api.service';
-export * from './ticket-api.service';
+export * from './issue-api.service';
 export * from './user-directory-api.service';

@@ -3,7 +3,7 @@ import { Injectable, inject } from '@angular/core';
 import { Observable, map } from 'rxjs';
 
 import { API_URL } from '../../config/api.config';
-import { IssueWatcherState } from '../../models/ticket.model';
+import { IssueWatcherState } from '../../models/issue.model';
 import { silentRequest } from '../../utils/silent-request';
 
 interface WatcherStateDto {

@@ -4,21 +4,23 @@ import { TestBed } from '@angular/core/testing';
 import { Observable, Subject, of, throwError } from 'rxjs';
 
 import { provideCorelogTesting } from '../../testing';
-import { Ticket } from '../models/ticket.model';
+import { Issue } from '../models/issue.model';
 import {
   LOADING_MEMBER_NAME,
   MEMBER_NAMES_SOURCE,
   MemberNameEntry,
-  TicketStore,
+  IssueStore,
   UNKNOWN_MEMBER_NAME,
-} from './ticket.store';
+} from './issue.store';
 
 const BASE = '/api/v1/issues';
 
-function ticket(overrides: Partial<Ticket> = {}): Ticket {
+function issue(overrides: Partial<Issue> = {}): Issue {
   return {
     id: 'issue-1',
-    title: 'Error',
+    key: 'CORE-1',
+    projectKey: 'CORE',
+    summary: 'Error',
     description: '',
     status: 'open',
     priority: 'high',
@@ -29,8 +31,8 @@ function ticket(overrides: Partial<Ticket> = {}): Ticket {
     storyPoints: null,
     rank: 'm',
     closedAt: null,
-    requesterId: 'user-1',
-    requesterName: 'Ana',
+    reporterId: 'user-1',
+    reporterName: 'Ana',
     assigneeId: 'user-2',
     assigneeName: 'Luis',
     createdAt: '2026-11-22T00:00:00Z',
@@ -43,8 +45,10 @@ function ticket(overrides: Partial<Ticket> = {}): Ticket {
 function issueDto(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {
     id: 'issue-1',
+    key: 'CORE-1',
+    project_key: 'CORE',
     project_id: 'project-1',
-    title: 'Error',
+    summary: 'Error',
     description: '',
     status: 'open',
     priority: 'high',
@@ -54,8 +58,8 @@ function issueDto(overrides: Record<string, unknown> = {}): Record<string, unkno
     story_points: null,
     rank: 'm',
     closed_at: null,
-    requester_id: 'user-1',
-    requester_name: 'Ana',
+    reporter_id: 'user-1',
+    reporter_name: 'Ana',
     assignee_id: 'user-2',
     assignee_name: 'Luis',
     created_at: '2026-11-22T00:00:00Z',
@@ -76,8 +80,8 @@ function comment(id: string, issueId: string) {
   };
 }
 
-describe('TicketStore', () => {
-  let store: TicketStore;
+describe('IssueStore', () => {
+  let store: IssueStore;
   let httpMock: HttpTestingController;
   let listMembers: (organizationId: string) => Observable<readonly MemberNameEntry[]>;
   let membersCalls: string[];
@@ -101,7 +105,7 @@ describe('TicketStore', () => {
         },
       ],
     });
-    store = TestBed.inject(TicketStore);
+    store = TestBed.inject(IssueStore);
     httpMock = TestBed.inject(HttpTestingController);
   });
 
@@ -122,13 +126,13 @@ describe('TicketStore', () => {
     });
 
     it('does not replace the selected issue with a slower previous request', () => {
-      store.fetchTicket('issue-old');
-      store.fetchTicket('issue-new');
+      store.fetchIssue('issue-old');
+      store.fetchIssue('issue-new');
 
       httpMock.expectOne(`${BASE}/issue-old`);
       httpMock
         .expectOne(`${BASE}/issue-new`)
-        .flush({ data: issueDto({ id: 'issue-new', title: 'new' }) });
+        .flush({ data: issueDto({ id: 'issue-new', summary: 'new' }) });
 
       expect(store.selected.value()?.id).toBe('issue-new');
       expect(store.selected.loading()).toBe(false);
@@ -242,7 +246,7 @@ describe('TicketStore', () => {
 
   describe('list and details', () => {
     it('sends the filter and stores the page', () => {
-      store.fetchTickets({ status: 'open', page: 1, pageSize: 20 });
+      store.fetchIssues({ status: 'open', page: 1, pageSize: 20 });
       httpMock
         .expectOne((req) => req.url === BASE && req.params.get('status') === 'open')
         .flush({
@@ -250,13 +254,13 @@ describe('TicketStore', () => {
           meta: { page: 1, page_size: 20, total: 3 },
         });
 
-      expect(store.tickets().map((item) => item.id)).toEqual(['issue-1']);
+      expect(store.issues().map((item) => item.id)).toEqual(['issue-1']);
       expect(store.total()).toBe(3);
       expect(store.list.loading()).toBe(false);
     });
 
     it('keeps the list and exposes the error when the load fails', () => {
-      store.fetchTickets();
+      store.fetchIssues();
       httpMock
         .expectOne(BASE)
         .flush(
@@ -266,38 +270,38 @@ describe('TicketStore', () => {
 
       expect(store.list.error()?.code).toBe('issue.forbidden');
       expect(store.list.error()?.message).toBe('Sin acceso');
-      expect(store.tickets()).toEqual([]);
+      expect(store.issues()).toEqual([]);
     });
 
-    it('prepends a created ticket to a loaded list', () => {
-      store.fetchTickets();
+    it('prepends a created issue to a loaded list', () => {
+      store.fetchIssues();
       httpMock
         .expectOne(BASE)
         .flush({ data: [issueDto()], meta: { page: 1, page_size: 20, total: 1 } });
 
-      let created: Ticket | undefined;
+      let created: Issue | undefined;
       store
-        .createTicket({ title: 'Nueva', description: '', priority: 'low' })
+        .createIssue({ summary: 'Nueva', description: '', priority: 'low' })
         .subscribe((item) => (created = item));
-      httpMock.expectOne(BASE).flush({ data: issueDto({ id: 'issue-2', title: 'Nueva' }) });
+      httpMock.expectOne(BASE).flush({ data: issueDto({ id: 'issue-2', summary: 'Nueva' }) });
 
       expect(created?.id).toBe('issue-2');
-      expect(store.tickets().map((item) => item.id)).toEqual(['issue-2', 'issue-1']);
+      expect(store.issues().map((item) => item.id)).toEqual(['issue-2', 'issue-1']);
     });
 
     it('applies status, metadata and rank updates to the list and the selected issue', () => {
-      store.fetchTickets();
+      store.fetchIssues();
       httpMock
         .expectOne(BASE)
         .flush({ data: [issueDto()], meta: { page: 1, page_size: 20, total: 1 } });
-      store.fetchTicket('issue-1');
+      store.fetchIssue('issue-1');
       httpMock.expectOne(`${BASE}/issue-1`).flush({ data: issueDto() });
 
       store.updateStatus('issue-1', 'resolved').subscribe();
       httpMock
         .expectOne(`${BASE}/issue-1/status`)
         .flush({ data: issueDto({ status: 'resolved' }) });
-      expect(store.tickets()[0]?.status).toBe('resolved');
+      expect(store.issues()[0]?.status).toBe('resolved');
       expect(store.selected.value()?.status).toBe('resolved');
 
       store.updateRank('issue-1', 'z').subscribe();
@@ -308,23 +312,23 @@ describe('TicketStore', () => {
       httpMock
         .expectOne(`${BASE}/issue-1/metadata`)
         .flush({ data: issueDto({ issue_type: 'task' }) });
-      expect(store.tickets()[0]?.issueType).toBe('task');
+      expect(store.issues()[0]?.issueType).toBe('task');
     });
   });
 
   describe('assign and unassign', () => {
-    const issue = ticket();
+    const current = issue();
 
     beforeEach(() => {
-      store.list.set({ items: [issue], total: 1, page: 1, pageSize: 20 });
-      store.selected.set(issue);
+      store.list.set({ items: [current], total: 1, page: 1, pageSize: 20 });
+      store.selected.set(current);
     });
 
     it('clears the assignee optimistically and stores the server answer', () => {
       store.unassign('issue-1').subscribe();
 
       expect(store.selected.value()).toMatchObject({ assigneeId: null, assigneeName: null });
-      expect(store.tickets()[0]).toMatchObject({ assigneeId: null });
+      expect(store.issues()[0]).toMatchObject({ assigneeId: null });
 
       const request = httpMock.expectOne(`${BASE}/issue-1/assign`);
       expect(request.request.body).toEqual({ assignee_id: null });
@@ -344,7 +348,7 @@ describe('TicketStore', () => {
 
       expect(error?.message).toBe('Sin conexión');
       expect(store.selected.value()).toMatchObject({ assigneeId: 'user-2', assigneeName: 'Luis' });
-      expect(store.tickets()[0]).toMatchObject({ assigneeId: 'user-2' });
+      expect(store.issues()[0]).toMatchObject({ assigneeId: 'user-2' });
     });
 
     it('shows the new assignee optimistically and rolls back when assigning fails', () => {
@@ -385,7 +389,7 @@ describe('TicketStore', () => {
         .flush({ error: { message: 'x' } }, { status: 500, statusText: 'Server Error' });
 
       expect(failed).toBe(true);
-      expect(store.tickets()[0]).toMatchObject({ assigneeId: 'user-2', assigneeName: 'Luis' });
+      expect(store.issues()[0]).toMatchObject({ assigneeId: 'user-2', assigneeName: 'Luis' });
     });
   });
 
@@ -468,13 +472,13 @@ describe('TicketStore', () => {
   });
 
   it('clears the issue state on reset', () => {
-    store.fetchTicket('issue-1');
+    store.fetchIssue('issue-1');
     httpMock.expectOne(`${BASE}/issue-1`).flush({ data: issueDto() });
 
     store.reset();
 
     expect(store.selected.value()).toBeUndefined();
-    expect(store.tickets()).toEqual([]);
+    expect(store.issues()).toEqual([]);
     expect(store.total()).toBe(0);
   });
 });

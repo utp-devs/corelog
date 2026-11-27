@@ -3,9 +3,9 @@ import { Observable, catchError, defer, map, of, tap, throwError } from 'rxjs';
 
 import { AttachmentApiService } from '../services/api/attachment-api.service';
 import { IssueWatcherApiService } from '../services/api/issue-watcher-api.service';
-import { TicketApiService } from '../services/api/ticket-api.service';
+import { IssueApiService } from '../services/api/issue-api.service';
 import {
-  CreateTicketInput,
+  CreateIssueInput,
   IssueActivity,
   IssueAttachment,
   IssueComment,
@@ -13,12 +13,12 @@ import {
   IssueLinkKind,
   IssueStatus,
   IssueWatcherState,
-  ListTicketsFilter,
-  Ticket,
-  TicketPage,
+  ListIssuesFilter,
+  Issue,
+  IssuePage,
   UpdateIssueDetailsInput,
   UpdateIssueMetadataInput,
-} from '../models/ticket.model';
+} from '../models/issue.model';
 import { asApiError } from '../utils/api-error';
 import { AsyncState } from './async-state';
 import { resetOnLogout } from './session-scoped';
@@ -53,8 +53,8 @@ export const LOADING_MEMBER_NAME = 'Cargando…';
  * Each collection is tied to the issue it belongs to, so a late response for another issue is ignored.
  */
 @Injectable({ providedIn: 'root' })
-export class TicketStore {
-  private readonly api = inject(TicketApiService);
+export class IssueStore {
+  private readonly api = inject(IssueApiService);
   private readonly attachmentApi = inject(AttachmentApiService);
   private readonly watcherApi = inject(IssueWatcherApiService);
   private readonly memberSource = inject(MEMBER_NAMES_SOURCE);
@@ -67,8 +67,8 @@ export class TicketStore {
   private readonly memberOrganization = signal<string | null>(null);
   private readonly memberCache = new Map<string, ReadonlyMap<string, string>>();
 
-  readonly list = new AsyncState<TicketPage>();
-  readonly selected = new AsyncState<Ticket>();
+  readonly list = new AsyncState<IssuePage>();
+  readonly selected = new AsyncState<Issue>();
   readonly comments = new AsyncState<IssueComment[]>();
   readonly activities = new AsyncState<IssueActivity[]>();
   readonly links = new AsyncState<IssueLink[]>();
@@ -76,7 +76,7 @@ export class TicketStore {
   readonly attachments = new AsyncState<IssueAttachment[]>();
   readonly memberNames = new AsyncState<ReadonlyMap<string, string>>();
 
-  readonly tickets = computed<readonly Ticket[]>(() => this.list.value()?.items ?? []);
+  readonly issues = computed<readonly Issue[]>(() => this.list.value()?.items ?? []);
   readonly total = computed(() => this.list.value()?.total ?? 0);
   readonly commentsIssueId = this.commentsIssue.asReadonly();
   readonly activitiesIssueId = this.activitiesIssue.asReadonly();
@@ -94,25 +94,25 @@ export class TicketStore {
     resetOnLogout(() => this.reset());
   }
 
-  fetchTickets(filter: ListTicketsFilter = {}): void {
+  fetchIssues(filter: ListIssuesFilter = {}): void {
     this.list.load(this.api.list(filter));
   }
 
-  fetchTicket(id: string): void {
+  fetchIssue(id: string): void {
     this.selected.load(this.api.getById(id));
   }
 
-  createTicket(input: CreateTicketInput): Observable<Ticket> {
+  createIssue(input: CreateIssueInput): Observable<Issue> {
     return this.api.create(input).pipe(
-      tap((ticket) => {
+      tap((issue) => {
         if (this.list.hasValue()) {
-          this.list.update((page) => page && { ...page, items: [ticket, ...page.items] });
+          this.list.update((page) => page && { ...page, items: [issue, ...page.items] });
         }
       }),
     );
   }
 
-  updateStatus(id: string, status: IssueStatus): Observable<Ticket> {
+  updateStatus(id: string, status: IssueStatus): Observable<Issue> {
     return this.api.updateStatus(id, status).pipe(tap((updated) => this.applyUpdate(updated)));
   }
 
@@ -120,9 +120,9 @@ export class TicketStore {
    * Assigns the issue (or clears the assignee with null). The new assignee shows at once; the previous
    * state comes back if the API rejects the change, and the error is re-thrown for the caller.
    */
-  assign(id: string, assigneeId: string | null): Observable<Ticket> {
+  assign(id: string, assigneeId: string | null): Observable<Issue> {
     return defer(() => {
-      const previous = this.findTicket(id);
+      const previous = this.findIssue(id);
       if (previous) {
         // The name is unknown until the API answers, so it is cleared rather than shown stale.
         this.applyUpdate({ ...previous, assigneeId, assigneeName: null });
@@ -139,19 +139,19 @@ export class TicketStore {
     });
   }
 
-  unassign(id: string): Observable<Ticket> {
+  unassign(id: string): Observable<Issue> {
     return this.assign(id, null);
   }
 
-  updateMetadata(id: string, input: UpdateIssueMetadataInput): Observable<Ticket> {
+  updateMetadata(id: string, input: UpdateIssueMetadataInput): Observable<Issue> {
     return this.api.updateMetadata(id, input).pipe(tap((updated) => this.applyUpdate(updated)));
   }
 
-  updateDetails(id: string, input: UpdateIssueDetailsInput): Observable<Ticket> {
+  updateDetails(id: string, input: UpdateIssueDetailsInput): Observable<Issue> {
     return this.api.updateDetails(id, input).pipe(tap((updated) => this.applyUpdate(updated)));
   }
 
-  updateRank(id: string, rank: string): Observable<Ticket> {
+  updateRank(id: string, rank: string): Observable<Issue> {
     return this.api.updateRank(id, rank).pipe(tap((updated) => this.applyUpdate(updated)));
   }
 
@@ -326,20 +326,20 @@ export class TicketStore {
     }
   }
 
-  private findTicket(id: string): Ticket | undefined {
+  private findIssue(id: string): Issue | undefined {
     const selected = this.selected.value();
     if (selected?.id === id) {
       return selected;
     }
-    return this.list.value()?.items.find((ticket) => ticket.id === id);
+    return this.list.value()?.items.find((issue) => issue.id === id);
   }
 
-  private applyUpdate(updated: Ticket): void {
+  private applyUpdate(updated: Issue): void {
     this.list.update(
       (page) =>
         page && {
           ...page,
-          items: page.items.map((ticket) => (ticket.id === updated.id ? updated : ticket)),
+          items: page.items.map((issue) => (issue.id === updated.id ? updated : issue)),
         },
     );
     this.selected.update((current) => (current?.id === updated.id ? updated : current));

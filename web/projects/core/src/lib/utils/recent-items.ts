@@ -1,4 +1,5 @@
 import { SearchHit } from '../models/search.model';
+import { normalizeIssueLink } from '../config/issue-paths';
 
 /** localStorage key for the recently visited projects and issues (JSON array, newest first). */
 export const RECENT_STORAGE_KEY = 'corelog.recent';
@@ -37,7 +38,7 @@ export function getRecent(): RecentItem[] {
     return Array.isArray(parsed)
       ? parsed
           .filter(isRecentItem)
-          .map((item) => ({ ...item, link: toRouterPath(item.link) }))
+          .map((item) => ({ ...item, link: normalizeIssueLink(toRouterPath(item.link)) }))
           .slice(0, RECENT_LIMIT)
       : [];
   } catch {

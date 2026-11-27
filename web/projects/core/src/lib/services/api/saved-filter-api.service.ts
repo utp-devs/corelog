@@ -9,7 +9,7 @@ import {
   IssueType,
   SavedFilter,
   SavedFilterCriteria,
-} from '../../models/ticket.model';
+} from '../../models/issue.model';
 
 interface SavedFilterDto {
   id: string;

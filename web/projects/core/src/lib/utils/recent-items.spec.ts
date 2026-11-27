@@ -7,7 +7,13 @@ import {
 } from './recent-items';
 
 function item(id: string, kind: RecentItem['kind'] = 'issue'): RecentItem {
-  return { kind, id, title: `Titulo ${id}`, subtitle: 'CORE', link: `/${kind}s/${id}` };
+  return {
+    kind,
+    id,
+    title: `Titulo ${id}`,
+    subtitle: 'CORE',
+    link: `/${kind === 'issue' ? 'browse' : 'projects'}/${id}`,
+  };
 }
 
 describe('recent items', () => {
@@ -71,6 +77,6 @@ describe('recent items', () => {
         { kind: 'project', id: 'p', title: 'P', subtitle: 'CORE', link: '/projects/p/board' },
       ]),
     );
-    expect(getRecent().map((entry) => entry.link)).toEqual(['/issues/a', '/projects/p/board']);
+    expect(getRecent().map((entry) => entry.link)).toEqual(['/browse/a', '/projects/p/board']);
   });
 });

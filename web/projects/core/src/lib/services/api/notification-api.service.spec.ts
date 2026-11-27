@@ -39,7 +39,7 @@ describe('NotificationApiService', () => {
       id: 'n-1',
       kind: 'issue_assigned',
       message: 'Te asignaron',
-      link: '/issues/1',
+      link: '/browse/1',
       read: false,
       createdAt: '2026-11-22T10:00:00Z',
     });

@@ -5,7 +5,7 @@ export * from './people.model';
 export * from './organization.model';
 export * from './team.model';
 export * from './project.model';
-export * from './ticket.model';
+export * from './issue.model';
 export * from './board.model';
 export * from './sprint.model';
 export * from './backlog.model';

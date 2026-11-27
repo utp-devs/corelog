@@ -3,6 +3,7 @@ import { Injectable, inject } from '@angular/core';
 import { Observable, map } from 'rxjs';
 
 import { API_URL } from '../../config/api.config';
+import { normalizeIssueLink } from '../../config/issue-paths';
 import { SearchHit } from '../../models/search.model';
 
 interface Envelope<T> {
@@ -18,6 +19,8 @@ export class SearchApiService {
     const params = new HttpParams().set('q', query).set('limit', String(limit));
     return this.http
       .get<Envelope<SearchHit[]>>(this.url, { params })
-      .pipe(map((body) => body.data));
+      .pipe(
+        map((body) => body.data.map((hit) => ({ ...hit, link: normalizeIssueLink(hit.link) }))),
+      );
   }
 }

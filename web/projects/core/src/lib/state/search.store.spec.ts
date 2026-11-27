@@ -11,7 +11,7 @@ const hit = {
   id: 'i-1',
   title: 'Exportar',
   subtitle: 'CORE',
-  link: '/issues/i-1',
+  link: '/browse/i-1',
 } as const;
 
 describe('SearchStore', () => {
@@ -66,7 +66,7 @@ describe('SearchStore', () => {
 
   it('keeps recent items newest first and persists them', () => {
     store.rememberRecent(hit);
-    store.rememberRecent({ ...hit, id: 'i-2', link: '/issues/i-2' });
+    store.rememberRecent({ ...hit, id: 'i-2', link: '/browse/i-2' });
 
     expect(store.recent().map((item) => item.id)).toEqual(['i-2', 'i-1']);
     expect(localStorage.getItem(RECENT_STORAGE_KEY)).toContain('i-2');

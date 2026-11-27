@@ -9,9 +9,11 @@ export const ISSUE_TYPES: readonly IssueType[] = ['task', 'bug', 'story', 'epic'
 export const ISSUE_LINK_KINDS: readonly IssueLinkKind[] = ['blocks', 'relates', 'duplicates'];
 
 /** Full issue as returned by the API, with camelCase fields. */
-export interface Ticket {
+export interface Issue {
   readonly id: string;
-  readonly title: string;
+  readonly key: string;
+  readonly projectKey: string;
+  readonly summary: string;
   readonly description: string;
   readonly status: IssueStatus;
   readonly priority: IssuePriority;
@@ -22,8 +24,8 @@ export interface Ticket {
   readonly storyPoints: number | null;
   readonly rank: string;
   readonly closedAt: string | null;
-  readonly requesterId: string;
-  readonly requesterName: string;
+  readonly reporterId: string;
+  readonly reporterName: string;
   readonly assigneeId: string | null;
   readonly assigneeName: string | null;
   readonly createdAt: string;
@@ -109,7 +111,7 @@ export interface SavedFilter {
 /** Value of the assignee filter that selects the issues nobody is assigned to. */
 export const UNASSIGNED_FILTER = 'none';
 
-export interface ListTicketsFilter {
+export interface ListIssuesFilter {
   readonly status?: IssueStatus;
   readonly priority?: IssuePriority;
   readonly query?: string;
@@ -124,17 +126,17 @@ export interface ListTicketsFilter {
 }
 
 /** One page of issues and the total number of matches across all pages. */
-export interface TicketPage {
-  readonly items: readonly Ticket[];
+export interface IssuePage {
+  readonly items: readonly Issue[];
   readonly total: number;
   readonly page: number;
   readonly pageSize: number;
 }
 
-export interface CreateTicketInput {
+export interface CreateIssueInput {
   /** Project the issue belongs to. Without it the server uses the default project. */
   readonly projectId?: string;
-  readonly title: string;
+  readonly summary: string;
   readonly description: string;
   readonly priority: IssuePriority;
   readonly issueType?: IssueType;
@@ -151,7 +153,7 @@ export interface UpdateIssueMetadataInput {
 }
 
 export interface UpdateIssueDetailsInput extends UpdateIssueMetadataInput {
-  readonly title: string;
+  readonly summary: string;
   readonly description: string;
   readonly priority: IssuePriority;
 }
