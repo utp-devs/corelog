@@ -1,0 +1,28 @@
+<p-select
+  styleClass="user-picker"
+  [options]="options()"
+  optionLabel="name"
+  optionValue="id"
+  [filter]="true"
+  filterBy="searchText"
+  [ngModel]="value()"
+  (ngModelChange)="onSelect($event)"
+  (onFilter)="search.emit($event.filter)"
+  [showClear]="allowClear()"
+  [loading]="loading()"
+  [placeholder]="placeholder()"
+  [ariaLabel]="placeholder()"
+  [emptyMessage]="emptyText()"
+  [emptyFilterMessage]="emptyText()"
+>
+  <ng-template #selectedItem let-option>
+    <span class="avatar" aria-hidden="true">{{ option.initials }}</span>
+    <span>{{ option.name }}</span>
+  </ng-template>
+  <ng-template #item let-option>
+    <span class="option">
+      <span class="avatar" aria-hidden="true">{{ option.initials }}</span>
+      <span>{{ option.name }}</span>
+    </span>
+  </ng-template>
+</p-select>

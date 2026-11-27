@@ -1,0 +1,29 @@
+:host {
+  display: inline-flex;
+}
+
+.group {
+  display: inline-flex;
+  align-items: center;
+}
+
+.avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: 24px;
+  height: 24px;
+  border-radius: var(--cl-radius-full);
+  border: 2px solid var(--cl-bg-surface);
+  background: var(--cl-brand-subtle);
+  color: var(--cl-brand);
+  font-size: var(--cl-font-caption);
+  font-weight: 600;
+  line-height: 1;
+  user-select: none;
+}
+
+.avatar + .avatar {
+  margin-inline-start: -8px;
+}

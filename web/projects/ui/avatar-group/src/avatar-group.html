@@ -1,0 +1,10 @@
+<div class="group">
+  @for (item of items(); track item.id) {
+    <span class="avatar">
+      <span [attr.title]="item.name">{{ item.initials }}</span>
+    </span>
+  }
+  @if (hidden() > 0) {
+    <span class="avatar">+{{ hidden() }}</span>
+  }
+</div>

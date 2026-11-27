@@ -1,0 +1,16 @@
+<span
+  class="tile"
+  role="img"
+  [class]="sizeClass()"
+  [attr.aria-label]="'Proyecto ' + name()"
+  [attr.data-palette]="palette()"
+  [attr.data-testid]="dataTestId()"
+>
+  <span aria-hidden="true" class="content">
+    @if (icon(); as iconClass) {
+      <i [class]="iconClass"></i>
+    } @else {
+      {{ initials() }}
+    }
+  </span>
+</span>

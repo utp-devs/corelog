@@ -1,0 +1,60 @@
+:host {
+  display: inline-flex;
+  flex: none;
+}
+
+.avatar {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: var(--cl-radius-full);
+  font-weight: 600;
+  line-height: 1;
+  object-fit: cover;
+  user-select: none;
+}
+
+.size-16 {
+  width: 16px;
+  height: 16px;
+  font-size: var(--cl-font-caption);
+}
+
+.size-20 {
+  width: 20px;
+  height: 20px;
+  font-size: var(--cl-font-caption);
+}
+
+.size-24 {
+  width: 24px;
+  height: 24px;
+  font-size: var(--cl-font-small);
+}
+
+.size-32 {
+  width: 32px;
+  height: 32px;
+  font-size: var(--cl-font-small);
+}
+
+.size-40 {
+  width: 40px;
+  height: 40px;
+  font-size: var(--cl-font-body);
+}
+
+.size-64 {
+  width: 64px;
+  height: 64px;
+  font-size: var(--cl-font-h3);
+}
+
+@for $i from 1 through 10 {
+  .tone-#{$i} {
+    background: var(--cl-avatar-#{$i});
+    color: var(--cl-avatar-#{$i}-text);
+  }
+}

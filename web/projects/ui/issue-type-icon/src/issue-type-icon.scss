@@ -1,0 +1,42 @@
+:host {
+  display: inline-flex;
+}
+
+.wrapper {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--cl-space-1);
+}
+
+.icon {
+  display: inline-flex;
+}
+
+.task {
+  color: var(--cl-brand);
+}
+
+.bug {
+  color: var(--cl-danger);
+}
+
+.story {
+  color: var(--cl-success);
+}
+
+.epic {
+  color: var(--cl-info);
+}
+
+.subtask {
+  color: var(--cl-text-subtle);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}

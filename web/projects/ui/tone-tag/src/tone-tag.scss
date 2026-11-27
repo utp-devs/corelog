@@ -1,0 +1,54 @@
+:host {
+  display: inline-flex;
+  max-width: 100%;
+}
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  padding: 2px 10px;
+  border: 1px solid transparent;
+  border-radius: var(--cl-radius-sm);
+  font-size: var(--cl-font-small);
+  font-weight: 600;
+  line-height: 20px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.neutral {
+  background: var(--cl-bg-sunken);
+  color: var(--cl-text-subtle);
+  border-color: var(--cl-border);
+}
+
+.blue {
+  background: var(--cl-brand-subtle);
+  color: var(--cl-brand);
+  border-color: var(--cl-brand);
+}
+
+.gold {
+  background: var(--cl-warning-bg);
+  color: var(--cl-warning-text);
+  border-color: var(--cl-warning);
+}
+
+.green {
+  background: var(--cl-success-bg);
+  color: var(--cl-success-text);
+  border-color: var(--cl-success);
+}
+
+.orange {
+  background: var(--cl-warning-bg);
+  color: var(--cl-warning-text);
+  border-color: var(--cl-warning);
+}
+
+.red {
+  background: var(--cl-danger-bg);
+  color: var(--cl-danger-text);
+  border-color: var(--cl-danger);
+}

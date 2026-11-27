@@ -1,0 +1,19 @@
+<ng-template #content>
+  <app-avatar [id]="user().id" [name]="user().name" [src]="user().avatarUrl" [size]="size()" />
+  <span class="text">
+    <span class="name" [attr.title]="user().name">{{ user().name }}</span>
+    @if (user().role; as role) {
+      <span class="role" [attr.title]="role">{{ role }}</span>
+    }
+  </span>
+</ng-template>
+
+@if (href()) {
+  <a class="chip" [attr.href]="href()" [attr.data-testid]="dataTestId()">
+    <ng-container *ngTemplateOutlet="content" />
+  </a>
+} @else {
+  <span class="chip" [attr.data-testid]="dataTestId()">
+    <ng-container *ngTemplateOutlet="content" />
+  </span>
+}

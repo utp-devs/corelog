@@ -1,0 +1,88 @@
+:host {
+  display: inline-flex;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.wrapper {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--cl-space-1);
+  max-width: 100%;
+  min-width: 0;
+}
+
+.link {
+  color: var(--cl-brand);
+  font-weight: 600;
+  white-space: nowrap;
+  border-radius: var(--cl-radius-sm);
+}
+
+.link.resolved {
+  color: var(--cl-text-subtle);
+  font-weight: 400;
+  text-decoration: line-through;
+}
+
+.link:focus-visible,
+.copy-button:focus-visible {
+  outline: none;
+  box-shadow: var(--cl-shadow-focus);
+}
+
+.copy-wrap {
+  display: inline-flex;
+  opacity: 0;
+  transition: opacity 150ms ease-out;
+}
+
+.wrapper:hover .copy-wrap,
+.wrapper:focus-within .copy-wrap {
+  opacity: 1;
+}
+
+.copy-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  min-height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--cl-radius-sm);
+  background: transparent;
+  color: var(--cl-text-subtle);
+  cursor: pointer;
+}
+
+.copy-button:hover {
+  background: var(--cl-bg-sunken);
+  color: var(--cl-text);
+}
+
+@media (hover: none) {
+  .copy-wrap {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .copy-wrap {
+    transition: none;
+  }
+}
+
+/* Phones: the key and the copy button are 44 px tap targets. */
+@media (max-width: 767.98px) {
+  .link {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+  }
+
+  .copy-button {
+    min-width: 44px;
+    min-height: 44px;
+  }
+}

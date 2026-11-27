@@ -1,0 +1,20 @@
+@if (showImage()) {
+  <img
+    class="avatar"
+    [class]="sizeClass()"
+    [src]="src() ?? ''"
+    [alt]="name()"
+    [attr.data-testid]="dataTestId()"
+    (error)="onImageError()"
+  />
+} @else {
+  <span
+    class="avatar"
+    role="img"
+    [class]="sizeClass() + ' ' + toneClass()"
+    [attr.aria-label]="name()"
+    [attr.data-testid]="dataTestId()"
+  >
+    <span aria-hidden="true">{{ initials() }}</span>
+  </span>
+}
