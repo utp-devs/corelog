@@ -2256,110 +2256,6 @@ paths:
           description: Resumen personal
         '401':
           $ref: '#/components/responses/Unauthorized'
-  /workflows:
-    get:
-      tags: [issues]
-      operationId: getDefaultWorkflow
-      summary: Flujo por defecto de un proyecto
-      description: Devuelve las transiciones de estado permitidas y los roles de proyecto que pueden ejecutarlas. Requiere poder ver el proyecto.
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: project_id
-          in: query
-          required: true
-          schema:
-            type: string
-            format: uuid
-      responses:
-        '200':
-          description: Flujo por defecto
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  data:
-                    type: object
-                    properties:
-                      id:
-                        type: string
-                        format: uuid
-                      project_id:
-                        type: string
-                        format: uuid
-                      name:
-                        type: string
-                      transitions:
-                        type: array
-                        items:
-                          type: object
-                          properties:
-                            from_status:
-                              type: string
-                            to_status:
-                              type: string
-                            allowed_roles:
-                              type: array
-                              items:
-                                type: string
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          description: Sin permiso para ver el proyecto
-        '404':
-          description: El proyecto no tiene flujo por defecto
-    put:
-      tags: [issues]
-      operationId: updateDefaultWorkflow
-      summary: Reemplazar las transiciones del flujo por defecto
-      description: Solo el lider del proyecto o el administrador global. Valida estados, roles permitidos (admin, lead, contributor, viewer) y transiciones duplicadas o sin cambio de estado.
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: project_id
-          in: query
-          required: true
-          schema:
-            type: string
-            format: uuid
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [transitions]
-              properties:
-                transitions:
-                  type: array
-                  items:
-                    type: object
-                    required: [from_status, to_status, allowed_roles]
-                    properties:
-                      from_status:
-                        type: string
-                        enum: [open, in_progress, resolved, closed]
-                      to_status:
-                        type: string
-                        enum: [open, in_progress, resolved, closed]
-                      allowed_roles:
-                        type: array
-                        minItems: 1
-                        items:
-                          type: string
-                          enum: [admin, lead, contributor, viewer]
-      responses:
-        '200':
-          description: Flujo actualizado
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          description: Solo lead o administrador global
-        '404':
-          description: El proyecto no tiene flujo por defecto
-        '422':
-          $ref: '#/components/responses/ValidationError'
   /saved-filters:
     get:
       tags: [issues]
@@ -2440,8 +2336,8 @@ paths:
         que no en failed, cada una con su codigo. Acciones: assign (params.assignee_id, null desasigna), set_priority
         (params.priority_id), set_labels (params.add y params.remove, listas de ids de etiquetas del proyecto de cada
         incidencia), set_field (params.fields con los mismos campos que PATCH, incluido custom), transition
-        (params.status), move (params.project_id, params.issue_type_id, params.field_mapping), delete. Codigos de
-        fallo por incidencia: issue.not_found, issue.forbidden, issue.transition_not_allowed, issue.label_not_in_project,
+        (params.transition_id, params.status_id o params.status; exactamente uno), move (params.project_id, params.issue_type_id, params.field_mapping), delete. Codigos de
+        fallo por incidencia: issue.not_found, issue.forbidden, workflow.transition_not_allowed, workflow.validation_failed, issue.transition_unavailable, issue.status_conflict, issue.label_not_in_project,
         issue.move_mapping_required, issue.hierarchy_* y los de validacion del campo. La peticion se rechaza (422) si
         la accion no existe, faltan parametros, hay mas de 200 incidencias o ninguna.
       operationId: bulkChangeIssues
@@ -2727,8 +2623,15 @@ paths:
                   flagged: false
                   permissions: [edit_issue, assign_issue, transition_issue, comment_issue, delete_issue]
                   available_transitions:
-                    - {id: in_progress, name: En progreso, to_status: in_progress}
-                    - {id: closed, name: Cerrada, to_status: closed}
+                    - id: start
+                      name: Iniciar
+                      to_status: in_progress
+                      to: {id: 6f1b2c3d-0000-4000-8000-0000000000a2, name: En curso, category: in_progress}
+                      required_fields: []
+                      requires_comment: false
+                      requires_resolution: false
+                      requires_assignee: false
+                      needs_screen: false
                   counts: {comments: 2, attachments: 0, children: 3, links: 0, watchers: 2, votes: 0}
                   breadcrumb:
                     project: {id: 00000000-0000-4000-8000-000000000001, key: CORE, name: CoreLog}
@@ -2834,35 +2737,86 @@ paths:
           $ref: '#/components/responses/NotFound'
         '409':
           $ref: '#/components/responses/Conflict'
-  /issues/{id}/status:
+  /issues/{id}/transitions:
     parameters:
       - $ref: '#/components/parameters/IssueRef'
       - $ref: '#/components/parameters/IssueOrganizationId'
-    patch:
+    get:
       tags: [issues]
-      summary: Transition an issue's status
+      summary: Transiciones disponibles de una incidencia
       description: >-
-        The transition must exist in the project's default workflow and be allowed for the
-        authenticated role. Valid transitions are open to in_progress, open to closed,
-        in_progress to resolved, in_progress to closed, resolved to closed, and resolved to
-        in_progress. Any other transition is rejected with 409.
-      operationId: updateIssueStatus
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UpdateIssueStatusRequest'
+        Lista, en el orden del flujo de trabajo del proyecto, las transiciones que quien consulta puede ejecutar desde el
+        estado actual de la incidencia (se evaluan sus condiciones). Cada una indica el estado destino y lo que el cliente
+        debe pedir antes de ejecutarla (campos, comentario, resolucion, persona asignada). Requiere el permiso
+        transition_issue; quien no puede ver la incidencia recibe 404.
+      operationId: listIssueTransitions
       responses:
         '200':
-          description: The issue with its updated status
+          description: Transiciones que quien consulta puede ejecutar
           content:
             application/json:
               schema:
                 type: object
                 properties:
                   data:
-                    $ref: '#/components/schemas/Issue'
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/IssueTransition'
+              example:
+                data:
+                  - id: start
+                    name: Iniciar
+                    to_status: in_progress
+                    to: {id: 6f1b2c3d-0000-4000-8000-0000000000a2, name: En curso, category: in_progress}
+                    required_fields: []
+                    requires_comment: false
+                    requires_resolution: false
+                    requires_assignee: false
+                    needs_screen: false
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags: [issues]
+      summary: Ejecutar una transicion de la incidencia
+      description: >-
+        Ejecuta una transicion del flujo de trabajo en una sola transaccion: comprueba permisos y condiciones, valida los
+        campos, el comentario y la resolucion que pida la transicion, cambia el estado (y el valor legacy de status, que
+        refleja la categoria del estado), aplica las post-funciones (resolucion, asignacion, campos, comentarios), guarda
+        el historial de estados, un lote de actividad y el evento issue.transitioned. Si se envia expected_status_id y la
+        incidencia ya no esta en ese estado, o si otra transicion se adelanta, responde 409 issue.status_conflict.
+        Errores: 403 workflow.transition_not_allowed (la transicion no existe, no sale del estado actual o falla una
+        condicion), 409 issue.status_conflict, 422 workflow.validation_failed con un detalle por requisito incumplido,
+        422 issue.resolution_not_found.
+      operationId: runIssueTransition
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RunIssueTransitionRequest'
+            example:
+              transition_id: complete
+              comment: Verificado en produccion
+              expected_status_id: 6f1b2c3d-0000-4000-8000-0000000000a2
+      responses:
+        '200':
+          description: La incidencia con su nuevo estado y la transicion aplicada
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    allOf:
+                      - $ref: '#/components/schemas/Issue'
+                      - type: object
+                        properties:
+                          transition:
+                            $ref: '#/components/schemas/AppliedTransition'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
@@ -2870,7 +2824,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
         '409':
-          description: The requested status transition is not allowed from the issue's current status
+          description: El estado de la incidencia cambio (issue.status_conflict)
           content:
             application/json:
               schema:
@@ -2885,9 +2839,8 @@ paths:
       tags: [issues]
       summary: Asignar o desasignar una incidencia
       description: >-
-        Asigna la incidencia a un usuario, o la desasigna si assignee_id es null. Asignar una
-        incidencia abierta tambien la pasa a in_progress; en otro estado solo cambia la persona
-        asignada. La persona asignada debe pertenecer al mismo equipo que quien hace la peticion,
+        Asigna la incidencia a un usuario, o la desasigna si assignee_id es null. Asignar no
+        cambia el estado de la incidencia, solo la persona asignada. La persona asignada debe pertenecer al mismo equipo que quien hace la peticion,
         si no responde 403, y se añade a los seguidores de la incidencia en la misma transaccion.
         Desasignar requiere el mismo permiso que asignar, no cambia el estado, no avisa a nadie y
         es idempotente: si la incidencia ya no tiene persona asignada responde 200 sin cambios.
@@ -6875,12 +6828,40 @@ components:
           format: uuid
           nullable: true
           description: Persona asignada (requiere assign_issue). Si se omite se aplica la politica del proyecto (default_assignee_policy). El resto de campos del esquema del proyecto marcados como obligatorios en la disposicion se validan (422 validation.failed con details).
-    UpdateIssueStatusRequest:
+    RunIssueTransitionRequest:
       type: object
-      required: [status]
+      required: [transition_id]
+      additionalProperties: false
       properties:
-        status:
-          $ref: '#/components/schemas/IssueStatus'
+        transition_id:
+          type: string
+          maxLength: 64
+          description: Id de una de las transiciones devueltas por GET /issues/{id}/transitions.
+        fields:
+          type: object
+          additionalProperties: {type: string}
+          description: >-
+            Valores de los campos que pide la transicion (required_fields). Campos estandar: story_points, due_date,
+            start_date (AAAA-MM-DD) y flagged; los campos personalizados usan el nombre cf_ seguido de los 32 digitos
+            hexadecimales de su id.
+        comment:
+          type: string
+          description: Comentario de la transicion; se guarda como comentario de la incidencia.
+        resolution_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: Resolucion elegida; si se omite, el flujo aplica la resolucion Done de la organizacion en estados de categoria done.
+        assignee_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: Persona asignada cuando la transicion la pide.
+        expected_status_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: Estado que el cliente vio. Si ya no es el actual, la transicion falla con 409 issue.status_conflict.
     AssignIssueRequest:
       type: object
       required: [assignee_id]
@@ -6978,12 +6959,38 @@ components:
               type: array
               items:
                 $ref: '#/components/schemas/IssueChange'
+    WorkflowStatusRef:
+      type: object
+      properties:
+        id: {type: string, format: uuid}
+        name: {type: string, example: En curso}
+        category: {type: string, enum: [todo, in_progress, done]}
     IssueTransition:
       type: object
       properties:
-        id: {type: string, example: in_progress}
-        name: {type: string, example: En progreso}
-        to_status: {$ref: '#/components/schemas/IssueStatus'}
+        id: {type: string, example: start}
+        name: {type: string, example: Iniciar}
+        to_status:
+          allOf:
+            - $ref: '#/components/schemas/IssueStatus'
+          description: Valor legacy de status que refleja la categoria del estado destino (todo open, in_progress in_progress, done closed).
+        to: {$ref: '#/components/schemas/WorkflowStatusRef'}
+        required_fields:
+          type: array
+          items: {type: string}
+        requires_comment: {type: boolean}
+        requires_resolution: {type: boolean}
+        requires_assignee: {type: boolean}
+        needs_screen:
+          type: boolean
+          description: Verdadero si el cliente debe pedir datos antes de ejecutar la transicion.
+    AppliedTransition:
+      type: object
+      properties:
+        id: {type: string}
+        name: {type: string}
+        from_status_id: {type: string, format: uuid}
+        to: {$ref: '#/components/schemas/WorkflowStatusRef'}
     IssueCounts:
       type: object
       properties:
@@ -7323,7 +7330,11 @@ components:
         description:
           type: string
         status:
-          $ref: '#/components/schemas/IssueStatus'
+          allOf:
+            - $ref: '#/components/schemas/IssueStatus'
+          description: Valor legacy que refleja la categoria del estado de flujo (todo open, in_progress in_progress, done closed).
+        workflow_status:
+          $ref: '#/components/schemas/WorkflowStatusRef'
         priority:
           $ref: '#/components/schemas/PriorityRef'
         issue_type:

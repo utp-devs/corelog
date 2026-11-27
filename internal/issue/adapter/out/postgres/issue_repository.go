@@ -108,6 +108,24 @@ func (r *IssueRepository) save(ctx context.Context, t *domain.Issue) error {
 		return apperror.Wrap(apperror.KindInternal, "failed to save issue", err)
 	}
 	t.ID = id
+	return r.loadStatus(ctx, exec, t)
+}
+
+// loadStatus reads the workflow status the database gave to a new issue (the initial status of its project
+// workflow) so the caller sees it without another read.
+func (r *IssueRepository) loadStatus(ctx context.Context, exec sqlx.ExtContext, t *domain.Issue) error {
+	var row struct {
+		ID       uuid.UUID `db:"id"`
+		Name     string    `db:"name"`
+		Category string    `db:"category"`
+		Legacy   string    `db:"legacy"`
+	}
+	if err := sqlx.GetContext(ctx, exec, &row, `SELECT st.id, st.name, st.category, i.status AS legacy FROM issues i JOIN statuses st ON st.id = i.status_id WHERE i.id = $1`, t.ID); err != nil {
+		return apperror.Wrap(apperror.KindInternal, "failed to read issue status", err)
+	}
+	t.StatusID = row.ID
+	t.StatusRef = &domain.StatusRef{ID: row.ID, Name: row.Name, Category: row.Category}
+	t.Status = domain.Status(row.Legacy)
 	return nil
 }
 
@@ -280,9 +298,9 @@ func (r *IssueRepository) Update(ctx context.Context, t *domain.Issue) error {
 
 	const query = `
 		UPDATE issues
-		SET summary = :summary, description = :description, status = :status, priority = :priority,
+		SET summary = :summary, description = :description, priority = :priority,
 		    issue_type = :issue_type, parent_id = :parent_id, due_date = :due_date,
-		    story_points = :story_points, rank = :rank, closed_at = :closed_at,
+		    story_points = :story_points, rank = :rank,
 		    assignee_id = :assignee_id, updated_at = :updated_at,
 		    issue_type_id = :issue_type_id, priority_id = :priority_id,
 		    resolution_id = :resolution_id, resolved_at = :resolved_at,
@@ -323,9 +341,9 @@ func (r *IssueRepository) updateAndWatchAssignee(ctx context.Context, t *domain.
 	row := fromDomain(t)
 	const query = `
 		UPDATE issues
-		SET summary = :summary, description = :description, status = :status, priority = :priority,
+		SET summary = :summary, description = :description, priority = :priority,
 		    issue_type = :issue_type, parent_id = :parent_id, due_date = :due_date,
-		    story_points = :story_points, rank = :rank, closed_at = :closed_at,
+		    story_points = :story_points, rank = :rank,
 		    assignee_id = :assignee_id, updated_at = :updated_at,
 		    issue_type_id = :issue_type_id, priority_id = :priority_id,
 		    resolution_id = :resolution_id, resolved_at = :resolved_at,

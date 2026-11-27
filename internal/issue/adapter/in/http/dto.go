@@ -104,10 +104,6 @@ type watcherStateResponse struct {
 	Count      int  `json:"count"`
 }
 
-type updateStatusRequest struct {
-	Status string `json:"status" validate:"required,oneof=open in_progress resolved closed"`
-}
-
 // assignRequest acepta assignee_id como uuid o como null (desasignar). Se distingue la ausencia del campo
 // del null: un campo omitido se rechaza.
 type assignRequest struct {
@@ -141,21 +137,23 @@ type assignedUserValidation struct {
 }
 
 type issueResponse struct {
-	ID          string         `json:"id"`
-	Key         string         `json:"key"`
-	ProjectID   string         `json:"project_id"`
-	ProjectKey  string         `json:"project_key"`
-	Summary     string         `json:"summary"`
-	Description string         `json:"description"`
-	Status      string         `json:"status"`
-	IssueType   *issueTypeRef  `json:"issue_type"`
-	Priority    *priorityRef   `json:"priority"`
-	Resolution  *resolutionRef `json:"resolution"`
-	ResolvedAt  *time.Time     `json:"resolved_at"`
-	ParentID    *string        `json:"parent_id,omitempty"`
-	StartDate   *string        `json:"start_date"`
-	DueDate     *string        `json:"due_date"`
-	StoryPoints *float64       `json:"story_points"`
+	ID          string `json:"id"`
+	Key         string `json:"key"`
+	ProjectID   string `json:"project_id"`
+	ProjectKey  string `json:"project_key"`
+	Summary     string `json:"summary"`
+	Description string `json:"description"`
+	Status      string `json:"status"`
+	// WorkflowStatus is the workflow status of the issue; Status keeps the legacy value that mirrors its category.
+	WorkflowStatus *workflowStatusRef `json:"workflow_status"`
+	IssueType      *issueTypeRef      `json:"issue_type"`
+	Priority       *priorityRef       `json:"priority"`
+	Resolution     *resolutionRef     `json:"resolution"`
+	ResolvedAt     *time.Time         `json:"resolved_at"`
+	ParentID       *string            `json:"parent_id,omitempty"`
+	StartDate      *string            `json:"start_date"`
+	DueDate        *string            `json:"due_date"`
+	StoryPoints    *float64           `json:"story_points"`
 
 	OriginalEstimateSeconds  *int64                     `json:"original_estimate_seconds"`
 	RemainingEstimateSeconds *int64                     `json:"remaining_estimate_seconds"`
@@ -175,20 +173,21 @@ type issueResponse struct {
 // toIssueResponse arma la respuesta de una incidencia. names contiene el nombre de cada persona implicada.
 func toIssueResponse(t *domain.Issue, names map[uuid.UUID]string) issueResponse {
 	resp := issueResponse{
-		ID:          t.ID.String(),
-		Key:         t.Key(),
-		ProjectID:   t.ProjectID.String(),
-		ProjectKey:  t.ProjectKey,
-		Summary:     t.Summary,
-		Description: t.Description,
-		Status:      string(t.Status),
-		IssueType:   toIssueTypeRef(t.IssueTypeRef),
-		Priority:    toPriorityRef(t.PriorityRef),
-		Resolution:  toResolutionRef(t.ResolutionRef),
-		ResolvedAt:  t.ResolvedAt,
-		StartDate:   dateString(t.StartDate),
-		DueDate:     dateString(t.DueDate),
-		StoryPoints: t.StoryPoints,
+		ID:             t.ID.String(),
+		Key:            t.Key(),
+		ProjectID:      t.ProjectID.String(),
+		ProjectKey:     t.ProjectKey,
+		Summary:        t.Summary,
+		Description:    t.Description,
+		Status:         string(t.Status),
+		WorkflowStatus: toWorkflowStatusRef(t.StatusRef),
+		IssueType:      toIssueTypeRef(t.IssueTypeRef),
+		Priority:       toPriorityRef(t.PriorityRef),
+		Resolution:     toResolutionRef(t.ResolutionRef),
+		ResolvedAt:     t.ResolvedAt,
+		StartDate:      dateString(t.StartDate),
+		DueDate:        dateString(t.DueDate),
+		StoryPoints:    t.StoryPoints,
 
 		OriginalEstimateSeconds:  t.OriginalEstimateSeconds,
 		RemainingEstimateSeconds: t.RemainingEstimateSeconds,
@@ -277,6 +276,20 @@ type priorityRef struct {
 	Name  string `json:"name"`
 	Icon  string `json:"icon"`
 	Color string `json:"color"`
+}
+
+// workflowStatusRef is the workflow status of an issue as the API shows it.
+type workflowStatusRef struct {
+	ID       string `json:"id"`
+	Name     string `json:"name"`
+	Category string `json:"category"`
+}
+
+func toWorkflowStatusRef(ref *domain.StatusRef) *workflowStatusRef {
+	if ref == nil {
+		return nil
+	}
+	return &workflowStatusRef{ID: ref.ID.String(), Name: ref.Name, Category: ref.Category}
 }
 
 // resolutionRef is the resolution of a done issue as the API shows it.

@@ -38,32 +38,11 @@ type CollaborationRepository interface {
 	FindMentionIDs(ctx context.Context, issueID uuid.UUID, names []string) ([]uuid.UUID, error)
 }
 
-type WorkflowRepository interface {
-	CanTransition(ctx context.Context, projectID uuid.UUID, fromStatus, toStatus domain.Status, actorRole string) (bool, error)
-	DefaultWorkflow(ctx context.Context, projectID uuid.UUID) (*Workflow, error)
-	ReplaceTransitions(ctx context.Context, workflowID uuid.UUID, transitions []WorkflowTransition) error
-}
-
 // ActionManageWorkflow es la accion del autorizador para editar el flujo de un proyecto.
 const ActionManageWorkflow = "manage_workflow"
 
 // ActionMoveCards es la accion del autorizador para mover incidencias (columnas y backlog).
 const ActionMoveCards = "move_cards"
-
-// Workflow es el flujo por defecto de un proyecto con sus transiciones permitidas.
-type Workflow struct {
-	ID          uuid.UUID
-	ProjectID   uuid.UUID
-	Name        string
-	Transitions []WorkflowTransition
-}
-
-// WorkflowTransition es un cambio de estado permitido y los roles de proyecto que lo pueden ejecutar.
-type WorkflowTransition struct {
-	From  domain.Status
-	To    domain.Status
-	Roles []string
-}
 
 type IssueWatcherRepository interface {
 	State(context.Context, uuid.UUID, uuid.UUID) (WatcherState, error)

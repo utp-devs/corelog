@@ -21,7 +21,8 @@ func (h *Handler) RegisterRoutes(r chi.Router) {
 		r.Patch("/{id}", h.Patch)
 		r.Delete("/{id}", h.Delete)
 		r.Post("/{id}/restore", h.Restore)
-		r.Patch("/{id}/status", h.UpdateStatus)
+		r.Get("/{id}/transitions", h.ListTransitions)
+		r.Post("/{id}/transitions", h.RunTransition)
 		r.Patch("/{id}/assign", h.Assign)
 		r.Patch("/{id}/metadata", h.UpdateMetadata)
 		r.Patch("/{id}/rank", h.UpdateRank)
@@ -49,11 +50,6 @@ func (h *Handler) RegisterRoutes(r chi.Router) {
 		r.Use(appmw.Authenticate(h.jwtSecret))
 		r.Get("/", h.ListBacklog)
 		r.Put("/{issue_id}", h.MoveInBacklog)
-	})
-	r.Route("/workflows", func(r chi.Router) {
-		r.Use(appmw.Authenticate(h.jwtSecret))
-		r.Get("/", h.GetDefaultWorkflow)
-		r.Put("/", h.UpdateDefaultWorkflow)
 	})
 	r.Route("/saved-filters", func(r chi.Router) {
 		r.Use(appmw.Authenticate(h.jwtSecret))

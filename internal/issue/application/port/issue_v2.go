@@ -62,7 +62,18 @@ type PatchResult struct {
 type Transition struct {
 	ID   string
 	Name string
-	To   domain.Status
+	// To is the legacy status that mirrors the target status category.
+	To domain.Status
+	// ToStatusID, ToStatusName and ToCategory describe the workflow status the transition leads to.
+	ToStatusID   uuid.UUID
+	ToStatusName string
+	ToCategory   string
+	// RequiredFields, RequiresComment, RequiresResolution and RequiresAssignee tell what the client must ask for.
+	RequiredFields     []string
+	RequiresComment    bool
+	RequiresResolution bool
+	RequiresAssignee   bool
+	NeedsScreen        bool
 }
 
 // IssueView is the full view model of one issue for the caller.
@@ -76,8 +87,8 @@ type IssueView struct {
 	ViewerHasVoted bool
 }
 
-// TransitionProvider lists the transitions the caller may run on an issue. The legacy implementation derives
-// them from the status rules; a workflow engine can replace it.
+// TransitionProvider lists the transitions the caller may run on an issue. The issue service implements it with
+// the workflow engine.
 type TransitionProvider interface {
 	AvailableTransitions(ctx context.Context, issue *domain.Issue, actorID uuid.UUID, globalRole string) ([]Transition, error)
 }

@@ -23,7 +23,10 @@ const issueColumns = `id, project_id, summary, description, status, priority, is
 		       (SELECT pr.name FROM priorities pr WHERE pr.id = issues.priority_id) AS priority_name,
 		       (SELECT pr.icon FROM priorities pr WHERE pr.id = issues.priority_id) AS priority_icon,
 		       (SELECT pr.color FROM priorities pr WHERE pr.id = issues.priority_id) AS priority_color,
-		       (SELECT rs.name FROM resolutions rs WHERE rs.id = issues.resolution_id) AS resolution_name`
+		       (SELECT rs.name FROM resolutions rs WHERE rs.id = issues.resolution_id) AS resolution_name,
+		       status_id,
+		       (SELECT st.name FROM statuses st WHERE st.id = issues.status_id) AS status_name,
+		       (SELECT st.category FROM statuses st WHERE st.id = issues.status_id) AS status_category`
 
 type issueRow struct {
 	ID          uuid.UUID  `db:"id"`
@@ -58,6 +61,9 @@ type issueRow struct {
 	PriorityIcon   *string    `db:"priority_icon"`
 	PriorityColor  *string    `db:"priority_color"`
 	ResolutionName *string    `db:"resolution_name"`
+	StatusID       *uuid.UUID `db:"status_id"`
+	StatusName     *string    `db:"status_name"`
+	StatusCategory *string    `db:"status_category"`
 
 	OriginalEstimateSeconds  *int64     `db:"original_estimate_seconds"`
 	RemainingEstimateSeconds *int64     `db:"remaining_estimate_seconds"`
@@ -99,6 +105,12 @@ func (r issueRow) toDomain() *domain.Issue {
 		Flagged:                  r.Flagged,
 		VoteCount:                r.VoteCount,
 		DeletedAt:                r.DeletedAt,
+	}
+	if r.StatusID != nil {
+		issue.StatusID = *r.StatusID
+	}
+	if r.StatusID != nil && r.StatusName != nil && r.StatusCategory != nil {
+		issue.StatusRef = &domain.StatusRef{ID: *r.StatusID, Name: *r.StatusName, Category: *r.StatusCategory}
 	}
 	if r.IssueTypeName != nil {
 		issue.IssueTypeRef = &domain.CatalogRef{

@@ -384,35 +384,6 @@ func TestIssueHTTP_Handlers(t *testing.T) {
 		}
 	})
 
-	t.Run("PATCH /issues/{id}/status returns 409 on illegal transition", func(t *testing.T) {
-		// Open to Resolved is illegal
-		body := `{"status":"resolved"}`
-		req := httptest.NewRequest(http.MethodPatch, "/issues/"+issue.ID.String()+"/status", bytes.NewBufferString(body))
-		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("Authorization", "Bearer "+tokenUserA)
-		rec := httptest.NewRecorder()
-
-		router.ServeHTTP(rec, req)
-
-		if rec.Code != http.StatusConflict {
-			t.Errorf("got status %d, want %d", rec.Code, http.StatusConflict)
-		}
-	})
-
-	t.Run("PATCH /issues/{id}/status returns 200 on valid transition", func(t *testing.T) {
-		body := `{"status":"in_progress"}`
-		req := httptest.NewRequest(http.MethodPatch, "/issues/"+issue.ID.String()+"/status", bytes.NewBufferString(body))
-		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("Authorization", "Bearer "+tokenUserA)
-		rec := httptest.NewRecorder()
-
-		router.ServeHTTP(rec, req)
-
-		if rec.Code != http.StatusOK {
-			t.Errorf("got status %d, want %d; body: %s", rec.Code, http.StatusOK, rec.Body.String())
-		}
-	})
-
 	t.Run("PATCH /issues/{id}/assign returns 403 on cross-team assignment", func(t *testing.T) {
 		body := fmt.Sprintf(`{"assignee_id":"%s"}`, userOtherTeam.String())
 		req := httptest.NewRequest(http.MethodPatch, "/issues/"+issue.ID.String()+"/assign", bytes.NewBufferString(body))

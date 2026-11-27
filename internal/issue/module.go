@@ -15,8 +15,8 @@ type Module struct {
 	service *usecase.IssueService
 }
 
-func NewModule(repo port.Repository, directory port.UserDirectory, collaboration port.CollaborationRepository, issueLinks port.IssueLinkRepository, workflows port.WorkflowRepository, watchers port.IssueWatcherRepository, savedFilters port.SavedFilterRepository, jwtSecret string, authorizer port.ProjectAuthorizer, notifier port.Notifier, projectRoles ...port.ProjectRoleResolver) *Module {
-	dependencies := []any{collaboration, issueLinks, workflows, watchers, savedFilters, repo}
+func NewModule(repo port.Repository, directory port.UserDirectory, collaboration port.CollaborationRepository, issueLinks port.IssueLinkRepository, watchers port.IssueWatcherRepository, savedFilters port.SavedFilterRepository, jwtSecret string, authorizer port.ProjectAuthorizer, notifier port.Notifier, projectRoles ...port.ProjectRoleResolver) *Module {
+	dependencies := []any{collaboration, issueLinks, watchers, savedFilters, repo}
 	if authorizer != nil {
 		dependencies = append(dependencies, authorizer)
 	}
@@ -74,5 +74,13 @@ func (m *Module) WithActivityFeed(r port.ActivityFeedReader) *Module {
 // WithIssueLabels fixes the repository that stores the labels of issues (used by patches that set labels).
 func (m *Module) WithIssueLabels(r port.IssueLabelRepository) *Module {
 	m.service.WithIssueLabels(r)
+	return m
+}
+
+// WithWorkflowEngine wires the workflow engine and the persistence of transitions. It enables the transition
+// endpoints, the available transitions of the issue view and the board column moves.
+func (m *Module) WithWorkflowEngine(engine port.WorkflowEngine, repo port.TransitionRepository) *Module {
+	m.service.WithWorkflowEngine(engine, repo)
+	m.Handler.WithTransitions(m.service)
 	return m
 }

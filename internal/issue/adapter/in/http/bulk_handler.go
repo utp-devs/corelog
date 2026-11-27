@@ -229,15 +229,34 @@ func parseBulkParams(action domain.BulkAction, raw json.RawMessage) (port.BulkIn
 		in.Fields = patch
 		return in, nil
 	case domain.BulkTransition:
-		fields, err := paramsObject(raw, "status")
+		fields, err := paramsObject(raw, "transition_id", "status_id", "status")
 		if err != nil {
 			return in, err
 		}
-		var status string
-		if err := decodeStringParam(fields, "status", &status); err != nil {
-			return in, err
+		chosen := 0
+		if _, ok := fields["transition_id"]; ok {
+			chosen++
+			if err := decodeStringParam(fields, "transition_id", &in.TransitionID); err != nil {
+				return in, err
+			}
 		}
-		in.Status = domain.Status(status)
+		if _, ok := fields["status_id"]; ok {
+			chosen++
+			if err := decodeUUIDParam(fields, "status_id", &in.StatusID); err != nil {
+				return in, err
+			}
+		}
+		if _, ok := fields["status"]; ok {
+			chosen++
+			var status string
+			if err := decodeStringParam(fields, "status", &status); err != nil {
+				return in, err
+			}
+			in.Status = domain.Status(status)
+		}
+		if chosen != 1 {
+			return in, domain.ErrBulkParams
+		}
 		return in, nil
 	case domain.BulkMove:
 		fields, err := paramsObject(raw, "project_id", "issue_type_id", "field_mapping")

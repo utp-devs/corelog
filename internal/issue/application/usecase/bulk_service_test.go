@@ -146,25 +146,8 @@ func TestBulkAssignFollowsSingleAssignRules(t *testing.T) {
 	if err != nil || len(res.Succeeded) != 1 || res.Succeeded[0].AssigneeID == nil || *res.Succeeded[0].AssigneeID != f.other {
 		t.Fatalf("assign to a teammate = %+v, err %v", res, err)
 	}
-	if res.Succeeded[0].Status != domain.StatusInProgress {
-		t.Fatalf("status after assign = %s, want in_progress like the single endpoint", res.Succeeded[0].Status)
-	}
-}
-
-func TestBulkTransitionRecordsStatusChange(t *testing.T) {
-	f := newOpsFixture(t)
-	issue := f.issue(t, f.projA, f.owner, "Avanza")
-	res, err := f.svc.BulkChange(context.Background(), f.lead, "user", port.BulkInput{
-		Refs: []string{issue.ID.String()}, Action: domain.BulkTransition, Status: domain.StatusInProgress,
-	})
-	if err != nil || len(res.Succeeded) != 1 || res.Succeeded[0].Status != domain.StatusInProgress {
-		t.Fatalf("transition = %+v, err %v", res, err)
-	}
-	if len(f.events.list) != 1 || f.events.list[0].Type != "issue.updated" {
-		t.Fatalf("events = %+v", f.events.list)
-	}
-	if len(f.collab.activities) != 1 || f.collab.activities[0].FieldName == nil || *f.collab.activities[0].FieldName != "status" {
-		t.Fatalf("activities = %+v, want one status entry", f.collab.activities)
+	if res.Succeeded[0].Status != domain.StatusOpen {
+		t.Fatalf("status after assign = %s, want it unchanged like the single endpoint", res.Succeeded[0].Status)
 	}
 }
 

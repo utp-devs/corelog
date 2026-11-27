@@ -222,3 +222,46 @@ func TestLargeScaleRun(t *testing.T) {
 		t.Errorf("issues = %d, want %d", got, defaultIssues)
 	}
 }
+
+// TestSeededIssuesHaveWorkflowStatuses checks that every project has a valid workflow and every seeded issue a
+// status of its own workflow that agrees with its legacy status, with status history.
+func TestSeededIssuesHaveWorkflowStatuses(t *testing.T) {
+	db := testdb.New(t)
+	if err := runScenario(t, db, "demo", testOptions(t)); err != nil {
+		t.Fatalf("demo seed: %v", err)
+	}
+	checks := []struct {
+		name  string
+		query string
+	}{
+		{"projects without a workflow", `SELECT count(*) FROM projects p LEFT JOIN workflows w ON w.project_id = p.id WHERE w.id IS NULL`},
+		{"issues without a status", `SELECT count(*) FROM issues WHERE status_id IS NULL`},
+		{"issues whose status is not in their project workflow", `SELECT count(*) FROM issues i JOIN workflows w ON w.project_id = i.project_id
+			WHERE NOT (w.definition -> 'statuses' @> jsonb_build_array(jsonb_build_object('id', i.status_id::text)) OR
+			           EXISTS (SELECT 1 FROM jsonb_array_elements(w.definition -> 'statuses') s WHERE s ->> 'id' = i.status_id::text))`},
+		{"issues whose legacy status disagrees with their status", `SELECT count(*) FROM issues i JOIN statuses s ON s.id = i.status_id
+			WHERE (s.category = 'todo' AND i.status <> 'open') OR (s.category = 'in_progress' AND i.status <> 'in_progress')
+			   OR (s.category = 'done' AND i.status NOT IN ('resolved', 'closed'))`},
+		{"issues without status history", `SELECT count(*) FROM issues i WHERE NOT EXISTS (SELECT 1 FROM issue_status_history h WHERE h.issue_id = i.id)`},
+		{"board columns without statuses", `SELECT count(*) FROM board_columns c WHERE c.status IN ('open', 'in_progress') AND NOT EXISTS (SELECT 1 FROM board_column_statuses b WHERE b.column_id = c.id)`},
+	}
+	for _, check := range checks {
+		var n int
+		if err := db.Get(&n, check.query); err != nil {
+			t.Fatalf("%s: %v", check.name, err)
+		}
+		if n != 0 {
+			t.Errorf("%s: %d", check.name, n)
+		}
+	}
+	// Seeding again must not duplicate the history.
+	var before, after int
+	_ = db.Get(&before, `SELECT count(*) FROM issue_status_history`)
+	if _, err := db.Exec(statusHistorySQL); err != nil {
+		t.Fatal(err)
+	}
+	_ = db.Get(&after, `SELECT count(*) FROM issue_status_history`)
+	if before != after {
+		t.Errorf("status history grew from %d to %d on a second run", before, after)
+	}
+}

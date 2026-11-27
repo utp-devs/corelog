@@ -11,20 +11,10 @@ import (
 	"github.com/jhonsferg/corelog/internal/platform/validation"
 )
 
-var _ port.TransitionProvider = (*IssueService)(nil)
-
 // issuePermissionNames are the permissions the view model reports, in display order.
 var issuePermissionNames = []string{
 	"edit_issue", "assign_issue", "transition_issue", "comment_issue", "delete_issue",
 	"add_attachment", "link_issue", "watch_issue", "vote_issue", "log_work",
-}
-
-// legacyStatusNames are the Spanish names of the legacy statuses.
-var legacyStatusNames = map[domain.Status]string{
-	domain.StatusOpen:       "Abierta",
-	domain.StatusInProgress: "En progreso",
-	domain.StatusResolved:   "Resuelta",
-	domain.StatusClosed:     "Cerrada",
 }
 
 // GetView returns the issue with the permissions of the caller, the transitions it can run, the collection
@@ -100,56 +90,6 @@ func (s *IssueService) effectivePermissions(ctx context.Context, issue *domain.I
 		}
 	}
 	return out, nil
-}
-
-// AvailableTransitions is the legacy provider: the statuses the fixed status rules and the project workflow
-// allow for the caller. A caller who cannot edit the issue has none.
-func (s *IssueService) AvailableTransitions(ctx context.Context, issue *domain.Issue, actorID uuid.UUID, globalRole string) ([]port.Transition, error) {
-	out := []port.Transition{}
-	if err := s.requireFieldEdit(ctx, issue, actorID, globalRole); err != nil {
-		if apperror.KindOf(err) == apperror.KindInternal {
-			return nil, err
-		}
-		return out, nil
-	}
-	var workflow *port.Workflow
-	role := ""
-	if s.workflows != nil {
-		var err error
-		if role, err = s.transitionRole(ctx, issue.ProjectID, actorID, globalRole); err != nil {
-			return nil, err
-		}
-		if workflow, err = s.workflows.DefaultWorkflow(ctx, issue.ProjectID); err != nil {
-			return nil, err
-		}
-	}
-	for _, next := range []domain.Status{domain.StatusOpen, domain.StatusInProgress, domain.StatusResolved, domain.StatusClosed} {
-		if !issue.Status.CanTransitionTo(next) {
-			continue
-		}
-		if s.workflows != nil && !workflowAllows(workflow, issue.Status, next, role) {
-			continue
-		}
-		out = append(out, port.Transition{ID: string(next), Name: legacyStatusNames[next], To: next})
-	}
-	return out, nil
-}
-
-func workflowAllows(workflow *port.Workflow, from, to domain.Status, role string) bool {
-	if workflow == nil || role == "" {
-		return false
-	}
-	for _, transition := range workflow.Transitions {
-		if transition.From != from || transition.To != to {
-			continue
-		}
-		for _, allowed := range transition.Roles {
-			if allowed == role {
-				return true
-			}
-		}
-	}
-	return false
 }
 
 // finishCreate validates the fields beyond the legacy create input, applies the project defaults and writes the

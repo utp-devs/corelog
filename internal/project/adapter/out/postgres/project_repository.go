@@ -18,8 +18,22 @@ import (
 	"github.com/jhonsferg/corelog/internal/project/domain"
 )
 
+// WorkflowProvisioner gives a new project the workflow and statuses of its template inside the project
+// creation transaction. The composition root wires the workflow module implementation.
+type WorkflowProvisioner interface {
+	ProvisionWorkflow(ctx context.Context, tx sqlx.ExtContext, projectID uuid.UUID, template string) error
+}
+
 type ProjectRepository struct {
-	db *sqlx.DB
+	db        *sqlx.DB
+	workflows WorkflowProvisioner
+}
+
+// WithWorkflowProvisioner fixes the provisioner called when a project is created. Without one the
+// project gets its workflow lazily, when its first issue is written.
+func (r *ProjectRepository) WithWorkflowProvisioner(p WorkflowProvisioner) *ProjectRepository {
+	r.workflows = p
+	return r
 }
 
 func NewProjectRepository(db *sqlx.DB) *ProjectRepository {
@@ -132,22 +146,9 @@ func (r *ProjectRepository) CreateWithMembers(ctx context.Context, p *domain.Pro
 		}
 	}
 
-	defaultWorkflowID, err := database.InsertReturningID(ctx, tx, `
-		INSERT INTO workflows (project_id, name, is_default, created_at, updated_at)
-		VALUES (:project_id, 'Default', true, now(), now())
-		RETURNING id`, map[string]interface{}{"project_id": p.ID})
-	if err != nil {
-		return apperror.Wrap(apperror.KindInternal, "failed to create default project workflow", err)
-	}
-	for _, transition := range [][2]string{
-		{"open", "in_progress"}, {"open", "closed"},
-		{"in_progress", "resolved"}, {"in_progress", "closed"},
-		{"resolved", "closed"}, {"resolved", "in_progress"},
-	} {
-		if _, err := tx.ExecContext(ctx, `
-			INSERT INTO workflow_transitions (workflow_id, from_status, to_status, allowed_roles)
-			VALUES ($1, $2, $3, 'admin,agent,requester')`, defaultWorkflowID, transition[0], transition[1]); err != nil {
-			return apperror.Wrap(apperror.KindInternal, "failed to create default project workflow transition", err)
+	if r.workflows != nil {
+		if err := r.workflows.ProvisionWorkflow(ctx, tx, projectID, string(p.Template)); err != nil {
+			return apperror.Wrap(apperror.KindInternal, "failed to create default project workflow", err)
 		}
 	}
 	if err := tx.Commit(); err != nil {

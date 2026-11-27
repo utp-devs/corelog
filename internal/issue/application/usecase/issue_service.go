@@ -32,7 +32,6 @@ type IssueService struct {
 	directory     port.UserDirectory
 	collaboration port.CollaborationRepository
 	issueLinks    port.IssueLinkRepository
-	workflows     port.WorkflowRepository
 	projectRoles  port.ProjectRoleResolver
 	watchers      port.IssueWatcherRepository
 	assigneeWatch port.AssigneeWatcherRepository
@@ -57,12 +56,13 @@ type IssueService struct {
 	ops            *operationDeps
 	feed           port.ActivityFeedReader
 	labels         port.IssueLabelRepository
+	engine         port.WorkflowEngine
+	transitionRepo port.TransitionRepository
 }
 
 func NewIssueService(repo port.Repository, directory port.UserDirectory, repositories ...any) *IssueService {
 	var collaboration port.CollaborationRepository
 	var issueLinks port.IssueLinkRepository
-	var workflows port.WorkflowRepository
 	var projectRoles port.ProjectRoleResolver
 	var authorizer port.ProjectAuthorizer
 	var watchers port.IssueWatcherRepository
@@ -82,8 +82,6 @@ func NewIssueService(repo port.Repository, directory port.UserDirectory, reposit
 			collaboration = typed
 		case port.IssueLinkRepository:
 			issueLinks = typed
-		case port.WorkflowRepository:
-			workflows = typed
 		case port.ProjectRoleResolver:
 			projectRoles = typed
 		case port.IssueWatcherRepository:
@@ -94,7 +92,7 @@ func NewIssueService(repo port.Repository, directory port.UserDirectory, reposit
 			savedFilters = typed
 		}
 	}
-	service := &IssueService{tx: noTxManager{}, clock: clock.RealClock{}, repo: repo, directory: directory, collaboration: collaboration, issueLinks: issueLinks, workflows: workflows, projectRoles: projectRoles, authorizer: authorizer, watchers: watchers, assigneeWatch: assigneeWatch, savedFilters: savedFilters, backlog: backlog}
+	service := &IssueService{tx: noTxManager{}, clock: clock.RealClock{}, repo: repo, directory: directory, collaboration: collaboration, issueLinks: issueLinks, projectRoles: projectRoles, authorizer: authorizer, watchers: watchers, assigneeWatch: assigneeWatch, savedFilters: savedFilters, backlog: backlog}
 	// The optional ports may be implemented by the repository or by any of the other adapters.
 	for _, candidate := range append([]any{repo}, repositories...) {
 		if typed, ok := candidate.(port.ViewReader); ok {
@@ -348,43 +346,6 @@ func (s *IssueService) UserNames(ctx context.Context, userIDs []uuid.UUID) (map[
 		return map[uuid.UUID]string{}, nil
 	}
 	return s.directory.NamesOf(ctx, userIDs)
-}
-
-func (s *IssueService) UpdateStatus(ctx context.Context, id, actorID uuid.UUID, globalRole string, status domain.Status) (*domain.Issue, error) {
-	issue, err := s.repo.FindByID(ctx, id)
-	if err != nil {
-		return nil, err
-	}
-	if err := s.requireIssueEdit(ctx, issue.ProjectID, actorID, globalRole); err != nil {
-		return nil, err
-	}
-
-	if s.workflows != nil {
-		transitionRole, err := s.transitionRole(ctx, issue.ProjectID, actorID, globalRole)
-		if err != nil {
-			return nil, err
-		}
-		allowed, err := s.workflows.CanTransition(ctx, issue.ProjectID, issue.Status, status, transitionRole)
-		if err != nil {
-			return nil, err
-		}
-		if !allowed {
-			return nil, domain.ErrIllegalTransition
-		}
-	}
-
-	if err := issue.ChangeStatus(status); err != nil {
-		return nil, err
-	}
-	if err := s.applyResolution(ctx, issue); err != nil {
-		return nil, err
-	}
-
-	if err := s.repo.Update(ctx, issue); err != nil {
-		return nil, err
-	}
-
-	return issue, nil
 }
 
 func (s *IssueService) Assign(ctx context.Context, id, assignerID, assigneeID uuid.UUID, globalRole string) (*domain.Issue, error) {
@@ -709,85 +670,6 @@ func (s *IssueService) transitionRole(ctx context.Context, projectID, actorID uu
 		return "", nil
 	}
 	return *role, nil
-}
-
-// DefaultWorkflow devuelve el flujo por defecto del proyecto. Lo puede leer quien puede ver el proyecto.
-func (s *IssueService) DefaultWorkflow(ctx context.Context, actorID uuid.UUID, globalRole string, projectID uuid.UUID) (*port.Workflow, error) {
-	if err := s.requireIssueView(ctx, projectID, actorID, globalRole); err != nil {
-		return nil, err
-	}
-	if s.workflows == nil {
-		return nil, apperror.New(apperror.KindNotFound, "workflow not found")
-	}
-	workflow, err := s.workflows.DefaultWorkflow(ctx, projectID)
-	if err != nil {
-		return nil, err
-	}
-	if workflow == nil {
-		return nil, apperror.New(apperror.KindNotFound, "workflow not found")
-	}
-	return workflow, nil
-}
-
-// allowedWorkflowRoles son los roles de proyecto que pueden aparecer en una transicion.
-var allowedWorkflowRoles = map[string]bool{"admin": true, "lead": true, "contributor": true, "viewer": true}
-
-// UpdateDefaultWorkflow reemplaza las transiciones del flujo por defecto. Solo el lider del proyecto
-// y el administrador global pueden editarlo. Valida estados, roles y duplicados antes de guardar.
-func (s *IssueService) UpdateDefaultWorkflow(ctx context.Context, actorID uuid.UUID, globalRole string, projectID uuid.UUID, transitions []port.WorkflowTransition) (*port.Workflow, error) {
-	if err := s.authorize(ctx, port.ActionManageWorkflow, projectID, actorID, globalRole); err != nil {
-		return nil, err
-	}
-	if s.workflows == nil {
-		return nil, apperror.New(apperror.KindNotFound, "workflow not found")
-	}
-	current, err := s.workflows.DefaultWorkflow(ctx, projectID)
-	if err != nil {
-		return nil, err
-	}
-	if current == nil {
-		return nil, apperror.New(apperror.KindNotFound, "workflow not found")
-	}
-	seen := make(map[[2]domain.Status]bool, len(transitions))
-	for _, transition := range transitions {
-		if !transition.From.IsValid() || !transition.To.IsValid() {
-			return nil, apperror.New(apperror.KindValidation, "invalid status in transition")
-		}
-		if transition.From == transition.To {
-			return nil, apperror.New(apperror.KindValidation, "a transition must change the status")
-		}
-		key := [2]domain.Status{transition.From, transition.To}
-		if seen[key] {
-			return nil, apperror.New(apperror.KindValidation, "duplicated transition")
-		}
-		seen[key] = true
-		if len(transition.Roles) == 0 {
-			return nil, apperror.New(apperror.KindValidation, "a transition needs at least one role")
-		}
-		for _, role := range transition.Roles {
-			if !allowedWorkflowRoles[role] {
-				return nil, apperror.New(apperror.KindValidation, "invalid role in transition")
-			}
-		}
-	}
-	if err := s.workflows.ReplaceTransitions(ctx, current.ID, transitions); err != nil {
-		return nil, err
-	}
-	return s.workflows.DefaultWorkflow(ctx, projectID)
-}
-
-// MoveIssueToStatus cambia el estado de una incidencia del proyecto indicado. Reutiliza UpdateStatus,
-// asi que aplica permisos de edicion y reglas del flujo. Una incidencia de otro proyecto no existe aqui.
-func (s *IssueService) MoveIssueToStatus(ctx context.Context, actorID uuid.UUID, globalRole string, projectID, issueID uuid.UUID, status domain.Status) error {
-	issue, err := s.repo.FindByID(ctx, issueID)
-	if err != nil {
-		return err
-	}
-	if issue.ProjectID != projectID {
-		return domain.ErrIssueNotFound
-	}
-	_, err = s.UpdateStatus(ctx, issueID, actorID, globalRole, status)
-	return err
 }
 
 // Backlog devuelve las incidencias del proyecto en el orden de su rank. Lo puede leer quien puede ver el proyecto.

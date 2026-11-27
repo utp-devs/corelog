@@ -51,7 +51,7 @@ func (s *BoardService) Get(ctx context.Context, projectID, actorID uuid.UUID, gl
 	return view, nil
 }
 
-// MoveCard mueve una incidencia a la columna indicada. La columna define el estado destino (ADR-004).
+// MoveCard mueve una incidencia a la columna indicada. La columna define los estados destino.
 // Respeta el limite WIP de la columna destino y delega en el modulo issue la regla de flujo y permisos.
 func (s *BoardService) MoveCard(ctx context.Context, projectID, actorID uuid.UUID, globalRole string, issueID, columnID uuid.UUID) error {
 	if _, err := s.projects.Get(ctx, actorID, globalRole, projectID); err != nil {
@@ -89,7 +89,7 @@ func (s *BoardService) MoveCard(ctx context.Context, projectID, actorID uuid.UUI
 	if target.WIPLimit != nil && len(target.Cards) >= *target.WIPLimit {
 		return domain.ErrWIPLimitExceeded
 	}
-	return s.mover.MoveIssue(ctx, actorID, globalRole, projectID, issueID, string(target.Status))
+	return s.mover.MoveIssue(ctx, actorID, globalRole, projectID, issueID, target.ID)
 }
 
 // UpdateColumnWIP fija o quita el limite WIP de una columna. Solo lead y admin (manage_board).

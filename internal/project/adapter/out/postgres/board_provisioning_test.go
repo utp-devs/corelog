@@ -29,6 +29,14 @@ func (ownerOrgs) ProjectCreationPolicy(context.Context, uuid.UUID) (string, stri
 	return domain.CreationPolicyMembers, "open", nil
 }
 
+// sqlWorkflowProvisioner provisions the workflow with the database function the workflow module also uses.
+type sqlWorkflowProvisioner struct{}
+
+func (sqlWorkflowProvisioner) ProvisionWorkflow(ctx context.Context, tx sqlx.ExtContext, projectID uuid.UUID, _ string) error {
+	_, err := tx.ExecContext(ctx, `SELECT corelog_ensure_workflow($1)`, projectID)
+	return err
+}
+
 func insertUser(t *testing.T, db *sqlx.DB) uuid.UUID {
 	t.Helper()
 	id := uuid.New()
@@ -43,7 +51,7 @@ func TestProjectCreationProvisionsDefaultBoardPostgres(t *testing.T) {
 	db := testdb.New(t)
 	ctx := context.Background()
 	leadID := insertUser(t, db)
-	repository := NewProjectRepository(db)
+	repository := NewProjectRepository(db).WithWorkflowProvisioner(sqlWorkflowProvisioner{})
 	service := projectusecase.NewProjectService(repository, NewMemberRepository(db), ownerOrgs{})
 
 	created, err := service.Create(ctx, leadID, uuid.MustParse(defaultOrganizationID), "NEW", "New Scrum", "", domain.ProjectTypeScrum, "")
@@ -52,15 +60,18 @@ func TestProjectCreationProvisionsDefaultBoardPostgres(t *testing.T) {
 	}
 	assertDefaultBoard(t, db, created.ID, "scrum")
 
-	var workflowCount, transitionCount int
-	if err := db.Get(&workflowCount, `SELECT count(*) FROM workflows WHERE project_id=$1 AND is_default`, created.ID); err != nil {
+	var workflowCount, statusCount, boundColumns int
+	if err := db.Get(&workflowCount, `SELECT count(*) FROM workflows WHERE project_id=$1`, created.ID); err != nil {
 		t.Fatal(err)
 	}
-	if err := db.Get(&transitionCount, `SELECT count(*) FROM workflow_transitions wt JOIN workflows w ON w.id=wt.workflow_id WHERE w.project_id=$1 AND w.is_default`, created.ID); err != nil {
+	if err := db.Get(&statusCount, `SELECT jsonb_array_length(definition->'statuses') FROM workflows WHERE project_id=$1`, created.ID); err != nil {
 		t.Fatal(err)
 	}
-	if workflowCount != 1 || transitionCount != 6 {
-		t.Fatalf("default workflow was not provisioned: workflows=%d transitions=%d", workflowCount, transitionCount)
+	if err := db.Get(&boundColumns, `SELECT count(DISTINCT bcs.column_id) FROM board_column_statuses bcs JOIN board_columns c ON c.id=bcs.column_id JOIN boards b ON b.id=c.board_id WHERE b.project_id=$1`, created.ID); err != nil {
+		t.Fatal(err)
+	}
+	if workflowCount != 1 || statusCount != 4 || boundColumns != 3 {
+		t.Fatalf("template workflow was not provisioned: workflows=%d statuses=%d bound columns=%d", workflowCount, statusCount, boundColumns)
 	}
 
 	_, err = service.Create(ctx, leadID, uuid.MustParse(defaultOrganizationID), "NEW", "Duplicate", "", domain.ProjectTypeKanban, "")

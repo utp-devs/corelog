@@ -382,51 +382,6 @@ func TestIssueService_GetAndList(t *testing.T) {
 	})
 }
 
-func TestIssueService_UpdateStatus(t *testing.T) {
-	ctx := context.Background()
-	repo := newFakeIssueRepo()
-	dir := newFakeUserDirectory()
-	svc := NewIssueService(repo, dir, contributorRoleResolver())
-
-	reporterID := uuid.New()
-	t1, _ := svc.Create(ctx, port.CreateInput{
-		Summary:     "Issue",
-		Description: "Desc",
-		Priority:    domain.PriorityMedium,
-		ReporterID:  reporterID,
-	})
-
-	t.Run("valid transition", func(t *testing.T) {
-		updated, err := svc.UpdateStatus(ctx, t1.ID, reporterID, "admin", domain.StatusInProgress)
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		if updated.Status != domain.StatusInProgress {
-			t.Errorf("got status %v, want %v", updated.Status, domain.StatusInProgress)
-		}
-
-		stored, _ := repo.FindByID(ctx, t1.ID)
-		if stored.Status != domain.StatusInProgress {
-			t.Errorf("got stored status %v, want %v", stored.Status, domain.StatusInProgress)
-		}
-	})
-
-	t.Run("illegal transition", func(t *testing.T) {
-		// InProgress -> Open is illegal
-		_, err := svc.UpdateStatus(ctx, t1.ID, reporterID, "admin", domain.StatusOpen)
-		if !errors.Is(err, domain.ErrIllegalTransition) {
-			t.Errorf("expected ErrIllegalTransition, got %v", err)
-		}
-	})
-
-	t.Run("issue not found", func(t *testing.T) {
-		_, err := svc.UpdateStatus(ctx, uuid.New(), reporterID, "admin", domain.StatusClosed)
-		if !errors.Is(err, domain.ErrIssueNotFound) {
-			t.Errorf("expected ErrIssueNotFound, got %v", err)
-		}
-	})
-}
-
 func TestIssueService_UpdateRank(t *testing.T) {
 	ctx := context.Background()
 	repo := newFakeIssueRepo()
@@ -506,139 +461,6 @@ func TestIssueService_UpdateDetailsAuthorization(t *testing.T) {
 	})
 }
 
-type fakeWorkflowRepo struct {
-	allowed  bool
-	roles    []string
-	workflow *port.Workflow
-	replaced []port.WorkflowTransition
-}
-
-func (r *fakeWorkflowRepo) DefaultWorkflow(_ context.Context, _ uuid.UUID) (*port.Workflow, error) {
-	return r.workflow, nil
-}
-
-func (r *fakeWorkflowRepo) ReplaceTransitions(_ context.Context, _ uuid.UUID, transitions []port.WorkflowTransition) error {
-	r.replaced = transitions
-	return nil
-}
-
-// TestIssueService_UpdateDefaultWorkflow comprueba permisos (solo lead y admin) y validaciones.
-func TestIssueService_UpdateDefaultWorkflow(t *testing.T) {
-	ctx := context.Background()
-	valid := []port.WorkflowTransition{{From: domain.StatusOpen, To: domain.StatusInProgress, Roles: []string{"lead", "contributor"}}}
-	newRepo := func() *fakeWorkflowRepo {
-		return &fakeWorkflowRepo{workflow: &port.Workflow{ID: uuid.New(), ProjectID: domain.DefaultProjectID, Name: "Flujo"}}
-	}
-	lead := "lead"
-	leadResolver := fakeProjectRoleResolver{role: &lead}
-
-	repo := newRepo()
-	svc := NewIssueService(newFakeIssueRepo(), newFakeUserDirectory(), repo, leadResolver)
-	if _, err := svc.UpdateDefaultWorkflow(ctx, uuid.New(), "agent", domain.DefaultProjectID, valid); err != nil {
-		t.Fatalf("lead should update the workflow, got %v", err)
-	}
-	if len(repo.replaced) != 1 {
-		t.Fatalf("transitions were not replaced: %v", repo.replaced)
-	}
-
-	denied := NewIssueService(newFakeIssueRepo(), newFakeUserDirectory(), newRepo(), contributorRoleResolver())
-	if _, err := denied.UpdateDefaultWorkflow(ctx, uuid.New(), "agent", domain.DefaultProjectID, valid); apperror.KindOf(err) != apperror.KindForbidden {
-		t.Fatalf("contributor should be forbidden, got %v", err)
-	}
-
-	cases := map[string][]port.WorkflowTransition{
-		"invalid status":  {{From: "open", To: "done", Roles: []string{"lead"}}},
-		"self transition": {{From: domain.StatusOpen, To: domain.StatusOpen, Roles: []string{"lead"}}},
-		"no roles":        {{From: domain.StatusOpen, To: domain.StatusClosed, Roles: nil}},
-		"unknown role":    {{From: domain.StatusOpen, To: domain.StatusClosed, Roles: []string{"agent"}}},
-		"duplicated":      {{From: domain.StatusOpen, To: domain.StatusClosed, Roles: []string{"lead"}}, {From: domain.StatusOpen, To: domain.StatusClosed, Roles: []string{"lead"}}},
-	}
-	for name, transitions := range cases {
-		svc := NewIssueService(newFakeIssueRepo(), newFakeUserDirectory(), newRepo(), leadResolver)
-		if _, err := svc.UpdateDefaultWorkflow(ctx, uuid.New(), "agent", domain.DefaultProjectID, transitions); apperror.KindOf(err) != apperror.KindValidation {
-			t.Errorf("%s: want validation error, got %v", name, err)
-		}
-	}
-}
-
-// TestIssueService_DefaultWorkflow comprueba que lo puede leer un miembro, que un no miembro recibe
-// prohibido y que un proyecto sin flujo responde no encontrado.
-func TestIssueService_DefaultWorkflow(t *testing.T) {
-	ctx := context.Background()
-	workflowRepo := &fakeWorkflowRepo{workflow: &port.Workflow{Name: "Flujo", ProjectID: domain.DefaultProjectID}}
-
-	member := NewIssueService(newFakeIssueRepo(), newFakeUserDirectory(), workflowRepo, contributorRoleResolver())
-	workflow, err := member.DefaultWorkflow(ctx, uuid.New(), "agent", domain.DefaultProjectID)
-	if err != nil || workflow == nil || workflow.Name != "Flujo" {
-		t.Fatalf("member should read the workflow, got %v, %v", workflow, err)
-	}
-
-	outsider := NewIssueService(newFakeIssueRepo(), newFakeUserDirectory(), workflowRepo, fakeProjectRoleResolver{})
-	if _, err := outsider.DefaultWorkflow(ctx, uuid.New(), "agent", domain.DefaultProjectID); apperror.KindOf(err) != apperror.KindForbidden {
-		t.Fatalf("non member should be forbidden, got %v", err)
-	}
-
-	withoutFlow := NewIssueService(newFakeIssueRepo(), newFakeUserDirectory(), &fakeWorkflowRepo{}, contributorRoleResolver())
-	if _, err := withoutFlow.DefaultWorkflow(ctx, uuid.New(), "agent", domain.DefaultProjectID); apperror.KindOf(err) != apperror.KindNotFound {
-		t.Fatalf("project without workflow should be not found, got %v", err)
-	}
-}
-
-func (r *fakeWorkflowRepo) CanTransition(_ context.Context, _ uuid.UUID, _, _ domain.Status, role string) (bool, error) {
-	r.roles = append(r.roles, role)
-	return r.allowed, nil
-}
-
-// TestIssueService_WorkflowEvaluatesProjectRole comprueba que el flujo recibe el rol del proyecto
-// (o admin para el administrador global), no el rol global del actor.
-func TestIssueService_WorkflowEvaluatesProjectRole(t *testing.T) {
-	ctx := context.Background()
-	repo := newFakeIssueRepo()
-	workflowRepo := &fakeWorkflowRepo{allowed: true}
-	svc := NewIssueService(repo, newFakeUserDirectory(), workflowRepo, contributorRoleResolver())
-
-	issue, _ := svc.Create(ctx, port.CreateInput{Summary: "Role issue", Description: "Desc", Priority: domain.PriorityMedium, ReporterID: uuid.New()})
-
-	if _, err := svc.UpdateStatus(ctx, issue.ID, uuid.New(), "agent", domain.StatusInProgress); err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if _, err := svc.UpdateStatus(ctx, issue.ID, uuid.New(), "admin", domain.StatusResolved); err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if len(workflowRepo.roles) != 2 || workflowRepo.roles[0] != "contributor" || workflowRepo.roles[1] != "admin" {
-		t.Fatalf("workflow roles = %v, want [contributor admin]", workflowRepo.roles)
-	}
-}
-
-func TestIssueService_WorkflowPolicy(t *testing.T) {
-	ctx := context.Background()
-	repo := newFakeIssueRepo()
-	dir := newFakeUserDirectory()
-	workflowRepo := &fakeWorkflowRepo{allowed: false}
-	svc := NewIssueService(repo, dir, workflowRepo, contributorRoleResolver())
-
-	issue, _ := svc.Create(ctx, port.CreateInput{
-		Summary:     "Workflow issue",
-		Description: "Desc",
-		Priority:    domain.PriorityMedium,
-		ReporterID:  uuid.New(),
-	})
-
-	_, err := svc.UpdateStatus(ctx, issue.ID, uuid.New(), "admin", domain.StatusInProgress)
-	if !errors.Is(err, domain.ErrIllegalTransition) {
-		t.Fatalf("expected ErrIllegalTransition, got %v", err)
-	}
-
-	workflowRepo.allowed = true
-	updated, err := svc.UpdateStatus(ctx, issue.ID, uuid.New(), "admin", domain.StatusInProgress)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if updated.Status != domain.StatusInProgress {
-		t.Fatalf("got status %v, want %v", updated.Status, domain.StatusInProgress)
-	}
-}
-
 func TestIssueService_Assign(t *testing.T) {
 	ctx := context.Background()
 	repo := newFakeIssueRepo()
@@ -665,7 +487,7 @@ func TestIssueService_Assign(t *testing.T) {
 		ReporterID:  assigner,
 	})
 
-	t.Run("assigning to member of same team succeeds and moves open to in_progress", func(t *testing.T) {
+	t.Run("assigning to member of same team succeeds and keeps the status", func(t *testing.T) {
 		assigned, err := svc.Assign(ctx, issue.ID, assigner, assigneeTeamA, "admin")
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -673,8 +495,8 @@ func TestIssueService_Assign(t *testing.T) {
 		if assigned.AssigneeID == nil || *assigned.AssigneeID != assigneeTeamA {
 			t.Errorf("got assignee %v, want %v", assigned.AssigneeID, assigneeTeamA)
 		}
-		if assigned.Status != domain.StatusInProgress {
-			t.Errorf("got status %v, want %v", assigned.Status, domain.StatusInProgress)
+		if assigned.Status != domain.StatusOpen {
+			t.Errorf("got status %v, want %v", assigned.Status, domain.StatusOpen)
 		}
 		state, err := watchers.State(ctx, issue.ID, assigneeTeamA)
 		if err != nil || !state.IsWatching {
@@ -849,30 +671,6 @@ func authorizeWithResolver(ctx context.Context, resolver port.ProjectRoleResolve
 
 func (r fakeProjectRoleResolver) Authorize(ctx context.Context, action string, actorID uuid.UUID, globalRole string, projectID uuid.UUID) error {
 	return authorizeWithResolver(ctx, r, action, actorID, globalRole, projectID)
-}
-
-// TestIssueService_MoveIssueToStatusChecksProject comprueba que una incidencia solo se mueve dentro
-// de su proyecto: desde otro proyecto responde no encontrada y no cambia de estado.
-func TestIssueService_MoveIssueToStatusChecksProject(t *testing.T) {
-	ctx := context.Background()
-	repo := newFakeIssueRepo()
-	svc := NewIssueService(repo, newFakeUserDirectory(), contributorRoleResolver())
-	issue, err := svc.Create(ctx, port.CreateInput{Summary: "Move me", Description: "Desc", Priority: domain.PriorityMedium, ReporterID: uuid.New()})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	otherProject := uuid.New()
-	if err := svc.MoveIssueToStatus(ctx, uuid.New(), "agent", otherProject, issue.ID, domain.StatusInProgress); !errors.Is(err, domain.ErrIssueNotFound) {
-		t.Fatalf("move from another project: got %v, want ErrIssueNotFound", err)
-	}
-	if err := svc.MoveIssueToStatus(ctx, uuid.New(), "agent", domain.DefaultProjectID, issue.ID, domain.StatusInProgress); err != nil {
-		t.Fatalf("move within the project: %v", err)
-	}
-	stored, _ := repo.FindByID(ctx, issue.ID)
-	if stored.Status != domain.StatusInProgress {
-		t.Fatalf("status = %v, want in_progress", stored.Status)
-	}
 }
 
 type fakeBacklogRepo struct {

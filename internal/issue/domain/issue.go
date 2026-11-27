@@ -24,6 +24,9 @@ type Issue struct {
 	StoryPoints *float64
 	Rank        string
 	ClosedAt    *time.Time
+	// StatusID and StatusRef are the workflow status of the issue; they are filled when the issue is read.
+	StatusID  uuid.UUID
+	StatusRef *StatusRef
 	// IssueTypeID, PriorityID and ResolutionID reference the organization catalogs. The legacy enum fields
 	// IssueType and Priority mirror the catalog items through their legacy key and are written for old readers.
 	IssueTypeID  uuid.UUID
@@ -164,11 +167,6 @@ func (t *Issue) UpdateDetails(summary, description string, priority Priority) er
 
 func (t *Issue) AssignTo(assigneeID uuid.UUID) error {
 	t.AssigneeID = &assigneeID
-	if t.Status == StatusOpen {
-		if err := t.ChangeStatus(StatusInProgress); err != nil {
-			return err
-		}
-	}
 	t.UpdatedAt = time.Now().UTC()
 	return nil
 }

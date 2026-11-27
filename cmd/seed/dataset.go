@@ -78,10 +78,14 @@ func (t *table) add(vals ...any) {
 type dataset struct {
 	tables []*table
 	byName map[string]*table
+	// before holds statements that run right before the rows of a table are inserted; finally holds the
+	// statements that run after every table. Both are idempotent.
+	before  map[string][]string
+	finally []string
 }
 
 func newDataset() *dataset {
-	return &dataset{byName: map[string]*table{}}
+	return &dataset{byName: map[string]*table{}, before: map[string][]string{}}
 }
 
 // table returns the named table, registering it with cols on first use.
@@ -93,6 +97,16 @@ func (d *dataset) table(name string, cols ...string) *table {
 	d.byName[name] = t
 	d.tables = append(d.tables, t)
 	return t
+}
+
+// runBefore registers a statement that runs before the rows of the named table are inserted.
+func (d *dataset) runBefore(tableName, statement string) {
+	d.before[tableName] = append(d.before[tableName], statement)
+}
+
+// runFinally registers a statement that runs after every table is inserted.
+func (d *dataset) runFinally(statement string) {
+	d.finally = append(d.finally, statement)
 }
 
 // ignoreDuplicates marks a table whose inserts may repeat a key harmlessly.
@@ -111,8 +125,18 @@ func persist(ctx context.Context, db *sqlx.DB, ds *dataset) error {
 	defer func() { _ = tx.Rollback() }()
 	cache := map[catalogRef]uuid.UUID{}
 	for _, t := range ds.tables {
+		for _, statement := range ds.before[t.name] {
+			if _, err := tx.ExecContext(ctx, statement); err != nil {
+				return fmt.Errorf("preparar %s: %w", t.name, err)
+			}
+		}
 		if err := insertRows(ctx, tx, t, cache); err != nil {
 			return err
+		}
+	}
+	for _, statement := range ds.finally {
+		if _, err := tx.ExecContext(ctx, statement); err != nil {
+			return fmt.Errorf("cerrar la siembra: %w", err)
 		}
 	}
 	if err := tx.Commit(); err != nil {

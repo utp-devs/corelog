@@ -110,12 +110,12 @@ func (f fakeAuthorizer) Authorize(context.Context, string, uuid.UUID, string, uu
 
 type fakeMover struct {
 	calls  int
-	status string
+	column uuid.UUID
 }
 
-func (m *fakeMover) MoveIssue(_ context.Context, _ uuid.UUID, _ string, _, _ uuid.UUID, status string) error {
+func (m *fakeMover) MoveIssue(_ context.Context, _ uuid.UUID, _ string, _, _, column uuid.UUID) error {
 	m.calls++
-	m.status = status
+	m.column = column
 	return nil
 }
 
@@ -177,8 +177,8 @@ func TestBoardServiceMoveCard(t *testing.T) {
 		if err := svc.MoveCard(ctx, project, actor, "agent", f.cardInOpen, f.progressColumn); err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
-		if mover.calls != 1 || mover.status != string(domain.StatusInProgress) {
-			t.Fatalf("mover calls=%d status=%q, want one call to in_progress", mover.calls, mover.status)
+		if mover.calls != 1 || mover.column != f.progressColumn {
+			t.Fatalf("mover calls=%d column=%v, want one call to the in-progress column", mover.calls, mover.column)
 		}
 	})
 

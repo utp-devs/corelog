@@ -51,6 +51,8 @@ import (
 	userhttp "github.com/jhonsferg/corelog/internal/user/adapter/in/http"
 	userpostgres "github.com/jhonsferg/corelog/internal/user/adapter/out/postgres"
 	userport "github.com/jhonsferg/corelog/internal/user/application/port"
+	"github.com/jhonsferg/corelog/internal/workflow"
+	workflowpostgres "github.com/jhonsferg/corelog/internal/workflow/adapter/out/postgres"
 )
 
 // buildRouter assembles the HTTP router with every module mounted under /api/v1. It only constructs
@@ -65,7 +67,7 @@ func buildRouter(cfg *config.Config, db *sqlx.DB, log *slog.Logger) (chi.Router,
 	userRepo = userpostgres.NewUserRepository(db)
 	teamRepo = teampostgres.NewTeamRepository(db)
 	issueDBRepo = issuepostgres.NewIssueRepository(db)
-	projectRepo = projectpostgres.NewProjectRepository(db)
+	projectRepo = projectpostgres.NewProjectRepository(db).WithWorkflowProvisioner(workflowpostgres.NewProvisioner())
 	projectMemberRepo = projectpostgres.NewMemberRepository(db)
 	projectCatalogRepo := projectpostgres.NewCatalogRepository(db)
 	sessionRepo := userpostgres.NewSessionRepository(db)
@@ -111,9 +113,9 @@ func buildRouter(cfg *config.Config, db *sqlx.DB, log *slog.Logger) (chi.Router,
 		attachmentRoot = filepath.Join("data", "attachments")
 	}
 	fileStorage := issuefilesystem.New(attachmentRoot)
-	workflowRepo := issuepostgres.NewWorkflowRepository(db)
+	workflowModule := workflow.NewModule(workflowpostgres.NewRepository(db), clock.RealClock{})
 	notificationModule := notification.NewModule(notificationpostgres.NewNotificationRepository(db), cfg.Auth.JWTSecret)
-	issueModule := issue.NewModule(issueRepo, userDirectory, collaborationRepo, issueLinkRepo, workflowRepo, watcherRepo, savedFilterRepo, cfg.Auth.JWTSecret, projectAuthorizer, notificationModule.Service, projectMemberRepo).WithTxManager(database.NewTxManager(db))
+	issueModule := issue.NewModule(issueRepo, userDirectory, collaborationRepo, issueLinkRepo, watcherRepo, savedFilterRepo, cfg.Auth.JWTSecret, projectAuthorizer, notificationModule.Service, projectMemberRepo).WithTxManager(database.NewTxManager(db))
 	searchModule := search.NewModule(searchpostgres.NewSearchIndex(db), cfg.Auth.JWTSecret)
 	dashboardModule := dashboard.NewModule(dashboardpostgres.NewDashboardReader(db), cfg.Auth.JWTSecret)
 	favoriteModule := favorite.NewModule(favoritepostgres.NewRepository(db), favoritepostgres.NewProjectVisibility(db), cfg.Auth.JWTSecret)
@@ -121,8 +123,9 @@ func buildRouter(cfg *config.Config, db *sqlx.DB, log *slog.Logger) (chi.Router,
 	noteModule := note.NewModule(notepostgres.NewRepository(db), notepostgres.NewLinkAccess(db), cfg.Auth.JWTSecret)
 	calendarModule := calendar.NewModule(calendarpostgres.NewCalendarRepository(db), projectAuthorizer, cfg.Auth.JWTSecret)
 	sprintModule := sprint.NewModule(sprintpostgres.NewSprintRepository(db), projectAuthorizer, cfg.Auth.JWTSecret)
-	boardModule := board.NewModule(boardpostgres.NewBoardRepository(db), projectModule.Service, projectAuthorizer, boardIssueMover{issues: issueModule.Service}, cfg.Auth.JWTSecret)
+	boardModule := board.NewModule(boardpostgres.NewBoardRepository(db), projectModule.Service, projectAuthorizer, boardIssueMover{issues: issueModule.Service.(issueport.TransitionService)}, cfg.Auth.JWTSecret)
 	issueModule.WithCatalog(issueCatalogRepo)
+	issueModule.WithWorkflowEngine(workflowEngineAdapter{workflows: workflowModule.Service}, issuepostgres.NewTransitionRepository(db))
 	issueModule.WithActivityFeed(issuepostgres.NewActivityFeedRepository(db)).WithIssueLabels(issuepostgres.NewIssueLabelRepository(db))
 	issueModule.WithPermissions(issuePermissionChecker{authorizer: authorizer}).
 		WithEvents(events.NewPostgresPublisher(func(ctx context.Context) sqlx.ExtContext { return database.Executor(ctx, db) })).

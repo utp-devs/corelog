@@ -213,10 +213,25 @@ func (h *Handler) Restore(w http.ResponseWriter, r *http.Request) {
 	h.writeIssue(w, r, http.StatusOK, issue)
 }
 
+// transitionResponse is one transition the caller may run. ToStatus is the legacy status the target mirrors; To
+// is the workflow status the issue moves to. NeedsScreen tells the client to ask for input first.
 type transitionResponse struct {
+	ID                 string              `json:"id"`
+	Name               string              `json:"name"`
+	ToStatus           string              `json:"to_status"`
+	To                 transitionStatusRef `json:"to"`
+	RequiredFields     []string            `json:"required_fields"`
+	RequiresComment    bool                `json:"requires_comment"`
+	RequiresResolution bool                `json:"requires_resolution"`
+	RequiresAssignee   bool                `json:"requires_assignee"`
+	NeedsScreen        bool                `json:"needs_screen"`
+}
+
+// transitionStatusRef is the target status of a transition.
+type transitionStatusRef struct {
 	ID       string `json:"id"`
 	Name     string `json:"name"`
-	ToStatus string `json:"to_status"`
+	Category string `json:"category"`
 }
 
 type countsResponse struct {
@@ -275,7 +290,12 @@ func toIssueViewResponse(resp issueResponse, view *port.IssueView) issueViewResp
 		out.Permissions = []string{}
 	}
 	for _, t := range view.Transitions {
-		out.AvailableTransitions = append(out.AvailableTransitions, transitionResponse{ID: t.ID, Name: t.Name, ToStatus: string(t.To)})
+		out.AvailableTransitions = append(out.AvailableTransitions, transitionResponse{
+			ID: t.ID, Name: t.Name, ToStatus: string(t.To),
+			To:             transitionStatusRef{ID: t.ToStatusID.String(), Name: t.ToStatusName, Category: t.ToCategory},
+			RequiredFields: nonNilStrings(t.RequiredFields), RequiresComment: t.RequiresComment,
+			RequiresResolution: t.RequiresResolution, RequiresAssignee: t.RequiresAssignee, NeedsScreen: t.NeedsScreen,
+		})
 	}
 	if p := view.Breadcrumb.Parent; p != nil {
 		out.Breadcrumb.Parent = &breadcrumbParent{ID: p.ID.String(), Key: p.Key, Summary: p.Summary, Type: p.Type}

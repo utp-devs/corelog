@@ -116,7 +116,7 @@ func TestIssue_AssignTo(t *testing.T) {
 	reporter := uuid.New()
 	assignee := uuid.New()
 
-	t.Run("assigning open issue moves it to in_progress", func(t *testing.T) {
+	t.Run("assigning an open issue keeps its status", func(t *testing.T) {
 		issue, _ := NewIssue("Test", "Desc", PriorityMedium, reporter)
 		if issue.Status != StatusOpen {
 			t.Fatalf("expected initial StatusOpen")
@@ -129,8 +129,8 @@ func TestIssue_AssignTo(t *testing.T) {
 		if issue.AssigneeID == nil || *issue.AssigneeID != assignee {
 			t.Errorf("got assignee %v, want %v", issue.AssigneeID, assignee)
 		}
-		if issue.Status != StatusInProgress {
-			t.Errorf("got status %v, want %v", issue.Status, StatusInProgress)
+		if issue.Status != StatusOpen {
+			t.Errorf("got status %v, want %v: assigning no longer moves the issue", issue.Status, StatusOpen)
 		}
 	})
 

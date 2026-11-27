@@ -39,7 +39,8 @@ func TestBoardRepositoryFindDefaultByProjectPostgres(t *testing.T) {
 		`CREATE TABLE projects (id UUID PRIMARY KEY, deleted_at TIMESTAMPTZ)`,
 		`CREATE TABLE boards (id UUID PRIMARY KEY, project_id UUID NOT NULL, name VARCHAR(80) NOT NULL, type VARCHAR(10) NOT NULL, is_default BOOLEAN NOT NULL)`,
 		`CREATE TABLE board_columns (id UUID PRIMARY KEY, board_id UUID NOT NULL, name VARCHAR(80) NOT NULL, status VARCHAR(20) NOT NULL, position INTEGER NOT NULL, wip_limit INTEGER)`,
-		`CREATE TABLE issues (id UUID PRIMARY KEY, project_id UUID NOT NULL, issue_type VARCHAR(20) NOT NULL, summary VARCHAR(200) NOT NULL, status VARCHAR(20) NOT NULL, priority VARCHAR(20) NOT NULL, assignee_id UUID, story_points NUMERIC(4,1), rank VARCHAR(64) NOT NULL, created_at TIMESTAMPTZ NOT NULL, deleted_at TIMESTAMPTZ)`,
+		`CREATE TABLE issues (id UUID PRIMARY KEY, project_id UUID NOT NULL, issue_type VARCHAR(20) NOT NULL, summary VARCHAR(200) NOT NULL, status VARCHAR(20) NOT NULL, priority VARCHAR(20) NOT NULL, assignee_id UUID, story_points NUMERIC(4,1), rank VARCHAR(64) NOT NULL, created_at TIMESTAMPTZ NOT NULL, deleted_at TIMESTAMPTZ, status_id UUID)`,
+		`CREATE TABLE board_column_statuses (column_id UUID NOT NULL, status_id UUID NOT NULL, PRIMARY KEY (column_id, status_id))`,
 	} {
 		if _, err := db.Exec(statement); err != nil {
 			t.Fatal(err)
@@ -80,6 +81,29 @@ func TestBoardRepositoryFindDefaultByProjectPostgres(t *testing.T) {
 	}
 	if _, err := repository.FindDefaultByProject(context.Background(), uuid.New()); err != domain.ErrBoardNotFound {
 		t.Fatalf("missing board error = %v, want %v", err, domain.ErrBoardNotFound)
+	}
+
+	// A column bound to statuses shows the issues in those statuses, whatever their legacy value; a column
+	// without bindings still shows the issues by their legacy value.
+	mappedStatus, mappedIssue := uuid.New(), uuid.New()
+	if _, err := db.Exec(`INSERT INTO board_column_statuses (column_id, status_id) VALUES ($1, $2)`, progressColumnID, mappedStatus); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`INSERT INTO issues (id, project_id, issue_type, summary, status, priority, rank, created_at, status_id) VALUES ($1, $2, 'task', 'Mapped card', 'open', 'low', 'n', now(), $3)`, mappedIssue, projectID, mappedStatus); err != nil {
+		t.Fatal(err)
+	}
+	board, err = repository.FindDefaultByProject(context.Background(), projectID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(board.Columns[1].Cards) != 1 || board.Columns[1].Cards[0].ID != mappedIssue || len(board.Columns[0].Cards) != 2 {
+		t.Fatalf("column bound to a status must show its issues: open=%d progress=%d", len(board.Columns[0].Cards), len(board.Columns[1].Cards))
+	}
+	if _, err := db.Exec(`DELETE FROM issues WHERE id = $1`, mappedIssue); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`DELETE FROM board_column_statuses`); err != nil {
+		t.Fatal(err)
 	}
 
 	// A soft-deleted issue is no longer a card, while the live one stays.

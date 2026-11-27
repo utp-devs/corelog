@@ -22,8 +22,11 @@ type BulkInput struct {
 	LabelsRemove []uuid.UUID
 	// Fields is the partial update of a set_field action. It goes through the single-issue patch rules.
 	Fields PatchInput
-	// Status is the target status of a transition action.
-	Status domain.Status
+	// TransitionID, StatusID and Status choose the transition of a transition action: by workflow transition id,
+	// by target workflow status or by the legacy status the target mirrors. Exactly one is set.
+	TransitionID string
+	StatusID     uuid.UUID
+	Status       domain.Status
 	// Move is the destination of a move action.
 	Move MoveInput
 }

@@ -541,8 +541,8 @@ func TestGetView(t *testing.T) {
 	if lead.Counts.Comments != 2 || lead.Counts.Children != 3 || lead.Breadcrumb.Parent == nil || lead.Breadcrumb.Parent.Key != "CORE-1" {
 		t.Fatalf("view extras = %+v %+v", lead.Counts, lead.Breadcrumb)
 	}
-	if len(lead.Transitions) == 0 || lead.Transitions[0].To != domain.StatusInProgress {
-		t.Fatalf("transitions = %+v, want the legacy open transitions", lead.Transitions)
+	if len(lead.Transitions) != 0 {
+		t.Fatalf("transitions = %+v, want none without a workflow engine", lead.Transitions)
 	}
 
 	viewer, err := f.svc.GetView(ctx, f.issue.ID, f.viewer, "user")

@@ -80,8 +80,21 @@ func validateBulkInput(in port.BulkInput) error {
 			return domain.ErrBulkParams
 		}
 	case domain.BulkTransition:
-		if !in.Status.IsValid() {
-			return domain.ErrInvalidStatus
+		chosen := 0
+		if in.TransitionID != "" {
+			chosen++
+		}
+		if in.StatusID != uuid.Nil {
+			chosen++
+		}
+		if in.Status != "" {
+			chosen++
+			if !in.Status.IsValid() {
+				return domain.ErrInvalidStatus
+			}
+		}
+		if chosen != 1 {
+			return domain.ErrBulkParams
 		}
 	case domain.BulkMove:
 		if in.Move.ProjectID == uuid.Nil {
@@ -134,7 +147,7 @@ func (s *IssueService) applyBulkAction(ctx context.Context, id, actorID uuid.UUI
 	case domain.BulkSetLabels:
 		return s.bulkLabels(ctx, id, actorID, globalRole, in.LabelsAdd, in.LabelsRemove)
 	case domain.BulkTransition:
-		return s.bulkTransition(ctx, id, actorID, globalRole, in.Status)
+		return s.bulkTransition(ctx, id, actorID, globalRole, in)
 	case domain.BulkMove:
 		result, err := s.MoveIssue(ctx, id, actorID, globalRole, in.Move)
 		if err != nil {
@@ -277,76 +290,39 @@ func (s *IssueService) commitChanges(ctx context.Context, issue *domain.Issue, a
 	return s.publishUpdated(ctx, issue, actorID, batchID, changes)
 }
 
-// bulkTransition moves the issue to status. It checks the transition provider when one is wired, otherwise the
-// legacy workflow, then the status rules of the domain. The change is recorded like any other update.
-func (s *IssueService) bulkTransition(ctx context.Context, id, actorID uuid.UUID, globalRole string, status domain.Status) (*domain.Issue, error) {
-	if s.lifecycle != nil {
-		if err := s.lifecycle.LockForUpdate(ctx, id); err != nil {
+// bulkTransition runs a workflow transition on one issue through the single-issue transition use case. The
+// transition is chosen by id, by target status or by the legacy status the target mirrors; a status choice
+// takes the first transition the caller may run that leads there.
+func (s *IssueService) bulkTransition(ctx context.Context, id, actorID uuid.UUID, globalRole string, in port.BulkInput) (*domain.Issue, error) {
+	transitionID := in.TransitionID
+	if transitionID == "" {
+		issue, err := s.repo.FindByID(ctx, id)
+		if err != nil {
 			return nil, err
 		}
-	}
-	issue, err := s.repo.FindByID(ctx, id)
-	if err != nil {
-		return nil, err
-	}
-	if err := s.requireVisible(ctx, issue.ProjectID, actorID, globalRole); err != nil {
-		return nil, err
-	}
-	if err := s.requireIssueEdit(ctx, issue.ProjectID, actorID, globalRole); err != nil {
-		return nil, err
-	}
-	if err := s.checkTransition(ctx, issue, actorID, globalRole, status); err != nil {
-		return nil, err
-	}
-	from := issue.Status
-	if from == status {
-		return issue, nil
-	}
-	if err := issue.ChangeStatus(status); err != nil {
-		return nil, err
-	}
-	if err := s.applyResolution(ctx, issue); err != nil {
-		return nil, err
-	}
-	issue.UpdatedAt = s.now()
-	if err := s.repo.Update(ctx, issue); err != nil {
-		return nil, err
-	}
-	if err := s.commitChanges(ctx, issue, actorID, []domain.Change{domain.NewChange("status", string(from), string(status))}); err != nil {
-		return nil, err
-	}
-	return issue, nil
-}
-
-// checkTransition asks the transition provider (or the legacy workflow) whether the status can be reached.
-func (s *IssueService) checkTransition(ctx context.Context, issue *domain.Issue, actorID uuid.UUID, globalRole string, status domain.Status) error {
-	if s.transitions != nil {
-		available, err := s.transitions.AvailableTransitions(ctx, issue, actorID, globalRole)
-		if err != nil {
-			return err
+		if err := s.requireVisible(ctx, issue.ProjectID, actorID, globalRole); err != nil {
+			return nil, err
 		}
-		for _, transition := range available {
-			if transition.To == status {
-				return nil
+		options, err := s.transitionOptions(ctx, issue, actorID, globalRole)
+		if err != nil {
+			return nil, err
+		}
+		for _, option := range options {
+			if (in.StatusID != uuid.Nil && option.ToStatusID == in.StatusID) ||
+				(in.Status != "" && domain.LegacyStatusOfCategory(option.ToCategory) == in.Status) {
+				transitionID = option.ID
+				break
 			}
 		}
-		return domain.ErrIllegalTransition
+		if transitionID == "" {
+			return nil, domain.ErrTransitionUnavailable
+		}
 	}
-	if s.workflows == nil {
-		return nil
-	}
-	role, err := s.transitionRole(ctx, issue.ProjectID, actorID, globalRole)
+	result, err := s.TransitionIssue(ctx, port.TransitionRequest{IssueID: id, ActorID: actorID, GlobalRole: globalRole, TransitionID: transitionID})
 	if err != nil {
-		return err
+		return nil, err
 	}
-	allowed, err := s.workflows.CanTransition(ctx, issue.ProjectID, issue.Status, status, role)
-	if err != nil {
-		return err
-	}
-	if !allowed {
-		return domain.ErrIllegalTransition
-	}
-	return nil
+	return result.Issue, nil
 }
 
 // bulkFailure describes why one reference could not be changed. Internal causes do not leave the server.

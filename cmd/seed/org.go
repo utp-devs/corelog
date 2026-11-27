@@ -97,15 +97,6 @@ var standardColumns = []struct {
 	{"Closed", "closed", 3, 0},
 }
 
-var standardTransitions = []struct{ from, to, roles string }{
-	{"open", "in_progress", "admin,lead,contributor,viewer"},
-	{"open", "closed", "admin,lead,contributor"},
-	{"in_progress", "resolved", "admin,lead,contributor"},
-	{"in_progress", "closed", "admin"},
-	{"resolved", "closed", "admin,lead,contributor,viewer"},
-	{"resolved", "in_progress", "admin,lead,contributor"},
-}
-
 var commonLabels = []labelSpec{
 	{"bug", "red"}, {"feature", "green"}, {"infra", "purple"}, {"docs", "gray"}, {"urgente", "orange"},
 }
@@ -191,8 +182,6 @@ func buildOrg(ds *dataset, spec orgSpec, users []uuid.UUID) orgModel {
 	projectTeamRoles := ds.table("project_team_roles", "project_id", "team_id", "role", "created_at")
 	labels := ds.table("labels", "id", "project_id", "name", "color", "created_at", "updated_at")
 	components := ds.table("components", "id", "project_id", "name", "description", "created_at", "updated_at")
-	workflows := ds.table("workflows", "id", "project_id", "name", "is_default", "created_at", "updated_at")
-	transitions := ds.table("workflow_transitions", "workflow_id", "from_status", "to_status", "allowed_roles")
 
 	for _, ps := range spec.projects {
 		pid := projectID(ps.key)
@@ -229,12 +218,27 @@ func buildOrg(ds *dataset, spec orgSpec, users []uuid.UUID) orgModel {
 
 		addBoard(ds, pid, ps.key, "Tablero principal", ps.kind, true, catalogCreated)
 
-		wf := idFor("workflow", ps.key, "default")
-		workflows.add(wf, pid, "Workflow por defecto", true, catalogCreated, catalogCreated)
-		for _, t := range standardTransitions {
-			transitions.add(wf, t.from, t.to, t.roles)
-		}
 		model.projects = append(model.projects, pm)
 	}
+	// Every project gets the workflow of its template and its board columns are bound to its statuses before
+	// the first issue is written; the issues take their status from the workflow of the project.
+	ds.runBefore("issues", ensureWorkflowsSQL)
+	ds.runFinally(ensureWorkflowsSQL)
+	ds.runFinally(statusHistorySQL)
 	return model
 }
+
+// ensureWorkflowsSQL gives every project without one the workflow of its template (idempotent).
+const ensureWorkflowsSQL = `SELECT corelog_ensure_workflow(id) FROM projects`
+
+// statusHistorySQL writes the initial status history of the issues that have none (idempotent).
+const statusHistorySQL = `
+INSERT INTO issue_status_history (issue_id, from_status_id, to_status_id, changed_by, changed_at)
+SELECT i.id, NULL, (w.definition ->> 'initial')::uuid, i.reporter_id, i.created_at
+FROM issues i JOIN workflows w ON w.project_id = i.project_id
+WHERE NOT EXISTS (SELECT 1 FROM issue_status_history h WHERE h.issue_id = i.id);
+INSERT INTO issue_status_history (issue_id, from_status_id, to_status_id, changed_by, changed_at)
+SELECT i.id, (w.definition ->> 'initial')::uuid, i.status_id, NULL, GREATEST(i.updated_at, i.created_at)
+FROM issues i JOIN workflows w ON w.project_id = i.project_id
+WHERE i.status_id <> (w.definition ->> 'initial')::uuid
+  AND (SELECT count(*) FROM issue_status_history h WHERE h.issue_id = i.id) = 1`
