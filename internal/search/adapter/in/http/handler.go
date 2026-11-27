@@ -15,6 +15,9 @@ import (
 type Handler struct {
 	service   port.Service
 	jwtSecret string
+	global    port.GlobalService
+	issues    port.IssueSearchService
+	filters   port.FilterService
 }
 
 func NewHandler(service port.Service, jwtSecret string) *Handler {
@@ -22,10 +25,54 @@ func NewHandler(service port.Service, jwtSecret string) *Handler {
 }
 
 func (h *Handler) RegisterRoutes(r chi.Router) {
+	auth := appmw.Authenticate(h.jwtSecret)
 	r.Route("/search", func(r chi.Router) {
-		r.Use(appmw.Authenticate(h.jwtSecret))
+		r.Use(auth)
 		r.Get("/", h.Search)
+		if h.issues != nil {
+			r.Get("/issues", h.SearchIssues)
+			r.Post("/issues", h.SearchIssues)
+			r.Post("/validate", h.Validate)
+			r.Get("/suggest", h.Suggest)
+		}
 	})
+	if h.issues != nil {
+		r.With(auth).Get("/issues/search", h.SearchIssues)
+		r.With(auth).Post("/issues/search", h.SearchIssues)
+	}
+	if h.filters != nil {
+		r.Route("/filters", func(r chi.Router) {
+			r.Use(auth)
+			r.Get("/", h.ListFilters)
+			r.Post("/", h.CreateFilter)
+			r.Get("/{id}", h.GetFilter)
+			r.Patch("/{id}", h.UpdateFilter)
+			r.Delete("/{id}", h.DeleteFilter)
+			r.Put("/{id}/shares", h.SetFilterShares)
+			r.Get("/{id}/issues", h.RunFilter)
+			r.Get("/{id}/subscription", h.GetSubscription)
+			r.Post("/{id}/subscription", h.Subscribe)
+			r.Delete("/{id}/subscription", h.Unsubscribe)
+		})
+	}
+}
+
+// WithGlobal enables the global search v2 (more kinds, highlights).
+func (h *Handler) WithGlobal(service port.GlobalService) *Handler {
+	h.global = service
+	return h
+}
+
+// WithIssueSearch enables the CoreQL issue search endpoints.
+func (h *Handler) WithIssueSearch(service port.IssueSearchService) *Handler {
+	h.issues = service
+	return h
+}
+
+// WithFilters enables the saved filter endpoints.
+func (h *Handler) WithFilters(service port.FilterService) *Handler {
+	h.filters = service
+	return h
 }
 
 type hitResponse struct {
@@ -52,6 +99,10 @@ func (h *Handler) Search(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		limit = parsed
+	}
+	if h.global != nil {
+		h.searchGlobal(w, r, viewerOf(r), limit)
+		return
 	}
 	hits, err := h.service.Search(r.Context(), actorID, globalRole, r.URL.Query().Get("q"), limit)
 	if err != nil {
