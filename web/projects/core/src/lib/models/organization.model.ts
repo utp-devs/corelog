@@ -71,7 +71,11 @@ export interface InvitationCreated extends Invitation {
 
 /** Public preview of an invitation behind a token. */
 export interface InvitationPreview {
+  readonly organizationId: string;
   readonly organizationName: string;
+  readonly hasLogo: boolean;
+  /** Display name of the member who sent the invitation; null when unknown. */
+  readonly invitedBy: string | null;
   readonly role: OrgRole;
   readonly email: string;
   readonly status: InvitationStatus;

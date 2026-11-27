@@ -141,7 +141,10 @@ describe('OrganizationApiService', () => {
       expect(req.request.method).toBe('GET');
       req.flush({
         data: {
+          organization_id: 'org-1',
           organization_name: 'Acme',
+          has_logo: true,
+          invited_by: 'Ana Owner',
           role: 'guest',
           email: 'ana@example.com',
           status: 'pending',
@@ -149,7 +152,10 @@ describe('OrganizationApiService', () => {
         },
       });
       expect(await pending).toEqual({
+        organizationId: 'org-1',
         organizationName: 'Acme',
+        hasLogo: true,
+        invitedBy: 'Ana Owner',
         role: 'guest',
         email: 'ana@example.com',
         status: 'pending',

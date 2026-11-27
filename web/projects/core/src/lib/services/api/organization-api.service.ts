@@ -62,7 +62,10 @@ interface InvitationCreatedDto extends InvitationDto {
 }
 
 interface InvitationPreviewDto {
+  readonly organization_id: string;
   readonly organization_name: string;
+  readonly has_logo: boolean;
+  readonly invited_by: string | null;
   readonly role: OrgRole;
   readonly email: string;
   readonly status: InvitationStatus;
@@ -132,7 +135,10 @@ function toInvitationCreated(dto: InvitationCreatedDto): InvitationCreated {
 
 function toPreview(dto: InvitationPreviewDto): InvitationPreview {
   return {
+    organizationId: dto.organization_id,
     organizationName: dto.organization_name,
+    hasLogo: dto.has_logo,
+    invitedBy: dto.invited_by,
     role: dto.role,
     email: dto.email,
     status: dto.status,
