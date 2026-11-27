@@ -23,6 +23,10 @@ type fakeSprints struct {
 	err    error
 }
 
+func (f *fakeSprints) ResolveSprintProject(context.Context, uuid.UUID) (uuid.UUID, error) {
+	return f.sprint.ProjectID, f.err
+}
+
 func (f *fakeSprints) List(context.Context, uuid.UUID, string, uuid.UUID) ([]*domain.Sprint, error) {
 	return []*domain.Sprint{f.sprint}, f.err
 }
@@ -31,12 +35,12 @@ func (f *fakeSprints) Create(_ context.Context, _ uuid.UUID, _ string, _ uuid.UU
 	return f.sprint, f.err
 }
 
-func (f *fakeSprints) Start(context.Context, uuid.UUID, string, uuid.UUID, uuid.UUID) (*domain.Sprint, error) {
+func (f *fakeSprints) Start(context.Context, uuid.UUID, string, uuid.UUID, uuid.UUID, port.StartInput) (*domain.Sprint, error) {
 	return f.sprint, f.err
 }
 
-func (f *fakeSprints) Close(context.Context, uuid.UUID, string, uuid.UUID, uuid.UUID, port.CloseInput) (*domain.Sprint, error) {
-	return f.sprint, f.err
+func (f *fakeSprints) Complete(context.Context, uuid.UUID, string, uuid.UUID, uuid.UUID, port.CompleteInput) (*port.CompleteResult, error) {
+	return &port.CompleteResult{Sprint: f.sprint}, f.err
 }
 
 func (f *fakeSprints) AssignIssue(context.Context, uuid.UUID, string, uuid.UUID, uuid.UUID, uuid.UUID) error {
@@ -88,7 +92,7 @@ func TestSprintHTTPLifecycleStatusCodes(t *testing.T) {
 	project, sprintID, issueID := uuid.New(), uuid.New(), uuid.New()
 	base := "/sprints"
 	query := "?project_id=" + project.String()
-	sprint, _ := domain.NewSprint(project, "Sprint 1", "", nil, nil)
+	sprint, _ := domain.NewSprint(time.Now(), project, "Sprint 1", "", nil, nil)
 	sprint.ID = sprintID
 	auth := sprintAuth(t)
 

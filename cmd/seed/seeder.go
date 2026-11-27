@@ -70,7 +70,7 @@ var appTables = []string{
 	"notification_preferences", "notifications", "user_sessions",
 	"comment_mentions", "comments", "activities", "watchers", "issue_links", "issue_votes", "attachments",
 	"issue_labels", "issue_components", "saved_filters", "issue_status_history", "issues", "sprints",
-	"board_column_statuses", "board_columns", "boards", "workflows", "statuses",
+	"board_quick_filters", "board_swimlanes", "board_column_statuses", "board_columns", "boards", "workflows", "statuses",
 	"labels", "components", "project_members", "projects",
 	"team_members", "teams", "organization_invitations", "organization_members", "organizations", "users",
 }

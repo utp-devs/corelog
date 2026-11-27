@@ -129,8 +129,15 @@ func buildRouter(cfg *config.Config, db *sqlx.DB, log *slog.Logger) (chi.Router,
 	projectModule.WithRecents(favoriteModule.RecentRecorder)
 	noteModule := note.NewModule(notepostgres.NewRepository(db), notepostgres.NewLinkAccess(db), cfg.Auth.JWTSecret)
 	calendarModule := calendar.NewModule(calendarpostgres.NewCalendarRepository(db), projectAuthorizer, cfg.Auth.JWTSecret)
-	sprintModule := sprint.NewModule(sprintpostgres.NewSprintRepository(db), projectAuthorizer, cfg.Auth.JWTSecret)
-	boardModule := board.NewModule(boardpostgres.NewBoardRepository(db), projectModule.Service, projectAuthorizer, boardIssueMover{issues: issueModule.Service.(issueport.TransitionService)}, cfg.Auth.JWTSecret)
+	sprintModule := sprint.NewModule(sprintpostgres.NewSprintRepository(db), projectAuthorizer, database.NewTxManager(db), clock.RealClock{}, cfg.Auth.JWTSecret)
+	boardRepo := boardpostgres.NewBoardRepository(db)
+	boardModule := board.NewModule(board.Deps{
+		Repository: boardRepo, Boards: boardRepo, Projects: projectModule.Service, Authorizer: projectAuthorizer,
+		Mover:       boardIssueMover{issues: issueModule.Service.(issueport.TransitionService)},
+		Transitions: boardCardTransitions{issues: issueModule.Service.(issueport.TransitionService)},
+		Editor:      boardCardEditor{issues: issueModule.Service},
+		Clock:       clock.RealClock{}, JWTSecret: cfg.Auth.JWTSecret,
+	})
 	issueModule.WithCatalog(issueCatalogRepo)
 	issueModule.WithWorkflowEngine(workflowEngineAdapter{workflows: workflowModule.Service}, issuepostgres.NewTransitionRepository(db))
 	issueModule.WithActivityFeed(issuepostgres.NewActivityFeedRepository(db)).WithIssueLabels(issuepostgres.NewIssueLabelRepository(db))

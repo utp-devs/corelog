@@ -123,6 +123,14 @@ func addBoard(ds *dataset, projectID uuid.UUID, projectKey, name, kind string, i
 		}
 		cols.add(idFor("board_column", id.String(), c.status), id, c.name, c.status, c.position, wip, at, at)
 	}
+	filters := ds.table("board_quick_filters", "id", "board_id", "name", "query_text", "position")
+	for i, f := range []struct{ name, query string }{
+		{"Mis incidencias", "assignee = currentUser()"},
+		{"Sin responsable", "assignee is EMPTY"},
+		{"Prioridad alta", "priority in (high, critical)"},
+	} {
+		filters.add(idFor("board_quick_filter", id.String(), f.name), id, f.name, f.query, i)
+	}
 	return id
 }
 
@@ -131,6 +139,7 @@ func addSprint(ds *dataset, projectID uuid.UUID, projectKey, name, goal, status 
 	id := idFor("sprint", projectKey, name)
 	ds.table("sprints", "id", "project_id", "name", "goal", "status", "start_date", "end_date", "closed_at", "created_at", "updated_at").
 		add(id, projectID, name, goal, status, start.Format("2006-01-02"), end.Format("2006-01-02"), opt(closed), start, start)
+	ds.runFinally(sprintHistorySQL)
 	return id
 }
 
@@ -242,3 +251,26 @@ SELECT i.id, (w.definition ->> 'initial')::uuid, i.status_id, NULL, GREATEST(i.u
 FROM issues i JOIN workflows w ON w.project_id = i.project_id
 WHERE i.status_id <> (w.definition ->> 'initial')::uuid
   AND (SELECT count(*) FROM issue_status_history h WHERE h.issue_id = i.id) = 1`
+
+// sprintHistorySQL rebuilds the scope history of the seeded sprints that are active or closed: lifecycle
+// timestamps, the committed snapshot, the completed/incomplete verdicts of closed sprints and their points.
+// It only touches sprints that have no events yet, so running it again changes nothing.
+const sprintHistorySQL = `
+UPDATE sprints SET started_at = COALESCE(started_at, start_date::timestamptz), completed_at = COALESCE(completed_at, closed_at)
+WHERE status IN ('active', 'closed');
+INSERT INTO sprint_issue_events (sprint_id, issue_id, event, points_at_time, status_category_at_time, happened_at, after_start)
+SELECT s.id, i.id, 'added', i.story_points, 'todo', s.started_at, FALSE
+FROM sprints s JOIN issues i ON i.sprint_id = s.id AND i.deleted_at IS NULL
+WHERE s.status IN ('active', 'closed') AND NOT EXISTS (SELECT 1 FROM sprint_issue_events e WHERE e.sprint_id = s.id);
+INSERT INTO sprint_issue_events (sprint_id, issue_id, event, points_at_time, status_category_at_time, happened_at, after_start)
+SELECT s.id, i.id, CASE WHEN corelog_issue_category(i.status_id, i.status) = 'done' THEN 'completed' ELSE 'incomplete' END,
+       i.story_points, corelog_issue_category(i.status_id, i.status), COALESCE(s.closed_at, s.updated_at), TRUE
+FROM sprints s JOIN issues i ON i.sprint_id = s.id AND i.deleted_at IS NULL
+WHERE s.status = 'closed'
+  AND NOT EXISTS (SELECT 1 FROM sprint_issue_events e WHERE e.sprint_id = s.id AND e.event IN ('completed', 'incomplete'));
+UPDATE sprints s SET committed_points = COALESCE((SELECT SUM(e.points_at_time) FROM sprint_issue_events e
+    WHERE e.sprint_id = s.id AND e.event = 'added' AND NOT e.after_start), 0)
+WHERE s.status IN ('active', 'closed') AND s.committed_points IS NULL;
+UPDATE sprints s SET completed_points = COALESCE((SELECT SUM(e.points_at_time) FROM sprint_issue_events e
+    WHERE e.sprint_id = s.id AND e.event = 'completed'), 0)
+WHERE s.status = 'closed' AND s.completed_points IS NULL`

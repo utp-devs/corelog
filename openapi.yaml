@@ -23,6 +23,8 @@ tags:
     description: Notas personales privadas del usuario
   - name: issues
     description: Gestion de incidencias (issues) con clave legible por proyecto
+  - name: boards
+    description: Tableros por proyecto, columnas, carriles, filtros rapidos y movimiento de tarjetas
   - name: workflows
     description: Flujo de trabajo por proyecto, plantillas y catalogo de estados de la organizacion
   - name: health
@@ -1456,6 +1458,381 @@ paths:
           description: Columna no encontrada en el proyecto
         '422':
           $ref: '#/components/responses/ValidationError'
+  /projects/{id}/boards:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+    get:
+      tags: [boards]
+      operationId: listProjectBoards
+      summary: Listar los tableros de un proyecto
+      description: El tablero principal va primero. Requiere poder ver el proyecto.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Tableros del proyecto
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: {$ref: '#/components/schemas/BoardSummary'}
+              example:
+                data:
+                  - {id: 7f0c3c2e-6d55-4d44-9c3a-0e1b2c3d4e5f, project_id: 1a2b3c4d-0000-4000-8000-000000000001, name: Tablero principal, type: scrum, is_default: true, column_count: 3, swimlane_mode: none}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+    post:
+      tags: [boards]
+      operationId: createProjectBoard
+      summary: Crear un tablero
+      description: Requiere manage_board (lead u org-admin). Sin columnas, crea Por hacer, En curso y Hecho con los estados del flujo agrupados por categoria. El nombre es unico por proyecto sin distinguir mayusculas y un proyecto admite hasta 20 tableros. Un proyecto archivado es de solo lectura (project.archived).
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/CreateBoardRequest'}
+            example:
+              name: Sprint de bugs
+              type: kanban
+              swimlane_mode: assignee
+              estimation: issue_count
+              columns:
+                - {name: Pendiente, status_ids: ['9b1a0000-0000-4000-8000-000000000001']}
+                - {name: Hecho, color: green, max_issues: 10, status_ids: ['9b1a0000-0000-4000-8000-000000000004']}
+      responses:
+        '201':
+          description: Tablero creado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: {$ref: '#/components/schemas/BoardDetail'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409':
+          description: Nombre repetido (board.name_taken), limite de tableros (board.too_many) o proyecto archivado (project.archived)
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+        '422':
+          description: Ajustes o columnas no validos (board.invalid_settings, board.invalid_columns, board.invalid)
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+  /boards/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+    get:
+      tags: [boards]
+      operationId: getBoard
+      summary: Obtener un tablero con su configuracion
+      description: Devuelve ajustes, columnas con sus estados, filtros rapidos, carriles, los estados del flujo y los estados sin columna (unmapped_status_ids, que se muestran en la columna implicita Sin asignar).
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Tablero
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: {$ref: '#/components/schemas/BoardDetail'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+    patch:
+      tags: [boards]
+      operationId: updateBoard
+      summary: Editar los ajustes de un tablero
+      description: Requiere manage_board. Los campos ausentes no cambian; done_retention_days null quita la retencion.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/UpdateBoardRequest'}
+            example: {name: Tablero del equipo, swimlane_mode: epic, card_fields: [key, type, assignee, points], done_retention_days: 14}
+      responses:
+        '200':
+          description: Tablero actualizado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: {$ref: '#/components/schemas/BoardDetail'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409':
+          description: Nombre repetido (board.name_taken) o proyecto archivado (project.archived)
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+        '422': {$ref: '#/components/responses/ValidationError'}
+    delete:
+      tags: [boards]
+      operationId: deleteBoard
+      summary: Eliminar un tablero
+      description: Requiere manage_board. El tablero principal del proyecto no se puede eliminar (board.default_not_deletable).
+      security:
+        - bearerAuth: []
+      responses:
+        '204': {description: Tablero eliminado}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409':
+          description: Tablero principal (board.default_not_deletable) o proyecto archivado (project.archived)
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+  /boards/{id}/columns:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+    put:
+      tags: [boards]
+      operationId: replaceBoardColumns
+      summary: Reemplazar las columnas de un tablero
+      description: Reemplazo completo en una transaccion. Las columnas con id se conservan (y sus tarjetas), las demas se crean y las que faltan se eliminan. Reglas - al menos una columna (hasta 20), un estado del flujo del proyecto aparece como mucho en una columna, min_issues <= max_issues. Los estados sin columna se muestran en la columna implicita Sin asignar. Requiere manage_board.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [columns]
+              properties:
+                columns:
+                  type: array
+                  items: {$ref: '#/components/schemas/BoardColumnInput'}
+            example:
+              columns:
+                - {id: 5d0e0000-0000-4000-8000-000000000001, name: Por hacer, status_ids: ['9b1a0000-0000-4000-8000-000000000001']}
+                - {name: En curso, color: blue, min_issues: 1, max_issues: 4, status_ids: ['9b1a0000-0000-4000-8000-000000000002', '9b1a0000-0000-4000-8000-000000000003']}
+      responses:
+        '200':
+          description: Tablero con las columnas nuevas
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: {$ref: '#/components/schemas/BoardDetail'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409':
+          description: Proyecto archivado (project.archived)
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+        '422':
+          description: Mapeo no valido (board.invalid_columns); details indica la columna y el campo
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+  /boards/{id}/quick-filters:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+    put:
+      tags: [boards]
+      operationId: replaceBoardQuickFilters
+      summary: Reemplazar los filtros rapidos de un tablero
+      description: |
+        Hasta 20 filtros. La consulta usa una gramatica minima que reemplazara la busqueda avanzada - clausulas unidas con AND:
+        assignee = currentUser(), assignee = "nombre", assignee is EMPTY, labels = x, labels in (a, b), priority in (a, b), type = x, status = x, text ~ "texto", flagged = true. Requiere manage_board.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [quick_filters]
+              properties:
+                quick_filters:
+                  type: array
+                  items: {$ref: '#/components/schemas/BoardQueryInput'}
+            example:
+              quick_filters:
+                - {name: Mis incidencias, query: 'assignee = currentUser()'}
+                - {name: Prioridad alta, query: 'priority in (Alta, Crítica)'}
+      responses:
+        '200':
+          description: Tablero con los filtros nuevos
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: {$ref: '#/components/schemas/BoardDetail'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409':
+          description: Proyecto archivado (project.archived)
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+        '422':
+          description: Consulta no valida (board.invalid_query)
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+  /boards/{id}/swimlanes:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+    put:
+      tags: [boards]
+      operationId: replaceBoardSwimlanes
+      summary: Reemplazar los carriles por consulta de un tablero
+      description: Solo se usan cuando swimlane_mode es query; cada tarjeta cae en el primer carril cuya consulta cumple y las demas en el carril implicito other. Misma gramatica que los filtros rapidos. Requiere manage_board.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [swimlanes]
+              properties:
+                swimlanes:
+                  type: array
+                  items: {$ref: '#/components/schemas/BoardQueryInput'}
+            example:
+              swimlanes:
+                - {name: Errores, query: 'type = bug'}
+                - {name: Urgente, query: 'labels = urgente'}
+      responses:
+        '200':
+          description: Tablero con los carriles nuevos
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: {$ref: '#/components/schemas/BoardDetail'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409':
+          description: Proyecto archivado (project.archived)
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+        '422':
+          description: Consulta no valida (board.invalid_query)
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+  /boards/{id}/view:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+    get:
+      tags: [boards]
+      operationId: getBoardView
+      summary: Vista del tablero con columnas, carriles y tarjetas
+      description: Un numero constante de consultas SQL, sin importar cuantas tarjetas haya (hasta 5000). count son las tarjetas mostradas tras los filtros rapidos y total las de la columna sin filtrar; wip_state se evalua sobre total (ok, below_min, at_max, over_max). Las epicas no son tarjetas. Los tableros scrum muestran por defecto el sprint activo y los kanban todas las incidencias. Los estados sin columna aparecen en unmapped_column cuando show_unmapped_lane es true.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: quick_filters
+          in: query
+          description: Ids de filtros rapidos separados por coma; deben cumplirse todos.
+          schema: {type: string}
+        - name: sprint
+          in: query
+          description: active, all, none (sin sprint) o el id de un sprint.
+          schema: {type: string}
+        - name: swimlane
+          in: query
+          description: Id de carril; solo devuelve las tarjetas de ese carril.
+          schema: {type: string}
+      responses:
+        '200':
+          description: Vista del tablero
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: {$ref: '#/components/schemas/BoardView'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '422':
+          description: Parametros no validos (board.invalid_query, validacion)
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+  /boards/{id}/cards/{issue_id}/move:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      - name: issue_id
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+    post:
+      tags: [boards]
+      operationId: moveBoardViewCard
+      summary: Mover una tarjeta a una columna
+      description: |
+        Requiere move_cards. Si la tarjeta ya esta en la columna solo cambia su posicion (before_issue_id o after_issue_id, uno de los dos). Si no, resuelve con el motor de flujo la transicion que lleva del estado actual a los estados de la columna:
+        - ninguna transicion disponible - 409 issue.transition_unavailable;
+        - varias - 409 board.ambiguous_transition, details lista las candidatas (field es el id de la transicion y message su nombre); reenviar con transition_id;
+        - la transicion pide datos - 422 issue.required_field_missing, details[0] es {field: transition_id, message: <id>} y siguen los campos pedidos (fields.x, comment, resolution, assignee); reenviar con transition_id e input.
+        El limite WIP es solo un aviso: la respuesta lleva wip.exceeded. Con carriles por responsable (o por epica) soltar la tarjeta en un carril cambia su responsable (o su epica) a traves del servicio de incidencias.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/MoveBoardCardRequest'}
+            example:
+              column_id: 5d0e0000-0000-4000-8000-000000000002
+              after_issue_id: 3c9d0000-0000-4000-8000-0000000000aa
+              swimlane: unassigned
+      responses:
+        '200':
+          description: Tarjeta movida
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: {$ref: '#/components/schemas/MoveBoardCardResult'}
+              example:
+                data:
+                  issue_id: 3c9d0000-0000-4000-8000-0000000000bb
+                  column_id: 5d0e0000-0000-4000-8000-000000000002
+                  status: {id: 9b1a0000-0000-4000-8000-000000000002, name: En curso, category: in_progress}
+                  transition_id: start
+                  transitioned: true
+                  rank: n
+                  wip: {column_id: 5d0e0000-0000-4000-8000-000000000002, count: 5, min_issues: null, max_issues: 4, state: over_max, exceeded: true}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404':
+          description: Tablero, columna o tarjeta no encontrados (board.not_found, board.column_not_found, board.card_not_found)
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+        '409':
+          description: Sin transicion (issue.transition_unavailable), ambigua (board.ambiguous_transition), cambio de estado concurrente (issue.status_conflict), posicion no calculable (board.rank_conflict) o proyecto archivado (project.archived)
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+        '422':
+          description: Falta informacion de la transicion (issue.required_field_missing) o peticion no valida (board.invalid_move, workflow.validation_failed)
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
   /projects/{id}/members:
     parameters:
       - name: id
@@ -2099,37 +2476,34 @@ paths:
       tags: [issues]
       operationId: listSprints
       summary: Sprints de un proyecto
-      description: Requiere poder ver el proyecto.
+      description: Requiere poder ver el proyecto. Devuelve planificados, activo y cerrados.
       security:
         - bearerAuth: []
       parameters:
-        - name: project_id
-          in: query
-          required: true
-          schema:
-            type: string
-            format: uuid
+        - {name: project_id, in: query, required: true, schema: {type: string, format: uuid}}
       responses:
         '200':
           description: Sprints del proyecto
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          description: Sin permiso para ver el proyecto
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: {$ref: '#/components/schemas/Sprint'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
     post:
       tags: [issues]
       operationId: createSprint
       summary: Planificar un sprint
-      description: Solo el lead del proyecto o el administrador global. Las fechas son opcionales; si se dan, el fin no puede ser anterior al inicio.
+      description: Requiere el permiso de gestionar sprints (lead o administrador). Puede haber varios sprints planificados a la vez. Las fechas son opcionales; si se dan, el fin no puede ser anterior al inicio.
       security:
         - bearerAuth: []
       parameters:
-        - name: project_id
-          in: query
-          required: true
-          schema:
-            type: string
-            format: uuid
+        - {name: project_id, in: query, required: true, schema: {type: string, format: uuid}}
       requestBody:
         required: true
         content:
@@ -2137,138 +2511,276 @@ paths:
             schema:
               type: object
               required: [name]
+              additionalProperties: false
               properties:
-                name:
-                  type: string
-                  maxLength: 80
-                goal:
-                  type: string
-                  maxLength: 500
-                start_date:
-                  type: string
-                  format: date
-                end_date:
-                  type: string
-                  format: date
+                name: {type: string, maxLength: 80}
+                goal: {type: string, maxLength: 500}
+                start_date: {type: string, format: date}
+                end_date: {type: string, format: date}
+            example: {name: Sprint 13, goal: Cerrar la API de reembolsos, start_date: '2026-11-30', end_date: '2026-12-11'}
       responses:
         '201':
           description: Sprint creado en estado planned
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          description: Solo lead o administrador global
-        '422':
-          $ref: '#/components/responses/ValidationError'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: {$ref: '#/components/schemas/Sprint'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '422': {$ref: '#/components/responses/ValidationError'}
   /sprints/velocity:
     get:
       tags: [issues]
       operationId: getSprintVelocity
       summary: Velocidad del proyecto en sus ultimos sprints cerrados
+      description: Usa los puntos completados fijados al cerrar cada sprint.
       security:
         - bearerAuth: []
       parameters:
-        - name: project_id
-          in: query
-          required: true
-          schema:
-            type: string
-            format: uuid
-        - name: limit
-          in: query
-          required: false
-          schema:
-            type: integer
-            minimum: 1
-            maximum: 20
-            default: 5
+        - {name: project_id, in: query, required: true, schema: {type: string, format: uuid}}
+        - {name: limit, in: query, required: false, schema: {type: integer, minimum: 1, maximum: 20, default: 5}}
       responses:
         '200':
           description: Puntos completados por sprint, del mas reciente al mas antiguo
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          description: Sin permiso para ver el proyecto
-  /sprints/{id}/start:
-    post:
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: {$ref: '#/components/schemas/SprintVelocityPoint'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+  /sprints/{id}:
+    get:
       tags: [issues]
-      operationId: startSprint
-      summary: Activar un sprint planificado
-      description: Un proyecto solo puede tener un sprint activo. Si ya hay otro activo responde 409.
+      operationId: getSprint
+      summary: Detalle de un sprint
+      description: project_id es opcional; si falta se deduce del sprint. Un sprint de otro proyecto responde 404.
       security:
         - bearerAuth: []
       parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-        - name: project_id
-          in: query
-          required: true
-          schema:
-            type: string
-            format: uuid
+        - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+        - {name: project_id, in: query, required: false, schema: {type: string, format: uuid}}
       responses:
         '200':
-          description: Sprint activo
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          description: Solo lead o administrador global
-        '404':
-          description: Sprint no encontrado en el proyecto
-        '409':
-          description: El sprint no esta planificado o ya hay otro sprint activo
-  /sprints/{id}/close:
-    post:
+          description: Sprint
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: {$ref: '#/components/schemas/Sprint'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+    patch:
       tags: [issues]
-      operationId: closeSprint
-      summary: Cerrar un sprint activo
-      description: unfinished decide que pasa con las incidencias no cerradas. backlog las quita del sprint; sprint las mueve a target_sprint_id, que debe ser un sprint planificado del mismo proyecto.
+      operationId: updateSprint
+      summary: Editar un sprint
+      description: Cambia nombre, objetivo y fechas de un sprint planificado o activo (un sprint activo conserva siempre sus fechas). Un sprint cerrado responde 409 sprint.closed. Una fecha null la borra.
       security:
         - bearerAuth: []
       parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-        - name: project_id
-          in: query
-          required: true
-          schema:
-            type: string
-            format: uuid
+        - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+        - {name: project_id, in: query, required: false, schema: {type: string, format: uuid}}
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required: [unfinished]
+              additionalProperties: false
               properties:
-                unfinished:
-                  type: string
-                  enum: [backlog, sprint]
-                target_sprint_id:
-                  type: string
-                  format: uuid
-                  nullable: true
+                name: {type: string, maxLength: 80}
+                goal: {type: string, maxLength: 500}
+                start_date: {type: string, format: date, nullable: true}
+                end_date: {type: string, format: date, nullable: true}
+            example: {goal: Cerrar reembolsos y pagos, end_date: '2026-12-12'}
+      responses:
+        '200':
+          description: Sprint actualizado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: {$ref: '#/components/schemas/Sprint'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+    delete:
+      tags: [issues]
+      operationId: deleteSprint
+      summary: Borrar un sprint planificado
+      description: Solo se borran sprints planificados (409 sprint.not_planned en otro caso). Sus incidencias vuelven al backlog.
+      security:
+        - bearerAuth: []
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+        - {name: project_id, in: query, required: false, schema: {type: string, format: uuid}}
+      responses:
+        '204': {description: Sprint borrado}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+  /sprints/{id}/start:
+    post:
+      tags: [issues]
+      operationId: startSprint
+      summary: Iniciar un sprint planificado
+      description: |
+        Confirma nombre, fechas y objetivo (el cuerpo es opcional; sin fechas empieza hoy y dura 14 dias), congela el alcance comprometido
+        (evento added por incidencia y committed_points) y activa el sprint. Un proyecto solo puede tener un sprint activo: si ya hay otro
+        responde 409 sprint.already_active, tambien ante dos inicios simultaneos. Un sprint sin incidencias responde 422 sprint.empty salvo con force=true.
+      security:
+        - bearerAuth: []
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+        - {name: project_id, in: query, required: false, schema: {type: string, format: uuid}}
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                name: {type: string, maxLength: 80}
+                goal: {type: string, maxLength: 500}
+                start_date: {type: string, format: date}
+                end_date: {type: string, format: date}
+                force: {type: boolean, description: Permite iniciar un sprint sin incidencias}
+            example: {name: Sprint 13, goal: Cerrar la API de reembolsos, start_date: '2026-11-30', end_date: '2026-12-11'}
+      responses:
+        '200':
+          description: Sprint activo
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: {$ref: '#/components/schemas/Sprint'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+  /sprints/{id}/complete:
+    post:
+      tags: [issues]
+      operationId: completeSprint
+      summary: Completar un sprint activo
+      description: |
+        Cierra el sprint en una sola transaccion. Las incidencias en categoria done quedan completadas en el sprint; el resto se mueve al destino:
+        backlog, sprint:<uuid> (sprint planificado del mismo proyecto) o new (crea el siguiente sprint planificado, con new_sprint_name o el nombre
+        incrementado). Registra un evento completed o incomplete por incidencia con sus puntos de ese momento y fija completed_points.
+        Si algo falla no cambia nada.
+      security:
+        - bearerAuth: []
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+        - {name: project_id, in: query, required: false, schema: {type: string, format: uuid}}
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                destination: {type: string, description: 'backlog, new o sprint:<uuid>', example: new}
+                new_sprint_name: {type: string, maxLength: 80}
+            example: {destination: new, new_sprint_name: Sprint 14}
+      responses:
+        '200':
+          description: Sprint cerrado y resumen
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: {$ref: '#/components/schemas/SprintCompletion'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+  /sprints/{id}/close:
+    post:
+      tags: [issues]
+      operationId: closeSprint
+      summary: Cerrar un sprint activo (forma antigua de completar)
+      description: Equivale a completar con la forma antigua del destino. unfinished=backlog las quita del sprint; unfinished=sprint las mueve a target_sprint_id (planificado, mismo proyecto). Tambien admite destination. Devuelve solo el sprint.
+      security:
+        - bearerAuth: []
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+        - {name: project_id, in: query, required: false, schema: {type: string, format: uuid}}
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                destination: {type: string}
+                new_sprint_name: {type: string}
+                unfinished: {type: string, enum: [backlog, sprint]}
+                target_sprint_id: {type: string, format: uuid, nullable: true}
+            example: {unfinished: backlog}
       responses:
         '200':
           description: Sprint cerrado
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          description: Solo lead o administrador global
-        '404':
-          description: Sprint no encontrado en el proyecto
-        '409':
-          description: El sprint no esta activo
-        '422':
-          $ref: '#/components/responses/ValidationError'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: {$ref: '#/components/schemas/Sprint'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+  /sprints/{id}/report:
+    get:
+      tags: [issues]
+      operationId: getSprintReport
+      summary: Informe del sprint
+      description: |
+        Compromiso frente a lo completado, calculado del historial de alcance. completed e incomplete son las incidencias en el alcance al final
+        (o ahora, en un sprint activo) con los puntos de ese momento; removed son las que salieron del sprint; added_after_start es un subconjunto de
+        las anteriores: las que no estaban en el compromiso inicial. burndown da, por dia, el alcance, lo restante y la linea ideal (null sin fecha de fin).
+        velocity son los ultimos sprints cerrados del proyecto. Un sprint planificado devuelve todo en cero.
+      security:
+        - bearerAuth: []
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+        - {name: project_id, in: query, required: false, schema: {type: string, format: uuid}}
+      responses:
+        '200':
+          description: Informe
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: {$ref: '#/components/schemas/SprintReport'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
   /sprints/{id}/issues:
     get:
       tags: [issues]
@@ -2277,126 +2789,149 @@ paths:
       security:
         - bearerAuth: []
       parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-        - name: project_id
-          in: query
-          required: true
-          schema:
-            type: string
-            format: uuid
+        - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+        - {name: project_id, in: query, required: false, schema: {type: string, format: uuid}}
       responses:
-        '200':
-          description: Incidencias del sprint
-        '403':
-          description: Sin permiso para ver el proyecto
-        '404':
-          description: Sprint no encontrado en el proyecto
+        '200': {description: Incidencias del sprint}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
   /sprints/{id}/issues/{issue_id}:
     put:
       tags: [issues]
       operationId: assignSprintIssue
       summary: Asignar una incidencia al sprint
-      description: Solo lead o administrador global. Un sprint cerrado no admite cambios.
+      description: Requiere gestionar sprints. Un sprint cerrado no admite cambios. En un sprint activo queda registrada como anadida despues del inicio.
       security:
         - bearerAuth: []
       parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-        - name: issue_id
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-        - name: project_id
-          in: query
-          required: true
-          schema:
-            type: string
-            format: uuid
+        - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+        - {name: issue_id, in: path, required: true, schema: {type: string, format: uuid}}
+        - {name: project_id, in: query, required: false, schema: {type: string, format: uuid}}
       responses:
-        '204':
-          description: Asignada
-        '403':
-          description: Solo lead o administrador global
-        '404':
-          description: Sprint o incidencia no encontrados en el proyecto
-        '409':
-          description: El sprint esta cerrado
+        '204': {description: Asignada}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
     delete:
       tags: [issues]
       operationId: removeSprintIssue
       summary: Quitar una incidencia del sprint
-      description: Solo lead o administrador global. La incidencia vuelve al backlog.
+      description: Requiere gestionar sprints. La incidencia vuelve al backlog; en un sprint activo queda registrada como retirada.
       security:
         - bearerAuth: []
       parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-        - name: issue_id
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-        - name: project_id
-          in: query
-          required: true
-          schema:
-            type: string
-            format: uuid
+        - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+        - {name: issue_id, in: path, required: true, schema: {type: string, format: uuid}}
+        - {name: project_id, in: query, required: false, schema: {type: string, format: uuid}}
       responses:
-        '204':
-          description: Quitada
-        '403':
-          description: Solo lead o administrador global
-        '404':
-          description: La incidencia no esta en este sprint del proyecto
-        '409':
-          description: El sprint esta cerrado
+        '204': {description: Quitada}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
   /sprints/{id}/burndown:
     get:
       tags: [issues]
       operationId: getSprintBurndown
       summary: Burndown del sprint por dia
-      description: Trabajo restante real frente a la linea ideal que baja a cero. El sprint necesita fechas.
+      description: Trabajo restante real frente a la linea ideal, calculado del historial de alcance. En un sprint activo la serie llega hasta hoy. El sprint necesita fechas (422 sprint.dates_required).
       security:
         - bearerAuth: []
       parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-        - name: project_id
-          in: query
-          required: true
-          schema:
-            type: string
-            format: uuid
+        - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+        - {name: project_id, in: query, required: false, schema: {type: string, format: uuid}}
+      responses:
+        '200': {description: Un punto por dia}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+  /projects/{id}/backlog:
+    get:
+      tags: [issues]
+      operationId: getProjectBacklog
+      summary: Backlog del proyecto con sus secciones
+      description: |
+        Devuelve las secciones en orden: sprint activo, sprints planificados (por creacion) y backlog sin sprint. Cada seccion lista sus incidencias
+        por rank con totales (incidencias, puntos, estimacion original en segundos y desglose por categoria de estado). Las epicas no aparecen como
+        filas: van en epics con su progreso. El backlog sin sprint no muestra las incidencias ya terminadas. El parametro version esta reservado y
+        aun no filtra. Maximo 3000 filas (truncated=true si se supera).
+      security:
+        - bearerAuth: []
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+        - {name: epic, in: query, required: false, description: Solo incidencias hijas de esta epica, schema: {type: string, format: uuid}}
+        - {name: version, in: query, required: false, description: Reservado, schema: {type: string}}
+        - {name: q, in: query, required: false, description: Texto en el resumen o clave (SPR-12), schema: {type: string}}
       responses:
         '200':
-          description: Un punto por dia entre el inicio y el fin del sprint
-        '403':
-          description: Sin permiso para ver el proyecto
-        '404':
-          description: Sprint no encontrado en el proyecto
-        '422':
-          description: El sprint no tiene fechas
+          description: Backlog
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: {$ref: '#/components/schemas/Backlog'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+  /backlog/rank:
+    put:
+      tags: [issues]
+      operationId: rankBacklog
+      summary: Mover y ordenar varias incidencias en el backlog
+      description: |
+        Mueve issue_ids (en ese orden, maximo 200) a target (sprint_id o null para el backlog) justo antes de before_issue_id o despues de
+        after_issue_id, que deben estar en la seccion de destino y no ser de las movidas; sin ancla van al final. Todo en una transaccion:
+        actualiza sprint y rank y escribe los eventos de alcance de los sprints activos (anadida despues del inicio, retirada, movida).
+        Reordenar y mover entre backlog y sprint activo requiere mover tarjetas; tocar un sprint planificado requiere ademas gestionar sprints.
+        Un sprint cerrado no admite movimientos (409 sprint.closed).
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [issue_ids, target]
+              additionalProperties: false
+              properties:
+                project_id: {type: string, format: uuid, description: Opcional; se deduce de las incidencias}
+                issue_ids: {type: array, minItems: 1, maxItems: 200, items: {type: string, format: uuid}}
+                target:
+                  type: object
+                  required: [sprint_id]
+                  properties:
+                    sprint_id: {type: string, format: uuid, nullable: true}
+                before_issue_id: {type: string, format: uuid}
+                after_issue_id: {type: string, format: uuid}
+            example:
+              issue_ids: ['0b6f2a40-5c1e-4a3e-9d57-7c1a2a9a1111', '0b6f2a40-5c1e-4a3e-9d57-7c1a2a9a2222']
+              target: {sprint_id: '5d1c7b6e-3f0a-4c58-8d0e-2e4b9a7c3333'}
+              before_issue_id: '0b6f2a40-5c1e-4a3e-9d57-7c1a2a9a4444'
+      responses:
+        '200':
+          description: Movidas
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      project_id: {type: string, format: uuid}
+                      issue_ids: {type: array, items: {type: string, format: uuid}}
+                      sprint_id: {type: string, format: uuid, nullable: true}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '422': {$ref: '#/components/responses/ValidationError'}
   /notifications:
     get:
       tags: [issues]
@@ -6049,6 +6584,193 @@ components:
           schema:
             $ref: '#/components/schemas/ErrorResponse'
   schemas:
+    Sprint:
+      type: object
+      required: [id, project_id, name, goal, status]
+      properties:
+        id: {type: string, format: uuid}
+        project_id: {type: string, format: uuid}
+        board_id: {type: string, format: uuid, nullable: true}
+        name: {type: string}
+        goal: {type: string}
+        status: {type: string, enum: [planned, active, closed]}
+        start_date: {type: string, format: date, nullable: true}
+        end_date: {type: string, format: date, nullable: true}
+        started_at: {type: string, format: date-time, nullable: true}
+        completed_at: {type: string, format: date-time, nullable: true}
+        closed_at: {type: string, format: date-time, nullable: true, description: Igual que completed_at}
+        committed_points: {type: number, nullable: true, description: Puntos del alcance al iniciar}
+        completed_points: {type: number, nullable: true, description: Puntos completados al cerrar}
+      example:
+        id: 5d1c7b6e-3f0a-4c58-8d0e-2e4b9a7c3333
+        project_id: 9a0c1f10-2b3c-4d5e-8f60-71829304a5b6
+        board_id: null
+        name: Sprint 12
+        goal: Estabilizar la API
+        status: closed
+        start_date: '2026-11-02'
+        end_date: '2026-11-13'
+        started_at: '2026-11-02T09:00:00Z'
+        completed_at: '2026-11-13T17:30:00Z'
+        closed_at: '2026-11-13T17:30:00Z'
+        committed_points: 21
+        completed_points: 18
+    SprintVelocityPoint:
+      type: object
+      properties:
+        sprint_id: {type: string, format: uuid}
+        name: {type: string}
+        points: {type: number}
+    SprintCompletion:
+      type: object
+      properties:
+        sprint: {$ref: '#/components/schemas/Sprint'}
+        next_sprint: {allOf: [{$ref: '#/components/schemas/Sprint'}], nullable: true, description: Sprint de destino cuando destination es new o sprint:<id>}
+        completed_issues: {type: integer}
+        moved_issues: {type: integer}
+        completed_points: {type: number}
+        committed_points: {type: number}
+    SprintReportIssue:
+      type: object
+      properties:
+        issue_id: {type: string, format: uuid}
+        key: {type: string, example: SPR-12}
+        summary: {type: string}
+        points: {type: number, nullable: true, description: Puntos en el momento relevante}
+        status_category: {type: string, enum: [todo, in_progress, done]}
+        added_after_start: {type: boolean}
+        removed_at: {type: string, format: date-time, description: Solo en removed}
+        removed_kind: {type: string, enum: [removed, moved_out], description: Solo en removed}
+    SprintReport:
+      type: object
+      properties:
+        sprint: {$ref: '#/components/schemas/Sprint'}
+        committed_points: {type: number}
+        completed_points: {type: number}
+        incomplete_points: {type: number}
+        added_points: {type: number}
+        removed_points: {type: number}
+        completed: {type: array, items: {$ref: '#/components/schemas/SprintReportIssue'}}
+        incomplete: {type: array, items: {$ref: '#/components/schemas/SprintReportIssue'}}
+        removed: {type: array, items: {$ref: '#/components/schemas/SprintReportIssue'}}
+        added_after_start: {type: array, items: {$ref: '#/components/schemas/SprintReportIssue'}}
+        burndown:
+          type: array
+          items:
+            type: object
+            properties:
+              date: {type: string, format: date}
+              ideal: {type: number, nullable: true}
+              remaining: {type: number}
+              scope: {type: number}
+              completed: {type: number}
+        velocity: {type: array, items: {$ref: '#/components/schemas/SprintVelocityPoint'}}
+      example:
+        sprint: {id: 5d1c7b6e-3f0a-4c58-8d0e-2e4b9a7c3333, name: Sprint 12, status: closed}
+        committed_points: 10
+        completed_points: 5
+        incomplete_points: 15
+        added_points: 8
+        removed_points: 0
+        completed: [{issue_id: 0b6f2a40-5c1e-4a3e-9d57-7c1a2a9a1111, key: SPR-1, summary: A, points: 5, status_category: done, added_after_start: false}]
+        incomplete: [{issue_id: 0b6f2a40-5c1e-4a3e-9d57-7c1a2a9a2222, key: SPR-4, summary: D, points: 8, status_category: todo, added_after_start: true}]
+        removed: []
+        added_after_start: [{issue_id: 0b6f2a40-5c1e-4a3e-9d57-7c1a2a9a2222, key: SPR-4, summary: D, points: 8, status_category: todo, added_after_start: true}]
+        burndown: [{date: '2026-11-02', ideal: 10, remaining: 10, scope: 10, completed: 0}]
+        velocity: [{sprint_id: 5d1c7b6e-3f0a-4c58-8d0e-2e4b9a7c3333, name: Sprint 12, points: 5}]
+    BacklogTotals:
+      type: object
+      properties:
+        issues: {type: integer}
+        points: {type: number}
+        original_estimate_seconds: {type: integer}
+        by_category:
+          type: object
+          description: Claves todo, in_progress y done, cada una con issues, points y original_estimate_seconds
+          additionalProperties:
+            type: object
+            properties:
+              issues: {type: integer}
+              points: {type: number}
+              original_estimate_seconds: {type: integer}
+    BacklogIssue:
+      type: object
+      properties:
+        id: {type: string, format: uuid}
+        key: {type: string}
+        summary: {type: string}
+        issue_type: {type: string}
+        issue_type_name: {type: string}
+        issue_type_icon: {type: string}
+        issue_type_color: {type: string}
+        status: {type: string}
+        status_name: {type: string}
+        status_category: {type: string, enum: [todo, in_progress, done]}
+        priority: {type: string}
+        priority_name: {type: string}
+        priority_icon: {type: string}
+        priority_color: {type: string}
+        assignee_id: {type: string, format: uuid, nullable: true}
+        assignee_name: {type: string}
+        story_points: {type: number, nullable: true}
+        original_estimate_seconds: {type: integer, nullable: true}
+        rank: {type: string}
+        epic_id: {type: string, format: uuid, nullable: true}
+        epic_key: {type: string}
+        epic_summary: {type: string}
+        flagged: {type: boolean}
+        labels:
+          type: array
+          items:
+            type: object
+            properties:
+              id: {type: string, format: uuid}
+              name: {type: string}
+              color: {type: string}
+    BacklogSection:
+      type: object
+      properties:
+        kind: {type: string, enum: [active, planned, backlog]}
+        sprint: {allOf: [{$ref: '#/components/schemas/Sprint'}], nullable: true, description: Null en la seccion backlog}
+        issues: {type: array, items: {$ref: '#/components/schemas/BacklogIssue'}}
+        totals: {$ref: '#/components/schemas/BacklogTotals'}
+    Backlog:
+      type: object
+      properties:
+        project_id: {type: string, format: uuid}
+        sections: {type: array, items: {$ref: '#/components/schemas/BacklogSection'}}
+        epics:
+          type: array
+          items:
+            type: object
+            properties:
+              id: {type: string, format: uuid}
+              key: {type: string}
+              summary: {type: string}
+              status: {type: string, enum: [todo, in_progress, done]}
+              total: {type: integer}
+              done: {type: integer}
+              points: {type: number}
+              done_points: {type: number}
+              progress: {type: number, description: Fraccion de hijas terminadas, de 0 a 1}
+        can_manage_sprints: {type: boolean}
+        can_move_cards: {type: boolean}
+        truncated: {type: boolean}
+      example:
+        project_id: 9a0c1f10-2b3c-4d5e-8f60-71829304a5b6
+        sections:
+          - kind: active
+            sprint: {id: 5d1c7b6e-3f0a-4c58-8d0e-2e4b9a7c3333, name: Sprint 12, status: active}
+            issues: [{id: 0b6f2a40-5c1e-4a3e-9d57-7c1a2a9a1111, key: SPR-1, summary: Pagar con tarjeta, status_category: todo, story_points: 5, rank: m, labels: []}]
+            totals: {issues: 1, points: 5, original_estimate_seconds: 0, by_category: {todo: {issues: 1, points: 5, original_estimate_seconds: 0}, in_progress: {issues: 0, points: 0, original_estimate_seconds: 0}, done: {issues: 0, points: 0, original_estimate_seconds: 0}}}
+          - kind: backlog
+            sprint: null
+            issues: []
+            totals: {issues: 0, points: 0, original_estimate_seconds: 0, by_category: {}}
+        epics: [{id: 0b6f2a40-5c1e-4a3e-9d57-7c1a2a9a9999, key: SPR-9, summary: Pagos, status: in_progress, total: 4, done: 1, points: 13, done_points: 3, progress: 0.25}]
+        can_manage_sprints: true
+        can_move_cards: true
+        truncated: false
     TwoFactorChallenge:
       type: object
       description: Reto de inicio de sesion. El token caduca a los 5 minutos y solo sirve para /auth/login/2fa.
@@ -6639,6 +7361,251 @@ components:
       properties:
         id: {type: string, format: uuid}
         reassigned_issues: {type: integer, minimum: 0}
+    BoardSummary:
+      type: object
+      properties:
+        id: {type: string, format: uuid}
+        project_id: {type: string, format: uuid}
+        name: {type: string}
+        type: {type: string, enum: [scrum, kanban]}
+        is_default: {type: boolean}
+        column_count: {type: integer}
+        swimlane_mode: {type: string, enum: [none, assignee, epic, query, story]}
+    BoardColumnConfig:
+      type: object
+      properties:
+        id: {type: string, format: uuid}
+        name: {type: string}
+        color: {type: string, description: 'Vacio o gray, red, orange, amber, green, teal, blue, indigo, purple, pink.'}
+        position: {type: integer}
+        min_issues: {type: integer, nullable: true}
+        max_issues: {type: integer, nullable: true, description: Limite WIP de la columna.}
+        status_ids:
+          type: array
+          items: {type: string, format: uuid}
+    BoardColumnInput:
+      type: object
+      required: [name]
+      properties:
+        id: {type: string, format: uuid, description: Id de una columna existente del tablero para conservarla.}
+        name: {type: string, maxLength: 80}
+        color: {type: string}
+        min_issues: {type: integer, minimum: 0, nullable: true}
+        max_issues: {type: integer, minimum: 1, nullable: true}
+        status_ids:
+          type: array
+          items: {type: string, format: uuid}
+    BoardQueryInput:
+      type: object
+      required: [name, query]
+      properties:
+        name: {type: string, maxLength: 60}
+        query: {type: string, maxLength: 500}
+    BoardQuery:
+      type: object
+      properties:
+        id: {type: string, format: uuid}
+        name: {type: string}
+        query: {type: string}
+    BoardWorkflowStatus:
+      type: object
+      properties:
+        id: {type: string, format: uuid}
+        name: {type: string}
+        category: {type: string, enum: [todo, in_progress, done]}
+    BoardDetail:
+      type: object
+      properties:
+        id: {type: string, format: uuid}
+        project_id: {type: string, format: uuid}
+        name: {type: string}
+        type: {type: string, enum: [scrum, kanban]}
+        is_default: {type: boolean}
+        swimlane_mode: {type: string, enum: [none, assignee, epic, query, story]}
+        estimation: {type: string, enum: [story_points, issue_count, time]}
+        card_fields:
+          type: array
+          items: {type: string, enum: [key, type, priority, assignee, labels, points, epic, subtasks, flag, estimate]}
+        show_unmapped_lane: {type: boolean}
+        done_retention_days: {type: integer, nullable: true}
+        columns:
+          type: array
+          items: {$ref: '#/components/schemas/BoardColumnConfig'}
+        quick_filters:
+          type: array
+          items: {$ref: '#/components/schemas/BoardQuery'}
+        swimlanes:
+          type: array
+          items: {$ref: '#/components/schemas/BoardQuery'}
+        workflow_statuses:
+          type: array
+          items: {$ref: '#/components/schemas/BoardWorkflowStatus'}
+        unmapped_status_ids:
+          type: array
+          items: {type: string, format: uuid}
+        can_manage_board: {type: boolean}
+        can_move_cards: {type: boolean}
+    CreateBoardRequest:
+      type: object
+      required: [name]
+      properties:
+        name: {type: string, maxLength: 80}
+        type: {type: string, enum: [scrum, kanban], description: Por defecto el tipo del proyecto.}
+        swimlane_mode: {type: string, enum: [none, assignee, epic, query, story]}
+        estimation: {type: string, enum: [story_points, issue_count, time]}
+        card_fields:
+          type: array
+          items: {type: string}
+        show_unmapped_lane: {type: boolean, default: true}
+        done_retention_days: {type: integer, minimum: 0, maximum: 3650, nullable: true}
+        columns:
+          type: array
+          items: {$ref: '#/components/schemas/BoardColumnInput'}
+    UpdateBoardRequest:
+      type: object
+      properties:
+        name: {type: string, maxLength: 80}
+        swimlane_mode: {type: string, enum: [none, assignee, epic, query, story]}
+        estimation: {type: string, enum: [story_points, issue_count, time]}
+        card_fields:
+          type: array
+          items: {type: string}
+        show_unmapped_lane: {type: boolean}
+        done_retention_days: {type: integer, minimum: 0, maximum: 3650, nullable: true}
+    BoardViewRef:
+      type: object
+      properties:
+        id: {type: string, format: uuid}
+        key: {type: string}
+        summary: {type: string}
+    BoardViewNamed:
+      type: object
+      properties:
+        name: {type: string}
+        key: {type: string, description: Clave heredada (bug, task, high...) cuando existe.}
+        icon: {type: string}
+        color: {type: string}
+    BoardViewCard:
+      type: object
+      properties:
+        id: {type: string, format: uuid}
+        key: {type: string, example: CORE-12}
+        summary: {type: string}
+        type: {$ref: '#/components/schemas/BoardViewNamed'}
+        priority: {$ref: '#/components/schemas/BoardViewNamed'}
+        status: {$ref: '#/components/schemas/BoardWorkflowStatus'}
+        assignee:
+          type: object
+          nullable: true
+          properties:
+            id: {type: string, format: uuid}
+            name: {type: string}
+        labels:
+          type: array
+          items: {type: string}
+        story_points: {type: number, nullable: true}
+        remaining_estimate_seconds: {type: integer, nullable: true}
+        flagged: {type: boolean}
+        rank: {type: string}
+        sprint_id: {type: string, format: uuid, nullable: true}
+        epic:
+          nullable: true
+          allOf: [{$ref: '#/components/schemas/BoardViewRef'}]
+        parent:
+          nullable: true
+          allOf: [{$ref: '#/components/schemas/BoardViewRef'}]
+        subtasks:
+          type: object
+          properties:
+            total: {type: integer}
+            done: {type: integer}
+        swimlane_id: {type: string, description: 'Id del carril; vacio sin carriles. Valores implicitos: unassigned, no-epic, no-parent, other.'}
+    BoardViewColumn:
+      allOf:
+        - $ref: '#/components/schemas/BoardColumnConfig'
+        - type: object
+          properties:
+            count: {type: integer, description: Tarjetas mostradas tras los filtros rapidos.}
+            total: {type: integer, description: Tarjetas de la columna sin filtros rapidos.}
+            estimate: {type: number, description: Suma segun la estimacion del tablero (puntos, incidencias u horas restantes).}
+            wip_state: {type: string, enum: [ok, below_min, at_max, over_max]}
+            cards:
+              type: array
+              items: {$ref: '#/components/schemas/BoardViewCard'}
+    BoardView:
+      type: object
+      properties:
+        board: {$ref: '#/components/schemas/BoardDetail'}
+        sprint:
+          type: object
+          nullable: true
+          properties:
+            id: {type: string, format: uuid}
+            name: {type: string}
+        columns:
+          type: array
+          items: {$ref: '#/components/schemas/BoardViewColumn'}
+        unmapped_column:
+          type: object
+          nullable: true
+          description: Columna implicita Sin asignar con las tarjetas cuyo estado no esta en ninguna columna.
+          properties:
+            id: {type: string, example: unmapped}
+            name: {type: string}
+            status_ids:
+              type: array
+              items: {type: string, format: uuid}
+            count: {type: integer}
+            total: {type: integer}
+            estimate: {type: number}
+            cards:
+              type: array
+              items: {$ref: '#/components/schemas/BoardViewCard'}
+        unmapped_count: {type: integer}
+        swimlanes:
+          type: array
+          items:
+            type: object
+            properties:
+              id: {type: string}
+              name: {type: string}
+              kind: {type: string, enum: [none, assignee, epic, query, story]}
+              count: {type: integer}
+    MoveBoardCardRequest:
+      type: object
+      required: [column_id]
+      properties:
+        column_id: {type: string, format: uuid}
+        before_issue_id: {type: string, format: uuid}
+        after_issue_id: {type: string, format: uuid}
+        swimlane: {type: string, description: Id del carril donde se soltó la tarjeta.}
+        transition_id: {type: string, description: Transicion elegida cuando varias llevan a la columna o ya se pidio su informacion.}
+        input:
+          type: object
+          properties:
+            fields: {type: object, additionalProperties: {type: string}}
+            comment: {type: string}
+            resolution_id: {type: string, format: uuid}
+            assignee_id: {type: string, format: uuid}
+    MoveBoardCardResult:
+      type: object
+      properties:
+        issue_id: {type: string, format: uuid}
+        column_id: {type: string, format: uuid}
+        status: {$ref: '#/components/schemas/BoardWorkflowStatus'}
+        transition_id: {type: string}
+        transitioned: {type: boolean}
+        rank: {type: string, description: Nueva posicion; vacia si no se pidio reordenar.}
+        wip:
+          type: object
+          description: Aviso del limite WIP de la columna destino (no bloquea el movimiento).
+          properties:
+            column_id: {type: string, format: uuid}
+            count: {type: integer}
+            min_issues: {type: integer, nullable: true}
+            max_issues: {type: integer, nullable: true}
+            state: {type: string, enum: [ok, below_min, at_max, over_max]}
+            exceeded: {type: boolean}
     ProjectBoard:
       type: object
       required: [id, project_id, name, type, columns]

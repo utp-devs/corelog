@@ -13,12 +13,12 @@ import (
 // TestSprintHTTPRejectsMalformedDates comprueba que una fecha fuera de formato responde 422.
 func TestSprintHTTPRejectsMalformedDates(t *testing.T) {
 	bad := "2026/11/02"
-	if _, _, err := parseDates(&bad, nil); apperror.KindOf(err) != apperror.KindValidation {
+	if _, err := parseDate(&bad); apperror.KindOf(err) != apperror.KindValidation {
 		t.Fatalf("malformed date: want validation error, got %v", err)
 	}
 	good := "2026-11-02"
-	start, end, err := parseDates(&good, nil)
-	if err != nil || start == nil || end != nil {
+	start, err := parseDate(&good)
+	if err != nil || start == nil {
 		t.Fatalf("valid start date rejected: %v", err)
 	}
 }
