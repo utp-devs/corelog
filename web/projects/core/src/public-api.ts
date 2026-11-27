@@ -45,3 +45,8 @@ export * from './lib/utils/org-permissions';
 export * from './lib/utils/board-rules';
 export * from './lib/utils/calendar-dates';
 export * from './lib/utils/silent-request';
+export * from './lib/utils/markdown/index';
+export * from './lib/guards/unsaved-changes.copy';
+export * from './lib/guards/unsaved-changes.guard';
+export * from './lib/services/hotkeys.service';
+export * from './lib/services/breakpoint.service';
