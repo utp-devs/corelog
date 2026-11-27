@@ -1,10 +1,14 @@
 // Forwards localhost ports of the Playwright container to the host (the dev stack) so the app is
 // opened on http://localhost:<port>: a secure context, exactly like a developer's browser, which the
-// clipboard API requires. Usage: node scripts/e2e-forward.cjs host.docker.internal 5173 8080
+// clipboard API requires. Each argument is <upstream host>:<upstream port>=<local port>, for example
+// node scripts/e2e-forward.cjs ui:4300=5173 api:8080=8080
 const net = require('node:net');
 
-const [host, ...ports] = process.argv.slice(2);
-for (const port of ports.map(Number)) {
+for (const spec of process.argv.slice(2)) {
+  const [target, local] = spec.split('=');
+  const [host, upstreamPort] = target.split(':');
+  const port = Number(upstreamPort);
+  const localPort = Number(local);
   net
     .createServer((client) => {
       const upstream = net.connect({ port, host });
@@ -22,5 +26,5 @@ for (const port of ports.map(Number)) {
       client.on('close', close);
       upstream.on('close', close);
     })
-    .listen(port, '127.0.0.1');
+    .listen(localPort, '127.0.0.1');
 }
