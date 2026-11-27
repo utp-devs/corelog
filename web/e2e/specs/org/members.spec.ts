@@ -6,7 +6,7 @@ import { expect, test } from '../../fixtures/test.ts';
 
 const MEMBERS_PATH = '/organization/members';
 
-test.describe('miembros de la organizacion (S-21)', () => {
+test.describe('miembros de la organizacion', () => {
   test('owner cambia el rol de un miembro tras confirmarlo', async ({ as, api, data }) => {
     const owner = await api('owner');
     const acme = await orgIdBySlug(owner, 'acme');

@@ -4,7 +4,7 @@ import { expect, test } from '../../fixtures/test.ts';
 
 const PEOPLE_PATH = '/people';
 
-test.describe('personas (S-27)', () => {
+test.describe('personas', () => {
   test('el directorio lista a los miembros y filtra por correo', async ({ as, api }) => {
     const member = await api('member');
     const acme = await orgIdBySlug(member, 'acme');

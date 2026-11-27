@@ -10,7 +10,7 @@ function freshEmail(): string {
   return `e2e.inv.${Math.random().toString(36).slice(2, 10)}@corelog.test`;
 }
 
-test.describe('invitaciones de la organizacion (S-22)', () => {
+test.describe('invitaciones de la organizacion', () => {
   test('owner crea una invitacion y copia su enlace', async ({ as, api, data }) => {
     const email = freshEmail();
     const page = await as('owner');

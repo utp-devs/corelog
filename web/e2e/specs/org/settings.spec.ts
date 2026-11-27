@@ -5,7 +5,7 @@ import { expect, test } from '../../fixtures/test.ts';
 
 const ACME_PATH = '/organization/settings';
 
-test.describe('configuracion de la organizacion (S-20)', () => {
+test.describe('configuracion de la organizacion', () => {
   test('owner cambia la visibilidad por defecto y la ve tras recargar', async ({ as, api }) => {
     const owner = await api('owner');
     const acme = await orgIdBySlug(owner, 'acme');

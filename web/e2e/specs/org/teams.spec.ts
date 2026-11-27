@@ -4,7 +4,7 @@ import { expect, test } from '../../fixtures/test.ts';
 
 const TEAMS_PATH = '/teams';
 
-test.describe('equipos (S-25)', () => {
+test.describe('equipos', () => {
   test('member crea un equipo desde la pantalla de equipos', async ({ as, api }) => {
     const member = await api('member');
     const acme = await orgIdBySlug(member, 'acme');
