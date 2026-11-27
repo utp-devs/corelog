@@ -1,33 +1,46 @@
 import { NgTemplateOutlet } from '@angular/common';
-import { ChangeDetectionStrategy, Component, DestroyRef, computed, inject } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  DestroyRef,
+  computed,
+  inject,
+  signal,
+} from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import {
-  BacklogItem,
   AuthStore,
+  BacklogItem,
+  BacklogSprint,
   BacklogStore,
   OrganizationStore,
   ProjectStore,
+  SprintStatus,
   WorkItemStatus,
   projectAccessVariantOf,
+  shortIssueKeyOf,
 } from '@corelog/core';
 import { DropdownMenu } from '@corelog/ui/app-shell';
 import { DataTable, DataTableCell, DataTableColumn } from '@corelog/ui/data-table';
 import { EmptyState } from '@corelog/ui/empty-state';
 import { ErrorPage } from '@corelog/ui/error-page';
-import { Lozenge, LozengeCategory } from '@corelog/ui/lozenge';
+import { Lozenge, LozengeCategory, LozengeTone } from '@corelog/ui/lozenge';
 import { PageContainer } from '@corelog/ui/page-container';
 import { PageHeader, PageHeaderActions } from '@corelog/ui/page-header';
 import { PriorityTag } from '@corelog/ui/priority-tag';
-import { Section } from '@corelog/ui/section';
+import { ProgressBar } from '@corelog/ui/progress-bar';
 import { AppTooltip } from '@corelog/ui/tooltip';
 import { Button } from 'primeng/button';
 import { Message } from 'primeng/message';
 
 import { trackProjectScope } from '../shared/project-scope';
 import {
+  SPRINT_STATUS_LABELS,
+  SPRINT_STATUS_TONES,
   STATUS_CATEGORIES,
   isReadOnlyRole,
-  shortKeyOf,
+  isResolvedStatus,
+  sprintDatesOf,
   statusName,
   typeName,
 } from '../shared/work-labels';
@@ -45,9 +58,13 @@ const COLUMNS: DataTableColumn[] = [
 const LOAD_ERROR_MESSAGE =
   'No se pudo cargar el backlog. Verifica que tengas acceso al proyecto e intenta de nuevo.';
 
+/** Id of the collapsible block that lists the issues no open sprint holds. */
+const BACKLOG_SECTION_ID = 'backlog';
+
 /**
- * Project backlog in rank order. Items move one position at a time with the up and down controls; the
- * server answers with the renumbered list, which replaces the rows.
+ * Project backlog: one collapsible block per active or planned sprint, with its dates, goal, progress and
+ * issues, then the block of the issues no sprint holds, in rank order. Those move one position at a time
+ * with the up and down controls; the server answers with the renumbered list, which replaces the rows.
  */
 @Component({
   selector: 'app-project-backlog-page',
@@ -67,7 +84,7 @@ const LOAD_ERROR_MESSAGE =
     PageContainer,
     PageHeader,
     PriorityTag,
-    Section,
+    ProgressBar,
   ],
   templateUrl: './project-backlog-page.html',
   styleUrl: './project-backlog-page.scss',
@@ -80,7 +97,10 @@ export class ProjectBacklogPage {
   private readonly projects = inject(ProjectStore);
   private readonly destroyRef = inject(DestroyRef);
 
-  protected readonly items = computed(() => [...this.store.ordered()]);
+  protected readonly items = computed(() => [...this.store.unplanned()]);
+  protected readonly sprintBlocks = this.store.sprints.value;
+  protected readonly backlogSectionId = BACKLOG_SECTION_ID;
+  private readonly collapsedIds = signal<ReadonlySet<string>>(new Set());
   protected readonly columns = COLUMNS;
   protected readonly loadErrorMessage = LOAD_ERROR_MESSAGE;
 
@@ -113,6 +133,41 @@ export class ProjectBacklogPage {
     ),
   );
 
+  protected isOpen(sectionId: string): boolean {
+    return !this.collapsedIds().has(sectionId);
+  }
+
+  protected toggle(sectionId: string): void {
+    this.collapsedIds.update((current) => {
+      const next = new Set(current);
+      if (!next.delete(sectionId)) {
+        next.add(sectionId);
+      }
+      return next;
+    });
+  }
+
+  protected sprintStatusLabel(status: SprintStatus): string {
+    return SPRINT_STATUS_LABELS[status];
+  }
+
+  protected sprintStatusTone(status: SprintStatus): LozengeTone {
+    return SPRINT_STATUS_TONES[status];
+  }
+
+  protected sprintDates(block: BacklogSprint): string {
+    return sprintDatesOf(block.sprint);
+  }
+
+  protected resolvedOf(block: BacklogSprint): number {
+    return block.issues.filter((issue) => isResolvedStatus(issue.status)).length;
+  }
+
+  /** Share of the sprint issues that are resolved or closed; an empty sprint has none. */
+  protected percentOf(block: BacklogSprint): number {
+    return block.issues.length === 0 ? 0 : (this.resolvedOf(block) / block.issues.length) * 100;
+  }
+
   protected statusLabel(status: WorkItemStatus): string {
     return statusName(status, status);
   }
@@ -121,8 +176,8 @@ export class ProjectBacklogPage {
     return typeName(type);
   }
 
-  protected shortKey(item: BacklogItem): string {
-    return shortKeyOf(item.id);
+  protected shortKey(item: { readonly id: string }): string {
+    return shortIssueKeyOf(item.id);
   }
 
   protected statusCategory(status: WorkItemStatus): LozengeCategory {

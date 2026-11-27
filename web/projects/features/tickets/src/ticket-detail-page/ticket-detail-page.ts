@@ -40,6 +40,7 @@ import {
   effectiveProjectRole,
   hasProjectPermission,
   issueKeyOf,
+  shortIssueKeyOf,
   issuePath,
 } from '@corelog/core';
 import { BreadcrumbItem, Breadcrumbs } from '@corelog/ui/breadcrumbs';
@@ -64,12 +65,10 @@ import { Subscription, firstValueFrom, map } from 'rxjs';
 import { injectMemberNames } from '../hooks/member-names';
 import { injectTeammateSearch } from '../hooks/teammate-search';
 import { IssuePicker } from '../issue-picker/issue-picker';
-import { CommentEditApi } from '../shared/comment-edit-api';
 import { errorMessage } from '../shared/error-message';
 import { payloadFrom } from '../shared/issue-payload';
 import { MentionSearch } from '../shared/mention-search';
 import { exactDate, timeAgo } from '../shared/time';
-import { shortIssueKey } from '../ticket-list/relative-time';
 import { TicketActivity } from './ticket-activity';
 import { TicketDescriptionSection } from './ticket-description-section';
 
@@ -152,7 +151,6 @@ export class TicketDetailPage {
   private readonly auth = inject(AuthStore);
   private readonly projectApi = inject(ProjectApiService);
   private readonly projects = inject(ProjectStore);
-  private readonly commentApi = inject(CommentEditApi);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   private readonly notify = inject(NotificationService);
@@ -555,7 +553,7 @@ export class TicketDetailPage {
   }
 
   protected linkKey(link: IssueLink): string {
-    return shortIssueKey(issueKeyOf(this.otherIssueId(link)));
+    return shortIssueKeyOf(this.otherIssueId(link));
   }
 
   protected linkPath(link: IssueLink): string {
@@ -582,17 +580,11 @@ export class TicketDetailPage {
     const ticket = this.detail();
     if (!ticket) return false;
     try {
-      await firstValueFrom(this.commentApi.update(ticket.id, commentId, body));
+      await firstValueFrom(this.store.updateComment(ticket.id, commentId, body));
     } catch (error) {
       this.notify.error(errorMessage(error, 'No se pudo guardar el comentario'));
       return false;
     }
-    const updatedAt = new Date().toISOString();
-    this.store.comments.update((items) =>
-      items?.map((comment) =>
-        comment.id === commentId ? { ...comment, body, updatedAt } : comment,
-      ),
-    );
     this.notify.success('Comentario actualizado');
     return true;
   };
@@ -665,7 +657,7 @@ export class TicketDetailPage {
   }
 
   protected shortKeyOf(ticket: { readonly id: string }): string {
-    return shortIssueKey(issueKeyOf(ticket.id));
+    return shortIssueKeyOf(ticket.id);
   }
 
   protected isResolved(ticket: Ticket): boolean {
@@ -716,7 +708,7 @@ export class TicketDetailPage {
 
   private loadMembership(projectId: string): void {
     this.membersRequest?.unsubscribe();
-    this.membersRequest = this.projectApi.listMembers(projectId).subscribe({
+    this.membersRequest = this.projectApi.listMembers(projectId, { silent: true }).subscribe({
       next: (members) => this.membership.set({ projectId, members }),
       error: () => this.membership.set({ projectId, members: [] }),
     });

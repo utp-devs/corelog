@@ -36,7 +36,10 @@ const USER: User = {
 
 function preview(patch: Partial<InvitationPreview> = {}): InvitationPreview {
   return {
+    organizationId: 'org-1',
     organizationName: 'Acme',
+    hasLogo: false,
+    invitedBy: null,
     role: 'member',
     email: 'ana@example.com',
     status: 'pending',

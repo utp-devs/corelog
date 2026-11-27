@@ -204,8 +204,8 @@ function switchNamed(harness: RouterTestingHarness, name: string): HTMLElement |
 }
 
 function radioNamed(harness: RouterTestingHarness, name: string): HTMLInputElement {
-  const label = Array.from(root(harness).querySelectorAll('label.choice')).find((element) =>
-    (element.textContent ?? '').includes(name),
+  const label = Array.from(root(harness).querySelectorAll('label.appearance-section__choice')).find(
+    (element) => (element.textContent ?? '').includes(name),
   );
   const radio = label?.querySelector('input[type="radio"]');
   if (!(radio instanceof HTMLInputElement)) throw new Error(`no radio for ${name}`);

@@ -32,12 +32,3 @@ export function relativeTime(iso: string, now: Date = new Date()): string | null
   }
   return FORMATTER.format(-Math.floor(elapsed / WEEK_MS), 'week');
 }
-
-/** Readable short key of an issue: the prefix and the first six characters of its identifier. */
-export function shortIssueKey(fullKey: string): string {
-  const dash = fullKey.indexOf('-');
-  if (dash < 0) {
-    return fullKey;
-  }
-  return `${fullKey.slice(0, dash + 1)}${fullKey.slice(dash + 1, dash + 7)}`;
-}

@@ -6,6 +6,126 @@
     margin: 0;
   }
 
+  &__stack {
+    @include m.flex-column(4);
+    min-width: 0;
+  }
+
+  &__block {
+    border: 1px solid var(--cl-border);
+    border-radius: var(--cl-radius-lg);
+    background: var(--cl-bg-surface);
+  }
+
+  &__block-title {
+    margin: 0;
+    font-size: inherit;
+  }
+
+  &__toggle {
+    @include m.flex-row(2, center);
+    width: 100%;
+    min-height: var(--cl-control-h-lg);
+    padding: var(--cl-space-3) var(--cl-space-4);
+    border: 0;
+    border-radius: var(--cl-radius-lg);
+    background: transparent;
+    color: var(--cl-text);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+
+    &:hover {
+      background: var(--cl-bg-hover);
+    }
+
+    &:focus-visible {
+      outline: none;
+      box-shadow: var(--cl-shadow-focus);
+    }
+  }
+
+  &__chevron {
+    color: var(--cl-text-subtle);
+    font-size: var(--cl-font-small);
+  }
+
+  &__block-name {
+    @include m.truncate;
+    font-size: var(--cl-font-body-strong);
+    font-weight: var(--cl-weight-semibold);
+  }
+
+  &__block-meta {
+    margin-left: auto;
+    color: var(--cl-text-subtle);
+    font-size: var(--cl-font-small);
+    white-space: nowrap;
+  }
+
+  &__sprint-head {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(10rem, 16rem);
+    gap: var(--cl-space-3) var(--cl-space-6);
+    align-items: center;
+    padding: 0 var(--cl-space-4) var(--cl-space-3);
+
+    @include m.respond-down(640px) {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+
+  &__goal {
+    margin: 0;
+    color: var(--cl-text-subtle);
+  }
+
+  &__progress {
+    display: block;
+    min-width: 0;
+  }
+
+  &__panel {
+    border-top: 1px solid var(--cl-divider);
+  }
+
+  &__note {
+    margin: 0;
+    padding: var(--cl-space-4);
+    color: var(--cl-text-subtle);
+  }
+
+  &__issues {
+    @include m.flex-column(0);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  &__issue {
+    @include m.flex-row(3, center);
+    padding: var(--cl-space-3) var(--cl-space-4);
+
+    & + & {
+      border-top: 1px solid var(--cl-divider);
+    }
+
+    .project-backlog__main {
+      flex: 1 1 auto;
+    }
+
+    @include m.respond-down(640px) {
+      flex-wrap: wrap;
+    }
+  }
+
+  &__points {
+    min-width: 2ch;
+    color: var(--cl-text-subtle);
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+  }
+
   &__position {
     color: var(--cl-text-subtle);
     font-variant-numeric: tabular-nums;

@@ -8,9 +8,9 @@ import {
   signal,
   untracked,
 } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { Button } from 'primeng/button';
 import { DatePicker } from 'primeng/datepicker';
 import { InputText } from 'primeng/inputtext';
@@ -24,6 +24,7 @@ import {
   IssuePriority,
   IssueStatus,
   IssueType,
+  AuthStore,
   ListTicketsFilter,
   NotificationService,
   SavedFilter,
@@ -32,6 +33,7 @@ import {
   Ticket,
   TicketStore,
   ISSUES_PATH,
+  UNASSIGNED_FILTER,
   issueKeyOf,
   issuePath,
 } from '@corelog/core';
@@ -44,11 +46,16 @@ import { PageHeader } from '@corelog/ui/page-header';
 import { Section } from '@corelog/ui/section';
 import { Toolbar, ToolbarLeft, ToolbarRight, ToolbarSecondary } from '@corelog/ui/toolbar';
 
+import { injectMemberNames } from '../hooks/member-names';
 import { TicketList } from '../ticket-list/ticket-list';
 
 const DEFAULT_PAGE_SIZE = 20;
 const SAVED_FILTER_NAME_MAX = 80;
 const NEW_ISSUE_PATH = `${ISSUES_PATH}/new`;
+/** Query parameter that keeps the assignee filter in the address. */
+const ASSIGNEE_PARAM = 'assignee';
+/** Value of the assignee filter for the issues assigned to the signed-in user. */
+const ASSIGNED_TO_ME = 'me';
 
 const STATUS_OPTIONS = (Object.keys(ISSUE_STATUS_META) as IssueStatus[]).map((value) => ({
   value,
@@ -111,6 +118,9 @@ function endOfDayIso(date: Date): string {
 export class TicketsListPage {
   private readonly store = inject(TicketStore);
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
+  private readonly auth = inject(AuthStore);
+  private readonly members = injectMemberNames();
   private readonly notify = inject(NotificationService);
   private readonly savedFilterApi = inject(SavedFilterApiService);
   private readonly destroyRef = inject(DestroyRef);
@@ -118,6 +128,13 @@ export class TicketsListPage {
   protected readonly statusFilter = signal<IssueStatus | undefined>(undefined);
   protected readonly priorityFilter = signal<IssuePriority | undefined>(undefined);
   protected readonly issueTypeFilter = signal<IssueType | undefined>(undefined);
+  /** Kept in the address (`?assignee=`): `me`, `none` or a member id. */
+  private readonly queryParams = toSignal(this.route.queryParamMap, {
+    initialValue: this.route.snapshot.queryParamMap,
+  });
+  protected readonly assigneeFilter = computed(
+    () => this.queryParams().get(ASSIGNEE_PARAM) || undefined,
+  );
   protected readonly dueFrom = signal<string | undefined>(undefined);
   protected readonly dueTo = signal<string | undefined>(undefined);
   protected readonly page = signal(1);
@@ -142,6 +159,7 @@ export class TicketsListPage {
       this.statusFilter() ||
       this.priorityFilter() ||
       this.issueTypeFilter() ||
+      this.assigneeFilter() ||
       this.dueFrom() ||
       this.dueTo(),
     ),
@@ -158,10 +176,21 @@ export class TicketsListPage {
     dueFrom: this.dueFrom(),
     dueTo: this.dueTo(),
   }));
+  /** The value sent to the API: `me` becomes the signed-in user's id. */
+  private readonly assigneeIdForApi = computed(() => {
+    const value = this.assigneeFilter();
+    return value === ASSIGNED_TO_ME ? this.auth.user()?.id : value;
+  });
+  private readonly assigneeOptions = computed(() => [
+    { value: ASSIGNED_TO_ME, label: 'Asignadas a mí' },
+    { value: UNASSIGNED_FILTER, label: 'Sin asignar' },
+    ...this.members.members().map((member) => ({ value: member.id, label: member.name })),
+  ]);
   protected readonly filter = computed<ListTicketsFilter>(() => ({
     status: this.statusFilter(),
     priority: this.priorityFilter(),
     issueType: this.issueTypeFilter(),
+    assigneeId: this.assigneeIdForApi(),
     query: this.query(),
     dueFrom: this.dueFrom(),
     dueTo: this.dueTo(),
@@ -204,6 +233,13 @@ export class TicketsListPage {
       value: this.issueTypeFilter(),
       onChange: (value) =>
         this.changeFilter(() => this.issueTypeFilter.set(value as IssueType | undefined)),
+    },
+    {
+      key: 'assignee',
+      label: 'Filtrar por asignado',
+      options: this.assigneeOptions(),
+      value: this.assigneeFilter(),
+      onChange: (value) => this.changeFilter(() => this.setAssignee(value)),
     },
   ]);
 
@@ -308,6 +344,7 @@ export class TicketsListPage {
     this.statusFilter.set(undefined);
     this.priorityFilter.set(undefined);
     this.issueTypeFilter.set(undefined);
+    this.setAssignee(undefined);
     this.dueFrom.set(undefined);
     this.dueTo.set(undefined);
     this.selectedSavedFilter.set(undefined);
@@ -396,6 +433,16 @@ export class TicketsListPage {
         takeUntilDestroyed(this.destroyRef),
       )
       .subscribe({ error: () => this.notify.error('No se pudo actualizar la incidencia') });
+  }
+
+  /** Writes the assignee filter to the address, replacing the history entry so Back does not step through filters. */
+  private setAssignee(value: string | undefined): void {
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { [ASSIGNEE_PARAM]: value ?? null },
+      queryParamsHandling: 'merge',
+      replaceUrl: true,
+    });
   }
 
   private changeFilter(apply: () => void): void {

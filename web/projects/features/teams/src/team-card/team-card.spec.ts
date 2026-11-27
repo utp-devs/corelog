@@ -41,8 +41,8 @@ describe('TeamCard', () => {
     expect(render(base).textContent).toContain('0 miembros');
   });
 
-  it('shows the Responsable lozenge only when the caller is a maintainer', () => {
-    expect(render({ ...base, myRole: 'maintainer' }).textContent).toContain('Responsable');
+  it('presents no lead: the caller role is not shown as Responsable on the card', () => {
+    expect(render({ ...base, myRole: 'maintainer' }).textContent).not.toContain('Responsable');
     expect(render({ ...base, myRole: 'member' }).textContent).not.toContain('Responsable');
   });
 

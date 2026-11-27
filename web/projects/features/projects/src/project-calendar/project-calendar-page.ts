@@ -18,6 +18,7 @@ import {
   monthCells,
   PROJECT_MOBILE_QUERY,
   projectAccessVariantOf,
+  shortIssueKeyOf,
 } from '@corelog/core';
 import { ErrorPage } from '@corelog/ui/error-page';
 import { ErrorState } from '@corelog/ui/error-state';
@@ -29,7 +30,6 @@ import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { SelectButton } from 'primeng/selectbutton';
 
-import { shortKeyOf } from '../shared/issue-key';
 import { injectProjectId } from '../shared/project-route';
 
 type CalendarView = 'month' | 'list';
@@ -139,7 +139,7 @@ export class ProjectCalendarPage implements OnInit {
   }
 
   protected shortKey(issueId: string): string {
-    return shortKeyOf(issueId);
+    return shortIssueKeyOf(issueId);
   }
 
   protected isToday(cell: Date): boolean {

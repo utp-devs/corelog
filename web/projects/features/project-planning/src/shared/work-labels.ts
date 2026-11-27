@@ -5,11 +5,12 @@ import {
   IssueType,
   OrgRole,
   ProjectMember,
+  Sprint,
+  SprintStatus,
   WorkItemStatus,
   effectiveProjectRole,
-  issueKeyOf,
 } from '@corelog/core';
-import { LozengeCategory } from '@corelog/ui/lozenge';
+import { LozengeCategory, LozengeTone } from '@corelog/ui/lozenge';
 
 /** Names of the workflow states as the planning screens show them, chosen by status code. */
 export const STATUS_NAMES: Readonly<Record<WorkItemStatus, string>> = {
@@ -26,6 +27,37 @@ export const STATUS_CATEGORIES: Readonly<Record<WorkItemStatus, LozengeCategory>
   closed: 'done',
 };
 
+/** Whether work on an item is over: resolved or closed. */
+export function isResolvedStatus(status: WorkItemStatus): boolean {
+  return status === 'resolved' || status === 'closed';
+}
+
+/** Spanish name of each sprint state. */
+export const SPRINT_STATUS_LABELS: Readonly<Record<SprintStatus, string>> = {
+  planned: 'Planificado',
+  active: 'Activo',
+  closed: 'Cerrado',
+};
+
+export const SPRINT_STATUS_TONES: Readonly<Record<SprintStatus, LozengeTone>> = {
+  planned: 'info',
+  active: 'success',
+  closed: 'neutral',
+};
+
+/** ISO day (2026-11-19) as dd/MM/yyyy. Other text is returned unchanged. */
+export function formatDay(value: string): string {
+  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(value);
+  return match ? `${match[3]}/${match[2]}/${match[1]}` : value;
+}
+
+/** Dates of a sprint as dd/MM/yyyy - dd/MM/yyyy, or a note when it has none. */
+export function sprintDatesOf(sprint: Sprint): string {
+  return sprint.startDate && sprint.endDate
+    ? `${formatDay(sprint.startDate)} - ${formatDay(sprint.endDate)}`
+    : 'Sin fechas';
+}
+
 /** Spanish name of a status code. Unknown codes fall back to the given text. */
 export function statusName(status: WorkItemStatus, fallback = ''): string {
   return STATUS_NAMES[status] ?? fallback;
@@ -34,13 +66,6 @@ export function statusName(status: WorkItemStatus, fallback = ''): string {
 /** Spanish name of an issue type. Unknown types fall back to the given text. */
 export function typeName(type: string): string {
   return ISSUE_TYPE_LABELS[type as IssueType] ?? type;
-}
-
-/** Readable short key of an issue: the prefix and the first six characters of its identifier. */
-export function shortKeyOf(issueId: string): string {
-  const full = issueKeyOf(issueId);
-  const dash = full.indexOf('-');
-  return dash < 0 ? full : full.slice(0, dash + 7);
 }
 
 /**

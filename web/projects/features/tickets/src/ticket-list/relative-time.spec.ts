@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { relativeTime, shortIssueKey } from './relative-time';
+import { relativeTime } from './relative-time';
 
 const NOW = new Date('2026-11-26T12:00:00Z');
 
@@ -17,13 +17,5 @@ describe('relativeTime', () => {
     expect(relativeTime('2026-09-01T00:00:00Z', NOW)).toBeNull();
     expect(relativeTime('2026-12-01T00:00:00Z', NOW)).toBeNull();
     expect(relativeTime('not a date', NOW)).toBeNull();
-  });
-});
-
-describe('shortIssueKey', () => {
-  it('keeps the prefix and six characters of the identifier', () => {
-    expect(shortIssueKey('INC-11111111')).toBe('INC-111111');
-    expect(shortIssueKey('INC-AB12')).toBe('INC-AB12');
-    expect(shortIssueKey('plain')).toBe('plain');
   });
 });

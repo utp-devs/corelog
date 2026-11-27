@@ -310,6 +310,17 @@ describe('TicketDetailPage', () => {
     );
   });
 
+  it('reads the project members silently so a failure never raises a toast', async () => {
+    const ctx = setupTickets({
+      user: userOf({ role: 'user' }),
+      ticketApi: { getById: () => of(ticketOf({})) },
+      projectApi: { listMembers: () => of([memberOf('user-1', 'viewer')]) },
+    });
+    await renderDetail();
+
+    expect(ctx.projectApi.listMembers).toHaveBeenCalledWith(expect.any(String), { silent: true });
+  });
+
   it('shows the clear option to a project contributor who is not a platform admin', async () => {
     const assigned = ticketOf({ assigneeId: 'user-2', assigneeName: 'Luis Pérez' });
     setupTickets({
@@ -593,7 +604,7 @@ describe('TicketDetailPage', () => {
     harness.fixture.detectChanges();
     clickIn(document, 'Guardar');
     await settle(harness);
-    expect(ctx.commentApi.update).toHaveBeenCalledWith(ISSUE_ID, 'c1', 'Texto corregido');
+    expect(ctx.ticketApi.updateComment).toHaveBeenCalledWith(ISSUE_ID, 'c1', 'Texto corregido');
     expect(document.body.textContent).toContain('Texto corregido');
 
     const edited = Array.from(

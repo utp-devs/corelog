@@ -11,12 +11,7 @@
     <app-page-header title="Miembros" [subtitle]="subtitle()">
       @if (canManage()) {
         <div appPageHeaderActions>
-          <p-button
-            label="Invitar personas"
-            type="button"
-            [buttonProps]="noAutofocus"
-            (onClick)="goToInvitations()"
-          />
+          <p-button label="Invitar personas" type="button" (onClick)="goToInvitations()" />
         </div>
       }
     </app-page-header>
@@ -147,12 +142,7 @@
           description="Invita a tus compañeros para empezar a colaborar."
         />
         @if (canManage()) {
-          <p-button
-            label="Invitar personas"
-            type="button"
-            [buttonProps]="noAutofocus"
-            (onClick)="goToInvitations()"
-          />
+          <p-button label="Invitar personas" type="button" (onClick)="goToInvitations()" />
         }
       }
     </ng-template>

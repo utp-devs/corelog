@@ -38,19 +38,15 @@ import { Message } from 'primeng/message';
 import { Select } from 'primeng/select';
 
 import { projectIdParam } from '../shared/project-scope';
-import { STATUS_CATEGORIES, statusName } from '../shared/work-labels';
+import {
+  SPRINT_STATUS_LABELS,
+  SPRINT_STATUS_TONES,
+  STATUS_CATEGORIES,
+  sprintDatesOf,
+  statusName,
+} from '../shared/work-labels';
 import { BurndownChart } from './burndown-chart';
 
-const STATUS_LABELS: Record<SprintStatus, string> = {
-  planned: 'Planificado',
-  active: 'Activo',
-  closed: 'Cerrado',
-};
-const STATUS_TONES: Record<SprintStatus, LozengeTone> = {
-  planned: 'info',
-  active: 'success',
-  closed: 'neutral',
-};
 const ISSUE_COLUMNS: DataTableColumn[] = [
   { key: 'title', title: 'Incidencia', mobilePrimary: true },
   { key: 'status', title: 'Estado' },
@@ -140,11 +136,11 @@ export class ProjectSprintsPage {
   }
 
   protected statusLabel(status: SprintStatus): string {
-    return STATUS_LABELS[status];
+    return SPRINT_STATUS_LABELS[status];
   }
 
   protected statusTone(status: SprintStatus): LozengeTone {
-    return STATUS_TONES[status];
+    return SPRINT_STATUS_TONES[status];
   }
 
   protected issueStatusLabel(status: WorkItemStatus): string {
@@ -157,9 +153,7 @@ export class ProjectSprintsPage {
 
   /** Dates of a sprint as dd/MM/yyyy. */
   protected dateRangeOf(sprint: Sprint): string {
-    return sprint.startDate && sprint.endDate
-      ? `${formatDay(sprint.startDate)} - ${formatDay(sprint.endDate)}`
-      : 'Sin fechas';
+    return sprintDatesOf(sprint);
   }
 
   protected setDraft(field: keyof SprintDraft, event: Event): void {
@@ -192,10 +186,4 @@ export class ProjectSprintsPage {
   protected canRemove(sprint: Sprint): boolean {
     return sprint.status !== 'closed';
   }
-}
-
-/** ISO day (2026-11-19) as dd/MM/yyyy. Other text is returned unchanged. */
-function formatDay(value: string): string {
-  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(value);
-  return match ? `${match[3]}/${match[2]}/${match[1]}` : value;
 }

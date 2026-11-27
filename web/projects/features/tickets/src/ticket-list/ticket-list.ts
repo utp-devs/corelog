@@ -16,6 +16,7 @@ import {
   IssueStatusCategory,
   Ticket,
   issueKeyOf,
+  shortIssueKeyOf,
   issuePath,
 } from '@corelog/core';
 import {
@@ -32,7 +33,7 @@ import { PriorityTag } from '@corelog/ui/priority-tag';
 import { AppTooltip } from '@corelog/ui/tooltip';
 import { UserChip } from '@corelog/ui/user-chip';
 
-import { relativeTime, shortIssueKey } from './relative-time';
+import { relativeTime } from './relative-time';
 
 /** Below this width the updated-date column is left out so the remaining columns fit. */
 const NARROW_TABLE_QUERY = '(max-width: 1023.98px)';
@@ -104,7 +105,7 @@ export class TicketList {
   }
 
   protected shortKeyOf(ticket: Ticket): string {
-    return shortIssueKey(issueKeyOf(ticket.id));
+    return shortIssueKeyOf(ticket.id);
   }
 
   protected keyOf(ticket: Ticket): string {

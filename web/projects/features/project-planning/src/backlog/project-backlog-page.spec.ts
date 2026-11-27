@@ -10,6 +10,9 @@ import {
   ProjectApiService,
   ProjectMember,
   SessionService,
+  Sprint,
+  SprintApiService,
+  SprintIssue,
 } from '@corelog/core';
 import { guardConsole, installViewport, provideCorelogTesting } from '@corelog/core/testing';
 import { NEVER, Observable, of } from 'rxjs';
@@ -52,6 +55,11 @@ const items: BacklogItem[] = [
   },
 ];
 
+interface SprintFixture {
+  readonly sprint: Sprint;
+  readonly issues: SprintIssue[];
+}
+
 async function settle(harness: RouterTestingHarness): Promise<void> {
   harness.fixture.detectChanges();
   await harness.fixture.whenStable();
@@ -62,12 +70,19 @@ async function renderPage(
   list: Observable<BacklogItem[]> = of(items),
   extraProviders: Provider[] = [],
   members: ProjectMember[] = [],
+  sprints: SprintFixture[] = [],
 ) {
   TestBed.resetTestingModule();
   const backlogApi = {
     list: vi.fn(() => list),
     move: vi.fn((_projectId: string, _issueId: string, _position: number) =>
       of([items[1], items[0]]),
+    ),
+  };
+  const sprintApi = {
+    list: vi.fn(() => of(sprints.map((entry) => entry.sprint))),
+    listIssues: vi.fn((_projectId: string, sprintId: string) =>
+      of(sprints.find((entry) => entry.sprint.id === sprintId)?.issues ?? []),
     ),
   };
   const projectApi = {
@@ -80,6 +95,7 @@ async function renderPage(
       provideRouter(projectRoutes(ProjectBacklogPage, 'backlog')),
       { provide: SessionService, useValue: signedInSession() },
       { provide: BacklogApiService, useValue: backlogApi },
+      { provide: SprintApiService, useValue: sprintApi },
       { provide: ProjectApiService, useValue: projectApi },
       { provide: AuthStore, useValue: signedInAuth() },
       ...extraProviders,
@@ -87,7 +103,7 @@ async function renderPage(
   });
   const harness = await RouterTestingHarness.create(backlogPath);
   await settle(harness);
-  return { backlogApi, harness };
+  return { backlogApi, sprintApi, harness };
 }
 
 function buttonNamed(label: string): HTMLButtonElement | null {
@@ -263,5 +279,150 @@ describe('ProjectBacklogPage', () => {
     expect(hrefs).toContain('/workspace/issues/issue-1');
     expect(hrefs.some((href) => href?.includes('/workspace/workspace/'))).toBe(false);
     harness.fixture.destroy();
+  });
+
+  describe('sprint sections', () => {
+    const activeSprint: Sprint = {
+      id: 'sprint-1',
+      projectId: PROJECT_ID,
+      name: 'Sprint 1',
+      goal: 'Entregar el tablero',
+      status: 'active',
+      startDate: '2026-11-02',
+      endDate: '2026-11-15',
+    };
+    const sprintIssue = (
+      id: string,
+      title: string,
+      status: SprintIssue['status'],
+    ): SprintIssue => ({
+      id,
+      title,
+      status,
+      priority: 'medium',
+    });
+    const withSprint: SprintFixture[] = [
+      {
+        sprint: activeSprint,
+        issues: [
+          sprintIssue('issue-1', 'Primera', 'resolved'),
+          sprintIssue('issue-9', 'Novena', 'open'),
+        ],
+      },
+    ];
+
+    function toggleOf(name: string): HTMLButtonElement | null {
+      return (
+        Array.from(document.querySelectorAll<HTMLButtonElement>('button[aria-expanded]')).find(
+          (button) => button.textContent?.includes(name),
+        ) ?? null
+      );
+    }
+
+    it('shows each open sprint with dates, goal, progress and its issues, apart from the backlog', async () => {
+      const { harness } = await renderPage(of(items), [], [], withSprint);
+
+      const block = toggleOf('Sprint 1')?.closest('section');
+      expect(block?.textContent).toContain('02/11/2026 - 15/11/2026');
+      expect(block?.textContent).toContain('Entregar el tablero');
+      expect(block?.textContent).toContain('Activo');
+      expect(block?.textContent).toContain('Primera');
+      expect(block?.textContent).toContain('Novena');
+      const bar = block?.querySelector('[role="progressbar"]');
+      expect(bar?.getAttribute('aria-valuenow')).toBe('50');
+      expect(block?.textContent).toContain('Resueltas 1 de 2');
+
+      const table = document.querySelector('table');
+      expect(table?.textContent).toContain('Segunda');
+      expect(table?.textContent).not.toContain('Primera');
+      expect(toggleOf('Backlog')?.textContent).toContain('1 sin planificar');
+      harness.fixture.destroy();
+    });
+
+    it('collapses and expands each section and keeps aria-expanded in step', async () => {
+      const { harness } = await renderPage(of(items), [], [], withSprint);
+      const sprintToggle = toggleOf('Sprint 1') as HTMLButtonElement;
+      expect(sprintToggle.getAttribute('aria-expanded')).toBe('true');
+      const panelId = sprintToggle.getAttribute('aria-controls') as string;
+      expect(document.getElementById(panelId)).not.toBeNull();
+
+      sprintToggle.click();
+      harness.fixture.detectChanges();
+      expect(sprintToggle.getAttribute('aria-expanded')).toBe('false');
+      expect(document.getElementById(panelId)).toBeNull();
+      expect(bodyText()).toContain('Entregar el tablero');
+
+      const backlogToggle = toggleOf('Backlog') as HTMLButtonElement;
+      backlogToggle.click();
+      harness.fixture.detectChanges();
+      expect(backlogToggle.getAttribute('aria-expanded')).toBe('false');
+      expect(document.querySelector('table')).toBeNull();
+
+      sprintToggle.click();
+      backlogToggle.click();
+      harness.fixture.detectChanges();
+      expect(sprintToggle.getAttribute('aria-expanded')).toBe('true');
+      expect(backlogToggle.getAttribute('aria-expanded')).toBe('true');
+      harness.fixture.destroy();
+    });
+
+    it('reorders only the unplanned issues, using their place in the whole backlog', async () => {
+      const three: BacklogItem[] = [
+        ...items,
+        { ...items[0], id: 'issue-3', summary: 'Tercera', rank: '000003' },
+      ];
+      const { backlogApi, harness } = await renderPage(
+        of(three),
+        [],
+        [],
+        [
+          {
+            sprint: activeSprint,
+            issues: [sprintIssue('issue-2', 'Segunda', 'open')],
+          },
+        ],
+      );
+
+      expect(buttonNamed('Bajar Primera')?.disabled).toBe(false);
+      buttonNamed('Bajar Primera')?.click();
+      await settle(harness);
+
+      expect(backlogApi.move).toHaveBeenCalledWith(PROJECT_ID, 'issue-1', 2);
+      harness.fixture.destroy();
+    });
+
+    it('says everything is planned when no issue is left outside a sprint', async () => {
+      const { harness } = await renderPage(
+        of(items),
+        [],
+        [],
+        [
+          {
+            sprint: activeSprint,
+            issues: [
+              sprintIssue('issue-1', 'Primera', 'open'),
+              sprintIssue('issue-2', 'Segunda', 'open'),
+            ],
+          },
+        ],
+      );
+
+      expect(bodyText()).toContain('Todo está planificado');
+      expect(bodyText()).not.toContain('El backlog está vacío');
+      harness.fixture.destroy();
+    });
+
+    it('keeps the backlog when the sprints cannot be read', async () => {
+      const failed = await renderPage(of(items), [
+        {
+          provide: SprintApiService,
+          useValue: { list: () => failWith(500), listIssues: () => of([]) },
+        },
+      ]);
+
+      expect(bodyText()).toContain('Primera');
+      expect(bodyText()).toContain('2 sin planificar');
+      failed.harness.fixture.destroy();
+    });
   });
 });

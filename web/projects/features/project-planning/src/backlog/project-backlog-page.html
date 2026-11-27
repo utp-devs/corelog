@@ -32,136 +32,238 @@
       </div>
     }
 
-    <app-section [flush]="true" [fill]="true">
-      <app-data-table
-        tableKey="project-backlog"
-        [columns]="columns"
-        [data]="items()"
-        [fill]="true"
-        rowKey="id"
-        [loading]="loading()"
-        [error]="tableError()"
-        [emptyState]="emptyTpl"
-        [mobileRender]="mobileTpl"
-        (retry)="retry()"
-      >
-        <ng-template appDataTableCell="position" let-row>
-          <span class="project-backlog__position">{{ positionOf(row) }}</span>
-        </ng-template>
-        <ng-template appDataTableCell="summary" let-row>
-          <div class="project-backlog__main">
-            <a
-              class="project-backlog__summary"
-              [routerLink]="['/issues', row.id]"
-              [title]="row.summary"
-              >{{ row.summary }}</a
+    <div class="project-backlog__stack">
+      @for (block of sprintBlocks(); track block.sprint.id) {
+        <section
+          class="project-backlog__block"
+          [attr.aria-labelledby]="'backlog-title-' + block.sprint.id"
+        >
+          <h2 class="project-backlog__block-title" [id]="'backlog-title-' + block.sprint.id">
+            <button
+              type="button"
+              class="project-backlog__toggle"
+              [attr.aria-expanded]="isOpen(block.sprint.id)"
+              [attr.aria-controls]="'backlog-panel-' + block.sprint.id"
+              (click)="toggle(block.sprint.id)"
             >
-            <span class="project-backlog__key">{{ shortKey(row) }}</span>
+              <i
+                class="project-backlog__chevron pi"
+                [class.pi-chevron-down]="isOpen(block.sprint.id)"
+                [class.pi-chevron-right]="!isOpen(block.sprint.id)"
+                aria-hidden="true"
+              ></i>
+              <span class="project-backlog__block-name">{{ block.sprint.name }}</span>
+              <app-lozenge [tone]="sprintStatusTone(block.sprint.status)">{{
+                sprintStatusLabel(block.sprint.status)
+              }}</app-lozenge>
+              <span class="project-backlog__block-meta">{{ sprintDates(block) }}</span>
+            </button>
+          </h2>
+          <div class="project-backlog__sprint-head">
+            <p class="project-backlog__goal">{{ block.sprint.goal || 'Sin objetivo definido.' }}</p>
+            <app-progress-bar
+              class="project-backlog__progress"
+              tone="success"
+              [value]="percentOf(block)"
+              [label]="'Resueltas ' + resolvedOf(block) + ' de ' + block.issues.length"
+            />
           </div>
-        </ng-template>
-        <ng-template appDataTableCell="type" let-row>
-          {{ typeLabel(row.type) }}
-        </ng-template>
-        <ng-template appDataTableCell="priority" let-row>
-          <app-priority-tag [priority]="row.priority" />
-        </ng-template>
-        <ng-template appDataTableCell="status" let-row>
-          <app-lozenge [category]="statusCategory(row.status)">{{
-            statusLabel(row.status)
-          }}</app-lozenge>
-        </ng-template>
-        <ng-template appDataTableCell="points" let-row>
-          {{ row.storyPoints ?? '-' }}
-        </ng-template>
-        <ng-template appDataTableCell="order" let-row>
-          <ng-container *ngTemplateOutlet="moveTpl; context: { $implicit: row }" />
-        </ng-template>
-      </app-data-table>
+          @if (isOpen(block.sprint.id)) {
+            <div class="project-backlog__panel" [id]="'backlog-panel-' + block.sprint.id">
+              @if (block.issues.length === 0) {
+                <p class="project-backlog__note">Este sprint aún no tiene incidencias.</p>
+              } @else {
+                <ul class="project-backlog__issues">
+                  @for (issue of block.issues; track issue.id) {
+                    <li class="project-backlog__issue">
+                      <div class="project-backlog__main">
+                        <a
+                          class="project-backlog__summary"
+                          [routerLink]="['/issues', issue.id]"
+                          [title]="issue.title"
+                          >{{ issue.title }}</a
+                        >
+                        <span class="project-backlog__key">{{ shortKey(issue) }}</span>
+                      </div>
+                      <app-priority-tag [priority]="issue.priority" />
+                      <app-lozenge [category]="statusCategory(issue.status)">{{
+                        statusLabel(issue.status)
+                      }}</app-lozenge>
+                      <span class="project-backlog__points">{{ issue.storyPoints ?? '-' }}</span>
+                    </li>
+                  }
+                </ul>
+              }
+            </div>
+          }
+        </section>
+      }
 
-      <ng-template #emptyTpl>
-        <app-empty-state
-          title="El backlog está vacío"
-          description="Crea incidencias o impórtalas para empezar a planificar."
-        />
-      </ng-template>
-
-      <ng-template #mobileTpl let-row>
-        <div class="project-backlog__card">
-          <a
-            class="project-backlog__summary"
-            [routerLink]="['/issues', row.id]"
-            [title]="row.summary"
-            >{{ row.summary }}</a
+      <section class="project-backlog__block" aria-labelledby="backlog-title-backlog">
+        <h2 class="project-backlog__block-title" id="backlog-title-backlog">
+          <button
+            type="button"
+            class="project-backlog__toggle"
+            [attr.aria-expanded]="isOpen(backlogSectionId)"
+            aria-controls="backlog-panel-backlog"
+            (click)="toggle(backlogSectionId)"
           >
-          <div class="project-backlog__meta">
-            <span class="project-backlog__key">{{ shortKey(row) }}</span>
-            <span class="project-backlog__type">{{ typeLabel(row.type) }}</span>
-            <app-priority-tag [priority]="row.priority" />
-            <app-lozenge [category]="statusCategory(row.status)">{{
-              statusLabel(row.status)
-            }}</app-lozenge>
-          </div>
-          <ng-container *ngTemplateOutlet="moveTpl; context: { $implicit: row }" />
-        </div>
-      </ng-template>
+            <i
+              class="project-backlog__chevron pi"
+              [class.pi-chevron-down]="isOpen(backlogSectionId)"
+              [class.pi-chevron-right]="!isOpen(backlogSectionId)"
+              aria-hidden="true"
+            ></i>
+            <span class="project-backlog__block-name">Backlog</span>
+            <span class="project-backlog__block-meta">{{ items().length }} sin planificar</span>
+          </button>
+        </h2>
+        @if (isOpen(backlogSectionId)) {
+          <div
+            class="project-backlog__panel project-backlog__panel--flush"
+            id="backlog-panel-backlog"
+          >
+            <app-data-table
+              tableKey="project-backlog"
+              [columns]="columns"
+              [data]="items()"
+              rowKey="id"
+              [loading]="loading()"
+              [error]="tableError()"
+              [emptyState]="emptyTpl"
+              [mobileRender]="mobileTpl"
+              (retry)="retry()"
+            >
+              <ng-template appDataTableCell="position" let-row>
+                <span class="project-backlog__position">{{ positionOf(row) }}</span>
+              </ng-template>
+              <ng-template appDataTableCell="summary" let-row>
+                <div class="project-backlog__main">
+                  <a
+                    class="project-backlog__summary"
+                    [routerLink]="['/issues', row.id]"
+                    [title]="row.summary"
+                    >{{ row.summary }}</a
+                  >
+                  <span class="project-backlog__key">{{ shortKey(row) }}</span>
+                </div>
+              </ng-template>
+              <ng-template appDataTableCell="type" let-row>
+                {{ typeLabel(row.type) }}
+              </ng-template>
+              <ng-template appDataTableCell="priority" let-row>
+                <app-priority-tag [priority]="row.priority" />
+              </ng-template>
+              <ng-template appDataTableCell="status" let-row>
+                <app-lozenge [category]="statusCategory(row.status)">{{
+                  statusLabel(row.status)
+                }}</app-lozenge>
+              </ng-template>
+              <ng-template appDataTableCell="points" let-row>
+                {{ row.storyPoints ?? '-' }}
+              </ng-template>
+              <ng-template appDataTableCell="order" let-row>
+                <ng-container *ngTemplateOutlet="moveTpl; context: { $implicit: row }" />
+              </ng-template>
+            </app-data-table>
 
-      <ng-template #moveTpl let-row>
-        @if (!readOnly()) {
-          <div class="project-backlog__order">
-            <button
-              type="button"
-              class="project-backlog__arrow"
-              appTooltip="Subir"
-              [attr.aria-label]="'Subir ' + row.summary"
-              [disabled]="!canMoveUp(row)"
-              (click)="moveUp(row)"
-            >
-              <i class="pi pi-arrow-up" aria-hidden="true"></i>
-            </button>
-            <button
-              type="button"
-              class="project-backlog__arrow"
-              appTooltip="Bajar"
-              [attr.aria-label]="'Bajar ' + row.summary"
-              [disabled]="!canMoveDown(row)"
-              (click)="moveDown(row)"
-            >
-              <i class="pi pi-arrow-down" aria-hidden="true"></i>
-            </button>
-            <app-dropdown-menu [label]="'Más opciones de orden de ' + row.summary" align="end">
-              <button
-                appMenuTrigger
-                type="button"
-                class="project-backlog__arrow"
-                appTooltip="Más opciones"
-                [attr.aria-label]="'Más opciones de orden de ' + row.summary"
-              >
-                <i class="pi pi-ellipsis-h" aria-hidden="true"></i>
-              </button>
-              <button
-                type="button"
-                role="menuitem"
-                class="project-backlog__menu-item"
-                [disabled]="!canMoveUp(row)"
-                (click)="moveToStart(row)"
-              >
-                <i class="pi pi-angle-double-up" aria-hidden="true"></i>
-                <span>Mover al inicio</span>
-              </button>
-              <button
-                type="button"
-                role="menuitem"
-                class="project-backlog__menu-item"
-                [disabled]="!canMoveDown(row)"
-                (click)="moveToEnd(row)"
-              >
-                <i class="pi pi-angle-double-down" aria-hidden="true"></i>
-                <span>Mover al final</span>
-              </button>
-            </app-dropdown-menu>
+            <ng-template #emptyTpl>
+              @if (store.isEmpty()) {
+                <app-empty-state
+                  title="El backlog está vacío"
+                  description="Crea incidencias o impórtalas para empezar a planificar."
+                />
+              } @else {
+                <app-empty-state
+                  title="Todo está planificado"
+                  description="Las incidencias del backlog ya están asignadas a un sprint."
+                />
+              }
+            </ng-template>
+
+            <ng-template #mobileTpl let-row>
+              <div class="project-backlog__card">
+                <a
+                  class="project-backlog__summary"
+                  [routerLink]="['/issues', row.id]"
+                  [title]="row.summary"
+                  >{{ row.summary }}</a
+                >
+                <div class="project-backlog__meta">
+                  <span class="project-backlog__key">{{ shortKey(row) }}</span>
+                  <span class="project-backlog__type">{{ typeLabel(row.type) }}</span>
+                  <app-priority-tag [priority]="row.priority" />
+                  <app-lozenge [category]="statusCategory(row.status)">{{
+                    statusLabel(row.status)
+                  }}</app-lozenge>
+                </div>
+                <ng-container *ngTemplateOutlet="moveTpl; context: { $implicit: row }" />
+              </div>
+            </ng-template>
+
+            <ng-template #moveTpl let-row>
+              @if (!readOnly()) {
+                <div class="project-backlog__order">
+                  <button
+                    type="button"
+                    class="project-backlog__arrow"
+                    appTooltip="Subir"
+                    [attr.aria-label]="'Subir ' + row.summary"
+                    [disabled]="!canMoveUp(row)"
+                    (click)="moveUp(row)"
+                  >
+                    <i class="pi pi-arrow-up" aria-hidden="true"></i>
+                  </button>
+                  <button
+                    type="button"
+                    class="project-backlog__arrow"
+                    appTooltip="Bajar"
+                    [attr.aria-label]="'Bajar ' + row.summary"
+                    [disabled]="!canMoveDown(row)"
+                    (click)="moveDown(row)"
+                  >
+                    <i class="pi pi-arrow-down" aria-hidden="true"></i>
+                  </button>
+                  <app-dropdown-menu
+                    [label]="'Más opciones de orden de ' + row.summary"
+                    align="end"
+                  >
+                    <button
+                      appMenuTrigger
+                      type="button"
+                      class="project-backlog__arrow"
+                      appTooltip="Más opciones"
+                      [attr.aria-label]="'Más opciones de orden de ' + row.summary"
+                    >
+                      <i class="pi pi-ellipsis-h" aria-hidden="true"></i>
+                    </button>
+                    <button
+                      type="button"
+                      role="menuitem"
+                      class="project-backlog__menu-item"
+                      [disabled]="!canMoveUp(row)"
+                      (click)="moveToStart(row)"
+                    >
+                      <i class="pi pi-angle-double-up" aria-hidden="true"></i>
+                      <span>Mover al inicio</span>
+                    </button>
+                    <button
+                      type="button"
+                      role="menuitem"
+                      class="project-backlog__menu-item"
+                      [disabled]="!canMoveDown(row)"
+                      (click)="moveToEnd(row)"
+                    >
+                      <i class="pi pi-angle-double-down" aria-hidden="true"></i>
+                      <span>Mover al final</span>
+                    </button>
+                  </app-dropdown-menu>
+                </div>
+              }
+            </ng-template>
           </div>
         }
-      </ng-template>
-    </app-section>
+      </section>
+    </div>
   </app-page-container>
 }

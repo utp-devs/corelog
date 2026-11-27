@@ -14,7 +14,7 @@ import { NgTemplateOutlet } from '@angular/common';
 import { FormControl, FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
-import { Button, ButtonProps } from 'primeng/button';
+import { Button } from 'primeng/button';
 import { Message } from 'primeng/message';
 import { Tooltip } from 'primeng/tooltip';
 import {
@@ -143,11 +143,6 @@ export class OrgMembersPage {
   protected readonly bulkOpen = signal(false);
   protected readonly busy = signal(false);
 
-  /**
-   * PrimeNG marks every button with the autofocus attribute unless it is told `false` explicitly, and the
-   * browser then focuses the first one of a freshly loaded page, leaving a focus ring on it.
-   */
-  protected readonly noAutofocus: ButtonProps = { autofocus: false };
   protected readonly roleFilterOptions = ROLE_FILTER_OPTIONS;
   protected readonly formatDate = formatOrgDate;
 

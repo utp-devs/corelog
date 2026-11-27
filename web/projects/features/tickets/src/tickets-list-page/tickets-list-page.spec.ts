@@ -1,11 +1,13 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
+import { ActivatedRoute, Router } from '@angular/router';
 import { ApiError, SavedFilter, Ticket } from '@corelog/core';
+import { FilterBar } from '@corelog/ui/filter-bar';
 import { guardConsole, installViewport } from '@corelog/core/testing';
 import { Observable, of, throwError } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { pageOf, setupTickets, ticketOf } from '../testing/ticket-test-kit';
+import { ME_ID, pageOf, setupTickets, ticketOf } from '../testing/ticket-test-kit';
 import { TicketsListPage } from './tickets-list-page';
 
 const SAVED_FILTER: SavedFilter = {
@@ -238,5 +240,116 @@ describe('TicketsListPage states', () => {
     setupTickets({ ticketApi: { list: () => of(pageOf([sampleTicket])) } });
     render();
     guard.expectNoConsoleOutput();
+  });
+});
+
+describe('TicketsListPage assignee filter', () => {
+  const guard = guardConsole();
+  let restoreViewport: () => void;
+
+  beforeEach(() => {
+    restoreViewport = installViewport(1280);
+  });
+
+  afterEach(() => {
+    restoreViewport();
+  });
+
+  async function settle(fixture: ComponentFixture<TicketsListPage>): Promise<void> {
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+  }
+
+  function assigneeDefinition(fixture: ComponentFixture<TicketsListPage>) {
+    const bar = fixture.debugElement.query(By.directive(FilterBar)).componentInstance as FilterBar;
+    const definition = bar.filters().find((filter) => filter.key === 'assignee');
+    if (!definition) throw new Error('no assignee filter');
+    return definition;
+  }
+
+  it('offers assigned to me, unassigned and every member', async () => {
+    setupTickets({
+      memberSource: { listMembers: () => of([{ userId: 'user-2', name: 'Luis Pérez' }]) },
+    });
+    const fixture = render();
+    await settle(fixture);
+
+    expect(assigneeDefinition(fixture).label).toBe('Filtrar por asignado');
+    expect(assigneeDefinition(fixture).options).toEqual([
+      { value: 'me', label: 'Asignadas a mí' },
+      { value: 'none', label: 'Sin asignar' },
+      { value: 'user-2', label: 'Luis Pérez' },
+    ]);
+  });
+
+  it('queries by member, by unassigned and by the signed-in user, and keeps the choice in the address', async () => {
+    const setup = setupTickets({
+      memberSource: { listMembers: () => of([{ userId: 'user-2', name: 'Luis Pérez' }]) },
+    });
+    const fixture = render();
+    await settle(fixture);
+    const router = TestBed.inject(Router);
+
+    assigneeDefinition(fixture).onChange('user-2');
+    await settle(fixture);
+    expect(router.url).toContain('assignee=user-2');
+    expect(setup.ticketApi.list).toHaveBeenLastCalledWith(
+      expect.objectContaining({ assigneeId: 'user-2', page: 1 }),
+    );
+
+    assigneeDefinition(fixture).onChange('none');
+    await settle(fixture);
+    expect(router.url).toContain('assignee=none');
+    expect(setup.ticketApi.list).toHaveBeenLastCalledWith(
+      expect.objectContaining({ assigneeId: 'none' }),
+    );
+
+    assigneeDefinition(fixture).onChange('me');
+    await settle(fixture);
+    expect(router.url).toContain('assignee=me');
+    expect(setup.ticketApi.list).toHaveBeenLastCalledWith(
+      expect.objectContaining({ assigneeId: ME_ID }),
+    );
+    guard.expectNoConsoleOutput();
+  });
+
+  it('starts from the address, shows a chip and clears with the other filters', async () => {
+    const setup = setupTickets();
+    await TestBed.inject(Router).navigateByUrl('/?assignee=none');
+    const fixture = render();
+    await settle(fixture);
+
+    expect(setup.ticketApi.list).toHaveBeenCalledWith(
+      expect.objectContaining({ assigneeId: 'none' }),
+    );
+    expect(document.body.textContent).toContain('Filtrar por asignado: Sin asignar');
+    clickButton('Limpiar filtros');
+    await settle(fixture);
+
+    expect(TestBed.inject(Router).url).not.toContain('assignee');
+    expect(TestBed.inject(ActivatedRoute).snapshot.queryParamMap.has('assignee')).toBe(false);
+    expect(document.body.textContent).not.toContain('Filtrar por asignado: Sin asignar');
+    expect(setup.ticketApi.list).toHaveBeenLastCalledWith(
+      expect.objectContaining({ assigneeId: undefined }),
+    );
+  });
+
+  it('removes the filter from the chip', async () => {
+    const setup = setupTickets();
+    await TestBed.inject(Router).navigateByUrl('/?assignee=me');
+    const fixture = render();
+    await settle(fixture);
+    expect(document.body.textContent).toContain('Filtrar por asignado: Asignadas a mí');
+
+    document
+      .querySelector<HTMLButtonElement>('button[aria-label^="Quitar filtro Filtrar por asignado"]')
+      ?.click();
+    await settle(fixture);
+
+    expect(TestBed.inject(Router).url).not.toContain('assignee');
+    expect(setup.ticketApi.list).toHaveBeenLastCalledWith(
+      expect.objectContaining({ assigneeId: undefined }),
+    );
   });
 });

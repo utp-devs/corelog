@@ -5,32 +5,47 @@
   >
     <div class="appearance-section__choices" role="radiogroup" aria-label="Tema de la aplicación">
       @for (option of themeOptions; track option.value) {
-        <label class="choice" [class.choice--selected]="theme.mode() === option.value">
+        <label
+          class="appearance-section__choice"
+          [class.appearance-section__choice--selected]="theme.mode() === option.value"
+        >
           <input
             type="radio"
-            class="choice__input"
+            class="appearance-section__choice-input"
             name="profile-theme"
             [value]="option.value"
             [checked]="theme.mode() === option.value"
             (change)="theme.setMode(option.value)"
           />
-          <span class="choice__preview" [attr.data-preview]="option.value" aria-hidden="true">
-            <span class="choice__half choice__half--light">
-              <span class="choice__bar choice__bar--accent"></span>
-              <span class="choice__bar"></span>
-              <span class="choice__bar choice__bar--short"></span>
+          <span
+            class="appearance-section__choice-preview"
+            [attr.data-preview]="option.value"
+            aria-hidden="true"
+          >
+            <span class="appearance-section__choice-half appearance-section__choice-half--light">
+              <span
+                class="appearance-section__choice-bar appearance-section__choice-bar--accent"
+              ></span>
+              <span class="appearance-section__choice-bar"></span>
+              <span
+                class="appearance-section__choice-bar appearance-section__choice-bar--short"
+              ></span>
             </span>
-            <span class="choice__half choice__half--dark">
-              <span class="choice__bar choice__bar--accent"></span>
-              <span class="choice__bar"></span>
-              <span class="choice__bar choice__bar--short"></span>
+            <span class="appearance-section__choice-half appearance-section__choice-half--dark">
+              <span
+                class="appearance-section__choice-bar appearance-section__choice-bar--accent"
+              ></span>
+              <span class="appearance-section__choice-bar"></span>
+              <span
+                class="appearance-section__choice-bar appearance-section__choice-bar--short"
+              ></span>
             </span>
           </span>
-          <span class="choice__text">
-            <span class="choice__label">{{ option.label }}</span>
-            <span class="choice__hint">{{ option.hint }}</span>
+          <span class="appearance-section__choice-text">
+            <span class="appearance-section__choice-label">{{ option.label }}</span>
+            <span class="appearance-section__choice-hint">{{ option.hint }}</span>
           </span>
-          <i class="pi pi-check-circle choice__check" aria-hidden="true"></i>
+          <i class="pi pi-check-circle appearance-section__choice-check" aria-hidden="true"></i>
         </label>
       }
     </div>
@@ -40,22 +55,22 @@
     <div class="appearance-section__choices" role="radiogroup" aria-label="Densidad de las tablas">
       @for (option of densityOptions; track option.value) {
         <label
-          class="choice choice--plain"
-          [class.choice--selected]="preferences.density() === option.value"
+          class="appearance-section__choice appearance-section__choice--plain"
+          [class.appearance-section__choice--selected]="preferences.density() === option.value"
         >
           <input
             type="radio"
-            class="choice__input"
+            class="appearance-section__choice-input"
             name="profile-density"
             [value]="option.value"
             [checked]="preferences.density() === option.value"
             (change)="preferences.setDensity(option.value)"
           />
-          <span class="choice__text">
-            <span class="choice__label">{{ option.label }}</span>
-            <span class="choice__hint">{{ option.hint }}</span>
+          <span class="appearance-section__choice-text">
+            <span class="appearance-section__choice-label">{{ option.label }}</span>
+            <span class="appearance-section__choice-hint">{{ option.hint }}</span>
           </span>
-          <i class="pi pi-check-circle choice__check" aria-hidden="true"></i>
+          <i class="pi pi-check-circle appearance-section__choice-check" aria-hidden="true"></i>
         </label>
       }
     </div>

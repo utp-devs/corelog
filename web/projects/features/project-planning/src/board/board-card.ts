@@ -6,6 +6,7 @@ import {
   ISSUE_TYPES,
   IssueType,
   issueKeyOf,
+  shortIssueKeyOf,
   issuePath,
 } from '@corelog/core';
 import { DropdownMenu } from '@corelog/ui/app-shell';
@@ -14,8 +15,6 @@ import { IssueKey } from '@corelog/ui/issue-key';
 import { Lozenge } from '@corelog/ui/lozenge';
 import { PriorityTag } from '@corelog/ui/priority-tag';
 import { AppTooltip } from '@corelog/ui/tooltip';
-
-import { shortKeyOf } from '../shared/work-labels';
 
 /**
  * Visual card of a board column: type icon and key, title (two lines), priority, points and assignee.
@@ -39,7 +38,7 @@ export class BoardCardView {
   readonly moved = output<string>();
 
   protected readonly fullKey = computed(() => issueKeyOf(this.card().id));
-  protected readonly shortKey = computed(() => shortKeyOf(this.card().id));
+  protected readonly shortKey = computed(() => shortIssueKeyOf(this.card().id));
   protected readonly href = computed(() => issuePath(this.card().id));
   protected readonly issueType = computed<IssueType | undefined>(() =>
     ISSUE_TYPES.find((type) => type === this.card().type),

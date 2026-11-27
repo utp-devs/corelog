@@ -13,64 +13,68 @@
   &__choices {
     @include m.grid-auto(11rem, 4);
   }
-}
 
-// A selectable card: a native radio hidden visually, a preview, the label and a check mark that
-// only shows on the selected card.
-.choice {
-  @include m.flex-column(3);
-  position: relative;
-  box-sizing: border-box;
-  min-width: 0;
-  padding: var(--cl-space-3);
-  border: 2px solid var(--cl-border);
-  border-radius: var(--cl-radius-lg);
-  background: var(--cl-bg-surface);
-  cursor: pointer;
-  transition:
-    border-color var(--cl-motion-fast) var(--cl-ease),
-    background-color var(--cl-motion-fast) var(--cl-ease);
+  // A selectable card: a native radio hidden visually, a preview, the label and a check mark that
+  // only shows on the selected card.
+  &__choice {
+    @include m.flex-column(3);
+    position: relative;
+    box-sizing: border-box;
+    min-width: 0;
+    padding: var(--cl-space-3);
+    border: 2px solid var(--cl-border);
+    border-radius: var(--cl-radius-lg);
+    background: var(--cl-bg-surface);
+    cursor: pointer;
+    transition:
+      border-color var(--cl-motion-fast) var(--cl-ease),
+      background-color var(--cl-motion-fast) var(--cl-ease);
 
-  &:hover {
-    border-color: var(--cl-border-strong);
-    background: var(--cl-bg-hover);
+    &:hover {
+      border-color: var(--cl-border-strong);
+      background: var(--cl-bg-hover);
+    }
+
+    &:has(.appearance-section__choice-input:focus-visible) {
+      @include c.focus-ring;
+    }
+
+    &--selected,
+    &--selected:hover {
+      border-color: var(--cl-brand);
+      background: var(--cl-brand-subtle);
+    }
+
+    &--plain {
+      justify-content: center;
+      min-height: var(--cl-control-h-lg);
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      transition: none;
+    }
   }
 
-  &:has(.choice__input:focus-visible) {
-    @include c.focus-ring;
-  }
-
-  &--selected,
-  &--selected:hover {
-    border-color: var(--cl-brand);
-    background: var(--cl-brand-subtle);
-  }
-
-  &--plain {
-    justify-content: center;
-    min-height: var(--cl-control-h-lg);
-  }
-
-  &__input {
+  &__choice-input {
     @include m.visually-hidden;
   }
 
   // Miniature window. Each half forces its own color scheme, so the system colors give a light
   // and a dark sample whatever theme is active. "Sistema" shows both halves side by side.
-  &__preview {
+  &__choice-preview {
     display: flex;
     overflow: hidden;
     height: 4.5rem;
     border: 1px solid var(--cl-border);
     border-radius: var(--cl-radius-md);
 
-    &[data-preview='light'] .choice__half--dark,
-    &[data-preview='dark'] .choice__half--light {
+    &[data-preview='light'] .appearance-section__choice-half--dark,
+    &[data-preview='dark'] .appearance-section__choice-half--light {
       display: none;
     }
   }
 
-  &__half {
+  &__choice-half {
     @include m.flex-column(2);
     flex: 1 1 0;
     min-width: 0;
@@ -86,7 +90,7 @@
     }
   }
 
-  &__bar {
+  &__choice-bar {
     display: block;
     height: var(--cl-space-2);
     border-radius: var(--cl-radius-full);
@@ -102,21 +106,21 @@
     }
   }
 
-  &__text {
+  &__choice-text {
     @include m.flex-column(1);
     min-width: 0;
   }
 
-  &__label {
+  &__choice-label {
     font-weight: var(--cl-weight-semibold);
   }
 
-  &__hint {
+  &__choice-hint {
     color: var(--cl-text-subtle);
     font-size: var(--cl-font-small);
   }
 
-  &__check {
+  &__choice-check {
     position: absolute;
     top: var(--cl-space-2);
     right: var(--cl-space-2);
@@ -124,12 +128,8 @@
     font-size: 1.125rem;
     opacity: 0;
 
-    .choice--selected > & {
+    .appearance-section__choice--selected > & {
       opacity: 1;
     }
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    transition: none;
   }
 }

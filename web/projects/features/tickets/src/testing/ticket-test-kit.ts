@@ -23,7 +23,6 @@ import {
   User,
   UserDirectoryApiService,
 } from '@corelog/core';
-import { CommentEditApi } from '../shared/comment-edit-api';
 import { provideCorelogTesting } from '@corelog/core/testing';
 import { Observable, of } from 'rxjs';
 import { Mock, vi } from 'vitest';
@@ -113,7 +112,6 @@ export interface TicketTestSetup {
   readonly projectApi: Fake<ProjectApiService>;
   readonly directoryApi: Fake<UserDirectoryApiService>;
   readonly savedFilterApi: Fake<SavedFilterApiService>;
-  readonly commentApi: Fake<CommentEditApi>;
   readonly auth: { readonly user: WritableSignal<User | null> };
   readonly organizations: { readonly currentOrgId: WritableSignal<string | null> };
 }
@@ -125,7 +123,6 @@ export interface TicketTestOptions {
   readonly projectApi?: Partial<Record<keyof ProjectApiService, Impl>>;
   readonly directoryApi?: Partial<Record<keyof UserDirectoryApiService, Impl>>;
   readonly savedFilterApi?: Partial<Record<keyof SavedFilterApiService, Impl>>;
-  readonly commentApi?: Partial<Record<keyof CommentEditApi, Impl>>;
   readonly memberSource?: MemberNamesSource;
   readonly user?: User | null;
   readonly orgId?: string | null;
@@ -148,6 +145,16 @@ export function setupTickets(options: TicketTestOptions = {}): TicketTestSetup {
       updateRank: () => of(ticketOf()),
       listComments: () => of([] as IssueComment[]),
       createComment: () => of({} as IssueComment),
+      updateComment: (_issueId: string, id: string, body: string) =>
+        of({
+          id,
+          issueId: _issueId,
+          authorId: '',
+          body,
+          createdAt: COMMENT_AT,
+          updatedAt: COMMENT_AT,
+          deletedAt: null,
+        } as IssueComment),
       deleteComment: () => of(undefined),
       listActivities: () => of([] as IssueActivity[]),
       listLinks: () => of([] as IssueLink[]),
@@ -195,11 +202,6 @@ export function setupTickets(options: TicketTestOptions = {}): TicketTestSetup {
     options.savedFilterApi ?? {},
   );
 
-  const commentApi = fakeOf<CommentEditApi>(
-    { update: () => of(undefined) } as unknown as Record<keyof CommentEditApi, Impl>,
-    options.commentApi ?? {},
-  );
-
   const auth = { user: signal<User | null>(options.user === undefined ? userOf() : options.user) };
   const organizations = {
     currentOrgId: signal<string | null>(options.orgId === undefined ? ORG_ID : options.orgId),
@@ -215,7 +217,6 @@ export function setupTickets(options: TicketTestOptions = {}): TicketTestSetup {
       { provide: ProjectApiService, useValue: projectApi },
       { provide: UserDirectoryApiService, useValue: directoryApi },
       { provide: SavedFilterApiService, useValue: savedFilterApi },
-      { provide: CommentEditApi, useValue: commentApi },
       { provide: OrganizationStore, useValue: organizations },
       { provide: AuthStore, useValue: auth },
       { provide: MEMBER_NAMES_SOURCE, useValue: memberSource },
@@ -229,7 +230,6 @@ export function setupTickets(options: TicketTestOptions = {}): TicketTestSetup {
     projectApi,
     directoryApi,
     savedFilterApi,
-    commentApi,
     auth,
     organizations,
   };

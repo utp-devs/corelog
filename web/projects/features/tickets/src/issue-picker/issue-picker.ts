@@ -13,10 +13,8 @@ import {
 import { FormsModule } from '@angular/forms';
 import { AutoComplete } from 'primeng/autocomplete';
 import { Subscription, finalize } from 'rxjs';
-import { IssueStatus, Ticket, TicketApiService, issueKeyOf } from '@corelog/core';
+import { IssueStatus, Ticket, TicketApiService, shortIssueKeyOf } from '@corelog/core';
 import { StatusTag } from '@corelog/ui/status-tag';
-
-import { shortIssueKey } from '../ticket-list/relative-time';
 
 /** Delay before a search is sent, in milliseconds. Keeps one request per pause, not per key. */
 export const ISSUE_SEARCH_DEBOUNCE_MS = 300;
@@ -65,8 +63,8 @@ export class IssuePicker {
     return (
       this.options().find((option) => option.value === id) ?? {
         value: id,
-        label: shortIssueKey(issueKeyOf(id)),
-        key: shortIssueKey(issueKeyOf(id)),
+        label: shortIssueKeyOf(id),
+        key: shortIssueKeyOf(id),
         title: '',
         status: 'open',
       }
@@ -109,7 +107,7 @@ export class IssuePicker {
     return items
       .filter((ticket) => ticket.id !== this.excludeId())
       .map((ticket) => {
-        const key = shortIssueKey(issueKeyOf(ticket.id));
+        const key = shortIssueKeyOf(ticket.id);
         return {
           value: ticket.id,
           label: `${key} · ${ticket.title}`,
