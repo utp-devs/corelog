@@ -1,13 +1,16 @@
-/** Series colors for charts, all taken from tokens (never hex). */
+/**
+ * Series colors for charts, all taken from tokens (never hex). The order puts the colors with
+ * the best contrast on both the light and the dark surface first; the yellow warning is last.
+ */
 export const CHART_SERIES = [
   'var(--cl-brand)',
-  'var(--cl-success)',
-  'var(--cl-warning)',
-  'var(--cl-danger)',
-  'var(--cl-type-epic)',
   'var(--cl-type-subtask)',
-  'var(--cl-info)',
+  'var(--cl-type-epic)',
+  'var(--cl-danger)',
+  'var(--cl-success)',
   'var(--cl-cat-todo)',
+  'var(--cl-info)',
+  'var(--cl-warning)',
 ] as const;
 
 /** Color for series `index`; wraps around when there are more series than colors. */

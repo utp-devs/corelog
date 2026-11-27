@@ -26,6 +26,7 @@ import { trackRecent } from '@corelog/ui/command-palette';
 import { ShortcutsDialog } from '@corelog/ui/shortcuts-dialog';
 import { filter, map } from 'rxjs';
 
+import { CreateIssueLauncher } from './create-issue-dialog';
 import { DEFAULT_SHELL_BRAND, type ShellBrand } from './brand';
 import { ContextSidebar, type SidebarProject } from './context-sidebar';
 import {
@@ -61,6 +62,7 @@ export class AppShell {
   protected readonly hotkeys = inject(HotkeysService);
   private readonly projectStore = inject(ProjectStore);
   private readonly breakpoints = inject(BreakpointService);
+  private readonly createLauncher = inject(CreateIssueLauncher);
 
   /** Menus, sidebar items and sidebar titles. */
   readonly navConfig = input<ShellNavConfig>(DEFAULT_SHELL_NAV_CONFIG);
@@ -145,6 +147,8 @@ export class AppShell {
       const unregister = this.hotkeys.registerGlobalShortcuts({
         projectId,
         workPages: this.workPages(),
+        // Without the Crear button there is no dialog to open: the shortcut then opens the page.
+        onCreate: this.canCreate() ? () => this.createLauncher.open() : undefined,
         onHelp: () => this.helpOpen.update((open) => !open),
       });
       onCleanup(unregister);

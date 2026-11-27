@@ -6,134 +6,169 @@
   min-width: 0;
 }
 
-.card {
+.chart-card {
+  // Consistent plot height on every card: tokens only.
+  --chart-card-plot-h: calc(var(--cl-space-12) * 5);
+
   display: flex;
   flex: 1 1 auto;
   flex-direction: column;
-  gap: var(--cl-space-3);
+  gap: var(--cl-space-4);
   min-width: 0;
   padding: var(--cl-space-4);
   border: 1px solid var(--cl-border);
   border-radius: var(--cl-radius-lg);
   background: var(--cl-bg-surface);
-}
+  box-shadow: var(--cl-elev-raised);
 
-.header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: var(--cl-space-3);
-}
-
-.title {
-  margin: 0;
-  font-size: var(--cl-font-body-strong);
-  font-weight: 600;
-  color: var(--cl-text);
-}
-
-.description {
-  margin: var(--cl-space-1) 0 0;
-  font-size: var(--cl-font-small);
-  color: var(--cl-text-subtle);
-}
-
-.toggle {
-  min-height: 24px;
-  padding: 0 var(--cl-space-2);
-  border: 1px solid var(--cl-border);
-  border-radius: var(--cl-radius-md);
-  background: var(--cl-bg-surface);
-  color: var(--cl-text);
-  font: inherit;
-  font-size: var(--cl-font-small);
-  cursor: pointer;
-
-  &:focus-visible {
-    outline: none;
-    box-shadow: var(--cl-shadow-focus);
-  }
-}
-
-.body {
-  height: 240px;
-  min-width: 0;
-}
-
-.progress {
-  display: flex;
-  flex-direction: column;
-  gap: var(--cl-space-3);
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.progress-row {
-  display: grid;
-  grid-template-columns: minmax(96px, max-content) minmax(0, 1fr) auto;
-  align-items: center;
-  gap: var(--cl-space-3);
-  font-size: var(--cl-font-small);
-  color: var(--cl-text);
-}
-
-.progress-label {
-  overflow-wrap: anywhere;
-}
-
-.progress-track {
-  height: 10px;
-  overflow: hidden;
-  border-radius: var(--cl-radius-sm);
-  background: var(--cl-bg-muted);
-}
-
-.progress-fill {
-  display: block;
-  height: 100%;
-  border-radius: var(--cl-radius-sm);
-}
-
-.progress-value {
-  font-variant-numeric: tabular-nums;
-  color: var(--cl-text-subtle);
-}
-
-.empty {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 120px;
-  margin: 0;
-  font-size: var(--cl-font-body);
-  color: var(--cl-text-subtle);
-}
-
-.table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: var(--cl-font-small);
-
-  th,
-  td {
-    padding: var(--cl-space-1) var(--cl-space-2);
-    border-bottom: 1px solid var(--cl-border);
-    text-align: left;
+  &__header {
+    @include m.flex-row(3, flex-start, space-between);
+    flex-wrap: wrap;
   }
 
-  td {
+  &__heading {
+    min-width: 0;
+  }
+
+  &__title {
+    margin: 0;
+    font-size: var(--cl-font-body-strong);
+    font-weight: var(--cl-weight-semibold);
+    line-height: var(--cl-lh-tight);
+    color: var(--cl-text);
+  }
+
+  &__description {
+    margin: var(--cl-space-1) 0 0;
+    font-size: var(--cl-font-small);
+    color: var(--cl-text-subtle);
+  }
+
+  &__actions {
+    @include m.cluster(2);
+    margin-inline-start: auto;
+  }
+
+  &__toggle {
+    @include m.flex-row(2, center, center);
+    min-height: var(--cl-control-h-sm);
+    padding: 0 var(--cl-space-3);
+    border: 1px solid var(--cl-border-strong);
+    border-radius: var(--cl-radius-md);
+    background: var(--cl-bg-surface);
+    color: var(--cl-text);
+    font-size: var(--cl-font-small);
+    font-weight: var(--cl-weight-medium);
+    cursor: pointer;
+
+    &:hover {
+      background: var(--cl-bg-hover);
+    }
+
+    &:focus-visible {
+      outline: none;
+      box-shadow: var(--cl-shadow-focus);
+    }
+
+    &--active {
+      background: var(--cl-bg-selected);
+    }
+
+    @media (pointer: coarse) {
+      @include m.touch-target;
+    }
+  }
+
+  &__body {
+    position: relative;
+    min-width: 0;
+    height: var(--chart-card-plot-h);
+  }
+
+  &__empty {
+    @include m.flex-row(0, center, center);
+    flex: 1 1 auto;
+    min-height: calc(var(--cl-space-12) * 3);
+  }
+
+  &__progress {
+    @include m.flex-column(3);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  &__progress-row {
+    display: grid;
+    grid-template-columns: minmax(var(--cl-space-16), max-content) minmax(0, 1fr) auto;
+    align-items: center;
+    gap: var(--cl-space-3);
+    font-size: var(--cl-font-body);
+    color: var(--cl-text);
+  }
+
+  &__progress-label {
+    overflow-wrap: anywhere;
+  }
+
+  &__progress-track {
+    height: var(--cl-space-3);
+    overflow: hidden;
+    border-radius: var(--cl-radius-full);
+    background: var(--cl-bg-sunken);
+    box-shadow: inset 0 0 0 1px var(--cl-divider);
+  }
+
+  &__progress-fill {
+    display: block;
+    width: var(--cl-progress, 0%);
+    height: 100%;
+    border-radius: inherit;
+    background: var(--cl-bar-color, var(--cl-brand));
+    transition: width var(--cl-motion) var(--cl-ease);
+
+    @media (prefers-reduced-motion: reduce) {
+      transition: none;
+    }
+  }
+
+  &__progress-value {
+    min-width: var(--cl-space-6);
+    font-weight: var(--cl-weight-semibold);
+    font-variant-numeric: tabular-nums;
     text-align: right;
+    color: var(--cl-text);
   }
-}
 
-// Declared last so it wins over .table when the data is hidden.
-.sr-only {
-  @include m.visually-hidden;
-}
+  &__table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--cl-font-small);
+    color: var(--cl-text);
 
-@media (max-width: 767.98px) {
-  .toggle {
-    min-height: 44px;
+    th,
+    td {
+      padding: var(--cl-space-2);
+      border-bottom: 1px solid var(--cl-divider);
+      text-align: left;
+    }
+
+    th {
+      font-weight: var(--cl-weight-medium);
+    }
+
+    td {
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+    }
+
+    thead th {
+      color: var(--cl-text-subtle);
+    }
+
+    // Visually hidden until "Ver datos" is pressed; screen readers always reach it.
+    &--hidden {
+      @include m.visually-hidden;
+    }
   }
 }

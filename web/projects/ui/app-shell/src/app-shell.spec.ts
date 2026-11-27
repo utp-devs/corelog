@@ -1,6 +1,6 @@
 import { Component, inject, signal, type Type } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { ActivatedRoute, Routes, provideRouter } from '@angular/router';
+import { ActivatedRoute, Router, Routes, provideRouter } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import {
   LOCATION_ASSIGN,
@@ -19,6 +19,7 @@ import { of } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AppShell } from './app-shell';
+import { CreateIssueLauncher } from './create-issue-dialog';
 import type { ShellOrg } from './navigation';
 import { AppShellOrgSwitcher } from './shell-slots';
 
@@ -421,6 +422,18 @@ describe('AppShell user menu and shortcuts', () => {
     window.dispatchEvent(new KeyboardEvent('keydown', { key: '/', bubbles: true }));
     refresh();
     expect(palettes()).toBe(1);
+  });
+
+  it('asks the create dialog to open with the c key instead of leaving the page', async () => {
+    const { harness } = await render('/issues');
+    // The dialog form needs the full store graph, so only the request is observed here.
+    const open = vi
+      .spyOn(TestBed.inject(CreateIssueLauncher), 'open')
+      .mockImplementation(() => undefined);
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'c', bubbles: true }));
+    harness.fixture.detectChanges();
+    expect(open).toHaveBeenCalledTimes(1);
+    expect(TestBed.inject(Router).url).toBe('/issues');
   });
 
   it('leaves "/" to the palette only: the header search field does not take focus', async () => {
