@@ -38,7 +38,7 @@ export const ADMIN_NAV: ShellNavConfig = {
     },
   ],
   sidebars: {
-    // The project pages carry their own tabs under the project header, so the shell lists nothing here.
+    // The project sidebar is built by the shell from the project in view (template and permissions), so no static items.
     project: [],
     'org-admin': [
       {

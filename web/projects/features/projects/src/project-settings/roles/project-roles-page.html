@@ -1,0 +1,61 @@
+<div class="project-roles">
+  <app-section
+    title="Qué puede hacer cada rol"
+    [description]="
+      isDefault()
+        ? 'Este proyecto usa los permisos estándar.'
+        : 'Este proyecto tiene permisos personalizados: lo que ves aquí ya los refleja.'
+    "
+    ariaLabel="Roles del proyecto"
+  >
+    @if (loading()) {
+      <app-loading-skeleton variant="detail" [rows]="4" />
+    } @else if (failed()) {
+      <app-error-state
+        message="No se pudieron cargar los permisos."
+        [canRetry]="true"
+        (retry)="retry()"
+      />
+    } @else {
+      <div class="project-roles__grid" data-testid="roles-grid">
+        @for (role of roles(); track role.role) {
+          <article class="project-roles__card" [attr.data-testid]="'role-' + role.role">
+            <header class="project-roles__head">
+              <h3 class="project-roles__title">{{ labels[role.role] }}</h3>
+              <app-lozenge [tone]="role.role === 'lead' ? 'info' : 'neutral'"
+                >{{ role.total }} permisos</app-lozenge
+              >
+            </header>
+            <p class="project-roles__summary">{{ summaries[role.role] }}</p>
+            @if (role.groups.length === 0) {
+              <p class="project-roles__none">Este rol no tiene ningún permiso.</p>
+            }
+            @for (group of role.groups; track group.key) {
+              <section class="project-roles__group">
+                <h4 class="project-roles__group-title">{{ group.label }}</h4>
+                <ul class="project-roles__list">
+                  @for (ability of group.abilities; track ability.permission) {
+                    <li class="project-roles__item">
+                      <i class="pi pi-check" aria-hidden="true"></i>
+                      <span>
+                        <span class="project-roles__ability">{{ ability.label }}</span>
+                        @if (ability.description) {
+                          <span class="project-roles__hint">{{ ability.description }}</span>
+                        }
+                      </span>
+                    </li>
+                  }
+                </ul>
+              </section>
+            }
+          </article>
+        }
+      </div>
+      <p class="project-roles__note">
+        Además, los propietarios y administradores de la organización tienen permisos sobre todos
+        los proyectos, y quien creó una incidencia o es su responsable puede tener permisos sobre
+        esa incidencia. Eso se ajusta en «Permisos».
+      </p>
+    }
+  </app-section>
+</div>

@@ -83,8 +83,11 @@
     text-align: center;
   }
 
-  /* Horizontal and vertical scroll stay inside this box; the page itself never scrolls sideways. */
+  /* Horizontal and vertical scroll stay inside this box; the page itself never scrolls sideways.
+     It is also the containing block of the visually hidden labels inside the cards, which would
+     otherwise escape the clipping and widen the page. */
   &__columns {
+    position: relative;
     display: grid;
     flex: 1 1 auto;
     grid-auto-columns: minmax(16.25rem, 1fr);

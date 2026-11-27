@@ -1,0 +1,127 @@
+<form
+  class="project-details"
+  aria-label="Detalles del proyecto"
+  novalidate
+  [formGroup]="form"
+  (ngSubmit)="save()"
+>
+  <app-section
+    title="Identidad"
+    description="Cómo se ve el proyecto para el resto de la organización."
+    ariaLabel="Identidad"
+  >
+    <div class="project-details__fields">
+      <app-field-row label="Clave" helper="Aparece en cada incidencia y no se puede cambiar.">
+        <input
+          pInputText
+          appFieldControl
+          class="project-details__key"
+          readonly
+          [value]="project()?.key ?? ''"
+          data-testid="details-key"
+        />
+      </app-field-row>
+      <app-field-row label="Nombre" [required]="true" [error]="errorOf('name')">
+        <input
+          pInputText
+          appFieldControl
+          formControlName="name"
+          [attr.maxlength]="nameMax"
+          data-testid="details-name"
+        />
+      </app-field-row>
+      <app-field-row
+        label="Descripción"
+        helper="Cuéntale al equipo para qué sirve el proyecto."
+        [error]="errorOf('description')"
+      >
+        <textarea
+          pTextarea
+          appFieldControl
+          formControlName="description"
+          rows="3"
+          [attr.maxlength]="descriptionMax"
+          data-testid="details-description"
+        ></textarea>
+      </app-field-row>
+    </div>
+  </app-section>
+
+  <app-section
+    title="Apariencia"
+    description="Color e icono con los que se reconoce el proyecto en listas y menús."
+    ariaLabel="Apariencia"
+  >
+    <div class="project-details__fields">
+      <div class="project-details__group">
+        <app-color-picker label="Color del proyecto" formControlName="color" />
+      </div>
+      <div class="project-details__group">
+        <span class="project-details__group-title" id="details-icon-title">Icono</span>
+        <app-project-icon-picker formControlName="icon" />
+      </div>
+    </div>
+  </app-section>
+
+  <app-section
+    title="Responsables"
+    description="Quién lidera el proyecto y a quién se asignan las incidencias nuevas."
+    ariaLabel="Responsables"
+  >
+    <div class="project-details__fields">
+      <app-field-row
+        label="Líder del proyecto"
+        [required]="true"
+        helper="Elige entre las personas que ya forman parte del proyecto."
+        [error]="errorOf('leadId')"
+      >
+        <app-select-field
+          formControlName="leadId"
+          ariaLabel="Líder del proyecto"
+          [options]="leadOptions()"
+          data-testid="details-lead"
+        />
+      </app-field-row>
+      <app-field-row
+        label="Incidencias nuevas sin responsable"
+        helper="Qué pasa cuando alguien crea una incidencia y no elige a quién se la asigna."
+      >
+        <app-select-field
+          formControlName="defaultAssigneePolicy"
+          ariaLabel="Responsable por defecto"
+          filter="off"
+          [options]="assigneeOptions"
+          data-testid="details-assignee"
+        />
+      </app-field-row>
+    </div>
+  </app-section>
+
+  @if (failure(); as message) {
+    <div role="alert">
+      <p-message severity="error" [closable]="false">{{ message }}</p-message>
+    </div>
+  }
+
+  @if (canEdit()) {
+    <div class="project-details__actions">
+      @if (dirty()) {
+        <span class="project-details__dirty" role="status">Tienes cambios sin guardar</span>
+      }
+      <p-button
+        type="button"
+        label="Descartar"
+        severity="secondary"
+        [disabled]="!dirty() || saving()"
+        (onClick)="discard()"
+      />
+      <p-button
+        type="submit"
+        label="Guardar cambios"
+        [disabled]="!dirty()"
+        [loading]="saving()"
+        data-testid="details-save"
+      />
+    </div>
+  }
+</form>

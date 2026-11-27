@@ -1,12 +1,12 @@
 @use '../../../../ui/styles/mixins' as m;
 
-/* Two columns from 992 px: sprint list and form on the left, the selected sprint on the right. */
+/* Two columns from 992 px: sprint list and form on the left, the selected sprint on the right. The columns share the height, and the last card of the right column grows to the bottom. */
 .project-sprints {
   &__layout {
     display: grid;
     grid-template-columns: minmax(17.5rem, 21rem) minmax(0, 1fr);
     gap: var(--cl-space-4);
-    align-items: start;
+    align-items: stretch;
     min-width: 0;
   }
 

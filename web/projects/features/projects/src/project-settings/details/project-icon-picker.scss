@@ -1,0 +1,48 @@
+@use '../../../../../ui/styles/mixins' as m;
+
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.project-icon-picker {
+  @include m.cluster(2);
+
+  &__option {
+    @include m.flex-row(0, center, center);
+    width: var(--cl-control-h-lg);
+    height: var(--cl-control-h-lg);
+    padding: 0;
+    border: 1px solid var(--cl-border-strong);
+    border-radius: var(--cl-radius-md);
+    background: var(--cl-bg-surface);
+    color: var(--cl-text);
+    font-size: var(--cl-font-body);
+    cursor: pointer;
+
+    &:hover:not(:disabled) {
+      background: var(--cl-bg-hover);
+    }
+
+    &:focus-visible {
+      outline: none;
+      box-shadow: var(--cl-shadow-focus);
+    }
+
+    &:disabled {
+      cursor: not-allowed;
+      opacity: 0.6;
+    }
+
+    &--selected {
+      border-color: var(--cl-brand);
+      background: var(--cl-bg-selected);
+      color: var(--cl-brand);
+    }
+  }
+
+  &__none {
+    font-size: var(--cl-font-small);
+    font-weight: var(--cl-weight-semibold);
+  }
+}

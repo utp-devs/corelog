@@ -131,6 +131,8 @@ export function projectTestEnvironment(options: ProjectTestOptions = {}): Projec
   const projectApi = spies(
     {
       list: () => of([]),
+      listPage: () => of({ items: [], meta: { total: 0, page: 1, pageSize: 20 } }),
+      keyAvailable: () => of({ available: true, key: '' }),
       get: () => of(projectOf()),
       create: () => of(projectOf()),
       update: () => of(projectOf()),

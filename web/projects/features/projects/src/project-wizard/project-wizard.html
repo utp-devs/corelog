@@ -1,0 +1,363 @@
+@if (!roleKnown()) {
+  <app-page-container variant="wide" pageName="project-new" [ready]="false" />
+} @else if (!rights().allowed) {
+  <app-page-container variant="wide" pageName="project-new" [ready]="true" [fill]="true">
+    <app-error-page
+      [variant]="403"
+      [framed]="true"
+      title="No puedes crear proyectos"
+      [description]="rights().reason ?? 'No tienes permiso para crear proyectos.'"
+    />
+  </app-page-container>
+} @else {
+  <app-page-container variant="wide" pageName="project-new" [ready]="true" [fill]="true">
+    <app-page-header
+      title="Nuevo proyecto"
+      subtitle="Elige una plantilla y completa unos datos. Podrás cambiarlos después."
+    />
+
+    <nav class="project-wizard__stepper" aria-label="Pasos para crear el proyecto">
+      <p class="project-wizard__progress" aria-hidden="true">
+        Paso {{ step() + 1 }} de {{ steps.length }}: {{ current().label }}
+      </p>
+      <ol class="project-wizard__steps">
+        @for (item of steps; track item.id; let index = $index) {
+          <li
+            class="project-wizard__step"
+            [class.project-wizard__step--current]="stepState(index) === 'current'"
+            [class.project-wizard__step--done]="stepState(index) === 'done'"
+          >
+            <button
+              type="button"
+              class="project-wizard__step-button"
+              [attr.id]="stepId(index)"
+              [attr.aria-current]="stepState(index) === 'current' ? 'step' : null"
+              [attr.data-testid]="'wizard-step-' + item.id"
+              [disabled]="!canVisit(index) && stepState(index) !== 'current'"
+              (click)="goTo(index)"
+            >
+              <span class="project-wizard__step-number" aria-hidden="true">
+                @if (stepState(index) === 'done') {
+                  <i class="pi pi-check"></i>
+                } @else {
+                  {{ index + 1 }}
+                }
+              </span>
+              <span class="project-wizard__step-label">{{ item.label }}</span>
+            </button>
+          </li>
+        }
+      </ol>
+    </nav>
+
+    <form
+      class="project-wizard__panel"
+      novalidate
+      [formGroup]="form"
+      [attr.aria-labelledby]="stepId(step())"
+      (ngSubmit)="next()"
+    >
+      @switch (current().id) {
+        @case ('template') {
+          <fieldset class="project-wizard__fieldset">
+            <legend class="project-wizard__title">¿Cómo trabaja tu equipo?</legend>
+            <p class="project-wizard__hint">
+              La plantilla define las columnas del tablero y los tipos de incidencia iniciales.
+            </p>
+            <div class="project-wizard__templates">
+              @for (item of templates; track item.value) {
+                <label
+                  class="project-wizard__template"
+                  [class.project-wizard__template--selected]="isTemplate(item.value)"
+                  [attr.data-testid]="'template-' + item.value"
+                >
+                  <input
+                    type="radio"
+                    class="project-wizard__radio"
+                    name="template"
+                    [value]="item.value"
+                    [checked]="isTemplate(item.value)"
+                    (change)="chooseTemplate(item.value)"
+                  />
+                  <span class="project-wizard__template-head">
+                    <i
+                      [class]="item.icon + ' project-wizard__template-icon'"
+                      aria-hidden="true"
+                    ></i>
+                    <span class="project-wizard__template-name">{{ item.label }}</span>
+                    @if (item.sprints) {
+                      <span class="project-wizard__chip project-wizard__chip--accent">Sprints</span>
+                    }
+                  </span>
+                  <span class="project-wizard__template-text">{{ item.description }}</span>
+                  <span class="project-wizard__preview" aria-hidden="true">
+                    @for (status of item.statuses; track status.name) {
+                      <span
+                        class="project-wizard__column"
+                        [class.project-wizard__column--todo]="status.category === 'todo'"
+                        [class.project-wizard__column--in_progress]="
+                          status.category === 'in_progress'
+                        "
+                        [class.project-wizard__column--done]="status.category === 'done'"
+                        >{{ status.name }}</span
+                      >
+                    }
+                  </span>
+                  <span class="project-wizard__types">
+                    <span class="project-wizard__sr">Tipos de incidencia: </span>
+                    {{ item.issueTypes.join(' · ') }}
+                  </span>
+                </label>
+              }
+            </div>
+          </fieldset>
+        }
+        @case ('details') {
+          <div class="project-wizard__fields">
+            <h2 class="project-wizard__title">Detalles del proyecto</h2>
+            <app-field-row label="Nombre" [required]="true" [error]="nameError()">
+              <input
+                pInputText
+                appFieldControl
+                data-autofocus
+                formControlName="name"
+                placeholder="Por ejemplo, Plataforma de pagos"
+                autocomplete="off"
+                (blur)="onNameBlur()"
+              />
+            </app-field-row>
+
+            <app-field-row
+              label="Clave"
+              [required]="true"
+              [helper]="keyHelper()"
+              [error]="keyError()"
+            >
+              <input
+                pInputText
+                appFieldControl
+                #keyField
+                formControlName="key"
+                placeholder="PDP"
+                autocomplete="off"
+                [attr.maxlength]="keyMaxLength"
+                [attr.data-key-status]="keyStatus()"
+                (input)="onKeyInput(keyField.value)"
+              />
+            </app-field-row>
+
+            <app-field-row label="Descripción" [optional]="true">
+              <textarea
+                pTextarea
+                appFieldControl
+                formControlName="description"
+                rows="3"
+                placeholder="¿Para qué sirve este proyecto?"
+              ></textarea>
+            </app-field-row>
+
+            <div class="project-wizard__color">
+              <span class="project-wizard__label"
+                >Color <span class="project-wizard__optional">(opcional)</span></span
+              >
+              <app-color-picker label="Color del proyecto" formControlName="color" />
+            </div>
+          </div>
+        }
+        @case ('access') {
+          <div class="project-wizard__fields">
+            <h2 class="project-wizard__title">Quién participa</h2>
+
+            <fieldset class="project-wizard__fieldset">
+              <legend class="project-wizard__label">Visibilidad</legend>
+              <div class="project-wizard__choices">
+                @for (choice of visibilityChoices; track choice.value) {
+                  <label
+                    class="project-wizard__choice"
+                    [class.project-wizard__choice--selected]="visibility() === choice.value"
+                    [attr.data-testid]="'visibility-' + choice.value"
+                  >
+                    <input
+                      type="radio"
+                      class="project-wizard__radio"
+                      name="visibility"
+                      [value]="choice.value"
+                      [checked]="visibility() === choice.value"
+                      (change)="setVisibility(choice.value)"
+                    />
+                    <span class="project-wizard__choice-head">
+                      <i [class]="choice.icon" aria-hidden="true"></i>
+                      <span class="project-wizard__choice-name">{{ choice.label }}</span>
+                    </span>
+                    <span class="project-wizard__choice-text">{{ choice.description }}</span>
+                  </label>
+                }
+              </div>
+            </fieldset>
+
+            <app-field-row
+              label="Responsable"
+              helper="Por defecto, quien crea el proyecto."
+              [optional]="true"
+            >
+              <app-user-picker
+                appFieldControl
+                ariaLabel="Responsable del proyecto"
+                [users]="people()"
+                [loading]="peopleLoading()"
+                [allowClear]="false"
+                [value]="leadId()"
+                (valueChange)="setLead($event)"
+              />
+            </app-field-row>
+
+            <app-field-row
+              label="Equipos"
+              helper="Reciben el rol de colaborador."
+              [optional]="true"
+            >
+              <p-multiselect
+                appFieldControl
+                ariaLabel="Equipos del proyecto"
+                placeholder="Elegir equipos"
+                display="chip"
+                optionLabel="name"
+                optionValue="id"
+                emptyMessage="No hay equipos"
+                emptyFilterMessage="Sin resultados"
+                [options]="teams()"
+                [filter]="teams().length > 8"
+                [ngModel]="teamIds()"
+                [ngModelOptions]="{ standalone: true }"
+                (ngModelChange)="setTeamIds($event)"
+              />
+            </app-field-row>
+
+            <app-field-row
+              label="Personas"
+              helper="Se agregan como colaboradoras."
+              [optional]="true"
+            >
+              <p-multiselect
+                appFieldControl
+                ariaLabel="Personas del proyecto"
+                placeholder="Elegir personas"
+                display="chip"
+                optionLabel="name"
+                optionValue="id"
+                emptyMessage="No hay personas"
+                emptyFilterMessage="Sin resultados"
+                [options]="memberOptions()"
+                [filter]="true"
+                [ngModel]="memberIds()"
+                [ngModelOptions]="{ standalone: true }"
+                (ngModelChange)="setMemberIds($event)"
+              />
+            </app-field-row>
+          </div>
+        }
+        @case ('review') {
+          <div class="project-wizard__fields">
+            <h2 class="project-wizard__title">Revisa y crea</h2>
+            <dl class="project-wizard__summary" data-testid="wizard-summary">
+              <div class="project-wizard__summary-row">
+                <dt>Plantilla</dt>
+                <dd>{{ templateData().label }}</dd>
+              </div>
+              <div class="project-wizard__summary-row">
+                <dt>Nombre</dt>
+                <dd>{{ displayName() }}</dd>
+              </div>
+              <div class="project-wizard__summary-row">
+                <dt>Clave</dt>
+                <dd>{{ displayKey() }}</dd>
+              </div>
+              <div class="project-wizard__summary-row">
+                <dt>Descripción</dt>
+                <dd>{{ form.controls.description.value || 'Sin descripción' }}</dd>
+              </div>
+              <div class="project-wizard__summary-row">
+                <dt>Visibilidad</dt>
+                <dd>{{ visibilityLabel() }}</dd>
+              </div>
+              <div class="project-wizard__summary-row">
+                <dt>Responsable</dt>
+                <dd>{{ leadName() }}</dd>
+              </div>
+              <div class="project-wizard__summary-row">
+                <dt>Equipos</dt>
+                <dd>{{ teamNames() || 'Ninguno' }}</dd>
+              </div>
+              <div class="project-wizard__summary-row">
+                <dt>Personas</dt>
+                <dd>{{ peopleNames() || 'Ninguna' }}</dd>
+              </div>
+            </dl>
+          </div>
+        }
+      }
+
+      @if (current().id === 'details' && detailsSubmitted() && blocker(); as reason) {
+        <p class="project-wizard__blocker" role="status">{{ reason }}</p>
+      }
+
+      <div class="project-wizard__actions">
+        <a class="project-wizard__cancel" routerLink="/projects">Cancelar</a>
+        <span class="project-wizard__spacer"></span>
+        @if (step() > 0) {
+          <p-button
+            type="button"
+            label="Atrás"
+            severity="secondary"
+            [outlined]="true"
+            [disabled]="submitting()"
+            (onClick)="back()"
+          />
+        }
+        @if (current().id === 'review') {
+          <p-button
+            type="button"
+            label="Crear proyecto"
+            icon="pi pi-check"
+            data-testid="wizard-create"
+            [loading]="submitting()"
+            [disabled]="submitting()"
+            (onClick)="submit()"
+          />
+        } @else {
+          <p-button
+            type="submit"
+            label="Siguiente"
+            icon="pi pi-arrow-right"
+            iconPos="right"
+            data-testid="wizard-next"
+          />
+        }
+      </div>
+    </form>
+
+    <div appPageSidebar class="project-wizard__aside">
+      <section class="project-wizard__card" aria-label="Vista previa del proyecto">
+        <p class="project-wizard__card-label">Vista previa</p>
+        <div class="project-wizard__card-head">
+          <span
+            class="project-wizard__swatch"
+            [class.project-wizard__swatch--colored]="swatchCss()"
+            [style.--swatch]="swatchCss()"
+          >
+            {{ (displayKey() || '?').slice(0, 2) }}
+          </span>
+          <div class="project-wizard__card-title">
+            <p class="project-wizard__card-name">{{ displayName() || 'Nombre del proyecto' }}</p>
+            <p class="project-wizard__card-key">{{ displayKey() || 'CLAVE' }}</p>
+          </div>
+        </div>
+        <ul class="project-wizard__card-tags">
+          <li class="project-wizard__chip">{{ templateData().label }}</li>
+          <li class="project-wizard__chip">{{ visibilityLabel() }}</li>
+        </ul>
+        <p class="project-wizard__card-meta">Columnas: {{ columnNames() }}</p>
+      </section>
+    </div>
+  </app-page-container>
+}

@@ -1,0 +1,87 @@
+@use '../../../../../ui/styles/mixins' as m;
+
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.project-access {
+  @include m.flex-column(4);
+  min-width: 0;
+
+  &__notice {
+    @include m.flex-column(1);
+  }
+
+  &__add {
+    @include m.cluster(3, flex-end);
+    margin-bottom: var(--cl-space-4);
+    min-width: 0;
+  }
+
+  &__add-field {
+    @include m.flex-column(1);
+    min-width: 0;
+
+    &--grow {
+      flex: 1 1 16rem;
+    }
+
+    @include m.respond-down(768px) {
+      flex: 1 1 100%;
+    }
+  }
+
+  &__add-label {
+    color: var(--cl-text);
+    font-size: var(--cl-font-small);
+    font-weight: var(--cl-weight-medium);
+  }
+
+  &__role {
+    width: 11rem;
+    max-width: 100%;
+
+    @include m.respond-down(768px) {
+      width: 100%;
+    }
+  }
+
+  &__badges {
+    @include m.cluster(1);
+    min-width: 0;
+  }
+
+  &__static-role {
+    display: inline-flex;
+  }
+
+  &__effective {
+    display: block;
+    margin-top: var(--cl-space-1);
+    color: var(--cl-text-subtle);
+    font-size: var(--cl-font-small);
+  }
+
+  &__team {
+    @include m.flex-row(2);
+    min-width: 0;
+    color: var(--cl-text-subtle);
+  }
+
+  &__team-name {
+    @include m.truncate;
+    color: var(--cl-text);
+    font-weight: var(--cl-weight-semibold);
+  }
+
+  &__card {
+    @include m.flex-column(2);
+    min-width: 0;
+  }
+
+  &__card-head {
+    @include m.flex-row(2, center, space-between);
+    min-width: 0;
+  }
+}

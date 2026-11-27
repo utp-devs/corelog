@@ -1,14 +1,11 @@
 import type {
-  OrgRole,
-  OrgWhoCan,
-  Project,
-  ProjectMemberRole,
+  ProjectArchiveFilter,
+  ProjectListFilters,
+  ProjectSortColumn,
+  ProjectTemplate,
   ProjectType,
   ProjectVisibility,
 } from '@corelog/core';
-
-export type VisibilityFilter = 'all' | 'open' | 'private';
-export type ArchivedFilter = 'active' | 'archived' | 'all';
 
 export const VISIBILITY_LABELS: Record<ProjectVisibility, string> = {
   open: 'Abierto',
@@ -20,54 +17,90 @@ export const TYPE_LABELS: Record<ProjectType, string> = {
   scrum: 'Scrum',
 };
 
-export const MEMBER_ROLE_OPTIONS: { value: ProjectMemberRole; label: string }[] = [
-  { value: 'lead', label: 'Líder' },
-  { value: 'contributor', label: 'Colaborador' },
-  { value: 'viewer', label: 'Lector' },
+/** Value of a filter select that means "no filter". */
+export const ALL = 'all';
+
+export const DEFAULT_PAGE_SIZE = 20;
+
+export type ProjectView = 'table' | 'cards';
+
+/** Everything the list page lets the user change. Turned into server filters by `toListFilters`. */
+export interface ProjectListState {
+  readonly q: string;
+  readonly template: ProjectTemplate | typeof ALL;
+  readonly leadId: string;
+  readonly starred: boolean;
+  readonly archived: ProjectArchiveFilter;
+  readonly sort: string;
+  readonly page: number;
+  readonly pageSize: number;
+}
+
+export const INITIAL_LIST_STATE: ProjectListState = {
+  q: '',
+  template: ALL,
+  leadId: ALL,
+  starred: false,
+  archived: 'exclude',
+  sort: 'name:asc',
+  page: 1,
+  pageSize: DEFAULT_PAGE_SIZE,
+};
+
+export interface SortOption {
+  readonly value: string;
+  readonly label: string;
+}
+
+export const SORT_OPTIONS: readonly SortOption[] = [
+  { value: 'name:asc', label: 'Nombre (A a Z)' },
+  { value: 'name:desc', label: 'Nombre (Z a A)' },
+  { value: 'updated_at:desc', label: 'Actividad reciente' },
+  { value: 'created_at:desc', label: 'Creados recientemente' },
+  { value: 'key:asc', label: 'Clave (A a Z)' },
 ];
 
-/** Filters by text (name or key), visibility and archived state. Works on the loaded list, no requests. */
-export function filterProjects(
-  projects: readonly Project[],
-  query: string,
-  visibility: VisibilityFilter,
-  archived: ArchivedFilter,
-): Project[] {
-  const term = query.trim().toLowerCase();
-  return projects.filter((project) => {
-    if (visibility !== 'all' && project.visibility !== visibility) return false;
-    const isArchived = project.archivedAt !== null;
-    if (archived === 'active' && isArchived) return false;
-    if (archived === 'archived' && !isArchived) return false;
-    if (term && !`${project.name} ${project.key}`.toLowerCase().includes(term)) return false;
-    return true;
-  });
+export const ARCHIVED_OPTIONS: readonly { value: ProjectArchiveFilter; label: string }[] = [
+  { value: 'exclude', label: 'Solo activos' },
+  { value: 'include', label: 'Activos y archivados' },
+  { value: 'only', label: 'Solo archivados' },
+];
+
+/** Whether any filter differs from the default list (sorting and paging do not count). */
+export function hasActiveFilters(state: ProjectListState): boolean {
+  return (
+    state.q.trim() !== '' ||
+    state.template !== ALL ||
+    state.leadId !== ALL ||
+    state.starred ||
+    state.archived !== 'exclude'
+  );
 }
 
-export interface CreateProjectRights {
-  readonly allowed: boolean;
-  /** Spanish explanation shown as a tooltip when creation is not allowed. */
-  readonly reason: string | null;
-}
-
-/**
- * Who may create projects: global admins, organization owners and admins, and organization members
- * when the organization policy opens creation to members.
- */
-export function createProjectRights(
-  globalRole: string | null | undefined,
-  orgRole: OrgRole | null | undefined,
-  policy: OrgWhoCan | null | undefined,
-): CreateProjectRights {
-  if (globalRole === 'admin' || orgRole === 'owner' || orgRole === 'admin') {
-    return { allowed: true, reason: null };
-  }
-  if (orgRole === 'member' && policy === 'members') return { allowed: true, reason: null };
-  if (orgRole === 'guest') {
-    return { allowed: false, reason: 'Los invitados no pueden crear proyectos.' };
-  }
+/** Same filters as before, back to the defaults; keeps the chosen sort and page size. */
+export function clearedFilters(state: ProjectListState): ProjectListState {
   return {
-    allowed: false,
-    reason: 'Solo los administradores de la organización pueden crear proyectos.',
+    ...INITIAL_LIST_STATE,
+    sort: state.sort,
+    pageSize: state.pageSize,
   };
 }
+
+export function toListFilters(state: ProjectListState): ProjectListFilters {
+  const [column, direction] = state.sort.split(':');
+  const filters: ProjectListFilters = {
+    archived: state.archived,
+    sort: column as ProjectSortColumn,
+    desc: direction === 'desc',
+    page: state.page,
+    pageSize: state.pageSize,
+  };
+  const q = state.q.trim();
+  if (q) filters.q = q;
+  if (state.template !== ALL) filters.template = state.template;
+  if (state.leadId !== ALL) filters.leadId = state.leadId;
+  if (state.starred) filters.starred = true;
+  return filters;
+}
+
+export { createProjectRights, type CreateProjectRights } from '@corelog/core';

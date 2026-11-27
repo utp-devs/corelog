@@ -1,0 +1,14 @@
+<span class="project-person">
+  <app-avatar [id]="userId()" [name]="name()" [src]="src()" [size]="32" />
+  <span class="project-person__identity">
+    <span class="project-person__name" [attr.title]="name()">
+      {{ name() }}
+      @if (isSelf()) {
+        <span class="project-person__you"> (tú)</span>
+      }
+    </span>
+    @if (email()) {
+      <span class="project-person__email" [attr.title]="email()">{{ email() }}</span>
+    }
+  </span>
+</span>

@@ -269,7 +269,7 @@
             </app-section>
           }
 
-          <app-section title="Velocidad (sprints cerrados)">
+          <app-section title="Velocidad (sprints cerrados)" [fill]="true">
             @if (velocity().length === 0) {
               <app-empty-state
                 title="Aún no hay sprints cerrados"

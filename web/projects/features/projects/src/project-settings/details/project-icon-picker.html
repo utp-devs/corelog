@@ -1,0 +1,24 @@
+<div class="project-icon-picker" role="radiogroup" aria-label="Icono del proyecto">
+  @for (option of options; track option.value; let index = $index) {
+    <button
+      #option
+      type="button"
+      role="radio"
+      class="project-icon-picker__option"
+      [class.project-icon-picker__option--selected]="value() === option.value"
+      [attr.aria-checked]="value() === option.value"
+      [attr.aria-label]="option.label"
+      [attr.title]="option.label"
+      [attr.tabindex]="isTabStop(option) ? 0 : -1"
+      [disabled]="disabled()"
+      (click)="choose(option)"
+      (keydown)="onKeydown($event, index)"
+    >
+      @if (option.value) {
+        <i [class]="option.value" aria-hidden="true"></i>
+      } @else {
+        <span class="project-icon-picker__none" aria-hidden="true">Aa</span>
+      }
+    </button>
+  }
+</div>

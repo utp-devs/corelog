@@ -1,61 +1,82 @@
 import { describe, expect, it } from 'vitest';
-import type { Project } from '@corelog/core';
 
-import { createProjectRights, filterProjects } from './projects-page.utils';
+import {
+  INITIAL_LIST_STATE,
+  clearedFilters,
+  createProjectRights,
+  hasActiveFilters,
+  toListFilters,
+} from './projects-page.utils';
 
-function project(overrides: Partial<Project>): Project {
-  return {
-    id: 'p',
-    organizationId: 'o1',
-    key: 'CORE',
-    name: 'CoreLog',
-    description: '',
-    type: 'kanban',
-    leadId: '',
-    visibility: 'open',
-    archivedAt: null,
-    createdAt: '2026-01-01T00:00:00Z',
-    updatedAt: '2026-01-01T00:00:00Z',
-    ...overrides,
-  };
-}
+describe('toListFilters', () => {
+  it('sends only the filters that are set', () => {
+    expect(toListFilters(INITIAL_LIST_STATE)).toEqual({
+      archived: 'exclude',
+      sort: 'name',
+      desc: false,
+      page: 1,
+      pageSize: 20,
+    });
+    expect(
+      toListFilters({
+        ...INITIAL_LIST_STATE,
+        q: '  core ',
+        template: 'scrum',
+        leadId: 'u1',
+        starred: true,
+        sort: 'updated_at:desc',
+      }),
+    ).toEqual({
+      q: 'core',
+      template: 'scrum',
+      leadId: 'u1',
+      starred: true,
+      archived: 'exclude',
+      sort: 'updated_at',
+      desc: true,
+      page: 1,
+      pageSize: 20,
+    });
+  });
+});
 
-const list: Project[] = [
-  project({ id: 'p-1', key: 'CORE', name: 'CoreLog' }),
-  project({ id: 'p-2', key: 'SEC', name: 'Seguridad', visibility: 'private' }),
-  project({ id: 'p-3', key: 'OLD', name: 'Heredado', archivedAt: '2026-02-01T00:00:00Z' }),
-];
-
-describe('filterProjects', () => {
-  it('hides archived projects by default and matches name or key', () => {
-    expect(filterProjects(list, '', 'all', 'active').map((p) => p.id)).toEqual(['p-1', 'p-2']);
-    expect(filterProjects(list, 'sec', 'all', 'active').map((p) => p.id)).toEqual(['p-2']);
-    expect(filterProjects(list, '  core ', 'all', 'all').map((p) => p.id)).toEqual(['p-1']);
+describe('hasActiveFilters and clearedFilters', () => {
+  it('ignores sort and paging', () => {
+    expect(hasActiveFilters({ ...INITIAL_LIST_STATE, sort: 'key:asc', page: 3 })).toBe(false);
+    expect(hasActiveFilters({ ...INITIAL_LIST_STATE, archived: 'only' })).toBe(true);
+    expect(hasActiveFilters({ ...INITIAL_LIST_STATE, q: 'x' })).toBe(true);
   });
 
-  it('filters by visibility and by archived state', () => {
-    expect(filterProjects(list, '', 'private', 'all').map((p) => p.id)).toEqual(['p-2']);
-    expect(filterProjects(list, '', 'all', 'archived').map((p) => p.id)).toEqual(['p-3']);
+  it('clears filters but keeps sort and page size', () => {
+    const cleared = clearedFilters({
+      ...INITIAL_LIST_STATE,
+      q: 'x',
+      starred: true,
+      sort: 'key:asc',
+      pageSize: 50,
+      page: 4,
+    });
+    expect(cleared).toEqual({ ...INITIAL_LIST_STATE, sort: 'key:asc', pageSize: 50 });
   });
 });
 
 describe('createProjectRights', () => {
-  it('allows global admins and organization owners and admins', () => {
+  it('lets global admins and organization owners and admins create', () => {
     expect(createProjectRights('admin', null, 'admins').allowed).toBe(true);
     expect(createProjectRights('user', 'owner', 'admins').allowed).toBe(true);
     expect(createProjectRights('user', 'admin', 'admins').allowed).toBe(true);
   });
 
-  it('lets members create only when the policy says so', () => {
+  it('lets members create only when the policy allows it', () => {
     expect(createProjectRights('user', 'member', 'members').allowed).toBe(true);
     const closed = createProjectRights('user', 'member', 'admins');
     expect(closed.allowed).toBe(false);
-    expect(closed.reason).toContain('administradores');
+    expect(closed.reason).toMatch(/administradores/);
   });
 
   it('never lets guests create', () => {
     const guest = createProjectRights('user', 'guest', 'members');
     expect(guest.allowed).toBe(false);
-    expect(guest.reason).toContain('invitados');
+    expect(guest.reason).toMatch(/invitados/);
   });
 });

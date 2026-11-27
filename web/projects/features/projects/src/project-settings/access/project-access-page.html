@@ -1,0 +1,300 @@
+<div class="project-access">
+  @if (failure(); as message) {
+    <div role="alert" data-testid="access-error">
+      <p-message severity="error" [closable]="true" (onClose)="failure.set(null)">{{
+        message
+      }}</p-message>
+    </div>
+  }
+
+  <app-section
+    title="Personas"
+    description="Quienes pueden entrar al proyecto, directamente o por un equipo."
+    ariaLabel="Personas con acceso"
+  >
+    @if (canManage()) {
+      <form class="project-access__add" aria-label="Agregar una persona" (ngSubmit)="addPerson()">
+        <div class="project-access__add-field project-access__add-field--grow">
+          <span class="project-access__add-label" id="add-person-label">Agregar persona</span>
+          <app-user-picker
+            [users]="pickableUsers()"
+            [(value)]="newUserId"
+            placeholder="Buscar por nombre o correo"
+            ariaLabel="Persona de la organización"
+            data-testid="access-add-user"
+          />
+        </div>
+        <div class="project-access__add-field">
+          <span class="project-access__add-label" id="add-person-role-label">Rol</span>
+          <app-select-field
+            class="project-access__role"
+            ariaLabel="Rol de la persona nueva"
+            filter="off"
+            [options]="roleOptions"
+            [formControl]="newUserRole"
+          />
+        </div>
+        <p-button
+          type="submit"
+          label="Agregar"
+          icon="pi pi-plus"
+          [disabled]="!newUserId() || busy()"
+          data-testid="access-add-user-submit"
+        />
+      </form>
+    }
+
+    <app-data-table
+      tableKey="project-access-people"
+      [columns]="peopleColumns"
+      [data]="rows()"
+      rowKey="userId"
+      [loading]="loading()"
+      [error]="
+        context.projects.status() === 'error'
+          ? 'No se pudo cargar a las personas del proyecto.'
+          : null
+      "
+      (retry)="retry()"
+      [emptyState]="emptyPeopleTpl"
+      [mobileRender]="mobilePersonTpl"
+    >
+      <ng-template appDataTableCell="person" let-row>
+        <app-project-person
+          [userId]="row.userId"
+          [name]="row.name"
+          [email]="row.email"
+          [hasAvatar]="row.hasAvatar"
+          [isSelf]="isSelf(row)"
+        />
+      </ng-template>
+      <ng-template appDataTableCell="source" let-row>
+        <ng-container *ngTemplateOutlet="sourceTpl; context: { $implicit: row }" />
+      </ng-template>
+      <ng-template appDataTableCell="role" let-row>
+        <ng-container
+          *ngTemplateOutlet="personRoleTpl; context: { $implicit: row, compact: true }"
+        />
+      </ng-template>
+      <ng-template appDataTableCell="actions" let-row>
+        <ng-container *ngTemplateOutlet="personActionsTpl; context: { $implicit: row }" />
+      </ng-template>
+    </app-data-table>
+  </app-section>
+
+  @if (context.canManageMembers()) {
+    <app-section
+      title="Equipos"
+      description="Todas las personas de un equipo reciben el rol que le des."
+      ariaLabel="Equipos con acceso"
+    >
+      @if (canManage()) {
+        <form
+          class="project-access__add"
+          aria-label="Dar acceso a un equipo"
+          (ngSubmit)="addTeam()"
+        >
+          <div class="project-access__add-field project-access__add-field--grow">
+            <span class="project-access__add-label">Agregar equipo</span>
+            <app-select-field
+              ariaLabel="Equipo de la organización"
+              placeholder="Elige un equipo"
+              emptyMessage="No quedan equipos por agregar"
+              [options]="teamOptions()"
+              [ngModel]="newTeamId()"
+              [ngModelOptions]="{ standalone: true }"
+              (ngModelChange)="newTeamId.set($event)"
+              data-testid="access-add-team"
+            />
+          </div>
+          <div class="project-access__add-field">
+            <span class="project-access__add-label">Rol</span>
+            <app-select-field
+              class="project-access__role"
+              ariaLabel="Rol del equipo nuevo"
+              filter="off"
+              [options]="roleOptions"
+              [formControl]="newTeamRole"
+            />
+          </div>
+          <p-button
+            type="submit"
+            label="Agregar"
+            icon="pi pi-plus"
+            [disabled]="!newTeamId() || busy()"
+            data-testid="access-add-team-submit"
+          />
+        </form>
+      }
+
+      <app-data-table
+        tableKey="project-access-teams"
+        [columns]="teamColumns"
+        [data]="teamRows()"
+        rowKey="teamId"
+        [loading]="context.permissions.teamRolesLoading() && teamRows().length === 0"
+        [emptyState]="emptyTeamsTpl"
+        [mobileRender]="mobileTeamTpl"
+      >
+        <ng-template appDataTableCell="team" let-row>
+          <span class="project-access__team">
+            <i class="pi pi-users" aria-hidden="true"></i>
+            <span class="project-access__team-name">{{ row.name }}</span>
+          </span>
+        </ng-template>
+        <ng-template appDataTableCell="role" let-row>
+          <ng-container
+            *ngTemplateOutlet="teamRoleTpl; context: { $implicit: row, compact: true }"
+          />
+        </ng-template>
+        <ng-template appDataTableCell="actions" let-row>
+          <ng-container *ngTemplateOutlet="teamActionsTpl; context: { $implicit: row }" />
+        </ng-template>
+      </app-data-table>
+    </app-section>
+  }
+
+  <ng-template #sourceTpl let-row>
+    <span class="project-access__badges">
+      @if (row.directRole) {
+        <app-lozenge tone="neutral">Directo</app-lozenge>
+      }
+      @if (row.teamName) {
+        <app-lozenge tone="info" [attr.title]="'Por el equipo ' + row.teamName"
+          >Por equipo: {{ row.teamName }}</app-lozenge
+        >
+      }
+    </span>
+  </ng-template>
+
+  <ng-template #personRoleTpl let-row let-compact="compact">
+    @if (canManage() && row.directRole) {
+      <app-select-field
+        class="project-access__role"
+        filter="off"
+        [size]="compact ? 'compact' : 'default'"
+        [ariaLabel]="'Rol de ' + row.name"
+        [options]="roleOptions"
+        [formControl]="personRoleControl(row)"
+      />
+    } @else {
+      <span
+        class="project-access__static-role"
+        [appTooltip]="
+          row.directRole
+            ? ''
+            : 'Este rol viene del equipo ' + row.teamName + '. Cámbialo en la sección de equipos.'
+        "
+      >
+        <app-lozenge [tone]="row.effectiveRole === 'lead' ? 'info' : 'neutral'">{{
+          roleLabel(row.effectiveRole)
+        }}</app-lozenge>
+      </span>
+    }
+    @if (row.directRole && row.teamName && row.directRole !== row.effectiveRole) {
+      <span class="project-access__effective"
+        >Efectivo: {{ roleLabel(row.effectiveRole) }} (por el equipo)</span
+      >
+    }
+  </ng-template>
+
+  <ng-template #personActionsTpl let-row>
+    @if (canManage() && row.directRole) {
+      <p-button
+        icon="pi pi-user-minus"
+        severity="secondary"
+        [text]="true"
+        [ariaLabel]="'Quitar a ' + row.name"
+        [appTooltip]="'Quitar a ' + row.name"
+        [disabled]="busy()"
+        (onClick)="removing.set({ kind: 'person', row })"
+      />
+    }
+  </ng-template>
+
+  <ng-template #teamRoleTpl let-row let-compact="compact">
+    @if (canManage()) {
+      <app-select-field
+        class="project-access__role"
+        filter="off"
+        [size]="compact ? 'compact' : 'default'"
+        [ariaLabel]="'Rol del equipo ' + row.name"
+        [options]="roleOptions"
+        [formControl]="teamRoleControl(row)"
+      />
+    } @else {
+      <app-lozenge tone="neutral">{{ roleLabel(row.role) }}</app-lozenge>
+    }
+  </ng-template>
+
+  <ng-template #teamActionsTpl let-row>
+    @if (canManage()) {
+      <p-button
+        icon="pi pi-trash"
+        severity="secondary"
+        [text]="true"
+        [ariaLabel]="'Quitar el acceso del equipo ' + row.name"
+        [appTooltip]="'Quitar el acceso del equipo ' + row.name"
+        [disabled]="busy()"
+        (onClick)="removing.set({ kind: 'team', row })"
+      />
+    }
+  </ng-template>
+
+  <ng-template #mobilePersonTpl let-row>
+    <div class="project-access__card">
+      <div class="project-access__card-head">
+        <app-project-person
+          [userId]="row.userId"
+          [name]="row.name"
+          [email]="row.email"
+          [hasAvatar]="row.hasAvatar"
+          [isSelf]="isSelf(row)"
+        />
+        <ng-container *ngTemplateOutlet="personActionsTpl; context: { $implicit: row }" />
+      </div>
+      <ng-container *ngTemplateOutlet="sourceTpl; context: { $implicit: row }" />
+      <ng-container
+        *ngTemplateOutlet="personRoleTpl; context: { $implicit: row, compact: false }"
+      />
+    </div>
+  </ng-template>
+
+  <ng-template #mobileTeamTpl let-row>
+    <div class="project-access__card">
+      <div class="project-access__card-head">
+        <span class="project-access__team">
+          <i class="pi pi-users" aria-hidden="true"></i>
+          <span class="project-access__team-name">{{ row.name }}</span>
+        </span>
+        <ng-container *ngTemplateOutlet="teamActionsTpl; context: { $implicit: row }" />
+      </div>
+      <ng-container *ngTemplateOutlet="teamRoleTpl; context: { $implicit: row, compact: false }" />
+    </div>
+  </ng-template>
+
+  <ng-template #emptyPeopleTpl>
+    <app-empty-state
+      title="Aún no hay personas"
+      description="Agrega a quienes van a trabajar en este proyecto."
+    />
+  </ng-template>
+
+  <ng-template #emptyTeamsTpl>
+    <app-empty-state
+      title="Ningún equipo tiene acceso"
+      description="Dale acceso a un equipo para incluir de una vez a todas sus personas."
+    />
+  </ng-template>
+
+  <app-confirm-modal
+    [open]="removing() !== null"
+    [title]="removalTitle()"
+    [description]="removalText()"
+    confirmText="Quitar"
+    [danger]="true"
+    [loading]="busy()"
+    (confirmed)="confirmRemoval()"
+    (cancelled)="removing.set(null)"
+  />
+</div>

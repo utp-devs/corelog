@@ -1,5 +1,7 @@
 import { Routes } from '@angular/router';
-import { PROJECT_ROUTE_PARAM, projectRouteResolver } from '@corelog/core';
+import { PROJECT_ROUTE_PARAM, projectRouteResolver, unsavedChangesGuard } from '@corelog/core';
+
+import { PROJECT_SETTINGS_ROUTES } from './project-settings/project-settings.routes';
 
 /**
  * Children of the project workspace (`/projects/:key`). The planning sections (board, backlog and
@@ -17,14 +19,7 @@ export const PROJECT_DETAIL_CHILDREN: Routes = [
     loadComponent: () =>
       import('./project-calendar/project-calendar-page').then((m) => m.ProjectCalendarPage),
   },
-  {
-    path: 'permisos',
-    title: 'Permisos',
-    loadComponent: () =>
-      import('./project-permissions/project-permissions-page').then(
-        (m) => m.ProjectPermissionsPage,
-      ),
-  },
+  ...PROJECT_SETTINGS_ROUTES,
 ];
 
 /** Project list and project workspace, mounted by the application at /projects. The workspace route
@@ -34,6 +29,12 @@ export const PROJECTS_ROUTES: Routes = [
     path: '',
     title: 'Proyectos',
     loadComponent: () => import('./projects-page/projects-page').then((m) => m.ProjectsPage),
+  },
+  {
+    path: 'new',
+    title: 'Nuevo proyecto',
+    canDeactivate: [unsavedChangesGuard],
+    loadComponent: () => import('./project-wizard/project-wizard').then((m) => m.ProjectWizard),
   },
   {
     path: `:${PROJECT_ROUTE_PARAM}`,

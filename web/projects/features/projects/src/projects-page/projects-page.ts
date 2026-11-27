@@ -3,102 +3,115 @@ import {
   Component,
   DestroyRef,
   OnInit,
-  effect,
   computed,
+  effect,
   inject,
   signal,
+  untracked,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { NgTemplateOutlet } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute, Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import {
   AuthStore,
-  Project,
-  ProjectMemberRole,
-  ProjectStore,
-  leadNameOf,
+  FavoritesStore,
   NotificationService,
+  ORGANIZATION_ID_PROVIDER,
+  OrganizationApiService,
   OrganizationStore,
+  Project,
+  ProjectArchiveFilter,
+  ProjectStore,
   projectAccessVariantOf,
-  useOrgMembersById,
   projectPath,
 } from '@corelog/core';
 import { CardGrid } from '@corelog/ui/card-grid';
+import {
+  DataTable,
+  DataTableCell,
+  DataTableColumn,
+  DataTablePageChange,
+} from '@corelog/ui/data-table';
 import { EmptyState } from '@corelog/ui/empty-state';
 import { ErrorPage } from '@corelog/ui/error-page';
 import { ErrorState } from '@corelog/ui/error-state';
-import { Lozenge } from '@corelog/ui/lozenge';
 import { LoadingSkeleton } from '@corelog/ui/loading-skeleton';
+import { Lozenge } from '@corelog/ui/lozenge';
 import { PageContainer } from '@corelog/ui/page-container';
 import { PageHeader, PageHeaderActions } from '@corelog/ui/page-header';
 import { ProjectAvatar } from '@corelog/ui/project-avatar';
 import { SearchInput } from '@corelog/ui/search-input';
-import { Section } from '@corelog/ui/section';
+import { SelectField, SelectFieldOption } from '@corelog/ui/select-field';
 import { Toolbar, ToolbarLeft } from '@corelog/ui/toolbar';
-import { Button } from 'primeng/button';
-import { InputText } from 'primeng/inputtext';
-import { Select } from 'primeng/select';
-import { SelectButton } from 'primeng/selectbutton';
 import { AppTooltip } from '@corelog/ui/tooltip';
+import { Button } from 'primeng/button';
 
-import { failureMessage, inputValue } from '../shared/failure-message';
-import { ProjectCreateDialog } from './project-create-dialog';
+import { PROJECT_TEMPLATES, TEMPLATE_LABELS } from '../project-wizard/project-templates';
 import {
-  ArchivedFilter,
-  MEMBER_ROLE_OPTIONS,
-  TYPE_LABELS,
+  ALL,
+  ARCHIVED_OPTIONS,
+  INITIAL_LIST_STATE,
+  ProjectListState,
+  ProjectView,
+  SORT_OPTIONS,
   VISIBILITY_LABELS,
-  VisibilityFilter,
+  clearedFilters,
   createProjectRights,
-  filterProjects,
+  hasActiveFilters,
+  toListFilters,
 } from './projects-page.utils';
 
-const VISIBILITY_OPTIONS: { label: string; value: VisibilityFilter }[] = [
-  { label: 'Todos', value: 'all' },
-  { label: 'Abiertos', value: 'open' },
-  { label: 'Privados', value: 'private' },
+const VIEW_STORAGE_KEY = 'corelog.projects.view';
+const SKELETON_CARDS = 6;
+const DATE_FORMAT = new Intl.DateTimeFormat('es', { dateStyle: 'medium' });
+
+const COLUMNS: DataTableColumn[] = [
+  { key: 'name', title: 'Proyecto', mobilePrimary: true },
+  { key: 'key', title: 'Clave', mobilePrimary: true },
+  { key: 'template', title: 'Plantilla', hideable: true },
+  { key: 'lead', title: 'Responsable', hideable: true },
+  { key: 'updated', title: 'Última actividad', hideable: true },
 ];
 
-const ARCHIVED_OPTIONS: { value: ArchivedFilter; label: string }[] = [
-  { value: 'active', label: 'Activos' },
-  { value: 'archived', label: 'Archivados' },
-  { value: 'all', label: 'Todos los estados' },
+const TEMPLATE_OPTIONS: readonly SelectFieldOption[] = [
+  { value: ALL, label: 'Todas las plantillas' },
+  ...PROJECT_TEMPLATES.map((item) => ({ value: item.value, label: item.label })),
 ];
 
-const LABEL_COLOR_OPTIONS = [
-  { value: 'blue', label: 'Azul' },
-  { value: 'green', label: 'Verde' },
-  { value: 'gold', label: 'Dorado' },
-  { value: 'red', label: 'Rojo' },
-];
+function readStoredView(): ProjectView {
+  try {
+    return localStorage.getItem(VIEW_STORAGE_KEY) === 'cards' ? 'cards' : 'table';
+  } catch {
+    return 'table';
+  }
+}
 
-const SKELETON_SLOTS = [0, 1, 2];
-
-/** Projects of the active organization: filters, cards, and the members, labels and components of a selected project. */
+/** Projects of the active organization: search, filters, sorting, table or cards, stars and paging. */
 @Component({
   selector: 'app-projects-page',
   imports: [
     FormsModule,
+    NgTemplateOutlet,
+    RouterLink,
     Button,
-    InputText,
-    Select,
-    SelectButton,
     AppTooltip,
     CardGrid,
+    DataTable,
+    DataTableCell,
     EmptyState,
     ErrorPage,
     ErrorState,
-    Lozenge,
     LoadingSkeleton,
+    Lozenge,
     PageContainer,
     PageHeader,
     PageHeaderActions,
     ProjectAvatar,
     SearchInput,
-    Section,
+    SelectField,
     Toolbar,
     ToolbarLeft,
-    ProjectCreateDialog,
   ],
   templateUrl: './projects-page.html',
   styleUrl: './projects-page.scss',
@@ -107,19 +120,31 @@ const SKELETON_SLOTS = [0, 1, 2];
 })
 export class ProjectsPage implements OnInit {
   private readonly store = inject(ProjectStore);
+  private readonly favorites = inject(FavoritesStore);
   private readonly auth = inject(AuthStore);
-  private readonly router = inject(Router);
-  private readonly route = inject(ActivatedRoute);
   private readonly orgs = inject(OrganizationStore);
+  private readonly orgApi = inject(OrganizationApiService);
+  private readonly organizationId = inject(ORGANIZATION_ID_PROVIDER);
+  private readonly router = inject(Router);
   private readonly notify = inject(NotificationService);
   private readonly destroyRef = inject(DestroyRef);
 
-  protected readonly projects = this.store.projects;
-  protected readonly status = this.store.status;
-  protected readonly error = this.store.error;
-  protected readonly members = this.store.members;
-  protected readonly labels = this.store.labels;
-  protected readonly components = this.store.components;
+  protected readonly columns = COLUMNS;
+  protected readonly templateOptions = TEMPLATE_OPTIONS;
+  protected readonly sortOptions = SORT_OPTIONS;
+  protected readonly archivedOptions = ARCHIVED_OPTIONS;
+  protected readonly templates = PROJECT_TEMPLATES;
+  protected readonly skeletonCards = Array.from({ length: SKELETON_CARDS }, (_, index) => index);
+
+  protected readonly state = signal<ProjectListState>(INITIAL_LIST_STATE);
+  protected readonly view = signal<ProjectView>(readStoredView());
+  private readonly leads = signal<ReadonlyMap<string, string>>(new Map());
+
+  protected readonly items = this.store.pageItems;
+  protected readonly meta = this.store.pageMeta;
+  protected readonly loading = this.store.pageLoading;
+  protected readonly loaded = this.store.pageLoaded;
+  protected readonly error = this.store.pageError;
 
   protected readonly rights = computed(() =>
     createProjectRights(
@@ -130,214 +155,165 @@ export class ProjectsPage implements OnInit {
   );
   protected readonly canCreate = computed(() => this.rights().allowed);
   protected readonly accessVariant = computed(() => projectAccessVariantOf(this.error()));
-  protected readonly loading = computed(
-    () => this.status() === 'loading' && this.projects().length === 0,
+  protected readonly filtersActive = computed(() => hasActiveFilters(this.state()));
+  protected readonly total = computed(() => this.meta()?.total ?? 0);
+  protected readonly firstLoad = computed(() => this.loading() && !this.loaded());
+  protected readonly failed = computed(() => this.error() !== null && this.items().length === 0);
+  protected readonly isEmpty = computed(
+    () => this.loaded() && !this.failed() && this.total() === 0 && this.items().length === 0,
   );
+  protected readonly neverCreated = computed(() => this.isEmpty() && !this.filtersActive());
   protected readonly errorMessage = computed(
     () => this.error()?.message ?? 'No se pudieron cargar los proyectos.',
   );
-
-  protected readonly query = signal('');
-  protected readonly visibility = signal<VisibilityFilter>('all');
-  protected readonly archived = signal<ArchivedFilter>('active');
-  protected readonly visible = computed(() =>
-    filterProjects(this.projects(), this.query(), this.visibility(), this.archived()),
+  protected readonly pagination = computed(() => ({
+    page: this.state().page,
+    pageSize: this.state().pageSize,
+    total: this.total(),
+  }));
+  protected readonly totalPages = computed(() =>
+    Math.max(1, Math.ceil(this.total() / this.state().pageSize)),
   );
-
-  protected readonly createOpen = signal(false);
-  protected readonly selectedProjectId = signal<string | null>(null);
-  protected readonly selectedProject = computed(() =>
-    this.projects().find((project) => project.id === this.selectedProjectId()),
-  );
-  protected readonly membersTitle = computed(() => {
-    const project = this.selectedProject();
-    return project ? `Miembros de ${project.name}` : 'Miembros del proyecto';
-  });
-
-  protected readonly memberUserId = signal('');
-  protected readonly memberRole = signal<ProjectMemberRole>('contributor');
-  protected readonly labelName = signal('');
-  protected readonly labelColor = signal('blue');
-  protected readonly componentName = signal('');
-  protected readonly componentDescription = signal('');
-
-  // All projects of the list belong to the current organization: its members resolve the leads.
-  protected readonly lead = useOrgMembersById(computed(() => this.projects()[0]?.organizationId));
-
-  protected readonly visibilityOptions = VISIBILITY_OPTIONS;
-  protected readonly archivedOptions = ARCHIVED_OPTIONS;
-  protected readonly roleOptions = MEMBER_ROLE_OPTIONS;
-  protected readonly labelColorOptions = LABEL_COLOR_OPTIONS;
-  protected readonly skeletonSlots = SKELETON_SLOTS;
-
-  /** `?new=1` asks for the create dialog to open as soon as the caller is known to be allowed. */
-  private readonly createRequested = signal(false);
+  protected readonly leadOptions = computed<SelectFieldOption[]>(() => [
+    { value: ALL, label: 'Cualquier responsable' },
+    ...[...this.leads()].map(([value, label]) => ({ value, label })),
+  ]);
 
   constructor() {
     effect(() => {
-      if (this.createRequested() && this.canCreate()) {
-        this.createRequested.set(false);
-        this.createOpen.set(true);
-      }
+      const filters = toListFilters(this.state());
+      untracked(() => this.store.fetchPage(filters));
     });
   }
 
   ngOnInit(): void {
-    this.store.fetchProjects();
-    if (this.route.snapshot.queryParamMap.get('new') === '1') {
-      this.createRequested.set(true);
-      void this.router.navigate([], {
-        relativeTo: this.route,
-        queryParams: { new: null },
-        queryParamsHandling: 'merge',
-        replaceUrl: true,
-      });
-    }
+    this.favorites.fetchFavorites();
+    this.loadLeads();
+  }
+
+  protected leadName(project: Project): string {
+    return this.leads().get(project.leadId) ?? '-';
+  }
+
+  protected templateLabel(project: Project): string {
+    return TEMPLATE_LABELS[project.template ?? project.type];
   }
 
   protected visibilityLabel(project: Project): string {
     return VISIBILITY_LABELS[project.visibility];
   }
 
-  protected typeLabel(project: Project): string {
-    return TYPE_LABELS[project.type];
+  protected updated(project: Project): string {
+    return DATE_FORMAT.format(new Date(project.updatedAt));
   }
 
-  protected leadName(project: Project): string {
-    return leadNameOf(project.leadId, this.lead.members(), this.lead.status());
+  protected path(project: Project): string {
+    return projectPath(project);
   }
 
-  protected openCreate(): void {
-    if (this.canCreate()) this.createOpen.set(true);
+  protected isStarred(project: Project): boolean {
+    return this.favorites.isStarred(project.id);
   }
 
-  protected openBoard(project: Project): void {
-    void this.router.navigateByUrl(projectPath(project, 'board'));
+  protected create(): void {
+    if (this.canCreate()) void this.router.navigateByUrl('/projects/new');
   }
 
-  protected selectProject(project: Project): void {
-    this.selectedProjectId.set(project.id);
-    this.store.fetchMembers(project.id);
-    this.store.fetchLabels(project.id);
-    this.store.fetchComponents(project.id);
+  protected openProject(project: Project): void {
+    void this.router.navigateByUrl(projectPath(project));
   }
 
-  protected isSelected(project: Project): boolean {
-    return this.selectedProjectId() === project.id;
+  protected setQuery(q: string): void {
+    this.patch({ q });
   }
 
-  protected addMember(): void {
-    const projectId = this.selectedProjectId();
-    if (!projectId || !this.memberUserId()) return;
-    this.store
-      .addMember(projectId, this.memberUserId(), this.memberRole())
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: () => {
-          this.memberUserId.set('');
-          this.notify.success('Miembro agregado');
-        },
-        error: (error: unknown) =>
-          this.notify.error(failureMessage(error, 'No se pudo agregar el miembro')),
-      });
+  protected setTemplate(value: string | null): void {
+    this.patch({ template: (value ?? ALL) as ProjectListState['template'] });
   }
 
-  protected changeMemberRole(userId: string, role: ProjectMemberRole): void {
-    const projectId = this.selectedProjectId();
-    if (!projectId) return;
-    this.store
-      .updateMember(projectId, userId, role)
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        error: (error: unknown) =>
-          this.notify.error(failureMessage(error, 'No se pudo cambiar el rol')),
-      });
+  protected setLead(value: string | null): void {
+    this.patch({ leadId: value ?? ALL });
   }
 
-  protected removeMember(userId: string): void {
-    const projectId = this.selectedProjectId();
-    if (!projectId) return;
-    this.store
-      .removeMember(projectId, userId)
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        error: (error: unknown) =>
-          this.notify.error(failureMessage(error, 'No se pudo eliminar el miembro')),
-      });
+  protected setArchived(value: string | null): void {
+    this.patch({ archived: (value ?? 'exclude') as ProjectArchiveFilter });
   }
 
-  protected createLabel(): void {
-    const projectId = this.selectedProjectId();
-    const name = this.labelName();
-    if (!projectId || !name.trim()) return;
-    this.store
-      .createLabel(projectId, name, this.labelColor())
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: () => this.labelName.set(''),
-        error: (error: unknown) =>
-          this.notify.error(failureMessage(error, 'No se pudo crear la etiqueta')),
-      });
+  protected setSort(value: string | null): void {
+    this.patch({ sort: value ?? INITIAL_LIST_STATE.sort });
   }
 
-  protected deleteLabel(labelId: string): void {
-    const projectId = this.selectedProjectId();
-    if (!projectId) return;
-    this.store
-      .deleteLabel(projectId, labelId)
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        error: (error: unknown) =>
-          this.notify.error(failureMessage(error, 'No se pudo eliminar la etiqueta')),
-      });
+  protected toggleStarredFilter(): void {
+    this.patch({ starred: !this.state().starred });
   }
 
-  protected createComponent(): void {
-    const projectId = this.selectedProjectId();
-    const name = this.componentName();
-    if (!projectId || !name.trim()) return;
-    this.store
-      .createComponent(projectId, name, this.componentDescription())
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: () => {
-          this.componentName.set('');
-          this.componentDescription.set('');
-        },
-        error: (error: unknown) =>
-          this.notify.error(failureMessage(error, 'No se pudo crear el componente')),
-      });
+  protected clearFilters(): void {
+    this.state.update((state) => clearedFilters(state));
   }
 
-  protected deleteComponent(componentId: string): void {
-    const projectId = this.selectedProjectId();
-    if (!projectId) return;
-    this.store
-      .deleteComponent(projectId, componentId)
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        error: (error: unknown) =>
-          this.notify.error(failureMessage(error, 'No se pudo eliminar el componente')),
-      });
+  protected setView(view: ProjectView): void {
+    this.view.set(view);
+    try {
+      localStorage.setItem(VIEW_STORAGE_KEY, view);
+    } catch {
+      // The choice only lasts for this visit when storage is blocked.
+    }
   }
 
-  protected onLabelNameInput(event: Event): void {
-    this.labelName.set(inputValue(event));
+  protected changePage(change: DataTablePageChange): void {
+    this.state.update((state) => ({ ...state, page: change.page, pageSize: change.pageSize }));
   }
 
-  protected onMemberInput(event: Event): void {
-    this.memberUserId.set(inputValue(event));
+  protected goToPage(page: number): void {
+    const target = Math.min(Math.max(1, page), this.totalPages());
+    this.state.update((state) => ({ ...state, page: target }));
   }
 
-  protected onComponentNameInput(event: Event): void {
-    this.componentName.set(inputValue(event));
-  }
-
-  protected onComponentDescriptionInput(event: Event): void {
-    this.componentDescription.set(inputValue(event));
+  protected toggleStar(project: Project): void {
+    const wasStarred = this.isStarred(project);
+    const request = wasStarred
+      ? this.favorites.unstar(project.id)
+      : this.favorites.star({
+          id: project.id,
+          name: project.name,
+          key: project.key,
+          color: project.color,
+        });
+    request.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: () => {
+        if (wasStarred && this.state().starred) this.store.fetchPage(toListFilters(this.state()));
+      },
+      error: () =>
+        this.notify.error(
+          wasStarred
+            ? 'No se pudo quitar el proyecto de favoritos.'
+            : 'No se pudo marcar el proyecto como favorito.',
+        ),
+    });
   }
 
   protected retry(): void {
-    this.store.fetchProjects();
+    this.store.fetchPage(toListFilters(this.state()));
+  }
+
+  /** Any change of a filter or of the sort goes back to the first page. */
+  private patch(change: Partial<ProjectListState>): void {
+    this.state.update((state) => ({ ...state, ...change, page: 1 }));
+  }
+
+  private loadLeads(): void {
+    const organizationId = this.organizationId();
+    if (!organizationId) return;
+    this.orgApi
+      .listMembers(organizationId)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (members) =>
+          this.leads.set(
+            new Map(members.map((member) => [member.userId, member.displayName || member.name])),
+          ),
+        // Guests cannot read the directory: leads then show as unknown and the filter stays short.
+        error: () => this.leads.set(new Map()),
+      });
   }
 }

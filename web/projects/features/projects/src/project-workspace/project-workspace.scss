@@ -10,7 +10,7 @@
   min-width: 0;
   padding-block: var(--cl-space-3) 0;
 
-  /* The page below the tabs brings its own gutter, so only the header and the tab bar are inset here. */
+  /* The page below the header brings its own gutter, so only the header is inset here. */
   &__header {
     @include m.flex-row(3, flex-start);
     min-width: 0;
@@ -90,73 +90,6 @@
     color: var(--cl-brand);
     font: inherit;
     cursor: pointer;
-
-    &:focus-visible {
-      outline: none;
-      box-shadow: var(--cl-shadow-focus);
-    }
-  }
-
-  /* Tabs stay in view while the page scrolls. On narrow widths they scroll inside the bar and
-     fade at the edges that still hide tabs. */
-  &__nav {
-    margin-inline: var(--cl-gutter);
-    position: sticky;
-    top: 0;
-    z-index: 2;
-    min-width: 0;
-    max-width: 100%;
-    overflow-x: auto;
-    border-bottom: 1px solid var(--cl-border);
-    background:
-      linear-gradient(to right, var(--cl-bg-page) 30%, transparent) left center / 1.5rem 100%
-        no-repeat local,
-      linear-gradient(to left, var(--cl-bg-page) 30%, transparent) right center / 1.5rem 100%
-        no-repeat local,
-      linear-gradient(to right, var(--cl-border-strong), transparent) left center / 0.5rem 100%
-        no-repeat scroll,
-      linear-gradient(to left, var(--cl-border-strong), transparent) right center / 0.5rem 100%
-        no-repeat scroll,
-      var(--cl-bg-page);
-    scrollbar-width: none;
-
-    &::-webkit-scrollbar {
-      display: none;
-    }
-  }
-
-  &__tabs {
-    display: flex;
-    flex-wrap: nowrap;
-    gap: var(--cl-space-1);
-    margin: 0;
-    padding: 0;
-    list-style: none;
-  }
-
-  &__tab-item {
-    flex: 0 0 auto;
-  }
-
-  &__tab {
-    display: inline-flex;
-    align-items: center;
-    min-height: var(--cl-control-h-lg);
-    padding: 0 var(--cl-space-3);
-    border-bottom: 2px solid transparent;
-    color: var(--cl-text-subtle);
-    text-decoration: none;
-    white-space: nowrap;
-
-    &:hover {
-      color: var(--cl-text);
-    }
-
-    &--active {
-      border-bottom-color: var(--cl-brand);
-      color: var(--cl-brand);
-      font-weight: var(--cl-weight-semibold);
-    }
 
     &:focus-visible {
       outline: none;

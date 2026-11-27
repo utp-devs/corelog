@@ -6,8 +6,55 @@
 }
 
 .projects-page {
-  &__create {
-    display: inline-flex;
+  &__filters {
+    @include m.flex-row(3);
+    flex-wrap: wrap;
+    width: 100%;
+    min-width: 0;
+  }
+
+  &__search {
+    flex: 1 1 16rem;
+    min-width: 12rem;
+    max-width: 24rem;
+  }
+
+  &__select {
+    flex: 1 1 11rem;
+    min-width: 10rem;
+    max-width: 14rem;
+  }
+
+  &__views {
+    @include m.flex-row(0);
+    margin-inline-start: auto;
+    border: 1px solid var(--cl-border-strong);
+    border-radius: var(--cl-radius-md);
+    overflow: hidden;
+  }
+
+  &__view {
+    @include m.flex-row(0, center, center);
+    min-width: var(--cl-control-h-md);
+    min-height: var(--cl-control-h-md);
+    border: 0;
+    background: var(--cl-bg-surface);
+    color: var(--cl-text-subtle);
+    cursor: pointer;
+
+    &:hover {
+      background: var(--cl-bg-hover);
+    }
+
+    &[aria-pressed='true'] {
+      background: var(--cl-bg-selected);
+      color: var(--cl-brand);
+    }
+
+    &:focus-visible {
+      outline: none;
+      box-shadow: inset 0 0 0 2px var(--cl-brand);
+    }
   }
 
   &__hint {
@@ -16,18 +63,77 @@
     font-size: var(--cl-font-small);
   }
 
-  &__filters {
-    @include m.flex-row(3);
-    flex-wrap: wrap;
-    width: 100%;
+  /* Table cells */
+  &__name-cell {
+    @include m.flex-row(2);
     min-width: 0;
   }
 
-  &__archived {
-    min-width: 11rem;
+  &__link,
+  &__card-link {
+    @include m.truncate;
+    display: block;
+    min-width: 0;
+    min-height: var(--cl-control-h-md);
+    line-height: var(--cl-control-h-md);
+    color: var(--cl-text);
+    font-weight: var(--cl-weight-semibold);
+    text-decoration: none;
+
+    &:hover {
+      color: var(--cl-brand);
+      text-decoration: underline;
+    }
+
+    &:focus-visible {
+      outline: none;
+      box-shadow: var(--cl-shadow-focus);
+      border-radius: var(--cl-radius-sm);
+    }
   }
 
-  /* Skeleton grid while the projects load: same columns as the card grid. */
+  &__key {
+    color: var(--cl-text-subtle);
+    font-size: var(--cl-font-small);
+    font-weight: var(--cl-weight-medium);
+  }
+
+  &__star {
+    @include m.flex-row(0, center, center);
+    flex: none;
+    min-width: var(--cl-control-h-md);
+    min-height: var(--cl-control-h-md);
+    border: 0;
+    border-radius: var(--cl-radius-md);
+    background: none;
+    color: var(--cl-text-subtle);
+    cursor: pointer;
+
+    &:hover {
+      background: var(--cl-bg-hover);
+      color: var(--cl-text);
+    }
+
+    &--on {
+      color: var(--cl-warning-text);
+    }
+
+    &:focus-visible {
+      outline: none;
+      box-shadow: var(--cl-shadow-focus);
+    }
+  }
+
+  &__mobile {
+    @include m.flex-row(3);
+    min-width: 0;
+
+    > .projects-page__card-title {
+      flex: 1 1 auto;
+    }
+  }
+
+  /* Cards */
   &__skeletons {
     @include m.grid-auto(17.5rem, 4);
     margin: 0;
@@ -35,19 +141,9 @@
     list-style: none;
   }
 
-  &__skeleton {
-    display: flex;
-    min-width: 0;
-
-    > * {
-      flex: 1 1 auto;
-      min-width: 0;
-    }
-  }
-
-  /* Equal-height cards: the grid stretches each article and the card fills it. */
   &__card {
     @include m.flex-column(3);
+    position: relative;
     width: 100%;
     min-width: 0;
     padding: var(--cl-space-4);
@@ -61,179 +157,126 @@
       box-shadow: var(--cl-shadow-2);
     }
 
-    &--archived {
-      background: var(--cl-bg-sunken);
+    &:focus-within {
+      box-shadow: var(--cl-shadow-focus);
     }
+
+    &--archived {
+      opacity: 0.75;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      transition: none;
+    }
+  }
+
+  /* The title link covers the whole card; the star button sits above it. */
+  &__card-link::after {
+    content: '';
+    position: absolute;
+    inset: 0;
   }
 
   &__card-header {
     @include m.flex-row(3);
     min-width: 0;
+
+    .projects-page__star {
+      position: relative;
+      margin-inline-start: auto;
+    }
   }
 
   &__card-title {
-    @include m.flex-column(1);
+    @include m.flex-column(0);
+    flex: 1 1 auto;
     min-width: 0;
-    align-items: flex-start;
   }
 
-  &__name {
-    @include m.truncate;
-    max-width: 100%;
+  &__card-name {
     margin: 0;
-    color: var(--cl-text);
-    font-size: var(--cl-font-body-strong);
-    font-weight: var(--cl-weight-semibold);
-  }
-
-  &__key {
-    padding: 0 var(--cl-space-2);
-    border-radius: var(--cl-radius-sm);
-    background: var(--cl-bg-hover);
-    color: var(--cl-text-subtle);
-    font-size: var(--cl-font-small);
-    font-weight: var(--cl-weight-semibold);
-    letter-spacing: 0.04em;
+    min-width: 0;
+    font-size: var(--cl-font-body);
   }
 
   &__description {
+    margin: 0;
+    color: var(--cl-text-subtle);
+    font-size: var(--cl-font-small);
     display: -webkit-box;
-    margin: 0;
-    overflow: hidden;
-    color: var(--cl-text-subtle);
-    font-size: var(--cl-font-small);
-    line-height: var(--cl-lh-body);
-    min-height: 3em;
-    -webkit-box-orient: vertical;
     -webkit-line-clamp: 2;
-    overflow-wrap: anywhere;
-  }
-
-  &__lead {
-    @include m.flex-row(2);
-    margin: 0;
-    min-width: 0;
-    color: var(--cl-text-subtle);
-    font-size: var(--cl-font-small);
-
-    > span:last-child {
-      @include m.truncate;
-      color: var(--cl-text);
-    }
+    -webkit-box-orient: vertical;
+    overflow: hidden;
   }
 
   &__tags {
     @include m.cluster(2);
   }
 
-  &__card-actions {
-    @include m.flex-row(2, center, space-between);
-    flex-wrap: wrap;
-    margin-top: auto;
-    padding-top: var(--cl-space-2);
-    border-top: 1px solid var(--cl-divider);
-  }
-
-  /* Text action inside a card. Targets grow to 44 px on touch screens. */
-  &__link {
+  &__lead {
     @include m.flex-row(2);
-    min-height: var(--cl-control-h-md);
-    padding: 0 var(--cl-space-2);
-    border: 0;
-    border-radius: var(--cl-radius-md);
-    background: transparent;
-    color: var(--cl-brand);
-    font: inherit;
-    cursor: pointer;
-
-    &:hover {
-      background: var(--cl-bg-hover);
-    }
-
-    &[aria-pressed='true'] {
-      background: var(--cl-brand-subtle);
-    }
-
-    &:focus-visible {
-      outline: none;
-      box-shadow: var(--cl-shadow-focus);
-    }
-
-    @media (pointer: coarse) {
-      min-height: var(--cl-control-h-lg);
-    }
+    margin: 0;
+    color: var(--cl-text-subtle);
+    font-size: var(--cl-font-small);
   }
 
-  &__form {
-    @include m.cluster(2);
-    margin-bottom: var(--cl-space-4);
+  &__pager {
+    @include m.flex-row(3, center, flex-end);
+    flex-wrap: wrap;
+    color: var(--cl-text-subtle);
+    font-size: var(--cl-font-small);
   }
 
-  &__input-member {
-    width: 17.5rem;
-    max-width: 100%;
+  &__count {
+    margin-inline-end: auto;
   }
 
-  &__input-label,
-  &__input-name {
-    width: 12.5rem;
-    max-width: 100%;
+  /* Empty states */
+  /* The empty panels grow to the bottom of the filled page, so the surface paints the unused space. */
+  &__teaser {
+    @include m.flex-column(6);
+    flex: 1 1 auto;
+    padding: var(--cl-space-6);
+    border: 1px solid var(--cl-border);
+    border-radius: var(--cl-radius-lg);
+    background: var(--cl-bg-surface);
   }
 
-  &__input-description {
-    width: 15rem;
-    max-width: 100%;
+  &__empty {
+    flex: 1 1 auto;
+    padding: var(--cl-space-6);
+    border: 1px solid var(--cl-border);
+    border-radius: var(--cl-radius-lg);
+    background: var(--cl-bg-surface);
   }
 
-  &__list {
-    @include m.flex-column(2);
+  &__templates {
+    @include m.grid-auto(14rem, 3);
     margin: 0;
     padding: 0;
     list-style: none;
   }
 
-  &__item {
-    @include m.flex-row(3, center, space-between);
-    min-width: 0;
-    padding: var(--cl-space-2) var(--cl-space-3);
+  &__template {
+    @include m.flex-column(2);
+    padding: var(--cl-space-4);
     border: 1px solid var(--cl-border);
     border-radius: var(--cl-radius-md);
+    background: var(--cl-bg-sunken);
   }
 
-  &__item-text {
-    @include m.truncate;
-    min-width: 0;
-  }
-
-  &__item-actions {
+  &__template-name {
     @include m.flex-row(2);
-    flex-shrink: 0;
-  }
-
-  &__columns {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(min(20rem, 100%), 1fr));
-    gap: var(--cl-space-6);
-    align-items: start;
-  }
-
-  &__column {
-    @include m.flex-column;
-    min-width: 0;
-  }
-
-  &__subtitle {
-    margin: 0 0 var(--cl-space-3);
-    font-size: var(--cl-font-body-strong);
     font-weight: var(--cl-weight-semibold);
+    color: var(--cl-text);
+
+    i {
+      color: var(--cl-brand);
+    }
   }
 
-  @include m.respond-down(768px) {
-    &__input-member,
-    &__input-label,
-    &__input-name,
-    &__input-description {
-      width: 100%;
-    }
+  &__template-text {
+    color: var(--cl-text-subtle);
+    font-size: var(--cl-font-small);
   }
 }

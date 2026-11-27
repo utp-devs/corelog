@@ -2,14 +2,12 @@ import {
   ChangeDetectionStrategy,
   Component,
   DestroyRef,
-  DOCUMENT,
   computed,
   effect,
   inject,
   signal,
 } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
-import { NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
+import { RouterOutlet } from '@angular/router';
 import {
   CurrentProjectStore,
   Project,
@@ -26,7 +24,6 @@ import { ErrorState } from '@corelog/ui/error-state';
 import { LoadingSkeleton } from '@corelog/ui/loading-skeleton';
 import { Lozenge } from '@corelog/ui/lozenge';
 import { ProjectAvatar } from '@corelog/ui/project-avatar';
-import { filter, map } from 'rxjs';
 
 import { TYPE_LABELS, VISIBILITY_LABELS } from '../projects-page/projects-page.utils';
 
@@ -41,12 +38,11 @@ type LoadState =
   | { readonly status: 'ready'; readonly project: Project }
   | { readonly status: 'error'; readonly variant: ProjectAccessVariant | null };
 
-/** Shared header of a project: identity, breadcrumb and the section navigation. Sections render below it. */
+/** Shared header of a project: identity. The section navigation lives in the app shell sidebar. Sections render below it. */
 @Component({
   selector: 'app-project-workspace',
   imports: [
     PageContainer,
-    RouterLink,
     RouterOutlet,
     ErrorPage,
     ErrorState,
@@ -60,13 +56,8 @@ type LoadState =
 })
 export class ProjectWorkspace {
   private readonly current = inject(CurrentProjectStore);
-  private readonly router = inject(Router);
-  private readonly document = inject(DOCUMENT);
 
   protected readonly loadFailedMessage = LOAD_FAILED_MESSAGE;
-
-  /** Section tabs allowed for the project: template and permissions decide which ones are listed. */
-  protected readonly sections = this.current.navItems;
 
   /** Loading, failure or the project, derived from the store read of the route project. */
   protected readonly state = computed<LoadState>(() => {
@@ -91,20 +82,6 @@ export class ProjectWorkspace {
 
   protected readonly failed = computed(() => this.state().status === 'error');
 
-  private readonly url = toSignal(
-    this.router.events.pipe(
-      filter((event): event is NavigationEnd => event instanceof NavigationEnd),
-      map(() => this.router.url),
-    ),
-    { initialValue: this.router.url },
-  );
-
-  protected readonly activeKey = computed(() => {
-    // /projects/<key or id>/<section>: the section is the fourth segment of the path.
-    const segment = this.url().split(/[?#]/)[0].split('/')[3];
-    return this.sections().find((section) => section.key === segment)?.key ?? 'board';
-  });
-
   protected readonly descriptionOpen = signal(false);
 
   protected readonly lead = useOrgMembersById(computed(() => this.project()?.organizationId));
@@ -112,15 +89,6 @@ export class ProjectWorkspace {
   constructor() {
     // Leaving the project area clears the project and its permissions.
     inject(DestroyRef).onDestroy(() => this.current.reset());
-
-    // Keeps the active tab visible when the tabs scroll (phones).
-    effect(() => {
-      this.activeKey();
-      queueMicrotask(() => {
-        const active = this.document.querySelector<HTMLElement>('.project-workspace__tab--active');
-        active?.scrollIntoView?.({ inline: 'nearest', block: 'nearest' });
-      });
-    });
 
     // Recents: the project once its header has loaded.
     effect(() => {
@@ -157,10 +125,6 @@ export class ProjectWorkspace {
 
   protected toggleDescription(): void {
     this.descriptionOpen.update((open) => !open);
-  }
-
-  protected isActive(key: string): boolean {
-    return this.activeKey() === key;
   }
 
   protected retry(): void {

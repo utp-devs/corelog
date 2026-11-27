@@ -112,7 +112,7 @@ describe('workspace routes', () => {
 
   it('keeps every project section at its own path', async () => {
     const { router } = setup();
-    for (const section of ['board', 'backlog', 'sprints', 'calendar', 'permisos']) {
+    for (const section of ['board', 'backlog', 'sprints', 'calendar', 'settings/details']) {
       await router.navigateByUrl(`/projects/p1/${section}`);
       expect(router.url).toBe(`/projects/p1/${section}`);
     }

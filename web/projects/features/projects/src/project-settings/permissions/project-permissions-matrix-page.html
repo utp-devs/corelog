@@ -1,0 +1,213 @@
+<div class="project-matrix">
+  <app-section
+    title="Permisos del proyecto"
+    description="Marca qué puede hacer cada rol. Los cambios no se aplican hasta que los guardes."
+    ariaLabel="Permisos del proyecto"
+  >
+    @if (loading()) {
+      <app-loading-skeleton variant="table" [rows]="8" />
+    } @else if (failed()) {
+      <app-error-state
+        message="No se pudieron cargar los permisos."
+        [canRetry]="true"
+        (retry)="retry()"
+      />
+    } @else {
+      <div class="project-matrix__bar">
+        <span class="project-matrix__state" data-testid="permissions-default-state">
+          @if (isDefault()) {
+            <app-lozenge tone="success">Permisos estándar</app-lozenge>
+            <span class="project-matrix__state-text">Este proyecto no tiene cambios propios.</span>
+          } @else {
+            <app-lozenge tone="warning">Personalizados</app-lozenge>
+            <span class="project-matrix__state-text"
+              >Este proyecto se aparta de los permisos estándar.</span
+            >
+          }
+        </span>
+        @if (canEdit()) {
+          <span class="project-matrix__actions">
+            <p-button
+              type="button"
+              label="Restaurar estándar"
+              icon="pi pi-refresh"
+              severity="secondary"
+              [disabled]="!canReset() || busy()"
+              (onClick)="askReset()"
+              data-testid="permissions-reset"
+            />
+            <p-button
+              type="button"
+              label="Descartar"
+              severity="secondary"
+              [disabled]="!dirty() || busy()"
+              (onClick)="discard()"
+            />
+            <p-button
+              type="button"
+              label="Guardar cambios"
+              [disabled]="!dirty() || problems().length > 0 || busy()"
+              (onClick)="askSave()"
+              data-testid="permissions-save"
+            />
+          </span>
+        }
+      </div>
+
+      @if (failure(); as message) {
+        <div role="alert" class="project-matrix__alert">
+          <p-message severity="error" [closable]="true" (onClose)="failure.set(null)">{{
+            message
+          }}</p-message>
+        </div>
+      }
+      @if (dirty() && problems().length > 0) {
+        <div role="alert" class="project-matrix__alert" data-testid="permissions-problems">
+          <p-message severity="warn" [closable]="false">
+            <ul class="project-matrix__problems">
+              @for (problem of problems(); track problem) {
+                <li>{{ problem }}</li>
+              }
+            </ul>
+          </p-message>
+        </div>
+      }
+      @if (dirty()) {
+        <p class="project-matrix__dirty" role="status">
+          Tienes {{ changes().length }}
+          {{ changes().length === 1 ? 'permiso modificado' : 'permisos modificados' }} sin guardar.
+        </p>
+      }
+
+      <div
+        class="project-matrix__scroll"
+        tabindex="0"
+        role="region"
+        aria-label="Matriz de permisos"
+      >
+        <table class="project-matrix__table" data-testid="permissions-matrix">
+          <thead>
+            <tr>
+              <th scope="col" class="project-matrix__corner">Permiso</th>
+              @for (column of columns; track column.key) {
+                <th
+                  scope="col"
+                  class="project-matrix__col"
+                  [class.project-matrix__col--special]="column.special"
+                >
+                  <span class="project-matrix__col-name">{{ column.label }}</span>
+                  <span class="project-matrix__col-hint">{{ column.hint }}</span>
+                </th>
+              }
+            </tr>
+          </thead>
+          @for (group of groups(); track group.key) {
+            <tbody>
+              <tr>
+                <th
+                  scope="colgroup"
+                  [attr.colspan]="columns.length + 1"
+                  class="project-matrix__group"
+                >
+                  {{ group.label }}
+                </th>
+              </tr>
+              @for (permission of group.permissions; track permission) {
+                <tr class="project-matrix__row" [attr.data-permission]="permission">
+                  <th scope="row" class="project-matrix__permission">
+                    <span class="project-matrix__permission-name">{{
+                      copyOf(permission).label
+                    }}</span>
+                    @if (copyOf(permission).description) {
+                      <span class="project-matrix__permission-hint">{{
+                        copyOf(permission).description
+                      }}</span>
+                    }
+                  </th>
+                  @for (column of columns; track column.key; let col = $index) {
+                    <td
+                      class="project-matrix__cell"
+                      [class.project-matrix__cell--special]="column.special"
+                    >
+                      <input
+                        type="checkbox"
+                        class="project-matrix__check"
+                        [checked]="has(permission, column.key)"
+                        [disabled]="!canEdit() || lockReason(permission, column.key) !== null"
+                        [attr.aria-label]="checkboxLabel(column, permission)"
+                        [attr.title]="lockReason(permission, column.key)"
+                        [attr.data-row]="rowIndex(permission)"
+                        [attr.data-col]="col"
+                        [attr.data-testid]="'perm-' + permission + '-' + column.key"
+                        (change)="toggle(permission, column.key, $any($event.target).checked)"
+                        (keydown)="onKeydown($event, rowIndex(permission), col)"
+                      />
+                    </td>
+                  }
+                </tr>
+              }
+            </tbody>
+          }
+        </table>
+      </div>
+      <p class="project-matrix__legend">
+        Las últimas tres columnas solo aplican sobre cada incidencia: quien la creó, su responsable
+        o quien la sigue. Los candados indican permisos que el líder siempre conserva.
+      </p>
+    }
+  </app-section>
+
+  <app-dialog
+    size="md"
+    [open]="pending() !== null"
+    [heading]="
+      pending() === 'reset'
+        ? 'Restaurar los permisos estándar'
+        : 'Revisa los cambios antes de guardar'
+    "
+    [subtitle]="
+      pending() === 'reset'
+        ? 'Se descartan las reglas propias del proyecto y vuelven las estándar.'
+        : 'Esto es lo que cambia para el proyecto.'
+    "
+    (closeRequested)="cancelPending()"
+  >
+    @if (previewChanges().length === 0) {
+      <p class="project-matrix__empty">No hay diferencias con lo que ya está guardado.</p>
+    } @else {
+      <ul class="project-matrix__diff" data-testid="permissions-diff">
+        @for (change of previewChanges(); track change.permission) {
+          <li class="project-matrix__diff-item">
+            <span class="project-matrix__diff-name">{{ change.label }}</span>
+            @if (change.added.length > 0) {
+              <span class="project-matrix__diff-line project-matrix__diff-line--added">
+                <i class="pi pi-plus" aria-hidden="true"></i>
+                <span>Ahora pueden: {{ namesOf(change.added) }}</span>
+              </span>
+            }
+            @if (change.removed.length > 0) {
+              <span class="project-matrix__diff-line project-matrix__diff-line--removed">
+                <i class="pi pi-minus" aria-hidden="true"></i>
+                <span>Dejan de poder: {{ namesOf(change.removed) }}</span>
+              </span>
+            }
+          </li>
+        }
+      </ul>
+    }
+    <p-button
+      dialogFooter
+      label="Cancelar"
+      severity="secondary"
+      [disabled]="busy()"
+      (onClick)="cancelPending()"
+    />
+    <p-button
+      dialogFooter
+      [label]="pending() === 'reset' ? 'Restaurar' : 'Guardar cambios'"
+      [loading]="busy()"
+      (onClick)="confirm()"
+      data-testid="permissions-confirm"
+    />
+  </app-dialog>
+</div>

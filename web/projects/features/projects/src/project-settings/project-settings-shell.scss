@@ -1,0 +1,94 @@
+@use '../../../../ui/styles/mixins' as m;
+
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.project-settings {
+  @include m.flex-column(4);
+  min-width: 0;
+
+  &__notice {
+    @include m.flex-column(1);
+  }
+
+  &__layout {
+    display: grid;
+    grid-template-columns: 14rem minmax(0, 1fr);
+    gap: var(--cl-space-6);
+    align-items: start;
+    min-width: 0;
+
+    @include m.respond-down(768px) {
+      grid-template-columns: minmax(0, 1fr);
+      gap: var(--cl-space-4);
+    }
+  }
+
+  &__menu {
+    position: sticky;
+    top: calc(var(--cl-control-h-lg) + var(--cl-space-4));
+    min-width: 0;
+
+    @include m.respond-down(768px) {
+      position: static;
+    }
+  }
+
+  &__menu-list {
+    @include m.flex-column(1);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+
+    @include m.respond-down(768px) {
+      flex-direction: row;
+      flex-wrap: wrap;
+      gap: var(--cl-space-1);
+    }
+  }
+
+  &__menu-item {
+    flex: 0 0 auto;
+  }
+
+  &__link {
+    @include m.flex-row(2);
+    min-height: var(--cl-control-h-md);
+    padding: 0 var(--cl-space-3);
+    border-radius: var(--cl-radius-md);
+    color: var(--cl-text-subtle);
+    text-decoration: none;
+    white-space: nowrap;
+
+    &:hover {
+      background: var(--cl-bg-hover);
+      color: var(--cl-text);
+    }
+
+    &:focus-visible {
+      outline: none;
+      box-shadow: var(--cl-shadow-focus);
+    }
+
+    &--active {
+      background: var(--cl-bg-selected);
+      color: var(--cl-brand);
+      font-weight: var(--cl-weight-semibold);
+    }
+
+    &--danger:not(&--active) {
+      color: var(--cl-danger-text);
+    }
+
+    @media (pointer: coarse) {
+      min-height: var(--cl-control-h-lg);
+    }
+  }
+
+  &__content {
+    @include m.flex-column(4);
+    min-width: 0;
+  }
+}

@@ -1,0 +1,103 @@
+<div class="project-danger">
+  @if (failure(); as message) {
+    <div role="alert">
+      <p-message severity="error" [closable]="true" (onClose)="failure.set(null)">{{
+        message
+      }}</p-message>
+    </div>
+  }
+
+  <app-section
+    [title]="archived() ? 'Restaurar el proyecto' : 'Archivar el proyecto'"
+    [description]="
+      archived()
+        ? 'El proyecto está archivado y en solo lectura.'
+        : 'Pausa el proyecto sin perder nada de lo que contiene.'
+    "
+    ariaLabel="Archivar o restaurar"
+  >
+    <div class="project-danger__row">
+      <p class="project-danger__text">
+        @if (archived()) {
+          Al restaurarlo, el equipo vuelve a poder crear y editar incidencias, mover el tablero y
+          cambiar la configuración. Todo está como lo dejaron.
+        } @else {
+          Un proyecto archivado deja de mostrarse en las listas normales y queda en solo lectura:
+          nadie puede crear ni editar incidencias. Sus incidencias, comentarios y archivos se
+          conservan y puedes restaurarlo cuando quieras.
+        }
+      </p>
+      @if (canArchive()) {
+        <p-button
+          type="button"
+          [label]="archived() ? 'Restaurar proyecto' : 'Archivar proyecto'"
+          [icon]="archived() ? 'pi pi-replay' : 'pi pi-inbox'"
+          severity="secondary"
+          [disabled]="busy()"
+          (onClick)="askArchive()"
+          data-testid="danger-archive"
+        />
+      } @else {
+        <p class="project-danger__locked">
+          Solo los líderes pueden archivar o restaurar el proyecto.
+        </p>
+      }
+    </div>
+  </app-section>
+
+  <app-section
+    class="project-danger__delete"
+    title="Eliminar el proyecto"
+    description="Esta acción no se puede deshacer."
+    ariaLabel="Eliminar"
+  >
+    <div class="project-danger__row">
+      <p class="project-danger__text">
+        Se elimina el proyecto y deja de estar disponible para todas las personas. Si solo quieres
+        dejarlo de lado por un tiempo, es mejor archivarlo.
+      </p>
+      @if (canDelete()) {
+        <p-button
+          type="button"
+          label="Eliminar proyecto"
+          icon="pi pi-trash"
+          severity="danger"
+          [disabled]="busy()"
+          (onClick)="askDelete()"
+          data-testid="danger-delete"
+        />
+      } @else {
+        <p class="project-danger__locked">No tienes permiso para eliminar este proyecto.</p>
+      }
+    </div>
+  </app-section>
+
+  <app-confirm-modal
+    [open]="archiveOpen()"
+    [title]="archived() ? '¿Restaurar el proyecto?' : '¿Archivar el proyecto?'"
+    [description]="
+      archived()
+        ? 'El equipo podrá volver a editar el proyecto y trabajar en sus incidencias.'
+        : 'El proyecto quedará en solo lectura y saldrá de las listas normales. Puedes restaurarlo cuando quieras.'
+    "
+    [confirmText]="archived() ? 'Restaurar' : 'Archivar'"
+    [loading]="busy()"
+    (confirmed)="toggleArchive()"
+    (cancelled)="archiveOpen.set(false)"
+  />
+
+  <app-confirm-danger-modal
+    [open]="deleteOpen()"
+    title="Eliminar el proyecto"
+    [description]="
+      'Se eliminará ' +
+      (project()?.name ?? '') +
+      ' para todas las personas. Esta acción no se puede deshacer.'
+    "
+    [confirmation]="project()?.name ?? ''"
+    confirmText="Eliminar proyecto"
+    [loading]="busy()"
+    (confirmed)="deleteProject()"
+    (cancelled)="deleteOpen.set(false)"
+  />
+</div>

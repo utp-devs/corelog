@@ -1,0 +1,88 @@
+@use '../../../../../ui/styles/mixins' as m;
+
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.project-roles {
+  @include m.flex-column(4);
+  min-width: 0;
+
+  &__grid {
+    @include m.grid-auto(18rem, 4);
+    align-items: start;
+  }
+
+  &__card {
+    @include m.flex-column(3);
+    min-width: 0;
+    padding: var(--cl-space-4);
+    border: 1px solid var(--cl-border);
+    border-radius: var(--cl-radius-lg);
+    background: var(--cl-bg-surface);
+  }
+
+  &__head {
+    @include m.flex-row(2, center, space-between);
+  }
+
+  &__title {
+    margin: 0;
+    font-size: var(--cl-font-body-strong);
+    font-weight: var(--cl-weight-semibold);
+  }
+
+  &__summary,
+  &__none {
+    margin: 0;
+    color: var(--cl-text-subtle);
+  }
+
+  &__group {
+    @include m.flex-column(1);
+  }
+
+  &__group-title {
+    margin: 0;
+    color: var(--cl-text-subtle);
+    font-size: var(--cl-font-small);
+    font-weight: var(--cl-weight-semibold);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  &__list {
+    @include m.flex-column(1);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  &__item {
+    @include m.flex-row(2, flex-start);
+
+    > i {
+      margin-top: var(--cl-space-1);
+      color: var(--cl-success-text);
+      font-size: var(--cl-font-small);
+    }
+  }
+
+  &__ability {
+    display: block;
+    color: var(--cl-text);
+  }
+
+  &__hint {
+    display: block;
+    color: var(--cl-text-subtle);
+    font-size: var(--cl-font-small);
+  }
+
+  &__note {
+    margin: var(--cl-space-4) 0 0;
+    color: var(--cl-text-subtle);
+    font-size: var(--cl-font-small);
+  }
+}

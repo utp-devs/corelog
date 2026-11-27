@@ -9,7 +9,7 @@ import { PROJECTS_ROUTES, PROJECT_DETAIL_CHILDREN } from '@corelog/features/proj
 import { TEAMS_ROUTES } from '@corelog/features/teams';
 import { TICKETS_ROUTES } from '@corelog/features/tickets';
 
-const [projectList, projectDetail] = PROJECTS_ROUTES;
+const [projectList, projectNew, projectDetail] = PROJECTS_ROUTES;
 
 /**
  * Project list at /projects and the project workspace at /projects/:key. The planning screens are
@@ -17,6 +17,7 @@ const [projectList, projectDetail] = PROJECTS_ROUTES;
  */
 const PROJECT_ROUTES: Routes = [
   projectList,
+  projectNew,
   {
     ...projectDetail,
     children: [

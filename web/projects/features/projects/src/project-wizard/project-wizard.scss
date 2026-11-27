@@ -1,0 +1,435 @@
+@use '../../../../ui/styles/mixins' as m;
+
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.project-wizard {
+  /* Stepper: numbered list on wide screens, one progress line on phones. */
+  &__stepper {
+    min-width: 0;
+  }
+
+  &__progress {
+    display: none;
+    margin: 0;
+    color: var(--cl-text-subtle);
+    font-size: var(--cl-font-small);
+    font-weight: var(--cl-weight-semibold);
+
+    @include m.respond-down(768px) {
+      display: block;
+    }
+  }
+
+  &__steps {
+    @include m.flex-row(2);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+
+    @include m.respond-down(768px) {
+      margin-top: var(--cl-space-2);
+    }
+  }
+
+  &__step {
+    flex: 1 1 0;
+    min-width: 0;
+
+    &::after {
+      content: '';
+      display: block;
+      height: 3px;
+      margin-top: var(--cl-space-2);
+      border-radius: var(--cl-radius-full);
+      background: var(--cl-border);
+    }
+
+    &--done::after,
+    &--current::after {
+      background: var(--cl-brand);
+    }
+  }
+
+  /* On phones only the current step keeps its name; the progress line above says where you are. */
+  &__step:not(&__step--current) &__step-label {
+    @include m.respond-down(768px) {
+      @include m.visually-hidden;
+    }
+  }
+
+  &__step-button {
+    @include m.flex-row(2);
+    @include m.touch-target;
+    width: 100%;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--cl-text-subtle);
+    font: inherit;
+    font-size: var(--cl-font-small);
+    text-align: left;
+    cursor: pointer;
+
+    &:disabled {
+      cursor: default;
+    }
+
+    &:focus-visible {
+      outline: none;
+      box-shadow: var(--cl-shadow-focus);
+      border-radius: var(--cl-radius-sm);
+    }
+  }
+
+  &__step--current &__step-button {
+    color: var(--cl-text);
+    font-weight: var(--cl-weight-semibold);
+  }
+
+  &__step-number {
+    @include m.flex-row(0, center, center);
+    flex: none;
+    width: var(--cl-space-6);
+    height: var(--cl-space-6);
+    border: 2px solid var(--cl-border-strong);
+    border-radius: var(--cl-radius-full);
+    font-size: var(--cl-font-caption);
+    font-weight: var(--cl-weight-semibold);
+  }
+
+  &__step--current &__step-number {
+    border-color: var(--cl-brand);
+    background: var(--cl-brand);
+    color: var(--cl-text-on-brand);
+  }
+
+  &__step--done &__step-number {
+    border-color: var(--cl-brand);
+    color: var(--cl-brand);
+  }
+
+  &__step-label {
+    @include m.truncate;
+  }
+
+  &__panel {
+    @include m.flex-column(6);
+    flex: 1 1 auto;
+    padding: var(--cl-space-6);
+    border: 1px solid var(--cl-border);
+    border-radius: var(--cl-radius-lg);
+    background: var(--cl-bg-surface);
+    box-shadow: var(--cl-shadow-1);
+    min-width: 0;
+
+    @include m.respond-down(768px) {
+      padding: var(--cl-space-4);
+    }
+  }
+
+  &__fieldset {
+    @include m.flex-column(3);
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+
+  &__fields {
+    @include m.flex-column(5);
+    min-width: 0;
+  }
+
+  &__title {
+    margin: 0;
+    padding: 0;
+    font-size: var(--cl-font-h3);
+    font-weight: var(--cl-weight-semibold);
+    color: var(--cl-text);
+  }
+
+  &__hint {
+    margin: 0;
+    color: var(--cl-text-subtle);
+    font-size: var(--cl-font-small);
+  }
+
+  &__label {
+    padding: 0;
+    color: var(--cl-text);
+    font-size: var(--cl-font-small);
+    font-weight: var(--cl-weight-semibold);
+  }
+
+  &__optional {
+    color: var(--cl-text-subtle);
+    font-weight: var(--cl-weight-regular);
+  }
+
+  &__color {
+    @include m.flex-column(2);
+  }
+
+  &__sr {
+    @include m.visually-hidden;
+  }
+
+  /* Template cards */
+  &__templates {
+    @include m.grid-auto(15rem, 4);
+  }
+
+  &__template,
+  &__choice {
+    @include m.flex-column(3);
+    position: relative;
+    min-width: 0;
+    padding: var(--cl-space-4);
+    border: 1px solid var(--cl-border-strong);
+    border-radius: var(--cl-radius-lg);
+    background: var(--cl-bg-surface);
+    cursor: pointer;
+    transition: border-color var(--cl-motion-fast) ease;
+
+    &:hover {
+      background: var(--cl-bg-hover);
+    }
+
+    &:focus-within {
+      box-shadow: var(--cl-shadow-focus);
+    }
+
+    &--selected {
+      border-color: var(--cl-brand);
+      background: var(--cl-brand-subtle);
+
+      &:hover {
+        background: var(--cl-brand-subtle);
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      transition: none;
+    }
+  }
+
+  /* The radio stays in the accessibility tree and keyboard order; the whole card is its visible face. */
+  &__radio {
+    @include m.visually-hidden;
+  }
+
+  &__template-head,
+  &__choice-head {
+    @include m.flex-row(2);
+    min-width: 0;
+  }
+
+  &__template-icon {
+    color: var(--cl-brand);
+  }
+
+  &__template-name,
+  &__choice-name {
+    flex: 1 1 auto;
+    min-width: 0;
+    font-weight: var(--cl-weight-semibold);
+    color: var(--cl-text);
+  }
+
+  &__template-text,
+  &__choice-text {
+    color: var(--cl-text-subtle);
+    font-size: var(--cl-font-small);
+  }
+
+  &__preview {
+    @include m.cluster(1);
+  }
+
+  &__column {
+    padding: var(--cl-space-1) var(--cl-space-2);
+    border-radius: var(--cl-radius-sm);
+    font-size: var(--cl-font-caption);
+    color: var(--cl-text);
+    background: var(--cl-bg-sunken);
+    border-inline-start: 3px solid var(--cl-border-strong);
+
+    &--in_progress {
+      border-inline-start-color: var(--cl-info);
+    }
+
+    &--done {
+      border-inline-start-color: var(--cl-success);
+    }
+  }
+
+  &__types {
+    color: var(--cl-text-subtle);
+    font-size: var(--cl-font-caption);
+  }
+
+  &__choices {
+    @include m.grid-auto(15rem, 3);
+  }
+
+  &__chip {
+    padding: var(--cl-space-1) var(--cl-space-2);
+    border-radius: var(--cl-radius-full);
+    background: var(--cl-bg-sunken);
+    color: var(--cl-text);
+    font-size: var(--cl-font-caption);
+    font-weight: var(--cl-weight-medium);
+
+    &--accent {
+      background: var(--cl-brand-subtle);
+      color: var(--cl-brand);
+    }
+  }
+
+  /* Review */
+  &__summary {
+    margin: 0;
+  }
+
+  &__summary-row {
+    display: grid;
+    grid-template-columns: minmax(7rem, 1fr) 3fr;
+    gap: var(--cl-space-3);
+    padding: var(--cl-space-3) 0;
+    border-bottom: 1px solid var(--cl-border);
+
+    dt {
+      color: var(--cl-text-subtle);
+      font-size: var(--cl-font-small);
+    }
+
+    dd {
+      margin: 0;
+      min-width: 0;
+      overflow-wrap: anywhere;
+      color: var(--cl-text);
+    }
+
+    @include m.respond-down(768px) {
+      grid-template-columns: 1fr;
+      gap: var(--cl-space-1);
+    }
+  }
+
+  &__blocker {
+    margin: 0;
+    color: var(--cl-danger-text);
+    font-size: var(--cl-font-small);
+  }
+
+  &__actions {
+    @include m.flex-row(3);
+    margin-top: auto;
+    flex-wrap: wrap;
+    padding-top: var(--cl-space-4);
+    border-top: 1px solid var(--cl-border);
+  }
+
+  &__spacer {
+    flex: 1 1 auto;
+  }
+
+  &__cancel {
+    @include m.flex-row(0, center, center);
+    min-height: var(--cl-control-h-md);
+    padding: 0 var(--cl-space-3);
+    color: var(--cl-text-subtle);
+    font-size: var(--cl-font-small);
+    text-decoration: none;
+
+    &:hover {
+      color: var(--cl-text);
+      text-decoration: underline;
+    }
+
+    &:focus-visible {
+      outline: none;
+      box-shadow: var(--cl-shadow-focus);
+      border-radius: var(--cl-radius-sm);
+    }
+  }
+
+  /* Live preview */
+  &__aside {
+    min-width: 0;
+  }
+
+  &__card {
+    @include m.flex-column(3);
+    padding: var(--cl-space-4);
+    border: 1px solid var(--cl-border);
+    border-radius: var(--cl-radius-lg);
+    background: var(--cl-bg-surface);
+    box-shadow: var(--cl-shadow-1);
+  }
+
+  &__card-label {
+    margin: 0;
+    color: var(--cl-text-subtle);
+    font-size: var(--cl-font-caption);
+    font-weight: var(--cl-weight-semibold);
+    text-transform: uppercase;
+  }
+
+  &__card-head {
+    @include m.flex-row(3);
+    min-width: 0;
+  }
+
+  &__swatch {
+    @include m.flex-row(0, center, center);
+    flex: none;
+    width: var(--cl-control-h-lg);
+    height: var(--cl-control-h-lg);
+    border-radius: var(--cl-radius-md);
+    background: var(--cl-bg-sunken);
+    color: var(--cl-text);
+    font-weight: var(--cl-weight-semibold);
+
+    &--colored {
+      background: var(--swatch);
+      color: var(--cl-palette-11-text);
+    }
+  }
+
+  &__card-title {
+    min-width: 0;
+  }
+
+  &__card-name,
+  &__card-key {
+    @include m.truncate;
+    margin: 0;
+  }
+
+  &__card-name {
+    font-weight: var(--cl-weight-semibold);
+    color: var(--cl-text);
+  }
+
+  &__card-key {
+    color: var(--cl-text-subtle);
+    font-size: var(--cl-font-small);
+  }
+
+  &__card-tags {
+    @include m.cluster(2);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  &__card-meta {
+    margin: 0;
+    color: var(--cl-text-subtle);
+    font-size: var(--cl-font-small);
+  }
+}

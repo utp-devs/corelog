@@ -1,0 +1,72 @@
+@if (!loaded()) {
+  <app-page-container variant="wide" pageName="project-settings" [ready]="false">
+    <app-loading-skeleton variant="detail" [rows]="4" />
+  </app-page-container>
+} @else if (!allowed()) {
+  <app-page-container variant="wide" pageName="project-settings" [ready]="true" [fill]="true">
+    <app-error-page
+      [variant]="403"
+      title="No tienes acceso a la configuración"
+      description="La configuración del proyecto es para quienes trabajan en él. Pide a un líder del proyecto que te cambie el rol si la necesitas."
+      [framed]="true"
+    />
+  </app-page-container>
+} @else {
+  <app-page-container variant="wide" pageName="project-settings" [ready]="true">
+    <div class="project-settings">
+      <app-page-header
+        title="Configuración"
+        subtitle="Detalles, personas, roles y permisos de este proyecto."
+      />
+
+      @if (readOnly()) {
+        <p-message severity="info" [closable]="false" data-testid="settings-readonly">
+          <span class="project-settings__notice">
+            <strong>Solo lectura</strong>
+            <span
+              >Puedes ver la configuración, pero solo los líderes del proyecto pueden
+              cambiarla.</span
+            >
+          </span>
+        </p-message>
+      }
+      @if (context.archived()) {
+        <p-message severity="warn" [closable]="false" data-testid="settings-archived">
+          <span class="project-settings__notice">
+            <strong>Proyecto archivado</strong>
+            <span
+              >Está en solo lectura. Restáuralo desde «Zona de peligro» para volver a
+              editarlo.</span
+            >
+          </span>
+        </p-message>
+      }
+
+      <div class="project-settings__layout">
+        <nav class="project-settings__menu" aria-label="Secciones de la configuración">
+          <ul class="project-settings__menu-list">
+            @for (section of sections; track section.path) {
+              <li class="project-settings__menu-item">
+                <a
+                  class="project-settings__link"
+                  [class.project-settings__link--danger]="section.danger"
+                  [routerLink]="linkOf(section)"
+                  routerLinkActive="project-settings__link--active"
+                  ariaCurrentWhenActive="page"
+                  [attr.data-testid]="'settings-nav-' + section.path"
+                >
+                  <i [class]="section.icon" aria-hidden="true"></i>
+                  <span>{{ section.label }}</span>
+                </a>
+              </li>
+            }
+          </ul>
+        </nav>
+
+        <div class="project-settings__content">
+          <router-outlet />
+        </div>
+      </div>
+    </div>
+  </app-page-container>
+}

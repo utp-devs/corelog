@@ -82,15 +82,11 @@ describe('ProjectWorkspace', () => {
     return fixture.nativeElement as HTMLElement;
   }
 
-  it('shows the project identity, its section tabs and no duplicate breadcrumb', async () => {
+  it('shows the project identity, and no duplicated section tabs or breadcrumb', async () => {
     const { fixture } = await open({ projectApi: { get: () => of(demoProject()) } });
 
     expect(root(fixture).querySelector('h2')?.textContent).toContain('Proyecto demo');
-    expect(
-      root(fixture)
-        .querySelector('nav[aria-label="Secciones del proyecto"]')
-        ?.hasAttribute('data-scroll-x'),
-    ).toBe(true);
+    expect(root(fixture).querySelector('nav[aria-label="Secciones del proyecto"]')).toBeNull();
     expect(root(fixture).querySelector('nav[aria-label="Ruta de navegación"]')).toBeNull();
     consoleGuard.expectNoConsoleOutput();
   });
@@ -110,21 +106,7 @@ describe('ProjectWorkspace', () => {
     expect(toggle?.getAttribute('aria-expanded')).toBe('true');
   });
 
-  it('lists the tabs of a scrum project with key based links and marks the current one', async () => {
-    const { fixture } = await open({ projectApi: { get: () => of(demoProject()) } });
-
-    const tabs = Array.from(root(fixture).querySelectorAll<HTMLElement>('.project-workspace__tab'));
-    expect(tabs.map((tab) => tab.textContent?.trim())).toEqual([
-      'Tablero',
-      'Backlog',
-      'Sprints',
-      'Calendario',
-      'Permisos',
-    ]);
-    expect(tabs[0].getAttribute('aria-current')).toBe('page');
-  });
-
-  it('shows the 403 page instead of the tabs when the project is forbidden', async () => {
+  it('shows the 403 page instead of the project when the project is forbidden', async () => {
     const { fixture } = await open({
       projectApi: { get: () => throwError(() => apiError(403, 'forbidden')) },
     });
@@ -195,29 +177,6 @@ describe('ProjectWorkspace', () => {
 
     expect(root(fixture).querySelector('[aria-busy="true"]')).not.toBeNull();
     expect(root(fixture).querySelector('nav[aria-label="Secciones del proyecto"]')).toBeNull();
-  });
-
-  it('hides backlog and sprints for a kanban project', async () => {
-    const { fixture } = await open({
-      projectApi: { get: () => of(demoProject({ type: 'kanban', template: 'bug_tracking' })) },
-    });
-
-    const tabs = Array.from(root(fixture).querySelectorAll<HTMLElement>('.project-workspace__tab'));
-    expect(tabs.map((tab) => tab.textContent?.trim())).toEqual([
-      'Tablero',
-      'Calendario',
-      'Permisos',
-    ]);
-  });
-
-  it('links the tabs with the project key even when opened by id', async () => {
-    const { fixture } = await open({ projectApi: { get: () => of(demoProject()) } });
-
-    const hrefs = Array.from(
-      root(fixture).querySelectorAll<HTMLAnchorElement>('.project-workspace__tab'),
-    ).map((tab) => tab.getAttribute('href'));
-    expect(hrefs[0]).toBe('/projects/DEM/board');
-    expect(hrefs[1]).toBe('/projects/DEM/backlog');
   });
 
   it('records the recent project with its key path', async () => {

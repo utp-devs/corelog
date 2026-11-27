@@ -1,0 +1,34 @@
+@use '../../../../../ui/styles/mixins' as m;
+
+:host {
+  display: inline-flex;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.project-person {
+  @include m.flex-row(3);
+  min-width: 0;
+
+  &__identity {
+    @include m.flex-column(0);
+    min-width: 0;
+  }
+
+  &__name {
+    @include m.truncate;
+    color: var(--cl-text);
+    font-weight: var(--cl-weight-semibold);
+  }
+
+  &__you {
+    color: var(--cl-text-subtle);
+    font-weight: var(--cl-weight-regular);
+  }
+
+  &__email {
+    @include m.truncate;
+    color: var(--cl-text-subtle);
+    font-size: var(--cl-font-small);
+  }
+}

@@ -1,0 +1,51 @@
+@use '../../../../../ui/styles/mixins' as m;
+
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.project-details {
+  @include m.flex-column(4);
+  min-width: 0;
+
+  &__fields {
+    @include m.flex-column(4);
+    min-width: 0;
+    max-width: 40rem;
+  }
+
+  &__key {
+    max-width: 12rem;
+    background: var(--cl-bg-sunken);
+    color: var(--cl-text-subtle);
+    letter-spacing: 0.04em;
+  }
+
+  &__group {
+    @include m.flex-column(2);
+    min-width: 0;
+  }
+
+  &__group-title {
+    color: var(--cl-text);
+    font-size: var(--cl-font-body);
+    font-weight: var(--cl-weight-medium);
+  }
+
+  &__actions {
+    @include m.cluster(2, center, flex-end);
+
+    @include m.respond-down(768px) {
+      > * {
+        flex: 1 1 auto;
+      }
+    }
+  }
+
+  &__dirty {
+    margin-right: auto;
+    color: var(--cl-warning-text);
+    font-size: var(--cl-font-small);
+  }
+}
