@@ -1,0 +1,166 @@
+<section
+  class="rule-list"
+  [attr.aria-labelledby]="listId + '-title'"
+  [attr.data-testid]="'rules-' + kind()"
+>
+  <header class="rule-list__header">
+    <h4 class="rule-list__title" [id]="listId + '-title'">{{ title() }}</h4>
+    @if (hint(); as text) {
+      <p class="rule-list__hint">{{ text }}</p>
+    }
+  </header>
+
+  @if (rules().length === 0) {
+    <p class="rule-list__empty">Ninguna.</p>
+  }
+
+  @for (rule of rules(); track $index; let index = $index) {
+    <div class="rule-list__rule" data-testid="workflow-rule" [attr.data-type]="rule.type">
+      <div class="rule-list__rule-head">
+        @if (canEdit()) {
+          <app-select-field
+            class="rule-list__type"
+            size="compact"
+            [ariaLabel]="'Tipo de ' + title().toLowerCase() + ' ' + (index + 1)"
+            [options]="typeOptions()"
+            [ngModel]="rule.type"
+            [ngModelOptions]="{ standalone: true }"
+            (ngModelChange)="setType(index, $event)"
+          />
+          <p-button
+            icon="pi pi-trash"
+            severity="danger"
+            [text]="true"
+            class="touch-target"
+            [ariaLabel]="'Quitar ' + specOf(rule).label"
+            appTooltip="Quitar"
+            (onClick)="remove(index)"
+          />
+        } @else {
+          <span class="rule-list__label">{{ specOf(rule).label }}</span>
+        }
+      </div>
+
+      @for (param of specOf(rule).params; track param.key) {
+        <div class="rule-list__param">
+          @switch (param.control) {
+            @case ('roles') {
+              <fieldset class="rule-list__roles">
+                <legend class="rule-list__param-label">{{ param.label }}</legend>
+                @for (role of roleOptions; track role.value) {
+                  <label class="rule-list__check">
+                    <input
+                      type="checkbox"
+                      [disabled]="!canEdit()"
+                      [checked]="rolesOf(rule).includes(role.value)"
+                      (change)="toggleRole(index, role.value, $any($event.target).checked)"
+                    />
+                    <span>{{ role.label }}</span>
+                  </label>
+                }
+              </fieldset>
+            }
+            @case ('permission') {
+              <span class="rule-list__param-label">{{ param.label }}</span>
+              <app-select-field
+                size="compact"
+                [ariaLabel]="param.label"
+                [disabled]="!canEdit()"
+                [options]="permissionOptions"
+                [ngModel]="valueOf(rule, param.key)"
+                [ngModelOptions]="{ standalone: true }"
+                (ngModelChange)="setParam(index, param.key, $event)"
+              />
+            }
+            @case ('assignTarget') {
+              <span class="rule-list__param-label">{{ param.label }}</span>
+              <app-select-field
+                size="compact"
+                [ariaLabel]="param.label"
+                [disabled]="!canEdit()"
+                [options]="assignOptions"
+                [ngModel]="valueOf(rule, param.key)"
+                [ngModelOptions]="{ standalone: true }"
+                (ngModelChange)="setParam(index, param.key, $event)"
+              />
+            }
+            @case ('resolution') {
+              <span class="rule-list__param-label">{{ param.label }}</span>
+              <app-select-field
+                size="compact"
+                [ariaLabel]="param.label"
+                [disabled]="!canEdit()"
+                [options]="resolutionOptions()"
+                [ngModel]="valueOf(rule, param.key)"
+                [ngModelOptions]="{ standalone: true }"
+                (ngModelChange)="setParam(index, param.key, $event)"
+              />
+            }
+            @case ('textarea') {
+              <label
+                class="rule-list__param-label"
+                [attr.for]="listId + '-' + index + '-' + param.key"
+                >{{ param.label }}</label
+              >
+              <textarea
+                pTextarea
+                rows="2"
+                maxlength="2000"
+                class="rule-list__input"
+                [id]="listId + '-' + index + '-' + param.key"
+                [disabled]="!canEdit()"
+                [value]="valueOf(rule, param.key)"
+                (input)="setParam(index, param.key, $any($event.target).value)"
+              ></textarea>
+            }
+            @default {
+              <label
+                class="rule-list__param-label"
+                [attr.for]="listId + '-' + index + '-' + param.key"
+                >{{ param.label }}</label
+              >
+              <input
+                pInputText
+                type="text"
+                autocomplete="off"
+                class="rule-list__input"
+                [id]="listId + '-' + index + '-' + param.key"
+                [attr.list]="param.control === 'field' ? listId + '-fields' : null"
+                [attr.placeholder]="param.placeholder ?? null"
+                [disabled]="!canEdit()"
+                [value]="valueOf(rule, param.key)"
+                (input)="setParam(index, param.key, $any($event.target).value)"
+              />
+            }
+          }
+          @if (param.help) {
+            <span class="rule-list__help">{{ param.help }}</span>
+          }
+        </div>
+      }
+
+      @if (errorOf(rule); as problem) {
+        <p class="rule-list__error" role="alert">{{ problem }}</p>
+      }
+    </div>
+  }
+
+  <datalist [id]="listId + '-fields'">
+    @for (option of fieldOptions; track option.value) {
+      <option [value]="option.value">{{ option.label }}</option>
+    }
+  </datalist>
+
+  @if (canEdit()) {
+    <app-select-field
+      class="rule-list__add"
+      size="compact"
+      placeholder="Añadir…"
+      [ariaLabel]="'Añadir ' + title().toLowerCase()"
+      [options]="typeOptions()"
+      [ngModel]="adding()"
+      [ngModelOptions]="{ standalone: true }"
+      (ngModelChange)="add($event)"
+    />
+  }
+</section>

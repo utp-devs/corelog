@@ -1,10 +1,23 @@
-import { ChangeDetectionStrategy, Component, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 
 export type EmptyIllustrationKind = 'projects' | 'issues' | 'search' | 'notes' | 'generic';
 
+/** Photograph for an empty, error or maintenance state: the file name under /images/states without extension. */
+export type StateImage =
+  | 'empty-projects'
+  | 'empty-issues'
+  | 'empty-search'
+  | 'empty-notifications'
+  | 'empty-teams'
+  | 'error-403'
+  | 'error-404'
+  | 'error-500'
+  | 'maintenance';
+
 /**
- * Small drawing for empty states. It is decorative: the state text sits next to it.
- * Colors come from design tokens through the accent and muted classes.
+ * Picture for empty states. It is decorative: the state text sits next to it. With `image` it draws a state
+ * photograph in a rounded frame with its own dark background (the same in both themes); without it, a small
+ * line drawing chosen by `kind`. Colors come from design tokens.
  */
 @Component({
   selector: 'app-empty-illustration',
@@ -13,6 +26,13 @@ export type EmptyIllustrationKind = 'projects' | 'issues' | 'search' | 'notes' |
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class EmptyIllustration {
-  readonly kind = input.required<EmptyIllustrationKind>();
+  readonly kind = input<EmptyIllustrationKind>('generic');
+  /** State photograph; replaces the line drawing. */
+  readonly image = input<StateImage>();
   readonly testId = input<string>(undefined, { alias: 'data-testid' });
+
+  protected readonly imageSrc = computed(() => {
+    const name = this.image();
+    return name ? `/images/states/${name}.webp` : null;
+  });
 }

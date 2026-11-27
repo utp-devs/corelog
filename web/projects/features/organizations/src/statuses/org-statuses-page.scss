@@ -1,0 +1,126 @@
+@use '../../../../ui/styles/mixins' as m;
+
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.org-statuses-page {
+  &__banner {
+    display: block;
+    margin-bottom: var(--cl-space-4);
+  }
+
+  &__alert-body {
+    @include m.flex-column(1);
+  }
+
+  &__intro {
+    margin: 0 0 var(--cl-space-4);
+    color: var(--cl-text-subtle);
+  }
+
+  &__list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    border: 1px solid var(--cl-border);
+    border-radius: var(--cl-radius-lg);
+    background: var(--cl-bg-surface);
+  }
+
+  &__row {
+    @include m.flex-row(3);
+    padding: var(--cl-space-2) var(--cl-space-3);
+    background: var(--cl-bg-surface);
+    border-bottom: 1px solid var(--cl-divider);
+
+    &:first-child {
+      border-top-left-radius: var(--cl-radius-lg);
+      border-top-right-radius: var(--cl-radius-lg);
+    }
+
+    &:last-child {
+      border-bottom: 0;
+      border-bottom-left-radius: var(--cl-radius-lg);
+      border-bottom-right-radius: var(--cl-radius-lg);
+    }
+
+    @include m.respond-down(768px) {
+      flex-wrap: wrap;
+    }
+  }
+
+  &__handle {
+    flex: none;
+    color: var(--cl-text-subtle);
+    cursor: grab;
+    touch-action: none;
+  }
+
+  &__name {
+    flex: 1 1 10rem;
+    min-width: 0;
+    color: var(--cl-text);
+    font-weight: var(--cl-weight-semibold);
+    overflow-wrap: anywhere;
+  }
+
+  &__chip {
+    padding: 0 var(--cl-space-2);
+    border-radius: var(--cl-radius-sm);
+    font-size: var(--cl-font-small);
+    font-weight: var(--cl-weight-semibold);
+    line-height: var(--cl-lh-tight);
+    white-space: nowrap;
+
+    &--todo {
+      background: var(--cl-cat-todo-bg);
+      color: var(--cl-cat-todo-text);
+    }
+
+    &--progress {
+      background: var(--cl-cat-progress-bg);
+      color: var(--cl-cat-progress-text);
+    }
+
+    &--done {
+      background: var(--cl-success-bg);
+      color: var(--cl-success-text);
+    }
+  }
+
+  &__actions {
+    @include m.cluster(0);
+    margin-left: auto;
+  }
+
+  &__form {
+    @include m.flex-column(4);
+  }
+
+  &__input {
+    width: 100%;
+  }
+
+  &__text {
+    margin: 0;
+    color: var(--cl-text);
+    overflow-wrap: anywhere;
+  }
+
+  &__sr {
+    @include m.visually-hidden;
+  }
+}
+
+/* The row follows the pointer while it is dragged and a faded copy marks where it came from. */
+.cdk-drag-preview {
+  border: 1px solid var(--cl-border);
+  border-radius: var(--cl-radius-lg);
+  box-shadow: var(--cl-elev-overlay);
+}
+
+.cdk-drag-placeholder {
+  opacity: 0.4;
+}

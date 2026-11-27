@@ -370,6 +370,90 @@
   --cl-logo-plate: #f4f5f7;
 }
 
+/* Access screens (login, register, invitation) are always dark, whatever theme the person chose. Their
+   tokens are theme independent. Pairs checked for contrast: text and subtle text on surface and field (>= 4.5),
+   field border on field (>= 3), accent text on the page (>= 4.5), white on button (>= 4.5). */
+:root {
+  --cl-auth-bg: #0b1220;
+  --cl-auth-surface: #151b2b;
+  --cl-auth-field: #1b2740;
+  --cl-auth-field-border: #7487ad;
+  --cl-auth-text: #f4f7fb;
+  --cl-auth-text-subtle: #aab7cf;
+  --cl-auth-text-placeholder: #9aa9c4;
+  --cl-auth-accent: #4c9aff;
+  --cl-auth-accent-hover: #79b8ff;
+  --cl-auth-button: #1f6feb;
+  --cl-auth-button-hover: #1a5fd0;
+  --cl-auth-button-active: #164fb0;
+  --cl-auth-on-button: #ffffff;
+  --cl-auth-halo: rgba(76, 154, 255, 0.45);
+  --cl-auth-danger: #ff7452;
+  --cl-auth-danger-bg: #421509;
+  --cl-auth-danger-text: #ffb4a8;
+  --cl-auth-warning: #f5cd47;
+  --cl-auth-warning-bg: #3b2e00;
+  --cl-auth-warning-text: #f5cd47;
+  --cl-auth-success: #4bce97;
+  --cl-auth-success-bg: #1b3b2e;
+  --cl-auth-success-text: #7ee2b8;
+  --cl-auth-plate: #f4f5f7;
+  /* Opaque surfaces: the container, the hero frame and the form panel are solid. The page keeps one flat dim tint over
+     the blurred photograph; the hero text block gets one flat tint. No gradients. */
+  --cl-auth-card: #151b2b;
+  --cl-auth-panel: #111726;
+  --cl-auth-card-border: #2a3550;
+  --cl-auth-page-tint: rgba(11, 18, 32, 0.6);
+  --cl-auth-blur-page: 8px;
+  --cl-hero-text: #ffffff;
+  --cl-hero-text-subtle: #dbe4f3;
+  --cl-hero-panel: rgba(11, 18, 32, 0.6);
+  --cl-hero-chip: rgba(11, 18, 32, 0.72);
+
+  /* Light variant of the access screens, used when the visitor chose the light theme. Same roles as the dark
+     tokens above. Pairs checked for contrast: text and subtle text on the white panel and the field (>= 4.5),
+     field border on the field (>= 3), link blue on the panel (>= 4.5), white on the button (>= 4.5). */
+  --cl-auth-light-bg: #eef3fb;
+  --cl-auth-light-surface: #ffffff;
+  --cl-auth-light-field: #f3f6fc;
+  --cl-auth-light-field-border: #5b6b86;
+  --cl-auth-light-text: #0b1220;
+  --cl-auth-light-text-subtle: #3f4d66;
+  --cl-auth-light-text-placeholder: #5b6b86;
+  --cl-auth-light-accent: #0b5bd3;
+  --cl-auth-light-accent-hover: #0747a6;
+  --cl-auth-light-button-hover: #1a5fd0;
+  --cl-auth-light-halo: rgba(31, 111, 235, 0.35);
+  --cl-auth-light-danger: #de350b;
+  --cl-auth-light-danger-bg: #ffebe6;
+  --cl-auth-light-danger-text: #bf2600;
+  --cl-auth-light-warning: #c25100;
+  --cl-auth-light-warning-bg: #fff7d6;
+  --cl-auth-light-warning-text: #7a3b00;
+  --cl-auth-light-success: #22a06b;
+  --cl-auth-light-success-bg: #e3fcef;
+  --cl-auth-light-success-text: #216e4e;
+  --cl-auth-light-card: #ffffff;
+  --cl-auth-light-panel: #f7f9fd;
+  --cl-auth-light-card-border: #c5d0e4;
+  --cl-auth-light-page-tint: rgba(238, 243, 251, 0.55);
+  --cl-auth-light-hero-text: #0b1220;
+  --cl-auth-light-hero-text-subtle: #26354f;
+  --cl-auth-light-hero-panel: rgba(255, 255, 255, 0.72);
+  --cl-auth-light-hero-chip: rgba(255, 255, 255, 0.85);
+  --cl-auth-field-h: 60px;
+  --cl-auth-button-h: 44px;
+
+  /* Text and scrims over photographs. Same in both themes: the photos are dark. */
+  --cl-media-text: #ffffff;
+  --cl-media-text-subtle: #dbe4f3;
+  --cl-media-bg: #0b1220;
+  --cl-media-accent: #4c9aff;
+  --cl-media-scrim-strong: rgba(11, 18, 32, 0.88);
+  --cl-media-scrim-soft: rgba(11, 18, 32, 0.45);
+  --cl-media-chip: rgba(11, 18, 32, 0.6);
+}
+
 img[src*='/brand/corelog-banner'],
 img[src*='/brand/corelog-icon'] {
   background: var(--cl-logo-plate);

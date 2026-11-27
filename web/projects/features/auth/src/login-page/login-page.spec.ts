@@ -157,6 +157,12 @@ describe('LoginPage landmarks and labels', () => {
     expect(form?.querySelector('form')).not.toBeNull();
   });
 
+  it('uses the access layout with the carousel hero beside the form', () => {
+    const { el } = setup();
+    expect(el.querySelector('app-hero-carousel')).not.toBeNull();
+    expect(el.querySelector('.hero-carousel__dot')).not.toBeNull();
+  });
+
   it('associates each input with its visible label and marks it required', () => {
     const { el } = setup();
     const email = controlOf(el, 'Correo electrónico');

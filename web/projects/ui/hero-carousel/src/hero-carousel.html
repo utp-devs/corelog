@@ -1,0 +1,88 @@
+<div
+  class="hero-carousel"
+  role="region"
+  aria-roledescription="carrusel"
+  [attr.aria-label]="label()"
+>
+  <div class="hero-carousel__slides" aria-hidden="true">
+    @for (slide of slides(); track slide.src; let i = $index) {
+      <img
+        class="hero-carousel__image"
+        alt=""
+        decoding="async"
+        [class.hero-carousel__image--active]="i === index()"
+        [attr.src]="slide.src"
+        [attr.width]="slide.width ?? 1536"
+        [attr.height]="slide.height ?? 1024"
+        [attr.loading]="i === 0 ? 'eager' : 'lazy'"
+        [attr.fetchpriority]="i === 0 ? 'high' : null"
+        [style.--hero-position]="slide.position ?? 'center'"
+      />
+    }
+  </div>
+
+  <div class="hero-carousel__content">
+    <ng-content />
+  </div>
+
+  <div class="hero-carousel__footer">
+    <p
+      class="hero-carousel__caption"
+      role="status"
+      aria-atomic="true"
+      [attr.aria-live]="playing() ? 'off' : 'polite'"
+    >
+      <span aria-hidden="true">{{ current()?.caption }}</span>
+      <span class="hero-carousel__sr">{{ status() }}</span>
+    </p>
+
+    @if (multiple()) {
+      <div class="hero-carousel__controls">
+        <button
+          type="button"
+          class="hero-carousel__button"
+          aria-label="Imagen anterior"
+          title="Imagen anterior"
+          (click)="previous()"
+        >
+          <i class="pi pi-chevron-left" aria-hidden="true"></i>
+        </button>
+        <div class="hero-carousel__dots" role="group" aria-label="Elegir imagen">
+          @for (slide of slides(); track slide.src; let i = $index) {
+            <button
+              type="button"
+              class="hero-carousel__dot"
+              [attr.aria-label]="'Ir a la imagen ' + (i + 1) + ' de ' + count()"
+              [attr.aria-current]="i === index() ? 'true' : null"
+              [class.hero-carousel__dot--active]="i === index()"
+              (click)="goTo(i)"
+            >
+              <span class="hero-carousel__dot-mark"></span>
+            </button>
+          }
+        </div>
+        <button
+          type="button"
+          class="hero-carousel__button"
+          aria-label="Imagen siguiente"
+          title="Imagen siguiente"
+          (click)="next()"
+        >
+          <i class="pi pi-chevron-right" aria-hidden="true"></i>
+        </button>
+        @if (!reducedMotion()) {
+          <button
+            type="button"
+            class="hero-carousel__button"
+            [attr.aria-label]="userPaused() ? 'Reanudar la rotación' : 'Pausar la rotación'"
+            [attr.title]="userPaused() ? 'Reanudar la rotación' : 'Pausar la rotación'"
+            [attr.aria-pressed]="userPaused() ? 'true' : 'false'"
+            (click)="togglePlayback()"
+          >
+            <i [class]="userPaused() ? 'pi pi-play' : 'pi pi-pause'" aria-hidden="true"></i>
+          </button>
+        }
+      </div>
+    }
+  </div>
+</div>

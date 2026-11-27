@@ -78,3 +78,18 @@ describe('ErrorState', () => {
     expect(retryButton(fixture.nativeElement as HTMLElement)).toBeUndefined();
   });
 });
+
+describe('ErrorState with a state photograph', () => {
+  afterEach(() => TestBed.resetTestingModule());
+
+  it('draws the photograph instead of the icon tile', () => {
+    TestBed.configureTestingModule({ imports: [ErrorState] });
+    const fixture = TestBed.createComponent(ErrorState);
+    fixture.componentRef.setInput('status', 500);
+    fixture.componentRef.setInput('image', 'error-500');
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('img')?.getAttribute('src')).toBe('/images/states/error-500.webp');
+    expect(el.querySelector('.error-state__icon')).toBeNull();
+  });
+});

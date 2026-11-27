@@ -1,0 +1,53 @@
+@use '../../field-row/src/control' as c;
+
+:host {
+  display: contents;
+}
+
+// Fixed round button, 44px, bottom right and clear of the phone safe areas. It sits above page content.
+.theme-toggle-fab {
+  position: fixed;
+  right: max(var(--cl-space-6), env(safe-area-inset-right));
+  bottom: max(var(--cl-space-6), env(safe-area-inset-bottom));
+  z-index: var(--cl-z-modal);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: calc(var(--cl-space-10) + var(--cl-space-1));
+  height: calc(var(--cl-space-10) + var(--cl-space-1));
+  padding: 0;
+  border: 1px solid var(--cl-border-strong);
+  border-radius: var(--cl-radius-full);
+  background: var(--cl-bg-elevated);
+  color: var(--cl-text);
+  box-shadow: var(--cl-elev-overlay);
+  cursor: pointer;
+  transition:
+    background-color var(--cl-motion-fast) var(--cl-ease),
+    transform var(--cl-motion-fast) var(--cl-ease);
+
+  &:hover {
+    background: var(--cl-bg-hover);
+  }
+
+  &:active {
+    transform: scale(0.94);
+  }
+
+  &:focus-visible {
+    @include c.focus-ring;
+  }
+
+  &__icon {
+    font-size: var(--cl-font-body-strong);
+    line-height: 1;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+
+    &:active {
+      transform: none;
+    }
+  }
+}

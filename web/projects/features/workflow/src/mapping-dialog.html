@@ -1,0 +1,44 @@
+<app-dialog
+  size="md"
+  heading="Mover las incidencias de los estados que se quitan"
+  [open]="open()"
+  (closeRequested)="closeRequested.emit()"
+>
+  <div class="mapping-dialog" data-testid="workflow-mapping-dialog">
+    <p class="mapping-dialog__text">
+      Hay incidencias en estados que ya no estarán en el flujo. Elige a qué estado pasa cada grupo.
+    </p>
+    @for (item of requirements(); track item.statusId) {
+      <div class="mapping-dialog__row">
+        <span class="mapping-dialog__name" [id]="'mapping-' + item.statusId">
+          <strong>{{ item.name }}</strong> · {{ countText(item.issueCount) }}
+        </span>
+        <app-select-field
+          placeholder="Elige un estado"
+          [ariaLabelledBy]="'mapping-' + item.statusId"
+          [options]="targets()"
+          [ngModel]="choiceOf(item.statusId)"
+          (ngModelChange)="choose(item.statusId, $event)"
+        />
+      </div>
+    }
+  </div>
+
+  <p-button
+    dialogFooter
+    type="button"
+    label="Cancelar"
+    severity="secondary"
+    [disabled]="busy()"
+    (onClick)="closeRequested.emit()"
+  />
+  <p-button
+    dialogFooter
+    type="button"
+    data-testid="workflow-mapping-confirm"
+    [label]="confirmLabel()"
+    [loading]="busy()"
+    [disabled]="!complete()"
+    (onClick)="confirm()"
+  />
+</app-dialog>

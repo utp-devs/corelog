@@ -91,6 +91,14 @@ describe('ProjectWorkspace', () => {
     consoleGuard.expectNoConsoleOutput();
   });
 
+  it('draws a cover photograph behind the project header', async () => {
+    const { fixture } = await open({ projectApi: { get: () => of(demoProject()) } });
+
+    const cover = root(fixture).querySelector('.project-workspace__cover');
+    expect(cover?.getAttribute('src')).toContain('/images/covers/cover-0');
+    expect(cover?.getAttribute('alt')).toBe('');
+  });
+
   it('collapses a long description to one line and expands it on demand', async () => {
     const { fixture } = await open({
       projectApi: { get: () => of(demoProject({ description: 'x'.repeat(200) })) },

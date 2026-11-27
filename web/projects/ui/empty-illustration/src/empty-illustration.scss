@@ -15,4 +15,27 @@
   &__muted {
     color: var(--cl-border-strong);
   }
+
+  /* Photograph in a rounded frame with its own dark background, identical in both themes. */
+  &__frame {
+    display: block;
+    overflow: hidden;
+    width: min(22.5rem, 100%);
+    aspect-ratio: 3 / 2;
+    margin-inline: auto;
+    border-radius: var(--cl-radius-lg);
+    background: var(--cl-media-bg);
+    box-shadow: var(--cl-elev-raised);
+
+    @media (max-height: 700px) {
+      width: min(16rem, 100%);
+    }
+  }
+
+  &__image {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
 }

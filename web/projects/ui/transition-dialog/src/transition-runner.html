@@ -1,0 +1,11 @@
+<app-transition-dialog
+  [open]="open()"
+  [transition]="pending()"
+  [context]="context()"
+  [currentAssigneeId]="currentAssigneeId()"
+  [busy]="busy()"
+  [error]="error()"
+  [serverErrors]="details()"
+  (confirmed)="confirm($event)"
+  (closeRequested)="close()"
+/>

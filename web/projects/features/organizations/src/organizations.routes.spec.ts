@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { ONBOARDING_ROUTES, ORG_ADMIN_ROUTES } from './organizations.routes';
 import { OnboardingPage } from './onboarding/onboarding-page';
 import { OrgCatalogsPage } from './catalogs/org-catalogs-page';
+import { OrgStatusesPage } from './statuses/org-statuses-page';
 import { OrgInvitationsPage } from './invitations/org-invitations-page';
 import { OrgMembersPage } from './members/org-members-page';
 import { OrgSettingsPage } from './settings/org-settings-page';
@@ -18,12 +19,14 @@ describe('ORG_ADMIN_ROUTES', () => {
       'settings',
       'members',
       'catalogs',
+      'statuses',
       'invitations',
     ]);
     expect(ORG_ADMIN_ROUTES.map((route) => route.title)).toEqual([
       'Configuración de la organización',
       'Miembros',
       'Tipos, prioridades y resoluciones',
+      'Estados de incidencias',
       'Invitaciones',
     ]);
   });
@@ -32,7 +35,8 @@ describe('ORG_ADMIN_ROUTES', () => {
     expect(await loaded(ORG_ADMIN_ROUTES[0])).toBe(OrgSettingsPage);
     expect(await loaded(ORG_ADMIN_ROUTES[1])).toBe(OrgMembersPage);
     expect(await loaded(ORG_ADMIN_ROUTES[2])).toBe(OrgCatalogsPage);
-    expect(await loaded(ORG_ADMIN_ROUTES[3])).toBe(OrgInvitationsPage);
+    expect(await loaded(ORG_ADMIN_ROUTES[3])).toBe(OrgStatusesPage);
+    expect(await loaded(ORG_ADMIN_ROUTES[4])).toBe(OrgInvitationsPage);
   });
 
   it('guards unsaved settings edits on leave', () => {

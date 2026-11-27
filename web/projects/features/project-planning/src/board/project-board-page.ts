@@ -14,15 +14,19 @@ import {
   inject,
   signal,
   untracked,
+  viewChild,
 } from '@angular/core';
 import {
   AuthStore,
   BoardColumn,
   BoardCard,
   BoardMoveTarget,
+  BoardPendingInput,
   BoardStore,
   BreakpointService,
   ISSUE_PRIORITY_LABELS,
+  IssueStore,
+  NotificationService,
   OrganizationStore,
   CurrentProjectStore,
   ProjectStore,
@@ -40,6 +44,7 @@ import { Lozenge } from '@corelog/ui/lozenge';
 import { PageContainer } from '@corelog/ui/page-container';
 import { PageHeader } from '@corelog/ui/page-header';
 import { SearchInput } from '@corelog/ui/search-input';
+import { TransitionRunner } from '@corelog/ui/transition-dialog';
 import { AppTooltip } from '@corelog/ui/tooltip';
 import { InputNumber } from 'primeng/inputnumber';
 import { Message } from 'primeng/message';
@@ -72,6 +77,7 @@ const LOAD_ERROR_MESSAGE =
   selector: 'app-project-board-page',
   imports: [
     ArchivedNotice,
+    TransitionRunner,
     FormsModule,
     CdkDrag,
     CdkDragPreview,
@@ -198,10 +204,56 @@ export class ProjectBoardPage {
       this.store.setCurrentUserId(this.auth.user()?.id);
     });
     effect(() => {
+      const pending = this.store.pendingInput();
+      if (pending) untracked(() => this.resolvePendingInput(pending));
+    });
+    effect(() => {
       if (this.store.moveError()) {
         untracked(() => this.renderEpoch.update((value) => value + 1));
       }
     });
+  }
+
+  private readonly issues = inject(IssueStore);
+  private readonly notify = inject(NotificationService);
+  protected readonly runner = viewChild(TransitionRunner);
+  protected readonly pendingCard = signal<{ id: string; context: string } | null>(null);
+
+  /** The workflow asked for data before the move: open the transition dialog for the card. */
+  private resolvePendingInput(pending: BoardPendingInput): void {
+    const card = this.board()
+      ?.columns.flatMap((column) => column.cards)
+      .find((candidate) => candidate.id === pending.cardId);
+    this.pendingCard.set({ id: pending.cardId, context: card?.summary ?? '' });
+    this.issues.listTransitions(pending.cardId).subscribe({
+      next: (items) => {
+        const withScreen = items.filter((item) => item.needsScreen);
+        const match =
+          withScreen.find((item) => item.toStatus === pending.targetStatus) ?? withScreen[0];
+        if (match) {
+          this.runner()?.run(match);
+        } else {
+          this.finishPending();
+          this.notify.error(
+            'No se pudo mover la incidencia: el flujo no tiene una transición disponible.',
+          );
+        }
+      },
+      error: () => {
+        this.finishPending();
+        this.notify.error('No se pudo mover la incidencia. Intenta de nuevo.');
+      },
+    });
+  }
+
+  protected onPendingFinished(): void {
+    this.finishPending();
+    this.store.retry();
+  }
+
+  protected finishPending(): void {
+    this.pendingCard.set(null);
+    this.store.clearPendingInput();
   }
 
   protected isFull(column: BoardColumn): boolean {

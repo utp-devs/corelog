@@ -1,6 +1,10 @@
 @if (org(); as current) {
   <app-page-container variant="reading" pageName="org-settings" [ready]="true">
-    <app-page-header title="Configuración de la organización" [subtitle]="current.name" />
+    <app-page-header
+      banner="settings"
+      title="Configuración de la organización"
+      [subtitle]="current.name"
+    />
 
     <div class="org-settings-page">
       @if (!canEdit()) {

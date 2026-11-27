@@ -110,11 +110,11 @@ export class MyDashboardPage {
     () => !this.dashboard.summary.hasValue() && !this.dashboard.errorMessage(),
   );
 
-  protected readonly subtitle = computed(() => {
-    const name = this.auth.displayName();
-    const today = LONG_DATE.format(new Date());
-    return `${name ? `Hola, ${name}` : 'Hola'}. Hoy es ${today}.`;
-  });
+  /** First name of the signed-in person, for the greeting. */
+  protected readonly firstName = computed(
+    () => (this.auth.displayName() ?? '').trim().split(/\s+/)[0] ?? '',
+  );
+  protected readonly today = LONG_DATE.format(new Date());
 
   protected readonly statusRows = this.dashboard.statusRows;
   protected readonly statusLabels = computed(() => this.statusRows().map((row) => row.label));

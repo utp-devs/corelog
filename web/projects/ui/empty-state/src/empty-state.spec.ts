@@ -56,4 +56,15 @@ describe('EmptyState', () => {
     expect(el.querySelector('.empty-state__description')).toBeNull();
     expect(el.querySelector('button')).toBeNull();
   });
+
+  it('shows the state photograph instead of the icon tile when an image is given', () => {
+    TestBed.configureTestingModule({ imports: [EmptyState] });
+    const fixture = TestBed.createComponent(EmptyState);
+    fixture.componentRef.setInput('title', 'Aún no hay proyectos');
+    fixture.componentRef.setInput('image', 'empty-projects');
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('img')?.getAttribute('src')).toBe('/images/states/empty-projects.webp');
+    expect(el.querySelector('.empty-state__icon')).toBeNull();
+  });
 });

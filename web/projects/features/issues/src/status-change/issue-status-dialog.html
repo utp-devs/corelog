@@ -1,0 +1,110 @@
+<app-dialog
+  size="sm"
+  [heading]="heading()"
+  [subtitle]="subtitle()"
+  [open]="open()"
+  (closeRequested)="closeRequested.emit()"
+>
+  <div class="issue-status-dialog" data-testid="issue-status-dialog">
+    @if (error(); as message) {
+      <p-message severity="error" [closable]="false" role="alert">{{ message }}</p-message>
+    }
+    @if (loadError(); as message) {
+      <p-message severity="error" [closable]="false" role="alert">{{ message }}</p-message>
+    } @else if (loading()) {
+      <p class="issue-status-dialog__hint">Cargando las transiciones disponibles…</p>
+    } @else {
+      @if (bulk()) {
+        <p class="issue-status-dialog__hint">
+          @if (byTransition()) {
+            Todas están en el mismo estado: se ejecuta la misma transición en cada una.
+          } @else {
+            Están en estados distintos: cada una pasa al estado elegido si su flujo lo permite.
+          }
+        </p>
+      }
+
+      @if (choices().length === 0) {
+        <p class="issue-status-dialog__hint">No hay transiciones disponibles desde este estado.</p>
+      } @else {
+        <ul class="issue-status-dialog__list" role="radiogroup" aria-label="Nuevo estado">
+          @for (item of choices(); track item.value) {
+            <li>
+              <label
+                class="issue-status-dialog__option"
+                [class.issue-status-dialog__option--selected]="choice() === item.value"
+              >
+                <input
+                  type="radio"
+                  name="issue-status-choice"
+                  [value]="item.value"
+                  [checked]="choice() === item.value"
+                  [attr.data-testid]="'status-choice-' + item.value"
+                  (change)="select(item.value)"
+                />
+                <span class="issue-status-dialog__name">{{ item.label }}</span>
+                <span
+                  class="issue-status-dialog__target"
+                  [class.issue-status-dialog__target--todo]="item.category === 'todo'"
+                  [class.issue-status-dialog__target--progress]="item.category === 'progress'"
+                  [class.issue-status-dialog__target--done]="item.category === 'done'"
+                  >{{ item.target }}</span
+                >
+                @if (bulk() && item.needsScreen) {
+                  <span class="issue-status-dialog__note">Pide datos: puede fallar</span>
+                }
+              </label>
+            </li>
+          }
+        </ul>
+      }
+    }
+
+    @if (result(); as outcome) {
+      <section
+        class="issue-status-dialog__result"
+        aria-live="polite"
+        data-testid="status-bulk-result"
+      >
+        <p class="issue-status-dialog__summary">
+          {{ outcome.succeeded.length }} cambiadas, {{ outcome.failed.length }} con error.
+        </p>
+        <ul class="issue-status-dialog__failures">
+          @for (item of outcome.failed; track item.issue) {
+            <li>{{ failureText(item) }}</li>
+          }
+        </ul>
+      </section>
+    }
+  </div>
+
+  <p-button
+    dialogFooter
+    type="button"
+    [label]="result() ? 'Cerrar' : 'Cancelar'"
+    severity="secondary"
+    [disabled]="busy()"
+    (onClick)="closeRequested.emit()"
+  />
+  @if (!result()) {
+    <p-button
+      dialogFooter
+      type="button"
+      label="Cambiar estado"
+      data-testid="status-change-confirm"
+      [loading]="busy()"
+      [disabled]="choice() === null"
+      (onClick)="confirm()"
+    />
+  }
+</app-dialog>
+
+@if (single(); as issue) {
+  <app-transition-runner
+    [issueId]="issue.id"
+    [expectedStatusId]="issue.workflowStatus?.id"
+    [context]="issue.key + ' · ' + issue.summary"
+    [currentAssigneeId]="issue.assigneeId"
+    (finished)="onFinished()"
+  />
+}

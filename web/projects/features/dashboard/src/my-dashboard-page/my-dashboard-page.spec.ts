@@ -288,7 +288,11 @@ describe('MyDashboardPage', () => {
     const fixture = create();
 
     expect(el(fixture).querySelector('h1')?.textContent).toContain('Mi resumen');
-    expect(textOf(fixture)).toMatch(/Hola.* Hoy es /);
+    expect(textOf(fixture)).toMatch(/Hola/);
+    expect(textOf(fixture)).toMatch(/Hoy es /);
+    expect(el(fixture).querySelector('.dashboard-welcome__image')?.getAttribute('src')).toBe(
+      '/images/dashboard/dashboard-welcome-banner.webp',
+    );
   });
 
   it('lists assigned issues with key, status and priority', () => {

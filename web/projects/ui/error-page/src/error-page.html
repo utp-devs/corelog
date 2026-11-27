@@ -5,7 +5,7 @@
   [attr.data-variant]="variant()"
 >
   <div class="error-page__body">
-    <span class="error-page__icon" aria-hidden="true"><i [class]="copy().icon"></i></span>
+    <app-empty-illustration class="error-page__image" [image]="art()" />
     <p class="error-page__code">{{ variant() }}</p>
     <h1 class="error-page__title">{{ title() ?? copy().title }}</h1>
     <p class="error-page__description">{{ description() ?? copy().description }}</p>

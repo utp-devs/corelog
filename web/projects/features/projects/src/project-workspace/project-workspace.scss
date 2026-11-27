@@ -21,7 +21,51 @@
     background: var(--cl-bg-surface);
   }
 
+  /* Cover photograph behind the header under a dark gradient; text over it is white in both themes. */
+  &__header--cover {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    background: var(--cl-media-bg);
+
+    .project-workspace__title {
+      color: var(--cl-media-text);
+    }
+
+    .project-workspace__meta {
+      color: var(--cl-media-text-subtle);
+    }
+
+    .project-workspace__toggle {
+      color: var(--cl-media-text);
+      text-decoration: underline;
+    }
+  }
+
+  &__cover {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  &__scrim {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      90deg,
+      var(--cl-media-scrim-strong) 0%,
+      var(--cl-media-scrim-soft) 100%
+    );
+  }
+
+  &__avatar {
+    position: relative;
+  }
+
   &__identity {
+    position: relative;
     @include m.flex-column(1);
     flex: 1 1 auto;
     min-width: 0;

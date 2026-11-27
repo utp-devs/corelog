@@ -1,0 +1,51 @@
+@use '../../../ui/styles/mixins' as m;
+
+.templates-dialog {
+  @include m.flex-column(3);
+
+  &__text {
+    margin: 0;
+    color: var(--cl-text);
+  }
+
+  &__list {
+    @include m.flex-column(2);
+    margin: 0;
+    padding: 0;
+    border: 0;
+    min-width: 0;
+  }
+
+  &__legend {
+    @include m.visually-hidden;
+  }
+
+  &__option {
+    @include m.flex-row(3, flex-start);
+    padding: var(--cl-space-3);
+    border: 1px solid var(--cl-border);
+    border-radius: var(--cl-radius-md);
+    cursor: pointer;
+
+    &--selected {
+      border-color: var(--cl-brand);
+      background: var(--cl-bg-selected);
+    }
+  }
+
+  &__body {
+    @include m.flex-column(1);
+    min-width: 0;
+  }
+
+  &__name {
+    color: var(--cl-text);
+    font-weight: var(--cl-weight-semibold);
+  }
+
+  &__description,
+  &__steps {
+    color: var(--cl-text-subtle);
+    font-size: var(--cl-font-small);
+  }
+}

@@ -5,6 +5,14 @@
     @include a.form;
   }
 
+  &__input {
+    @include a.input;
+  }
+
+  &__submit {
+    @include a.submit;
+  }
+
   &__terms {
     margin: 0;
     font-size: var(--cl-font-small);

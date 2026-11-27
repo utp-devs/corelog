@@ -255,5 +255,12 @@
         </div>
       }
     </div>
+    <app-transition-runner
+      [issueId]="pendingCard()?.id ?? ''"
+      [context]="pendingCard()?.context"
+      (finished)="onPendingFinished()"
+      (failed)="finishPending()"
+      (cancelled)="finishPending()"
+    />
   </app-page-container>
 }

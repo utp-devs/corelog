@@ -1,4 +1,5 @@
 @use '../../../../ui/styles/mixins' as m;
+@use '../../../../ui/field-row/src/control' as c;
 
 // Vertical stack of fields, banner and actions shared by the auth screens.
 @mixin form {
@@ -9,4 +10,80 @@
 
 @mixin actions {
   @include m.flex-column(2);
+}
+
+/// Re-maps the semantic tokens to the always-dark palette of the access screens. Everything inside (inputs,
+/// alerts, links, PrimeNG buttons) then reads dark colors whatever theme the person chose.
+@mixin dark-scope {
+  color-scheme: dark;
+  --cl-bg-page: var(--cl-auth-bg);
+  --cl-bg-surface: var(--cl-auth-field);
+  --cl-bg-sunken: var(--cl-auth-field);
+  --cl-bg-elevated: var(--cl-auth-field);
+  --cl-bg-hover: color-mix(in srgb, var(--cl-auth-field), var(--cl-auth-text) 8%);
+  --cl-border: var(--cl-auth-field-border);
+  --cl-border-strong: var(--cl-auth-field-border);
+  --cl-divider: var(--cl-auth-field);
+  --cl-text: var(--cl-auth-text);
+  --cl-text-subtle: var(--cl-auth-text-subtle);
+  --cl-text-placeholder: var(--cl-auth-text-placeholder);
+  --cl-text-disabled: var(--cl-auth-text-placeholder);
+  --cl-text-on-brand: var(--cl-auth-on-button);
+  --cl-brand: var(--cl-auth-accent);
+  --cl-brand-hover: var(--cl-auth-accent-hover);
+  --cl-danger: var(--cl-auth-danger);
+  --cl-danger-bg: var(--cl-auth-danger-bg);
+  --cl-danger-text: var(--cl-auth-danger-text);
+  --cl-warning: var(--cl-auth-warning);
+  --cl-warning-bg: var(--cl-auth-warning-bg);
+  --cl-warning-text: var(--cl-auth-warning-text);
+  --cl-success: var(--cl-auth-success);
+  --cl-success-bg: var(--cl-auth-success-bg);
+  --cl-success-text: var(--cl-auth-success-text);
+  --cl-shadow-focus: 0 0 0 2px var(--cl-auth-surface), 0 0 0 4px var(--cl-auth-accent);
+  --cl-control-h-lg: var(--cl-auth-field-h);
+  --cl-logo-plate: transparent;
+
+  // PrimeNG reads its own variables, which are resolved at the root; the ones the access screens use are
+  // set again here.
+  --p-button-border-radius: var(--cl-radius-full);
+  --p-button-primary-background: var(--cl-auth-button);
+  --p-button-primary-hover-background: var(--cl-auth-button-hover);
+  --p-button-primary-active-background: var(--cl-auth-button-active);
+  --p-button-primary-border-color: var(--cl-auth-button);
+  --p-button-primary-hover-border-color: var(--cl-auth-button-hover);
+  --p-button-primary-active-border-color: var(--cl-auth-button-active);
+  --p-button-primary-color: var(--cl-auth-on-button);
+  --p-button-primary-hover-color: var(--cl-auth-on-button);
+  --p-button-primary-active-color: var(--cl-auth-on-button);
+  --p-button-primary-focus-ring-shadow: var(--cl-shadow-focus);
+  --p-button-outlined-secondary-border-color: var(--cl-auth-field-border);
+  --p-button-outlined-secondary-color: var(--cl-auth-text);
+  --p-button-outlined-secondary-hover-background: var(--cl-bg-hover);
+  --p-button-outlined-secondary-active-background: var(--cl-bg-hover);
+  --p-button-secondary-focus-ring-shadow: var(--cl-shadow-focus);
+  --p-progressspinner-color-1: var(--cl-auth-accent);
+  --p-progressspinner-color-2: var(--cl-auth-accent);
+  --p-progressspinner-color-3: var(--cl-auth-accent);
+  --p-progressspinner-color-4: var(--cl-auth-accent);
+}
+
+/// Native text input of an auth field: tall box with the value under the caption of the label.
+@mixin input {
+  @include c.control-box(var(--cl-auth-field-h));
+  height: var(--cl-auth-field-h);
+  padding: 0 var(--cl-space-12) 0 var(--cl-space-3);
+  border-radius: var(--cl-radius-lg);
+  background: var(--cl-auth-field);
+  font-size: var(--cl-font-body-strong);
+}
+
+/// Pill-shaped primary action of the access screens: 44px high and a blue halo.
+@mixin submit {
+  display: block;
+  --cl-control-h-md: var(--cl-auth-button-h);
+  --cl-control-h-lg: var(--cl-auth-button-h);
+  margin-top: var(--cl-space-2);
+  border-radius: var(--cl-radius-full);
+  box-shadow: 0 var(--cl-space-2) var(--cl-space-6) calc(var(--cl-space-4) * -1) var(--cl-auth-halo);
 }

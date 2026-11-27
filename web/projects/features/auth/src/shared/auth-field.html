@@ -1,0 +1,29 @@
+<div class="auth-field" [class.auth-field--invalid]="invalid()">
+  <div class="auth-field__box">
+    <ng-content select="input, app-password-input" />
+    <label class="auth-field__label" [attr.for]="controlId">
+      <span>{{ label() }}</span>
+      @if (required()) {
+        <span class="auth-field__required" aria-hidden="true">*</span>
+        <span class="auth-field__sr"> (obligatorio)</span>
+      }
+    </label>
+    @if (icon(); as name) {
+      <i [class]="'pi auth-field__icon ' + name" aria-hidden="true"></i>
+    }
+  </div>
+  <ng-content />
+  <div class="auth-field__messages" aria-live="polite">
+    @if (message(); as text) {
+      <p [attr.id]="errorId" class="auth-field__text auth-field__text--error">
+        <i class="pi pi-exclamation-circle auth-field__text-icon" aria-hidden="true"></i>
+        <span>{{ text }}</span>
+      </p>
+    } @else if (helper(); as text) {
+      <p [attr.id]="helperId" class="auth-field__text">
+        <i class="pi pi-info-circle auth-field__text-icon" aria-hidden="true"></i>
+        <span>{{ text }}</span>
+      </p>
+    }
+  </div>
+</div>

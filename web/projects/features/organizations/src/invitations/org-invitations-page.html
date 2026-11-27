@@ -1,6 +1,6 @@
 @if (org() && !canManage()) {
   <app-page-container variant="wide" pageName="org-invitations" [ready]="true">
-    <app-page-header title="Invitaciones" [subtitle]="subtitle()" />
+    <app-page-header banner="settings" title="Invitaciones" [subtitle]="subtitle()" />
     <p-message severity="info" [closable]="false" class="org-invitations-page__banner">
       <span class="org-invitations-page__alert">
         <strong>Solo lectura</strong>
@@ -17,7 +17,7 @@
   </app-page-container>
 } @else {
   <app-page-container variant="wide" pageName="org-invitations" [ready]="!loading()" [fill]="true">
-    <app-page-header title="Invitaciones" [subtitle]="subtitle()" />
+    <app-page-header banner="settings" title="Invitaciones" [subtitle]="subtitle()" />
 
     <app-section
       title="Invitar personas"

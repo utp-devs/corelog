@@ -1,0 +1,221 @@
+<div class="status-list">
+  <ul
+    class="status-list__items"
+    cdkDropList
+    cdkDropListLockAxis="y"
+    aria-label="Estados del flujo"
+    data-testid="workflow-statuses"
+    [cdkDropListDisabled]="!canEdit() || busy()"
+    (cdkDropListDropped)="drop($event)"
+  >
+    @for (
+      status of statuses();
+      track status.ref;
+      let index = $index;
+      let first = $first;
+      let last = $last
+    ) {
+      <li
+        class="status-list__item"
+        cdkDrag
+        data-testid="workflow-status"
+        [cdkDragDisabled]="!canEdit() || busy()"
+        [attr.data-name]="status.name"
+      >
+        <div class="status-list__row">
+          @if (canEdit()) {
+            <span class="status-list__handle" cdkDragHandle aria-hidden="true">
+              <i class="pi pi-bars"></i>
+            </span>
+          }
+
+          <div class="status-list__main">
+            @if (editing() === status.ref) {
+              <input
+                #nameInput
+                pInputText
+                class="status-list__rename"
+                type="text"
+                maxlength="60"
+                data-autofocus
+                autofocus
+                [attr.aria-label]="'Nombre del estado ' + status.name"
+                [value]="status.name"
+                (keydown)="onRenameKey($event, status, nameInput)"
+                (blur)="commitRename(status, nameInput.value)"
+              />
+            } @else {
+              <span class="status-list__name">{{ status.name }}</span>
+            }
+            <span class="status-list__meta">
+              <span
+                class="status-list__chip"
+                [class.status-list__chip--todo]="visual(status.category) === 'todo'"
+                [class.status-list__chip--progress]="visual(status.category) === 'progress'"
+                [class.status-list__chip--done]="visual(status.category) === 'done'"
+                >{{ labels[status.category] }}</span
+              >
+              @if (status.ref === initialRef()) {
+                <span class="status-list__initial" data-testid="workflow-initial-badge"
+                  >Inicial</span
+                >
+              }
+              <span class="status-list__count">{{ countText(status) }}</span>
+            </span>
+          </div>
+
+          @if (canEdit()) {
+            <div class="status-list__actions">
+              @if (canRename(status)) {
+                <p-button
+                  icon="pi pi-pencil"
+                  severity="secondary"
+                  [text]="true"
+                  class="touch-target"
+                  [ariaLabel]="'Renombrar ' + status.name"
+                  appTooltip="Renombrar"
+                  [disabled]="busy()"
+                  (onClick)="startRename(status)"
+                />
+              }
+              <p-button
+                icon="pi pi-arrow-up"
+                severity="secondary"
+                [text]="true"
+                class="touch-target"
+                [ariaLabel]="'Subir ' + status.name"
+                appTooltip="Subir"
+                [disabled]="first || busy()"
+                (onClick)="move(index, -1)"
+              />
+              <p-button
+                icon="pi pi-arrow-down"
+                severity="secondary"
+                [text]="true"
+                class="touch-target"
+                [ariaLabel]="'Bajar ' + status.name"
+                appTooltip="Bajar"
+                [disabled]="last || busy()"
+                (onClick)="move(index, 1)"
+              />
+              @if (status.ref !== initialRef()) {
+                <p-button
+                  icon="pi pi-flag"
+                  severity="secondary"
+                  [text]="true"
+                  class="touch-target"
+                  [ariaLabel]="'Usar ' + status.name + ' como estado inicial'"
+                  appTooltip="Marcar como inicial"
+                  [disabled]="busy()"
+                  (onClick)="initialChanged.emit(status.ref)"
+                />
+              }
+              <p-button
+                icon="pi pi-trash"
+                severity="danger"
+                [text]="true"
+                class="touch-target"
+                [ariaLabel]="'Eliminar ' + status.name"
+                appTooltip="Quitar del flujo"
+                [disabled]="busy() || statuses().length <= 1"
+                (onClick)="removed.emit(status.ref)"
+              />
+            </div>
+          }
+        </div>
+
+        @if (canEdit() && status.id === null) {
+          <div class="status-list__category">
+            <app-select-field
+              size="compact"
+              [ariaLabel]="'Categoría de ' + status.name"
+              [options]="categoryOptions"
+              [ngModel]="status.category"
+              (ngModelChange)="categoryChanged.emit({ ref: status.ref, category: $event })"
+            />
+          </div>
+        }
+      </li>
+    }
+  </ul>
+
+  @if (canEdit()) {
+    @if (adding(); as mode) {
+      <form class="status-list__add" (submit)="$event.preventDefault(); confirmAdd()">
+        @if (mode === 'catalog') {
+          @if (available().length === 0) {
+            <p class="status-list__empty">Todos los estados del catálogo ya están en el flujo.</p>
+          } @else {
+            <app-select-field
+              ariaLabel="Estado del catálogo"
+              placeholder="Elige un estado del catálogo"
+              [options]="available()"
+              [ngModel]="catalogChoice()"
+              [ngModelOptions]="{ standalone: true }"
+              (ngModelChange)="catalogChoice.set($event)"
+            />
+          }
+        } @else {
+          <input
+            pInputText
+            type="text"
+            maxlength="60"
+            autocomplete="off"
+            aria-label="Nombre del estado nuevo"
+            placeholder="Nombre del estado"
+            data-testid="workflow-new-status-name"
+            data-autofocus
+            [ngModel]="newName()"
+            [ngModelOptions]="{ standalone: true }"
+            (ngModelChange)="newName.set($event)"
+          />
+          <app-select-field
+            ariaLabel="Categoría del estado nuevo"
+            [options]="categoryOptions"
+            [ngModel]="newCategory()"
+            [ngModelOptions]="{ standalone: true }"
+            (ngModelChange)="newCategory.set($event)"
+          />
+        }
+        <div class="status-list__add-actions">
+          <p-button
+            type="button"
+            label="Cancelar"
+            severity="secondary"
+            size="small"
+            [text]="true"
+            (onClick)="cancelAdd()"
+          />
+          <p-button
+            type="submit"
+            label="Añadir"
+            size="small"
+            data-testid="workflow-add-status-confirm"
+            [disabled]="mode === 'catalog' ? !catalogChoice() : newName().trim() === ''"
+          />
+        </div>
+      </form>
+    } @else {
+      <div class="status-list__add-buttons">
+        <p-button
+          icon="pi pi-plus"
+          label="Estado nuevo"
+          severity="secondary"
+          [outlined]="true"
+          size="small"
+          data-testid="workflow-add-status"
+          (onClick)="openAdd('new')"
+        />
+        <p-button
+          icon="pi pi-list"
+          label="Del catálogo"
+          severity="secondary"
+          [outlined]="true"
+          size="small"
+          data-testid="workflow-add-status-catalog"
+          (onClick)="openAdd('catalog')"
+        />
+      </div>
+    }
+  }
+</div>

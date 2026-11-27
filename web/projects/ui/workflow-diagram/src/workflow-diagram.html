@@ -1,0 +1,136 @@
+<div class="workflow-diagram" data-testid="workflow-diagram">
+  <div class="workflow-diagram__toolbar" role="toolbar" aria-label="Controles del diagrama">
+    <p-button
+      icon="pi pi-minus"
+      severity="secondary"
+      [text]="true"
+      class="touch-target"
+      ariaLabel="Alejar"
+      appTooltip="Alejar"
+      (onClick)="zoomOut()"
+    />
+    <span class="workflow-diagram__zoom" aria-live="polite">{{ zoomLabel() }}</span>
+    <p-button
+      icon="pi pi-plus"
+      severity="secondary"
+      [text]="true"
+      class="touch-target"
+      ariaLabel="Acercar"
+      appTooltip="Acercar"
+      (onClick)="zoomIn()"
+    />
+    <p-button
+      icon="pi pi-expand"
+      severity="secondary"
+      [text]="true"
+      class="touch-target"
+      ariaLabel="Ajustar a la vista"
+      appTooltip="Ajustar a la vista"
+      (onClick)="fit()"
+    />
+  </div>
+
+  <svg
+    #svg
+    class="workflow-diagram__svg"
+    [class.workflow-diagram__svg--panning]="panning()"
+    role="group"
+    aria-label="Diagrama del flujo de trabajo. La tabla de transiciones contiene la misma información."
+    tabindex="0"
+    preserveAspectRatio="xMidYMid meet"
+    [attr.viewBox]="viewBox()"
+    [style.--workflow-diagram-ratio]="ratio()"
+    (wheel)="onWheel($event)"
+    (pointerdown)="onPointerDown($event)"
+    (pointermove)="onPointerMove($event)"
+    (pointerup)="onPointerUp()"
+    (pointercancel)="onPointerUp()"
+    (keydown)="onKeydown($event)"
+  >
+    <defs>
+      <marker
+        id="workflow-diagram-arrow"
+        class="workflow-diagram__marker"
+        viewBox="0 0 10 10"
+        refX="9"
+        refY="5"
+        markerWidth="8"
+        markerHeight="8"
+        orient="auto-start-reverse"
+      >
+        <path d="M 0 0 L 10 5 L 0 10 z" />
+      </marker>
+    </defs>
+
+    <g [attr.transform]="transform()">
+      @for (edge of edges(); track edge.id) {
+        <g
+          class="workflow-diagram__edge"
+          [class.workflow-diagram__edge--selected]="edge.selected"
+          aria-hidden="true"
+          [attr.data-testid]="'diagram-edge-' + edge.transitionId"
+          (click)="transitionSelected.emit(edge.transitionId)"
+        >
+          <path class="workflow-diagram__hit" [attr.d]="edge.path" />
+          <path
+            class="workflow-diagram__line"
+            marker-end="url(#workflow-diagram-arrow)"
+            [attr.d]="edge.path"
+          />
+          <rect
+            class="workflow-diagram__plate"
+            rx="4"
+            height="20"
+            [attr.x]="edge.labelX - edge.plateWidth / 2"
+            [attr.y]="edge.labelY - 10"
+            [attr.width]="edge.plateWidth"
+          />
+          <text
+            class="workflow-diagram__label"
+            text-anchor="middle"
+            dominant-baseline="central"
+            [attr.x]="edge.labelX"
+            [attr.y]="edge.labelY"
+          >
+            {{ edge.label }}
+          </text>
+        </g>
+      }
+
+      @for (node of nodes(); track node.id) {
+        <g
+          class="workflow-diagram__node"
+          [class.workflow-diagram__node--todo]="node.category === 'todo'"
+          [class.workflow-diagram__node--progress]="node.category === 'progress'"
+          [class.workflow-diagram__node--done]="node.category === 'done'"
+          [class.workflow-diagram__node--any]="node.virtual"
+          [class.workflow-diagram__node--initial]="node.initial"
+          [attr.role]="node.virtual || !interactive() ? 'img' : 'button'"
+          [attr.tabindex]="node.virtual || !interactive() ? null : 0"
+          [attr.aria-label]="nodeLabel(node)"
+          [attr.data-testid]="'diagram-node-' + node.id"
+          (click)="node.virtual ? null : statusSelected.emit(node.id)"
+          (keydown)="onNodeKeydown($event, node)"
+        >
+          <rect
+            class="workflow-diagram__box"
+            rx="8"
+            [attr.x]="node.x"
+            [attr.y]="node.y"
+            [attr.width]="node.width"
+            [attr.height]="node.height"
+          />
+          <text
+            class="workflow-diagram__name"
+            text-anchor="middle"
+            dominant-baseline="central"
+            [attr.x]="node.x + node.width / 2"
+            [attr.y]="node.y + node.height / 2"
+          >
+            {{ node.label }}
+          </text>
+        </g>
+      }
+    </g>
+  </svg>
+</div>

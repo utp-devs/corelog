@@ -7,12 +7,13 @@ import {
   computed,
   inject,
   input,
+  model,
   output,
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import {
   BreakpointService,
-  ISSUE_STATUS_META,
+  issueStatusView,
   IssueStatusCategory,
   Issue,
   issueKeyOf,
@@ -27,6 +28,7 @@ import {
   DataTablePagination,
   RowMenuItem,
 } from '@corelog/ui/data-table';
+import { BulkAction } from '@corelog/ui/bulk-bar';
 import { IssueKey } from '@corelog/ui/issue-key';
 import { Lozenge } from '@corelog/ui/lozenge';
 import { PriorityTag } from '@corelog/ui/priority-tag';
@@ -79,6 +81,10 @@ export class IssueList {
   readonly rowActions = input<((row: Issue) => RowMenuItem[]) | null>(null);
   /** The table grows to the remaining height of its section. */
   readonly fill = input(false);
+  /** Rows can be ticked; the bulk actions show above the table while any is. */
+  readonly selectable = input(false);
+  readonly selectedKeys = model<string[]>([]);
+  readonly bulkActions = input<BulkAction[]>([]);
 
   readonly open = output<Issue>();
   readonly retry = output<void>();
@@ -89,11 +95,11 @@ export class IssueList {
   );
 
   protected statusLabel(issue: Issue): string {
-    return ISSUE_STATUS_META[issue.status].label;
+    return issueStatusView(issue).label;
   }
 
   protected statusCategory(issue: Issue): IssueStatusCategory {
-    return ISSUE_STATUS_META[issue.status].category;
+    return issueStatusView(issue).category;
   }
 
   protected updatedText(issue: Issue): string {

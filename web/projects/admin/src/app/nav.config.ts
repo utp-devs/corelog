@@ -63,6 +63,13 @@ export const ADMIN_NAV: ShellNavConfig = {
         permission: 'org.admin',
       },
       {
+        key: 'org-statuses',
+        label: 'Estados',
+        path: '/organization/statuses',
+        icon: 'workflow',
+        permission: 'org.admin',
+      },
+      {
         key: 'org-invitations',
         label: 'Invitaciones',
         path: '/organization/invitations',

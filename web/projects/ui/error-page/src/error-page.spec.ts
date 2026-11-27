@@ -110,4 +110,14 @@ describe('ErrorPage', () => {
       'Puede que la hayan eliminado.',
     );
   });
+
+  it.each([
+    [403, 'error-403'],
+    [404, 'error-404'],
+    [500, 'error-500'],
+  ] as const)('shows the photograph of the %s variant', (variant, name) => {
+    const img = el(create(variant)).querySelector('img');
+    expect(img?.getAttribute('src')).toBe(`/images/states/${name}.webp`);
+    expect(img?.getAttribute('alt')).toBe('');
+  });
 });

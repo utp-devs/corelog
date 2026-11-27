@@ -1,0 +1,156 @@
+<section
+  class="transition-panel"
+  aria-label="Editar transición"
+  data-testid="workflow-transition-panel"
+>
+  <header class="transition-panel__header">
+    <h3 class="transition-panel__title">{{ canEdit() ? 'Editar transición' : 'Transición' }}</h3>
+    <p-button
+      icon="pi pi-times"
+      severity="secondary"
+      [text]="true"
+      class="touch-target"
+      ariaLabel="Cerrar el panel de la transición"
+      (onClick)="closed.emit()"
+    />
+  </header>
+
+  @for (problem of problems(); track problem) {
+    <p class="transition-panel__problem" role="alert">{{ problem }}</p>
+  }
+
+  <div class="transition-panel__field">
+    <label class="transition-panel__label" for="workflow-transition-name">Nombre</label>
+    <input
+      pInputText
+      id="workflow-transition-name"
+      type="text"
+      maxlength="60"
+      autocomplete="off"
+      class="transition-panel__input"
+      data-testid="workflow-transition-name"
+      [disabled]="!canEdit()"
+      [value]="transition().name"
+      (input)="rename($any($event.target).value)"
+    />
+  </div>
+
+  <fieldset class="transition-panel__field transition-panel__fieldset">
+    <legend class="transition-panel__label">Desde</legend>
+    <label class="transition-panel__check">
+      <input
+        type="checkbox"
+        data-testid="workflow-from-any"
+        [disabled]="!canEdit()"
+        [checked]="anySource()"
+        (change)="setAnySource($any($event.target).checked)"
+      />
+      <span>Cualquier estado</span>
+    </label>
+    @if (!anySource()) {
+      @for (status of statuses(); track status.ref) {
+        @if (status.ref !== transition().to) {
+          <label class="transition-panel__check">
+            <input
+              type="checkbox"
+              [disabled]="!canEdit()"
+              [checked]="transition().from.includes(status.ref)"
+              (change)="toggleSource(status.ref, $any($event.target).checked)"
+            />
+            <span>{{ status.name }}</span>
+          </label>
+        }
+      }
+    }
+  </fieldset>
+
+  <div class="transition-panel__field">
+    <span class="transition-panel__label" id="workflow-transition-to-label">Hasta</span>
+    <app-select-field
+      ariaLabelledBy="workflow-transition-to-label"
+      [disabled]="!canEdit()"
+      [options]="targetOptions()"
+      [ngModel]="transition().to"
+      (ngModelChange)="setTarget($event)"
+    />
+  </div>
+
+  <div class="transition-panel__field">
+    <label class="transition-panel__label" for="workflow-required-field"
+      >Campos que se piden al ejecutarla</label
+    >
+    @if (transition().requiredFields.length > 0) {
+      <ul class="transition-panel__chips" aria-label="Campos obligatorios">
+        @for (field of transition().requiredFields; track field) {
+          <li class="transition-panel__chip">
+            <span>{{ fieldLabelOf(field) }}</span>
+            @if (canEdit()) {
+              <button
+                type="button"
+                class="transition-panel__chip-remove"
+                [attr.aria-label]="'Quitar el campo ' + fieldLabelOf(field)"
+                (click)="removeField(field)"
+              >
+                <i class="pi pi-times" aria-hidden="true"></i>
+              </button>
+            }
+          </li>
+        }
+      </ul>
+    }
+    @if (canEdit()) {
+      <form class="transition-panel__add-field" (submit)="$event.preventDefault(); addField()">
+        <input
+          pInputText
+          id="workflow-required-field"
+          type="text"
+          autocomplete="off"
+          class="transition-panel__input"
+          list="workflow-field-choices"
+          placeholder="story_points, due_date, cf_…"
+          [ngModel]="fieldInput()"
+          [ngModelOptions]="{ standalone: true }"
+          (ngModelChange)="fieldInput.set($event)"
+        />
+        <datalist id="workflow-field-choices">
+          @for (option of fieldChoices; track option.value) {
+            <option [value]="option.value">{{ option.label }}</option>
+          }
+        </datalist>
+        <p-button
+          type="submit"
+          label="Añadir"
+          severity="secondary"
+          size="small"
+          [outlined]="true"
+        />
+      </form>
+    }
+  </div>
+
+  <app-workflow-rule-list
+    kind="condition"
+    title="Condiciones"
+    hint="Quién puede ver y ejecutar la transición."
+    [rules]="transition().conditions"
+    [canEdit]="canEdit()"
+    (rulesChange)="setRules('conditions', $event)"
+  />
+  <app-workflow-rule-list
+    kind="validator"
+    title="Validaciones"
+    hint="Lo que se debe cumplir o pedir antes de cambiar de estado."
+    [rules]="transition().validators"
+    [canEdit]="canEdit()"
+    (rulesChange)="setRules('validators', $event)"
+  />
+  <app-workflow-rule-list
+    kind="postFunction"
+    title="Acciones posteriores"
+    hint="Lo que ocurre automáticamente después del cambio."
+    [rules]="transition().postFunctions"
+    [resolutions]="resolutions()"
+    [canEdit]="canEdit()"
+    (rulesChange)="setRules('postFunctions', $event)"
+  />
+</section>

@@ -1,7 +1,7 @@
 @if (user(); as user) {
   <app-page-container variant="reading" pageName="profile" [ready]="true" [fill]="true">
     <div class="profile-page">
-      <app-page-header [title]="meta().title" [subtitle]="meta().description" />
+      <app-page-header banner="profile" [title]="meta().title" [subtitle]="meta().description" />
 
       <div
         class="profile-page__content"

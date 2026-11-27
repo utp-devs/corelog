@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
+import { EmptyIllustration, type StateImage } from '@corelog/ui/empty-illustration';
 import { Button } from 'primeng/button';
 
 interface StateCopy {
@@ -70,7 +71,7 @@ function copyForStatus(status: number | null | undefined): StateCopy | null {
  */
 @Component({
   selector: 'app-error-state',
-  imports: [Button],
+  imports: [Button, EmptyIllustration],
   templateUrl: './error-state.html',
   styleUrl: './error-state.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -81,6 +82,8 @@ export class ErrorState {
   readonly message = input<string>();
   /** HTTP status of the failure, when known. */
   readonly status = input<number | null>();
+  /** State photograph shown instead of the icon, for page-level errors. */
+  readonly image = input<StateImage>();
   readonly canRetry = input(false);
   readonly retry = output<void>();
 

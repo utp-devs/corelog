@@ -1,4 +1,5 @@
 <app-auth-layout
+  variant="login"
   title="Iniciar sesión"
   subtitle="Accede con tu cuenta para continuar con tu trabajo."
   switchText="¿No tienes cuenta?"
@@ -17,9 +18,10 @@
       <app-auth-alert tone="error">{{ message }}</app-auth-alert>
     }
 
-    <app-field-row
+    <app-auth-field
       #emailRow
       label="Correo electrónico"
+      icon="pi-envelope"
       [required]="true"
       [control]="form.controls.email"
       [messages]="emailMessages"
@@ -27,20 +29,18 @@
       [error]="serverError(form.controls.email)"
     >
       <input
-        pInputText
-        appFieldControl
-        pSize="large"
+        appAuthControl
+        class="login-page__input"
         formControlName="email"
         type="email"
         autocomplete="email"
         inputmode="email"
         autocapitalize="none"
         spellcheck="false"
-        [fluid]="true"
       />
-    </app-field-row>
+    </app-auth-field>
 
-    <app-field-row
+    <app-auth-field
       #passwordRow
       label="Contraseña"
       [required]="true"
@@ -58,12 +58,12 @@
         [invalid]="passwordRow.invalid()"
         [describedBy]="passwordRow.describedBy()"
       />
-    </app-field-row>
+    </app-auth-field>
 
     <p-button
+      class="login-page__submit"
       type="submit"
       label="Iniciar sesión"
-      size="large"
       [fluid]="true"
       [loading]="submitting()"
     />

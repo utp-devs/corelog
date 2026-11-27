@@ -1,4 +1,12 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { DOCUMENT } from '@angular/common';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  DestroyRef,
+  computed,
+  inject,
+  signal,
+} from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AuthStore, LOCATION_ASSIGN, OrganizationStore } from '@corelog/core';
 import { PageContainer } from '@corelog/ui/page-container';
@@ -18,6 +26,19 @@ const STEPS: readonly StepInfo[] = [
   { title: 'Organización', optional: false },
   { title: 'Equipo', optional: true },
   { title: 'Finalizar', optional: false },
+];
+
+/** Photograph beside each step of the wizard. */
+interface StepArt {
+  readonly name: string;
+  readonly src: string;
+}
+
+const ART: readonly StepArt[] = [
+  { name: 'create-org', src: '/images/onboarding/onboarding-create-org.webp' },
+  { name: 'create-org', src: '/images/onboarding/onboarding-create-org.webp' },
+  { name: 'join-team', src: '/images/onboarding/onboarding-join-team.webp' },
+  { name: 'ready', src: '/images/onboarding/onboarding-ready.webp' },
 ];
 
 /**
@@ -45,10 +66,23 @@ export class OnboardingPage {
   /** Opened from the organization switcher: the user already has a workspace to go back to. */
   protected readonly canCancel = this.route.snapshot.queryParamMap.get('new') !== null;
   protected readonly step = signal<number>(this.canCancel ? 1 : 0);
+  /** Phones do not show the photograph, so it is not even requested there. */
+  protected readonly phone = signal(false);
+  protected readonly art = computed(() => ART[this.step()]);
   protected readonly orgName = computed(() => this.org()?.name ?? null);
   protected readonly stepLabel = computed(
     () => `Paso ${this.step() + 1} de ${STEPS.length}: ${STEPS[this.step()].title}`,
   );
+
+  constructor() {
+    const query = inject(DOCUMENT).defaultView?.matchMedia?.('(max-width: 767.98px)');
+    if (query) {
+      this.phone.set(query.matches);
+      const listener = (event: MediaQueryListEvent): void => this.phone.set(event.matches);
+      query.addEventListener?.('change', listener);
+      inject(DestroyRef).onDestroy(() => query.removeEventListener?.('change', listener));
+    }
+  }
 
   protected stateOf(index: number): 'done' | 'current' | 'upcoming' {
     const current = this.step();

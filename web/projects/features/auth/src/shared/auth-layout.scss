@@ -1,12 +1,49 @@
 @use '../../../../ui/styles/mixins' as m;
 @use '../../../../ui/field-row/src/control' as c;
+@use 'auth-page' as a;
 
-// Split auth template. Colors, sizes and spacing come only from --cl-* tokens (both themes).
+// Access screens are dark by default and light when the visitor chose it. The scope re-maps the semantic tokens for everything inside, so the
+// theme the person chose in the app does not change this screen.
 :host {
   display: block;
   min-height: 100vh;
   min-height: 100dvh;
-  background: var(--cl-bg-page);
+  background: var(--cl-auth-bg);
+  color: var(--cl-auth-text);
+  @include a.dark-scope;
+}
+
+// Light variant: the same roles with the light palette. The dark palette is the default.
+:host([data-auth-theme='light']) {
+  color-scheme: light;
+  --cl-auth-bg: var(--cl-auth-light-bg);
+  --cl-auth-surface: var(--cl-auth-light-surface);
+  --cl-auth-field: var(--cl-auth-light-field);
+  --cl-auth-field-border: var(--cl-auth-light-field-border);
+  --cl-auth-text: var(--cl-auth-light-text);
+  --cl-auth-text-subtle: var(--cl-auth-light-text-subtle);
+  --cl-auth-text-placeholder: var(--cl-auth-light-text-placeholder);
+  --cl-auth-accent: var(--cl-auth-light-accent);
+  --cl-auth-accent-hover: var(--cl-auth-light-accent-hover);
+  --cl-auth-button-hover: var(--cl-auth-light-button-hover);
+  --cl-auth-halo: var(--cl-auth-light-halo);
+  --cl-auth-danger: var(--cl-auth-light-danger);
+  --cl-auth-danger-bg: var(--cl-auth-light-danger-bg);
+  --cl-auth-danger-text: var(--cl-auth-light-danger-text);
+  --cl-auth-warning: var(--cl-auth-light-warning);
+  --cl-auth-warning-bg: var(--cl-auth-light-warning-bg);
+  --cl-auth-warning-text: var(--cl-auth-light-warning-text);
+  --cl-auth-success: var(--cl-auth-light-success);
+  --cl-auth-success-bg: var(--cl-auth-light-success-bg);
+  --cl-auth-success-text: var(--cl-auth-light-success-text);
+  --cl-hero-text: var(--cl-auth-light-hero-text);
+  --cl-hero-text-subtle: var(--cl-auth-light-hero-text-subtle);
+  --cl-hero-panel: var(--cl-auth-light-hero-panel);
+  --cl-hero-chip: var(--cl-auth-light-hero-chip);
+  --cl-auth-card: var(--cl-auth-light-card);
+  --cl-auth-panel: var(--cl-auth-light-panel);
+  --cl-auth-card-border: var(--cl-auth-light-card-border);
+  --cl-auth-page-tint: var(--cl-auth-light-page-tint);
 }
 
 .auth-layout {
@@ -17,8 +54,8 @@
     z-index: var(--cl-z-modal);
     padding: var(--cl-space-2) var(--cl-space-4);
     border-radius: var(--cl-radius-md);
-    background: var(--cl-bg-surface);
-    color: var(--cl-text);
+    background: var(--cl-auth-field);
+    color: var(--cl-auth-text);
     box-shadow: var(--cl-elev-2);
     transform: translateY(-200%);
 
@@ -37,43 +74,118 @@
     }
   }
 
-  // The page measured by the layout audit: the brand panel and the form side by side.
+  // The page measured by the layout audit: full width, with the container centered on a deep navy backdrop.
   &__page {
+    position: relative;
+    isolation: isolate;
     display: grid;
-    grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
+    place-items: center;
     min-height: 100vh;
     min-height: 100dvh;
+    padding: var(--cl-space-8) var(--cl-gutter);
+    background: var(--cl-auth-bg);
   }
 
-  // Brand panel: logo, value proposition and soft shapes made of tokens.
-  &__brand {
-    position: relative;
-    display: flex;
+  // Blurred photograph under everything: the same image as the active slide, scaled so the blurred edges never
+  // show, under one flat dim tint. The page color stays behind it as the fallback.
+  &__backdrop {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
     overflow: hidden;
-    padding: var(--cl-space-12) var(--cl-space-10);
-    background: linear-gradient(160deg, var(--cl-brand-subtle) 0%, var(--cl-bg-page) 85%);
+    background: var(--cl-auth-bg);
   }
 
-  &__brand-inner {
-    @include m.flex-column(10, flex-start);
-    position: relative;
-    z-index: 1;
-    justify-content: center;
+  &__backdrop-image,
+  &__background {
+    position: absolute;
+    inset: 0;
     width: 100%;
-    max-width: 28rem;
-    margin-inline: auto;
+    height: 100%;
+    object-fit: cover;
+    transform: scale(1.05);
+    filter: blur(var(--cl-auth-blur-page));
+  }
+
+  &__backdrop-image {
+    opacity: 0;
+    transition: opacity 700ms var(--cl-ease);
+
+    &--active {
+      opacity: 1;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      transition: none;
+    }
+  }
+
+  // One flat uniform tint over the photograph.
+  &__veil {
+    position: absolute;
+    inset: 0;
+    background: var(--cl-auth-page-tint);
+  }
+
+  // Large rounded container: hero on the left, form on the right.
+  &__shell {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+    overflow: hidden;
+    width: min(100%, 80rem);
+    min-height: 44rem;
+    border: 1px solid var(--cl-auth-card-border);
+    border-radius: calc(var(--cl-radius-lg) * 3);
+    background: var(--cl-auth-card);
+    box-shadow: var(--cl-elev-modal);
+  }
+
+  // Minimal top bar: the logo on a light pill so its dark lettering stays legible on the photograph.
+  &__brand {
+    position: absolute;
+    top: var(--cl-space-6);
+    left: var(--cl-space-8);
+    z-index: 3;
+  }
+
+  &__logo-plate {
+    display: inline-flex;
+    padding: var(--cl-space-1) var(--cl-space-3);
+    border-radius: var(--cl-radius-full);
+    background: var(--cl-auth-plate);
+    box-shadow: var(--cl-shadow-1);
   }
 
   &__logo {
     display: block;
-    width: 11rem;
-    max-width: 100%;
+    width: 10rem;
     height: auto;
-    padding: var(--cl-space-1) var(--cl-space-2);
+    max-width: 100%;
+  }
+
+  &__hero {
+    grid-column: 1;
+    grid-row: 1;
+    min-width: 0;
+    min-height: 0;
   }
 
   &__pitch {
-    @include m.flex-column(5);
+    @include m.flex-column(3);
+    justify-content: flex-end;
+    height: 100%;
+    padding: var(--cl-space-16) var(--cl-space-8) var(--cl-space-2);
+  }
+
+  // Flat tint behind the text block only, so the photograph stays sharp and the text stays legible.
+  &__pitch-card {
+    @include m.flex-column(3);
+    align-self: flex-start;
+    max-width: 100%;
+    padding: var(--cl-space-5) var(--cl-space-6);
+    border-radius: calc(var(--cl-radius-lg) * 2);
+    background: var(--cl-hero-panel);
   }
 
   &__headline {
@@ -81,94 +193,83 @@
     font-size: var(--cl-font-display);
     font-weight: 700;
     line-height: var(--cl-lh-tight);
-    color: var(--cl-text);
+    letter-spacing: -0.01em;
+    color: var(--cl-hero-text);
   }
 
-  &__points {
-    @include m.flex-column(3);
+  &__headline-line {
+    display: block;
+  }
+
+  &__accent {
+    color: var(--cl-auth-accent);
+  }
+
+  &__lead {
     margin: 0;
-    padding: 0;
-    list-style: none;
-  }
-
-  &__point {
-    @include m.flex-row(3, flex-start);
+    max-width: 24rem;
     font-size: var(--cl-font-body-strong);
-    color: var(--cl-text-subtle);
-  }
-
-  &__point-icon {
-    flex: none;
-    margin-top: var(--cl-space-1);
-    color: var(--cl-brand);
-  }
-
-  &__shape {
-    position: absolute;
-    border-radius: var(--cl-radius-full);
-    background: var(--cl-brand);
-    opacity: 0.08;
-    pointer-events: none;
-
-    &--one {
-      right: -6rem;
-      bottom: -6rem;
-      width: 22rem;
-      height: 22rem;
-    }
-
-    &--two {
-      top: -4rem;
-      right: 20%;
-      width: 10rem;
-      height: 10rem;
-    }
+    color: var(--cl-hero-text-subtle);
   }
 
   &__panel {
     @include m.flex-row(0, center, center);
+    grid-column: 2;
+    grid-row: 1;
     min-width: 0;
-    padding: var(--cl-space-8) var(--cl-gutter);
-    background: var(--cl-bg-surface);
-    border-inline-start: 1px solid var(--cl-border);
+    padding: var(--cl-space-12) var(--cl-space-10);
+    background: var(--cl-auth-panel);
   }
 
   &__card {
-    width: min(26rem, 100%);
+    width: min(28rem, 100%);
     min-width: 0;
   }
 
   &__title {
     margin: 0;
-    font-size: var(--cl-font-h1);
+    font-size: var(--cl-font-display);
     font-weight: 700;
     line-height: var(--cl-lh-tight);
-    color: var(--cl-text);
+    letter-spacing: -0.01em;
+    color: var(--cl-auth-text);
     overflow-wrap: anywhere;
+
+    // The accent period of the reference design; silent for screen readers.
+    &::after {
+      content: '.' / '';
+      color: var(--cl-auth-accent);
+    }
+  }
+
+  &__heading {
+    margin-bottom: var(--cl-space-6);
   }
 
   &__subtitle {
-    margin: var(--cl-space-2) 0 var(--cl-space-6);
-    color: var(--cl-text-subtle);
+    margin: var(--cl-space-2) 0 0;
+    color: var(--cl-auth-text-subtle);
   }
 
   &__switch {
     margin: var(--cl-space-6) 0 0;
     text-align: center;
     font-size: var(--cl-font-body);
-    color: var(--cl-text-subtle);
+    color: var(--cl-auth-text-subtle);
   }
 
   &__switch-link {
     display: inline-flex;
     align-items: center;
     min-height: var(--cl-control-h-md);
+    padding-inline: var(--cl-space-1);
     border-radius: var(--cl-radius-sm);
-    color: var(--cl-brand);
+    color: var(--cl-auth-accent);
     font-weight: var(--cl-weight-semibold);
     text-decoration: none;
 
     &:hover {
+      color: var(--cl-auth-accent-hover);
       text-decoration: underline;
     }
 
@@ -177,36 +278,81 @@
     }
   }
 
-  // Tablet and phone: the brand panel becomes a compact header and the form follows.
+  // Tablet: the hero becomes a strip above the form.
   @include m.respond-down(1024px) {
-    &__page {
+    &__shell {
       grid-template-columns: minmax(0, 1fr);
-      grid-template-rows: auto 1fr;
+      grid-template-rows: 15.75rem auto;
+      width: min(100%, 44rem);
+      min-height: 0;
     }
 
-    &__brand {
-      padding: var(--cl-space-10) var(--cl-gutter);
-    }
-
-    &__brand-inner {
-      max-width: none;
-      margin-inline: 0;
-    }
-
-    &__pitch,
-    &__shape {
-      display: none;
-    }
-
-    &__logo {
-      width: 9rem;
+    &__hero,
+    &__panel {
+      grid-column: 1;
     }
 
     &__panel {
+      grid-row: 2;
+      padding: var(--cl-space-8) var(--cl-space-8) var(--cl-space-10);
+    }
+
+    &__brand {
+      top: var(--cl-space-4);
+      left: var(--cl-space-6);
+    }
+
+    &__pitch {
+      padding: var(--cl-space-12) var(--cl-space-6) 0;
+    }
+
+    &__headline {
+      font-size: var(--cl-font-h2);
+    }
+
+    &__lead {
+      display: none;
+    }
+  }
+
+  // Phone: no photograph in the container; a full-bleed background sits behind the form.
+  @include m.respond-down(721px) {
+    &__page {
+      display: block;
+      padding: 0;
+    }
+
+    &__shell {
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+      min-height: 100vh;
+      min-height: 100dvh;
+      border: 0;
+      border-radius: 0;
+      background: transparent;
+      box-shadow: none;
+    }
+
+    &__brand {
+      position: static;
+      padding: var(--cl-space-6) var(--cl-gutter) var(--cl-space-4);
+    }
+
+    &__panel {
+      flex: 1 1 auto;
       align-items: flex-start;
-      padding-top: var(--cl-space-8);
-      border-inline-start: 0;
-      border-top: 1px solid var(--cl-border);
+      padding: var(--cl-space-8) var(--cl-gutter) var(--cl-space-10);
+      border-radius: calc(var(--cl-radius-lg) * 3) calc(var(--cl-radius-lg) * 3) 0 0;
+      background: var(--cl-auth-panel);
+    }
+
+    &__card {
+      width: 100%;
+    }
+
+    &__title {
+      font-size: var(--cl-font-h1);
     }
   }
 }

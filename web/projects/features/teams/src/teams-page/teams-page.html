@@ -1,5 +1,6 @@
 <app-page-container variant="wide" [ready]="!loading()" pageName="teams" [fill]="true">
   <app-page-header
+    banner="teams"
     title="Equipos"
     subtitle="Agrupa a las personas de la organización y administra sus equipos."
   />
@@ -36,16 +37,25 @@
   } @else if (teams().length === 0) {
     <app-section [fill]="true" ariaLabel="Equipos">
       @if (canCreate()) {
-        <app-empty-state title="Aún no hay equipos" [description]="emptyDescription()">
+        <app-empty-state
+          image="empty-teams"
+          title="Aún no hay equipos"
+          [description]="emptyDescription()"
+        >
           <p-button action label="Crear equipo" icon="pi pi-plus" (onClick)="openCreate()" />
         </app-empty-state>
       } @else {
-        <app-empty-state title="Aún no hay equipos" [description]="emptyDescription()" />
+        <app-empty-state
+          image="empty-teams"
+          title="Aún no hay equipos"
+          [description]="emptyDescription()"
+        />
       }
     </app-section>
   } @else if (visible().length === 0) {
     <app-section [fill]="true" ariaLabel="Equipos">
       <app-empty-state
+        image="empty-search"
         title="Ningún equipo coincide con la búsqueda"
         description="Prueba con otro nombre o descripción."
       />

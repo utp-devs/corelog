@@ -1,0 +1,135 @@
+<app-dialog
+  size="md"
+  [heading]="heading()"
+  [subtitle]="subtitle()"
+  [open]="open()"
+  (closeRequested)="closeRequested.emit()"
+>
+  <form class="transition-dialog" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+    @if (error(); as message) {
+      <p-message severity="error" [closable]="false" role="alert" data-testid="transition-error">{{
+        message
+      }}</p-message>
+    }
+    @for (detail of otherErrors(); track detail.field) {
+      <p-message severity="error" [closable]="false" role="alert">{{ detail.message }}</p-message>
+    }
+
+    <div formGroupName="fields" class="transition-dialog__fields">
+      @for (spec of fieldSpecs(); track spec.name; let first = $first) {
+        @if (spec.kind === 'flag') {
+          <label class="transition-dialog__flag">
+            <input
+              type="checkbox"
+              [checked]="fieldControl(spec.name).value === 'true'"
+              (change)="toggleFlag(spec.name, $any($event.target).checked)"
+            />
+            <span>{{ spec.label }}</span>
+          </label>
+        } @else {
+          <app-field-row
+            #row
+            [label]="spec.label"
+            [required]="true"
+            [error]="fieldError(spec.name)"
+          >
+            @switch (spec.kind) {
+              @case ('date') {
+                <app-date-field [inputId]="row.controlId" [formControlName]="'f_' + spec.name" />
+              }
+              @case ('number') {
+                <input
+                  pInputText
+                  appFieldControl
+                  type="number"
+                  inputmode="decimal"
+                  min="0"
+                  class="transition-dialog__input"
+                  [formControlName]="'f_' + spec.name"
+                  [attr.data-testid]="'transition-field-' + spec.name"
+                />
+              }
+              @default {
+                <input
+                  pInputText
+                  appFieldControl
+                  type="text"
+                  autocomplete="off"
+                  class="transition-dialog__input"
+                  [formControlName]="'f_' + spec.name"
+                  [attr.data-testid]="'transition-field-' + spec.name"
+                />
+              }
+            }
+          </app-field-row>
+        }
+      }
+    </div>
+
+    @if (resolutionRequired()) {
+      <app-field-row
+        #resolutionRow
+        label="Resolución"
+        [required]="true"
+        [error]="resolutionError()"
+      >
+        <app-select-field
+          placeholder="Elige una resolución"
+          [inputId]="resolutionRow.controlId"
+          [ariaLabelledBy]="resolutionRow.labelId"
+          [options]="resolutionOptions()"
+          [ngModel]="resolutionId()"
+          [ngModelOptions]="{ standalone: true }"
+          (ngModelChange)="resolutionId.set($event)"
+        />
+      </app-field-row>
+    }
+
+    @if (assigneeRequired()) {
+      <app-field-row label="Responsable" [required]="true" [error]="assigneeError()">
+        <app-user-picker
+          ariaLabel="Responsable"
+          placeholder="Elige una persona"
+          [users]="users()"
+          [allowClear]="false"
+          [value]="assigneeId()"
+          (valueChange)="assigneeId.set($event)"
+        />
+      </app-field-row>
+    }
+
+    <app-field-row
+      label="Comentario"
+      [required]="commentRequired()"
+      [optional]="!commentRequired()"
+      [error]="commentError()"
+    >
+      <textarea
+        pTextarea
+        appFieldControl
+        data-autofocus
+        rows="3"
+        formControlName="comment"
+        class="transition-dialog__input"
+        data-testid="transition-comment"
+      ></textarea>
+    </app-field-row>
+  </form>
+
+  <p-button
+    dialogFooter
+    type="button"
+    label="Cancelar"
+    severity="secondary"
+    [disabled]="busy()"
+    (onClick)="closeRequested.emit()"
+  />
+  <p-button
+    dialogFooter
+    type="button"
+    [label]="heading()"
+    data-testid="transition-confirm"
+    [loading]="busy()"
+    (onClick)="submit()"
+  />
+</app-dialog>

@@ -24,6 +24,7 @@ import { ErrorState } from '@corelog/ui/error-state';
 import { LoadingSkeleton } from '@corelog/ui/loading-skeleton';
 import { Lozenge } from '@corelog/ui/lozenge';
 import { ProjectAvatar } from '@corelog/ui/project-avatar';
+import { projectCover } from '../project-cover';
 
 import { TYPE_LABELS, VISIBILITY_LABELS } from '../projects-page/projects-page.utils';
 
@@ -103,6 +104,10 @@ export class ProjectWorkspace {
         });
       }
     });
+  }
+
+  protected cover(project: Project): string {
+    return projectCover(project.color, project.key);
   }
 
   protected leadName(project: Project): string {

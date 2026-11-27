@@ -1,0 +1,242 @@
+<app-page-container variant="wide" pageName="org-statuses" [ready]="!loading()" [fill]="true">
+  <app-page-header banner="settings" title="Estados de incidencias" [subtitle]="subtitle()">
+    @if (canManage() && !loadError()) {
+      <div appPageHeaderActions>
+        <p-button
+          icon="pi pi-plus"
+          label="Nuevo estado"
+          data-testid="status-create"
+          (onClick)="openCreate()"
+        />
+      </div>
+    }
+  </app-page-header>
+
+  @if (!canManage()) {
+    <p-message severity="info" [closable]="false" class="org-statuses-page__banner">
+      <span class="org-statuses-page__alert-body">
+        <strong>Solo lectura</strong>
+        <span
+          >Puedes ver los estados de la organización. Solo los administradores pueden
+          cambiarlos.</span
+        >
+      </span>
+    </p-message>
+  }
+
+  <app-section [fill]="true" ariaLabel="Estados de la organización">
+    <p class="org-statuses-page__intro">
+      Cada estado pertenece a una categoría (Por hacer, En curso o Hecho) que decide su color y
+      cuándo se considera terminada una incidencia. Los proyectos eligen entre estos estados al
+      diseñar su flujo de trabajo.
+    </p>
+
+    @if (listError(); as message) {
+      <div role="alert" class="org-statuses-page__banner">
+        <p-message severity="error" [closable]="true" (onClose)="listError.set(null)">{{
+          message
+        }}</p-message>
+      </div>
+    }
+
+    @if (loading()) {
+      <app-loading-skeleton variant="table" [rows]="5" />
+    } @else if (loadError(); as failure) {
+      <app-error-state [status]="failure.status" [canRetry]="true" (retry)="retry()" />
+    } @else if (statuses().length === 0) {
+      <app-empty-state title="Aún no hay estados" description="Crea el primero para empezar.">
+        @if (canManage()) {
+          <p-button action icon="pi pi-plus" label="Nuevo estado" (onClick)="openCreate()" />
+        }
+      </app-empty-state>
+    } @else {
+      <ul
+        class="org-statuses-page__list"
+        cdkDropList
+        cdkDropListLockAxis="y"
+        aria-label="Estados"
+        data-testid="status-list"
+        [cdkDropListDisabled]="!canManage() || busy()"
+        (cdkDropListDropped)="drop($event)"
+      >
+        @for (
+          status of statuses();
+          track status.id;
+          let index = $index;
+          let first = $first;
+          let last = $last
+        ) {
+          <li
+            class="org-statuses-page__row"
+            cdkDrag
+            data-testid="status-row"
+            [cdkDragDisabled]="!canManage() || busy()"
+            [attr.data-name]="status.name"
+          >
+            @if (canManage()) {
+              <span class="org-statuses-page__handle" cdkDragHandle aria-hidden="true">
+                <i class="pi pi-bars"></i>
+              </span>
+            }
+            <span class="org-statuses-page__name">{{ status.name }}</span>
+            <span
+              class="org-statuses-page__chip"
+              [class.org-statuses-page__chip--todo]="visual(status.category) === 'todo'"
+              [class.org-statuses-page__chip--progress]="visual(status.category) === 'progress'"
+              [class.org-statuses-page__chip--done]="visual(status.category) === 'done'"
+              >{{ labels[status.category] }}</span
+            >
+            @if (canManage()) {
+              <div class="org-statuses-page__actions">
+                <p-button
+                  icon="pi pi-arrow-up"
+                  severity="secondary"
+                  [text]="true"
+                  class="touch-target"
+                  [ariaLabel]="'Subir ' + status.name"
+                  appTooltip="Subir"
+                  [disabled]="first || busy()"
+                  (onClick)="move(index, -1)"
+                />
+                <p-button
+                  icon="pi pi-arrow-down"
+                  severity="secondary"
+                  [text]="true"
+                  class="touch-target"
+                  [ariaLabel]="'Bajar ' + status.name"
+                  appTooltip="Bajar"
+                  [disabled]="last || busy()"
+                  (onClick)="move(index, 1)"
+                />
+                <p-button
+                  icon="pi pi-pencil"
+                  severity="secondary"
+                  [text]="true"
+                  class="touch-target"
+                  [ariaLabel]="'Editar ' + status.name"
+                  appTooltip="Editar"
+                  [disabled]="busy()"
+                  (onClick)="openEdit(status)"
+                />
+                <p-button
+                  icon="pi pi-trash"
+                  severity="danger"
+                  [text]="true"
+                  class="touch-target"
+                  [ariaLabel]="'Eliminar ' + status.name"
+                  appTooltip="Eliminar"
+                  [disabled]="busy()"
+                  (onClick)="openDelete(status)"
+                />
+              </div>
+            }
+          </li>
+        }
+      </ul>
+    }
+  </app-section>
+
+  <p class="org-statuses-page__sr" role="status" aria-live="polite">{{ announcement() }}</p>
+
+  <app-dialog
+    size="md"
+    [heading]="editing() ? 'Editar estado' : 'Nuevo estado'"
+    [open]="formOpen()"
+    (closeRequested)="closeForm()"
+  >
+    <form class="org-statuses-page__form" [formGroup]="form" (ngSubmit)="save()">
+      @if (formError(); as message) {
+        <p-message severity="error" [closable]="false" role="alert">{{ message }}</p-message>
+      }
+      <app-field-row
+        label="Nombre"
+        [required]="true"
+        [control]="form.controls.name"
+        [messages]="nameMessages"
+        [submitted]="submitted()"
+      >
+        <input
+          pInputText
+          appFieldControl
+          data-autofocus
+          type="text"
+          formControlName="name"
+          autocomplete="off"
+          class="org-statuses-page__input"
+          maxlength="60"
+        />
+      </app-field-row>
+      <app-field-row #categoryRow label="Categoría" [required]="true">
+        <app-select-field
+          formControlName="category"
+          [inputId]="categoryRow.controlId"
+          [ariaLabelledBy]="categoryRow.labelId"
+          [options]="categoryOptions"
+        />
+      </app-field-row>
+    </form>
+
+    <p-button
+      dialogFooter
+      type="button"
+      label="Cancelar"
+      severity="secondary"
+      [disabled]="busy()"
+      (onClick)="closeForm()"
+    />
+    <p-button dialogFooter type="button" label="Guardar" [loading]="busy()" (onClick)="save()" />
+  </app-dialog>
+
+  <app-dialog
+    size="sm"
+    heading="Eliminar estado"
+    [open]="deleteOpen()"
+    (closeRequested)="closeDelete()"
+  >
+    <div class="org-statuses-page__form">
+      @if (deleteError(); as message) {
+        <p-message severity="error" [closable]="false" role="alert">{{ message }}</p-message>
+      }
+      @if (deleting(); as current) {
+        <p class="org-statuses-page__text">
+          Vas a eliminar <strong>{{ current.name }}</strong
+          >. Si hay incidencias o flujos que lo usan, elige a qué estado pasan.
+        </p>
+        <app-field-row
+          #targetRow
+          label="Mover las incidencias a"
+          [required]="deleteNeedsTarget()"
+          [optional]="!deleteNeedsTarget()"
+        >
+          <app-select-field
+            placeholder="Elige un estado"
+            [inputId]="targetRow.controlId"
+            [ariaLabelledBy]="targetRow.labelId"
+            [options]="deleteTargets()"
+            [ngModel]="deleteTarget()"
+            (ngModelChange)="deleteTarget.set($event)"
+          />
+        </app-field-row>
+      }
+    </div>
+
+    <p-button
+      dialogFooter
+      type="button"
+      label="Cancelar"
+      severity="secondary"
+      [disabled]="busy()"
+      (onClick)="closeDelete()"
+    />
+    <p-button
+      dialogFooter
+      type="button"
+      label="Eliminar"
+      severity="danger"
+      data-testid="status-delete-confirm"
+      [loading]="busy()"
+      [disabled]="!canConfirmDelete()"
+      (onClick)="confirmDelete()"
+    />
+  </app-dialog>
+</app-page-container>

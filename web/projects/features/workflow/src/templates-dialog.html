@@ -1,0 +1,67 @@
+<app-dialog
+  size="md"
+  heading="Restaurar una plantilla"
+  subtitle="Reemplaza el flujo actual por el de una plantilla. Los cambios sin guardar se pierden."
+  [open]="open()"
+  (closeRequested)="closeRequested.emit()"
+>
+  <div class="templates-dialog" data-testid="workflow-templates-dialog">
+    @if (error(); as message) {
+      <p-message severity="error" [closable]="false" role="alert">{{ message }}</p-message>
+    }
+
+    @if (loadFailed()) {
+      <p class="templates-dialog__text">No se pudieron cargar las plantillas.</p>
+      <p-button
+        label="Reintentar"
+        severity="secondary"
+        [outlined]="true"
+        (onClick)="retry.emit()"
+      />
+    } @else if (loading()) {
+      <p class="templates-dialog__text">Cargando plantillas…</p>
+    } @else {
+      <fieldset class="templates-dialog__list">
+        <legend class="templates-dialog__legend">Plantillas disponibles</legend>
+        @for (template of templates(); track template.id) {
+          <label
+            class="templates-dialog__option"
+            [class.templates-dialog__option--selected]="choice() === template.id"
+          >
+            <input
+              type="radio"
+              name="workflow-template"
+              [value]="template.id"
+              [checked]="choice() === template.id"
+              [attr.data-testid]="'workflow-template-' + template.id"
+              (change)="choice.set(template.id)"
+            />
+            <span class="templates-dialog__body">
+              <span class="templates-dialog__name">{{ template.name }}</span>
+              <span class="templates-dialog__description">{{ template.description }}</span>
+              <span class="templates-dialog__steps">{{ summary(template) }}</span>
+            </span>
+          </label>
+        }
+      </fieldset>
+    }
+  </div>
+
+  <p-button
+    dialogFooter
+    type="button"
+    label="Cancelar"
+    severity="secondary"
+    [disabled]="busy()"
+    (onClick)="closeRequested.emit()"
+  />
+  <p-button
+    dialogFooter
+    type="button"
+    label="Aplicar plantilla"
+    data-testid="workflow-template-apply"
+    [loading]="busy()"
+    [disabled]="choice() === null"
+    (onClick)="confirm()"
+  />
+</app-dialog>

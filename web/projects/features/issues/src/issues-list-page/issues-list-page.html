@@ -1,5 +1,6 @@
 <app-page-container variant="wide" pageName="issues" [ready]="!loading()" [fill]="true">
   <app-page-header
+    banner="issues"
     title="Incidencias"
     subtitle="Consulta y administra las incidencias registradas."
   />
@@ -94,11 +95,21 @@
       [pagination]="pagination()"
       [emptyState]="emptyTpl"
       [rowActions]="rowActions"
+      [selectable]="true"
+      [(selectedKeys)]="selectedKeys"
+      [bulkActions]="bulkActions()"
       (open)="openIssue($event)"
       (retry)="retry()"
       (pageChange)="changePage($event)"
     />
   </app-section>
+
+  <app-issue-status-dialog
+    [open]="statusOpen()"
+    [issues]="statusIssues()"
+    (closeRequested)="statusOpen.set(false)"
+    (changed)="onStatusChanged()"
+  />
 
   <app-dialog
     size="sm"
@@ -131,13 +142,18 @@
 <ng-template #emptyTpl>
   @if (hasActiveFilters()) {
     <app-empty-state
+      image="empty-search"
       title="Ninguna incidencia coincide con los filtros"
       description="Cambia o limpia los filtros para ver más resultados."
     >
       <p-button action label="Limpiar filtros" severity="secondary" (onClick)="clearFilters()" />
     </app-empty-state>
   } @else {
-    <app-empty-state title="Aún no hay incidencias" description="Crea la primera para empezar.">
+    <app-empty-state
+      image="empty-issues"
+      title="Aún no hay incidencias"
+      description="Crea la primera para empezar."
+    >
       <p-button action label="Nueva incidencia" icon="pi pi-plus" (onClick)="openNew()" />
     </app-empty-state>
   }

@@ -41,3 +41,35 @@ describe('EmptyIllustration', () => {
     expect(render('search').querySelector('svg')?.getAttribute('data-testid')).toBe('illustration');
   });
 });
+
+describe('EmptyIllustration with a state photograph', () => {
+  afterEach(() => TestBed.resetTestingModule());
+
+  function renderImage(image: string): HTMLElement {
+    TestBed.configureTestingModule({ imports: [EmptyIllustration] });
+    const fixture = TestBed.createComponent(EmptyIllustration);
+    fixture.componentRef.setInput('image', image);
+    fixture.detectChanges();
+    return fixture.nativeElement as HTMLElement;
+  }
+
+  it('draws the photograph instead of the line drawing, decorative and with fixed dimensions', () => {
+    const el = renderImage('empty-projects');
+    const img = el.querySelector('img');
+    expect(el.querySelector('svg')).toBeNull();
+    expect(img?.getAttribute('src')).toBe('/images/states/empty-projects.webp');
+    expect(img?.getAttribute('alt')).toBe('');
+    expect(img?.getAttribute('width')).toBe('960');
+    expect(img?.getAttribute('height')).toBe('640');
+    expect(img?.getAttribute('loading')).toBe('lazy');
+    expect(img?.getAttribute('decoding')).toBe('async');
+  });
+
+  it('keeps the line drawing when no image is given', () => {
+    TestBed.configureTestingModule({ imports: [EmptyIllustration] });
+    const fixture = TestBed.createComponent(EmptyIllustration);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('svg')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('img')).toBeNull();
+  });
+});

@@ -60,53 +60,72 @@
         <p class="onboarding__step-label" aria-live="polite">{{ stepLabel() }}</p>
       </nav>
 
-      @switch (step()) {
-        @case (0) {
-          <app-choose-step (create)="step.set(1)" />
-        }
-        @case (1) {
-          <section class="onboarding__panel" aria-labelledby="onboarding-org-title">
-            <h2 id="onboarding-org-title" class="onboarding__panel-title">
-              Datos de la organización
-            </h2>
-            <p class="onboarding__panel-lead">
-              Una organización agrupa tus proyectos, equipos e incidencias. Serás su propietario.
-            </p>
-            <app-org-form-step (back)="step.set(0)" (created)="step.set(2)" />
-          </section>
-        }
-        @case (2) {
-          <section class="onboarding__panel" aria-labelledby="onboarding-invite-title">
-            <h2 id="onboarding-invite-title" class="onboarding__panel-title">
-              Invita a tu equipo
-              <span class="onboarding__badge">Opcional</span>
-            </h2>
-            @if (org(); as current) {
-              <app-invite-step [orgId]="current.id" (continued)="step.set(3)" />
-            } @else {
-              <p class="onboarding__panel-lead">
-                No hay una organización activa. Vuelve al paso anterior.
-              </p>
+      <div class="onboarding__body">
+        <div class="onboarding__content">
+          @switch (step()) {
+            @case (0) {
+              <app-choose-step (create)="step.set(1)" />
             }
-          </section>
+            @case (1) {
+              <section class="onboarding__panel" aria-labelledby="onboarding-org-title">
+                <h2 id="onboarding-org-title" class="onboarding__panel-title">
+                  Datos de la organización
+                </h2>
+                <p class="onboarding__panel-lead">
+                  Una organización agrupa tus proyectos, equipos e incidencias. Serás su
+                  propietario.
+                </p>
+                <app-org-form-step (back)="step.set(0)" (created)="step.set(2)" />
+              </section>
+            }
+            @case (2) {
+              <section class="onboarding__panel" aria-labelledby="onboarding-invite-title">
+                <h2 id="onboarding-invite-title" class="onboarding__panel-title">
+                  Invita a tu equipo
+                  <span class="onboarding__badge">Opcional</span>
+                </h2>
+                @if (org(); as current) {
+                  <app-invite-step [orgId]="current.id" (continued)="step.set(3)" />
+                } @else {
+                  <p class="onboarding__panel-lead">
+                    No hay una organización activa. Vuelve al paso anterior.
+                  </p>
+                }
+              </section>
+            }
+            @case (3) {
+              <section
+                class="onboarding__panel onboarding__panel--done"
+                aria-labelledby="onboarding-finish-title"
+              >
+                <span class="onboarding__done-icon" aria-hidden="true">
+                  <i class="pi pi-check"></i>
+                </span>
+                <h2 id="onboarding-finish-title" class="onboarding__panel-title">Todo listo</h2>
+                <p class="onboarding__panel-lead">
+                  {{ orgName() ? orgName() + ' está preparada.' : 'Tu cuenta está preparada.' }}
+                  Empieza creando tu primer proyecto.
+                </p>
+                <p-button label="Ir a proyectos" size="large" type="button" (onClick)="finish()" />
+              </section>
+            }
+          }
+        </div>
+        @if (!phone()) {
+          <figure class="onboarding__art">
+            <img
+              class="onboarding__art-image"
+              alt=""
+              width="1200"
+              height="800"
+              loading="lazy"
+              decoding="async"
+              [attr.src]="art().src"
+              [attr.data-art]="art().name"
+            />
+          </figure>
         }
-        @case (3) {
-          <section
-            class="onboarding__panel onboarding__panel--done"
-            aria-labelledby="onboarding-finish-title"
-          >
-            <span class="onboarding__done-icon" aria-hidden="true">
-              <i class="pi pi-check"></i>
-            </span>
-            <h2 id="onboarding-finish-title" class="onboarding__panel-title">Todo listo</h2>
-            <p class="onboarding__panel-lead">
-              {{ orgName() ? orgName() + ' está preparada.' : 'Tu cuenta está preparada.' }} Empieza
-              creando tu primer proyecto.
-            </p>
-            <p-button label="Ir a proyectos" size="large" type="button" (onClick)="finish()" />
-          </section>
-        }
-      }
+      </div>
     </div>
   </app-page-container>
 </main>

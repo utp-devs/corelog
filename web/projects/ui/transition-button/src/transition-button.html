@@ -1,0 +1,70 @@
+<div class="transition-button">
+  <button
+    type="button"
+    class="transition-button__trigger touch-target"
+    aria-haspopup="menu"
+    data-testid="transition-button"
+    [class.transition-button__trigger--todo]="category() === 'todo'"
+    [class.transition-button__trigger--progress]="category() === 'progress'"
+    [class.transition-button__trigger--done]="category() === 'done'"
+    [class.transition-button__trigger--static]="disabled() && error() === null"
+    [attr.aria-expanded]="open() ? 'true' : 'false'"
+    [attr.aria-controls]="open() ? menuId : null"
+    [attr.aria-disabled]="disabled() && error() === null ? 'true' : null"
+    [attr.aria-busy]="loading() || busy() ? 'true' : null"
+    [attr.title]="hint()"
+    (click)="toggle()"
+  >
+    <span class="transition-button__name">{{ current().name }}</span>
+    @if (loading() || busy()) {
+      <i class="pi pi-spin pi-spinner transition-button__icon" aria-hidden="true"></i>
+    } @else if (!empty() && !disabledReason()) {
+      <i class="pi pi-chevron-down transition-button__icon" aria-hidden="true"></i>
+    }
+  </button>
+
+  @if (open()) {
+    <div class="transition-button__panel">
+      @if (error(); as message) {
+        <div class="transition-button__state" role="alert">
+          <span>{{ message }}</span>
+          <button type="button" class="transition-button__retry" #item (click)="retryLoad()">
+            Reintentar
+          </button>
+        </div>
+      } @else {
+        <ul
+          class="transition-button__list"
+          role="menu"
+          aria-label="Cambiar estado"
+          [id]="menuId"
+          (keydown)="onMenuKeydown($event)"
+        >
+          @for (transition of transitions(); track transition.id) {
+            <li role="none">
+              <button
+                #item
+                type="button"
+                role="menuitem"
+                class="transition-button__option"
+                [attr.data-testid]="'transition-option-' + transition.id"
+                (click)="choose(transition)"
+              >
+                <span class="transition-button__option-name">{{ transition.name }}</span>
+                <span
+                  class="transition-button__target"
+                  [class.transition-button__target--todo]="categoryOf(transition) === 'todo'"
+                  [class.transition-button__target--progress]="
+                    categoryOf(transition) === 'progress'
+                  "
+                  [class.transition-button__target--done]="categoryOf(transition) === 'done'"
+                  >{{ transition.to.name }}</span
+                >
+              </button>
+            </li>
+          }
+        </ul>
+      }
+    </div>
+  }
+</div>

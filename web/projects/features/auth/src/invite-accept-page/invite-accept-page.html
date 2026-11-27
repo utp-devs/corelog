@@ -1,4 +1,4 @@
-<app-auth-layout [title]="heading()" [subtitle]="subheading()">
+<app-auth-layout variant="invite" [title]="heading()" [subtitle]="subheading()">
   @if (!sessionChecked() || state().kind === 'loading') {
     <div class="invite-accept-page__loading" role="status" aria-live="polite">
       <p-progressspinner ariaLabel="Comprobando la invitación" strokeWidth="4" />
@@ -29,11 +29,16 @@
         <app-auth-alert tone="warning">{{ unusableMessage(preview.status) }}</app-auth-alert>
         <div class="invite-accept-page__actions">
           @if (!user()) {
-            <p-button label="Iniciar sesión" size="large" [fluid]="true" (onClick)="goToLogin()" />
+            <p-button
+              class="invite-accept-page__button"
+              label="Iniciar sesión"
+              [fluid]="true"
+              (onClick)="goToLogin()"
+            />
           }
           <p-button
+            class="invite-accept-page__button"
             label="Ir al inicio"
-            size="large"
             severity="secondary"
             [outlined]="true"
             [fluid]="true"
@@ -45,10 +50,15 @@
           Inicia sesión o crea una cuenta con {{ preview.email }} para aceptar la invitación.
         </p>
         <div class="invite-accept-page__actions">
-          <p-button label="Iniciar sesión" size="large" [fluid]="true" (onClick)="goToLogin()" />
           <p-button
+            class="invite-accept-page__button"
+            label="Iniciar sesión"
+            [fluid]="true"
+            (onClick)="goToLogin()"
+          />
+          <p-button
+            class="invite-accept-page__button"
             label="Crear cuenta"
-            size="large"
             severity="secondary"
             [outlined]="true"
             [fluid]="true"
@@ -61,8 +71,8 @@
         </app-auth-alert>
         <div class="invite-accept-page__actions">
           <p-button
+            class="invite-accept-page__button"
             label="Ir al espacio de trabajo"
-            size="large"
             [fluid]="true"
             (onClick)="openWorkspace()"
           />
@@ -82,16 +92,16 @@
         }
         <div class="invite-accept-page__actions">
           <p-button
+            class="invite-accept-page__button"
             label="Aceptar invitación"
-            size="large"
             [fluid]="true"
             [loading]="accepting()"
             (onClick)="accept(preview)"
           />
           @if (!sameAccount() || acceptError()) {
             <p-button
+              class="invite-accept-page__button"
               label="Cambiar de cuenta"
-              size="large"
               severity="secondary"
               [outlined]="true"
               [fluid]="true"
@@ -114,11 +124,16 @@
       </app-auth-alert>
       <div class="invite-accept-page__actions">
         @if (state().kind === 'failed') {
-          <p-button label="Reintentar" size="large" [fluid]="true" (onClick)="retry()" />
+          <p-button
+            class="invite-accept-page__button"
+            label="Reintentar"
+            [fluid]="true"
+            (onClick)="retry()"
+          />
         }
         <p-button
+          class="invite-accept-page__button"
           label="Ir al inicio"
-          size="large"
           [severity]="state().kind === 'failed' ? 'secondary' : undefined"
           [outlined]="state().kind === 'failed'"
           [fluid]="true"

@@ -24,6 +24,11 @@ export const ORG_ADMIN_ROUTES: Routes = [
     loadComponent: () => import('./catalogs/org-catalogs-page').then((m) => m.OrgCatalogsPage),
   },
   {
+    path: 'statuses',
+    title: 'Estados de incidencias',
+    loadComponent: () => import('./statuses/org-statuses-page').then((m) => m.OrgStatusesPage),
+  },
+  {
     path: 'invitations',
     title: 'Invitaciones',
     loadComponent: () =>

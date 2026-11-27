@@ -1,0 +1,90 @@
+@use '../../../ui/styles/mixins' as m;
+
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.rule-list {
+  @include m.flex-column(2);
+
+  &__header {
+    @include m.flex-column(0);
+  }
+
+  &__title {
+    margin: 0;
+    color: var(--cl-text);
+    font-size: var(--cl-font-body);
+    font-weight: var(--cl-weight-semibold);
+  }
+
+  &__hint,
+  &__help,
+  &__empty {
+    margin: 0;
+    color: var(--cl-text-subtle);
+    font-size: var(--cl-font-small);
+  }
+
+  &__rule {
+    @include m.flex-column(2);
+    padding: var(--cl-space-3);
+    border: 1px solid var(--cl-border);
+    border-radius: var(--cl-radius-md);
+    background: var(--cl-bg-surface);
+  }
+
+  &__rule-head {
+    @include m.flex-row(2, center, space-between);
+  }
+
+  &__type {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  &__label {
+    color: var(--cl-text);
+    font-weight: var(--cl-weight-semibold);
+  }
+
+  &__param {
+    @include m.flex-column(1);
+  }
+
+  &__param-label {
+    color: var(--cl-text-subtle);
+    font-size: var(--cl-font-small);
+    font-weight: var(--cl-weight-semibold);
+  }
+
+  &__input {
+    width: 100%;
+  }
+
+  &__roles {
+    @include m.flex-row(3);
+    flex-wrap: wrap;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    min-width: 0;
+  }
+
+  &__check {
+    @include m.flex-row(2);
+    color: var(--cl-text);
+    cursor: pointer;
+  }
+
+  &__error {
+    margin: 0;
+    color: var(--cl-danger-text);
+    font-size: var(--cl-font-small);
+  }
+
+  &__add {
+    max-width: 16rem;
+  }
+}

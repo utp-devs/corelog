@@ -85,6 +85,7 @@ describe('admin navigation', () => {
         ['Configuración', '/organization/settings'],
         ['Miembros', '/organization/members'],
         ['Incidencias', '/organization/catalogs'],
+        ['Estados', '/organization/statuses'],
         ['Invitaciones', '/organization/invitations'],
       ]);
     });

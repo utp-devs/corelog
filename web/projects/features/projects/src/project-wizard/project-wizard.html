@@ -79,6 +79,15 @@
                     [checked]="isTemplate(item.value)"
                     (change)="chooseTemplate(item.value)"
                   />
+                  <img
+                    class="project-wizard__template-image"
+                    alt=""
+                    width="960"
+                    height="640"
+                    loading="lazy"
+                    decoding="async"
+                    [attr.src]="'/images/templates/' + item.image + '.webp'"
+                  />
                   <span class="project-wizard__template-head">
                     <i
                       [class]="item.icon + ' project-wizard__template-icon'"

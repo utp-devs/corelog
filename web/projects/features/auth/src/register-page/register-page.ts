@@ -24,15 +24,14 @@ import {
   asApiError,
   safeRedirect,
 } from '@corelog/core';
-import { FieldControl, FieldRow } from '@corelog/ui/field-row';
 import { PasswordInput } from '@corelog/ui/password-input';
 import { PasswordStrength } from '@corelog/ui/password-strength';
 import { Button } from 'primeng/button';
-import { InputText } from 'primeng/inputtext';
 
 import { authErrorMessage } from '../auth-messages';
 import { focusFirstInvalid, goAfterAuth } from '../auth-navigation';
 import { AuthAlert } from '../shared/auth-alert';
+import { AuthControl, AuthField } from '../shared/auth-field';
 import { AuthLayout } from '../shared/auth-layout';
 
 const NAME_MESSAGE = 'El nombre debe tener al menos 2 caracteres';
@@ -47,12 +46,11 @@ const PASSWORD_MESSAGE = 'La contraseña debe tener al menos 8 caracteres';
     ReactiveFormsModule,
     AuthLayout,
     AuthAlert,
-    FieldRow,
-    FieldControl,
+    AuthField,
+    AuthControl,
     PasswordInput,
     PasswordStrength,
     Button,
-    InputText,
   ],
   templateUrl: './register-page.html',
   styleUrl: './register-page.scss',

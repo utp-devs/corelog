@@ -7,7 +7,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <script>
       try {
-        var mode = localStorage.getItem('corelog.theme') === 'dark' ? 'dark' : 'light';
+        var stored = localStorage.getItem('corelog.theme');
+        var mode =
+          stored === 'dark' ||
+          (stored === 'system' && matchMedia('(prefers-color-scheme: dark)').matches)
+            ? 'dark'
+            : 'light';
         document.documentElement.dataset.theme = mode;
         document.documentElement.style.colorScheme = mode;
       } catch (_) {}

@@ -36,20 +36,9 @@
     text-align: center;
   }
 
-  &__icon {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: var(--cl-space-16);
-    height: var(--cl-space-16);
-    border-radius: var(--cl-radius-full);
-    background: var(--cl-bg-sunken);
-    font-size: var(--cl-font-h2);
-    color: var(--cl-text-subtle);
-
-    i {
-      font-size: inherit;
-    }
+  &__image {
+    width: 100%;
+    margin-bottom: var(--cl-space-2);
   }
 
   &__code {

@@ -1,4 +1,15 @@
-<header class="page-header">
+<header class="page-header" [class.page-header--banner]="bannerSrc()" [attr.data-banner]="banner()">
+  @if (bannerSrc(); as src) {
+    <img
+      class="page-header__image"
+      alt=""
+      width="1800"
+      height="854"
+      decoding="async"
+      [attr.src]="src"
+    />
+    <span class="page-header__scrim" aria-hidden="true"></span>
+  }
   <div class="page-header__heading">
     <h1 class="page-header__title">{{ title() }}</h1>
     @if (subtitle()) {

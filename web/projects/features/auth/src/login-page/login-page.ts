@@ -23,14 +23,13 @@ import {
   asApiError,
   safeRedirect,
 } from '@corelog/core';
-import { FieldControl, FieldRow } from '@corelog/ui/field-row';
 import { PasswordInput } from '@corelog/ui/password-input';
 import { Button } from 'primeng/button';
-import { InputText } from 'primeng/inputtext';
 
 import { authErrorMessage } from '../auth-messages';
 import { focusFirstInvalid, goAfterAuth } from '../auth-navigation';
 import { AuthAlert } from '../shared/auth-alert';
+import { AuthControl, AuthField } from '../shared/auth-field';
 import { AuthLayout } from '../shared/auth-layout';
 
 const EMAIL_MESSAGE = 'Introduce un correo electrónico válido';
@@ -43,11 +42,10 @@ const PASSWORD_MESSAGE = 'La contraseña es obligatoria';
     ReactiveFormsModule,
     AuthLayout,
     AuthAlert,
-    FieldRow,
-    FieldControl,
+    AuthField,
+    AuthControl,
     PasswordInput,
     Button,
-    InputText,
   ],
   templateUrl: './login-page.html',
   styleUrl: './login-page.scss',

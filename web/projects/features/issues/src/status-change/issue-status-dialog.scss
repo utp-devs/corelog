@@ -1,0 +1,88 @@
+@use '../../../../ui/styles/mixins' as m;
+
+.issue-status-dialog {
+  @include m.flex-column(3);
+
+  &__hint {
+    margin: 0;
+    color: var(--cl-text-subtle);
+  }
+
+  &__list {
+    @include m.flex-column(2);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  &__option {
+    @include m.flex-row(2);
+    flex-wrap: wrap;
+    padding: var(--cl-space-3);
+    border: 1px solid var(--cl-border);
+    border-radius: var(--cl-radius-md);
+    cursor: pointer;
+
+    &--selected {
+      border-color: var(--cl-brand);
+      background: var(--cl-bg-selected);
+    }
+  }
+
+  &__name {
+    flex: 1 1 auto;
+    min-width: 0;
+    color: var(--cl-text);
+    font-weight: var(--cl-weight-semibold);
+    overflow-wrap: anywhere;
+  }
+
+  &__target {
+    padding: 0 var(--cl-space-2);
+    border-radius: var(--cl-radius-sm);
+    font-size: var(--cl-font-small);
+    font-weight: var(--cl-weight-semibold);
+    line-height: var(--cl-lh-tight);
+
+    &--todo {
+      background: var(--cl-cat-todo-bg);
+      color: var(--cl-cat-todo-text);
+    }
+
+    &--progress {
+      background: var(--cl-cat-progress-bg);
+      color: var(--cl-cat-progress-text);
+    }
+
+    &--done {
+      background: var(--cl-success-bg);
+      color: var(--cl-success-text);
+    }
+  }
+
+  &__note {
+    flex-basis: 100%;
+    color: var(--cl-warning-text);
+    font-size: var(--cl-font-small);
+  }
+
+  &__result {
+    @include m.flex-column(1);
+    padding: var(--cl-space-3);
+    border: 1px solid var(--cl-border);
+    border-radius: var(--cl-radius-md);
+  }
+
+  &__summary {
+    margin: 0;
+    color: var(--cl-text);
+    font-weight: var(--cl-weight-semibold);
+  }
+
+  &__failures {
+    margin: 0;
+    padding-left: var(--cl-space-5);
+    color: var(--cl-danger-text);
+    font-size: var(--cl-font-small);
+  }
+}

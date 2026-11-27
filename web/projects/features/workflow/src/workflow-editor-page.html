@@ -1,0 +1,245 @@
+<div class="workflow-page" data-testid="workflow-editor">
+  @if (loading()) {
+    <app-loading-skeleton variant="detail" [rows]="5" />
+  } @else if (loadError(); as failure) {
+    <app-error-state [status]="failure.status" [canRetry]="true" (retry)="retry()" />
+  } @else if (draft()) {
+    <header class="workflow-page__intro">
+      <div>
+        <h2 class="workflow-page__title">Flujo de trabajo</h2>
+        <p class="workflow-page__lead">
+          Define los estados por los que pasa una incidencia y las transiciones permitidas entre
+          ellos.
+        </p>
+      </div>
+      @if (canEdit()) {
+        <p-button
+          icon="pi pi-refresh"
+          label="Restaurar plantilla"
+          severity="secondary"
+          [outlined]="true"
+          data-testid="workflow-templates"
+          [disabled]="busy()"
+          (onClick)="openTemplates()"
+        />
+      }
+    </header>
+
+    @if (!canEdit()) {
+      <p-message severity="info" [closable]="false" data-testid="workflow-readonly">
+        <span class="workflow-page__notice">
+          <strong>Solo lectura</strong>
+          <span>Solo quienes gestionan el flujo de trabajo pueden cambiarlo.</span>
+        </span>
+      </p-message>
+    }
+
+    @if (conflict()) {
+      <p-message severity="warn" [closable]="false" role="alert" data-testid="workflow-conflict">
+        <span class="workflow-page__notice">
+          <strong>El flujo cambió mientras lo editabas</strong>
+          <span
+            >Alguien guardó una versión nueva. Recarga para ver sus cambios; los tuyos se
+            descartarán.</span
+          >
+          <p-button
+            label="Recargar"
+            size="small"
+            severity="secondary"
+            [outlined]="true"
+            (onClick)="reload()"
+          />
+        </span>
+      </p-message>
+    }
+
+    @if (message(); as text) {
+      <p-message severity="error" [closable]="true" role="alert" (onClose)="message.set(null)">{{
+        text
+      }}</p-message>
+    }
+
+    @if (canEdit() && (store.dirty() || validated() !== null)) {
+      <div class="workflow-page__dirty" role="status" data-testid="workflow-dirty">
+        <span class="workflow-page__dirty-text">
+          @if (store.dirty()) {
+            <i class="pi pi-pencil" aria-hidden="true"></i> Tienes cambios sin guardar.
+          } @else {
+            <i class="pi pi-check" aria-hidden="true"></i> Sin cambios pendientes.
+          }
+          @if (validated() === 'valid') {
+            <strong class="workflow-page__ok" data-testid="workflow-valid"
+              >El flujo es válido.</strong
+            >
+          }
+        </span>
+        <span class="workflow-page__dirty-actions">
+          <p-button
+            label="Descartar"
+            severity="secondary"
+            [text]="true"
+            [disabled]="busy() || !store.dirty()"
+            (onClick)="discard()"
+          />
+          <p-button
+            label="Validar"
+            severity="secondary"
+            [outlined]="true"
+            data-testid="workflow-validate"
+            [loading]="store.validating()"
+            [disabled]="busy()"
+            (onClick)="validate()"
+          />
+          <p-button
+            label="Guardar"
+            data-testid="workflow-save"
+            [loading]="store.saving()"
+            [disabled]="busy() || !store.dirty()"
+            (onClick)="save()"
+          />
+        </span>
+      </div>
+    }
+
+    @if (shownIssues().length > 0) {
+      <section
+        class="workflow-page__issues"
+        aria-labelledby="workflow-issues-title"
+        data-testid="workflow-validation"
+      >
+        <h3 class="workflow-page__issues-title" id="workflow-issues-title">{{ issuesTitle() }}</h3>
+        <ul class="workflow-page__issues-list">
+          @for (issue of shownIssues(); track $index) {
+            <li
+              class="workflow-page__issue"
+              [class.workflow-page__issue--warning]="issue.severity === 'warning'"
+              data-testid="workflow-issue"
+            >
+              {{ issue.text }}
+            </li>
+          }
+        </ul>
+      </section>
+    }
+
+    <div class="workflow-page__layout" [class.workflow-page__layout--diagram]="tab() === 'diagram'">
+      <app-section title="Estados" class="workflow-page__statuses" [fill]="false">
+        <app-workflow-status-list
+          [statuses]="statuses()"
+          [initialRef]="draft()?.initialRef ?? ''"
+          [catalog]="catalogItems()"
+          [canEdit]="canEdit()"
+          [canRenameSaved]="canRenameSaved()"
+          [busy]="busy()"
+          (added)="addFromCatalog($event)"
+          (created)="createStatus($event)"
+          (renamed)="renameDraftStatus($event)"
+          (categoryChanged)="changeCategory($event)"
+          (initialChanged)="markInitial($event)"
+          (removed)="removeStatusItem($event)"
+          (moved)="moveStatusItem($event)"
+        />
+      </app-section>
+
+      <app-section title="Transiciones" class="workflow-page__main">
+        <div class="workflow-page__tabs" role="tablist" aria-label="Vista del flujo">
+          <button
+            type="button"
+            role="tab"
+            id="workflow-tab-table"
+            class="workflow-page__tab touch-target"
+            aria-controls="workflow-panel-table"
+            data-testid="workflow-tab-table"
+            [class.workflow-page__tab--active]="tab() === 'table'"
+            [attr.aria-selected]="tab() === 'table'"
+            [tabindex]="tab() === 'table' ? 0 : -1"
+            (click)="setTab('table')"
+            (keydown)="onTabKeydown($event)"
+          >
+            Tabla
+          </button>
+          <button
+            type="button"
+            role="tab"
+            id="workflow-tab-diagram"
+            class="workflow-page__tab touch-target"
+            aria-controls="workflow-panel-diagram"
+            data-testid="workflow-tab-diagram"
+            [class.workflow-page__tab--active]="tab() === 'diagram'"
+            [attr.aria-selected]="tab() === 'diagram'"
+            [tabindex]="tab() === 'diagram' ? 0 : -1"
+            (click)="setTab('diagram')"
+            (keydown)="onTabKeydown($event)"
+          >
+            Diagrama
+          </button>
+        </div>
+
+        @if (tab() === 'table') {
+          <div id="workflow-panel-table" role="tabpanel" aria-labelledby="workflow-tab-table">
+            <app-workflow-transition-table
+              [transitions]="transitions()"
+              [statuses]="statuses()"
+              [selectedId]="selectedId()"
+              [canEdit]="canEdit()"
+              (selected)="selectTransition($event)"
+              (added)="addTransitionRow()"
+              (duplicated)="duplicateTransitionRow($event)"
+              (removed)="removeTransitionRow($event)"
+            />
+          </div>
+        } @else {
+          <div id="workflow-panel-diagram" role="tabpanel" aria-labelledby="workflow-tab-diagram">
+            <app-workflow-diagram
+              [statuses]="diagramStatuses()"
+              [transitions]="transitions()"
+              [initialId]="draft()?.initialRef ?? ''"
+              [selectedTransitionId]="selectedId()"
+              (transitionSelected)="selectTransition($event)"
+            />
+          </div>
+        }
+      </app-section>
+
+      @if (selected(); as transition) {
+        <div class="workflow-page__panel">
+          <app-workflow-transition-panel
+            [transition]="transition"
+            [statuses]="statuses()"
+            [resolutions]="resolutionOptions()"
+            [canEdit]="canEdit()"
+            [problems]="problemsOfSelected()"
+            (changed)="patchTransition($event)"
+            (closed)="closePanel()"
+          />
+        </div>
+      }
+    </div>
+
+    <p class="workflow-page__sr" role="status" aria-live="polite">{{ announcement() }}</p>
+  }
+
+  @if (pendingMapping(); as pending) {
+    <app-workflow-mapping-dialog
+      [open]="true"
+      [requirements]="pending.requirements"
+      [targets]="mappingTargets()"
+      [busy]="busy()"
+      [confirmLabel]="pending.purpose === 'remove' ? 'Quitar el estado' : 'Continuar'"
+      (confirmed)="confirmMapping($event)"
+      (closeRequested)="closeMapping()"
+    />
+  }
+
+  <app-workflow-templates-dialog
+    [open]="templatesOpen()"
+    [templates]="templates() ?? []"
+    [loading]="store.templates.loading()"
+    [loadFailed]="store.templates.error() !== null"
+    [busy]="store.saving()"
+    [error]="templateError()"
+    (applied)="applyTemplate($event)"
+    (retry)="retryTemplates()"
+    (closeRequested)="closeTemplates()"
+  />
+</div>

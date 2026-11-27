@@ -23,17 +23,7 @@
       <app-section title="Detalles">
         <div class="issue-detail__fields">
           <app-field-row label="Estado">
-            <app-inline-edit
-              label="Estado"
-              type="select"
-              appearance="lozenge"
-              [tone]="statusTone(selected.status)"
-              [value]="selected.status"
-              [options]="statusOptions()"
-              [locked]="archived()"
-              [disabledReason]="archivedReason"
-              [onSave]="saveStatus"
-            />
+            <app-status-tag [status]="selected.status" [workflowStatus]="selected.workflowStatus" />
           </app-field-row>
 
           <app-field-row label="Prioridad">
@@ -186,6 +176,25 @@
             [resolved]="isResolved(selected)"
           />
           <div class="issue-detail__actions">
+            @if (currentStatus(); as status) {
+              @if (canTransition() && !transitionsForbidden()) {
+                <app-transition-button
+                  [current]="status"
+                  [transitions]="transitions()"
+                  [loading]="transitionsLoading()"
+                  [error]="transitionsError()"
+                  [busy]="transitionBusy()"
+                  [disabledReason]="archived() ? archivedReason : undefined"
+                  (selected)="onTransitionSelected($event)"
+                  (retry)="loadTransitions()"
+                />
+              } @else {
+                <app-status-tag
+                  [status]="selected.status"
+                  [workflowStatus]="selected.workflowStatus"
+                />
+              }
+            }
             @if (watcherError(); as message) {
               <span class="issue-detail__watch-error" role="alert">{{ message }}</span>
             }
@@ -220,6 +229,15 @@
             <p-menu #actionsMenu [model]="menuItems()" [popup]="true" appendTo="body" />
           </div>
         </div>
+        <app-transition-runner
+          [issueId]="selected.id"
+          [expectedStatusId]="selected.workflowStatus?.id"
+          [context]="selected.key + ' · ' + selected.summary"
+          [currentAssigneeId]="selected.assigneeId"
+          (busyChange)="transitionBusy.set($event)"
+          (finished)="onTransitionFinished()"
+          (failed)="onTransitionFailed()"
+        />
         <h1 class="issue-detail__title">
           <app-inline-edit
             class="issue-detail__title-edit"

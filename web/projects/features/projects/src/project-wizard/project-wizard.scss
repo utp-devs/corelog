@@ -227,6 +227,20 @@
     min-width: 0;
   }
 
+  &__template-image {
+    display: block;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 3 / 2;
+    object-fit: cover;
+    border-radius: var(--cl-radius-md);
+    background: var(--cl-media-bg);
+
+    @include m.respond-down(768px) {
+      aspect-ratio: 21 / 9;
+    }
+  }
+
   &__template-icon {
     color: var(--cl-brand);
   }

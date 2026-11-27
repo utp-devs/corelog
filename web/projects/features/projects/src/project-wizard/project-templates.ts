@@ -17,6 +17,8 @@ export interface ProjectTemplateInfo {
   readonly type: ProjectType;
   readonly sprints: boolean;
   readonly icon: string;
+  /** Photograph at the top of the card: file name under /images/templates without extension. */
+  readonly image: string;
   readonly statuses: readonly TemplateStatus[];
   readonly issueTypes: readonly string[];
 }
@@ -38,6 +40,7 @@ export const PROJECT_TEMPLATES: readonly ProjectTemplateInfo[] = [
     type: 'scrum',
     sprints: true,
     icon: 'pi pi-sync',
+    image: 'template-scrum',
     statuses: STANDARD_STATUSES,
     issueTypes: STANDARD_ISSUE_TYPES,
   },
@@ -48,6 +51,7 @@ export const PROJECT_TEMPLATES: readonly ProjectTemplateInfo[] = [
     type: 'kanban',
     sprints: false,
     icon: 'pi pi-table',
+    image: 'template-kanban',
     statuses: STANDARD_STATUSES,
     issueTypes: STANDARD_ISSUE_TYPES,
   },
@@ -58,6 +62,7 @@ export const PROJECT_TEMPLATES: readonly ProjectTemplateInfo[] = [
     type: 'kanban',
     sprints: false,
     icon: 'pi pi-check-square',
+    image: 'template-tasks',
     statuses: [
       { name: 'Por hacer', category: 'todo' },
       { name: 'En curso', category: 'in_progress' },
@@ -72,6 +77,7 @@ export const PROJECT_TEMPLATES: readonly ProjectTemplateInfo[] = [
     type: 'kanban',
     sprints: false,
     icon: 'pi pi-exclamation-triangle',
+    image: 'template-bugs',
     statuses: [
       { name: 'Nuevo', category: 'todo' },
       { name: 'Confirmado', category: 'todo' },

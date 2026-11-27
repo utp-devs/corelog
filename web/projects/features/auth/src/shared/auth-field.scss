@@ -1,0 +1,78 @@
+@use '../../../../ui/styles/mixins' as m;
+
+:host {
+  display: block;
+  min-width: 0;
+}
+
+// Floating-caption field: the label sits inside the box above the value, the icon on the right. The box
+// itself (height, fill, border, focus) is drawn by the control; the label only overlays its top-left corner.
+.auth-field {
+  @include m.flex-column(1);
+  min-width: 0;
+
+  &__box {
+    position: relative;
+    min-width: 0;
+  }
+
+  &__label {
+    position: absolute;
+    top: var(--cl-space-2);
+    left: calc(var(--cl-space-3) + 1px);
+    right: var(--cl-space-12);
+    z-index: 1;
+    @include m.truncate;
+    font-size: var(--cl-font-caption);
+    font-weight: var(--cl-weight-semibold);
+    line-height: var(--cl-lh-tight);
+    color: var(--cl-text-subtle);
+    pointer-events: none;
+  }
+
+  &__required {
+    margin-left: var(--cl-space-1);
+    color: var(--cl-danger-text);
+  }
+
+  &__sr {
+    @include m.visually-hidden;
+  }
+
+  &__icon {
+    position: absolute;
+    top: 50%;
+    right: var(--cl-space-4);
+    transform: translateY(-50%);
+    font-size: var(--cl-font-body-strong);
+    color: var(--cl-text-subtle);
+    pointer-events: none;
+  }
+
+  &__messages:empty {
+    display: none;
+  }
+
+  &__text {
+    @include m.flex-row(1, flex-start);
+    margin: 0;
+    padding-inline: var(--cl-space-3);
+    font-size: var(--cl-font-small);
+    line-height: var(--cl-lh-tight);
+    color: var(--cl-text-subtle);
+
+    &--error {
+      color: var(--cl-danger-text);
+    }
+  }
+
+  &__text-icon {
+    flex: none;
+    font-size: var(--cl-font-small);
+    line-height: var(--cl-lh-tight);
+  }
+
+  &--invalid &__label {
+    color: var(--cl-danger-text);
+  }
+}

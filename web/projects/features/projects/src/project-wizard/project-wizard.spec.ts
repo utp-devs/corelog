@@ -84,6 +84,19 @@ describe('ProjectWizard', () => {
     expect(root.textContent).toContain('Nuevo');
   });
 
+  it('shows the photograph of each template at the top of its card', async () => {
+    const { root } = await render();
+    const sources = Array.from(root.querySelectorAll('[data-testid^="template-"] img')).map((img) =>
+      img.getAttribute('src'),
+    );
+    expect(sources).toEqual([
+      '/images/templates/template-scrum.webp',
+      '/images/templates/template-kanban.webp',
+      '/images/templates/template-tasks.webp',
+      '/images/templates/template-bugs.webp',
+    ]);
+  });
+
   it('suggests the key from the name and checks it', async () => {
     const { fixture, env, root } = await render();
     clickTestId(root, 'wizard-next');

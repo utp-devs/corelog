@@ -46,6 +46,12 @@ export const PROJECT_SETTINGS_ROUTES: Routes = [
           import('./issue-types/project-issue-types-page').then((m) => m.ProjectIssueTypesPage),
       },
       {
+        path: 'workflow',
+        title: 'Flujo de trabajo',
+        canDeactivate: [unsavedChangesGuard],
+        loadComponent: () => import('@corelog/features/workflow').then((m) => m.WorkflowEditorPage),
+      },
+      {
         path: 'danger',
         title: 'Zona de peligro',
         loadComponent: () =>

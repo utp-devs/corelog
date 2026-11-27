@@ -1,5 +1,9 @@
 <div class="empty-state" role="status" data-empty-state="true">
-  <div class="empty-state__icon" aria-hidden="true"><ng-content select="[icon]" /></div>
+  @if (image(); as name) {
+    <app-empty-illustration class="empty-state__image" [image]="name" />
+  } @else {
+    <div class="empty-state__icon" aria-hidden="true"><ng-content select="[icon]" /></div>
+  }
   <p class="empty-state__title">{{ title() }}</p>
   @if (description()) {
     <p class="empty-state__description">{{ description() }}</p>

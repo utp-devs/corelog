@@ -1,0 +1,15 @@
+<button
+  type="button"
+  class="theme-toggle-fab"
+  data-testid="theme-toggle"
+  [attr.aria-label]="label()"
+  [attr.title]="label()"
+  (click)="toggle()"
+>
+  <i
+    class="pi theme-toggle-fab__icon"
+    aria-hidden="true"
+    [class.pi-sun]="isDark()"
+    [class.pi-moon]="!isDark()"
+  ></i>
+</button>

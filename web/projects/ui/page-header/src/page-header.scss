@@ -3,6 +3,7 @@
 }
 
 .page-header {
+  position: relative;
   display: flex;
   flex-wrap: wrap;
   align-items: flex-end;
@@ -12,6 +13,7 @@
   border-bottom: 1px solid var(--cl-divider);
 
   &__heading {
+    position: relative;
     flex: 1 1 20rem;
     min-width: 0;
   }
@@ -34,6 +36,7 @@
   }
 
   &__actions {
+    position: relative;
     display: flex;
     flex-wrap: wrap;
     align-items: center;
@@ -46,5 +49,62 @@
     @media (max-width: 767.98px) {
       width: 100%;
     }
+  }
+
+  /* Banner strip: the photograph fills the header under a dark gradient and the text is white. Colors come from
+     the media tokens (same in both themes). Without the image the navy background keeps the text legible. */
+  &--banner {
+    overflow: hidden;
+    align-items: flex-end;
+    box-sizing: border-box;
+    min-height: 10rem;
+    padding: var(--cl-space-6);
+    border-bottom: 0;
+    border-radius: var(--cl-radius-lg);
+    background: var(--cl-media-bg);
+
+    @media (max-width: 767.98px) {
+      min-height: 6rem;
+      padding: var(--cl-space-4);
+    }
+
+    .page-header__title {
+      color: var(--cl-media-text);
+    }
+
+    .page-header__subtitle {
+      color: var(--cl-media-text-subtle);
+    }
+
+    /* Actions keep their own surface so buttons look the same as on a plain page in both themes. */
+    .page-header__actions {
+      padding: var(--cl-space-2);
+      border-radius: var(--cl-radius-md);
+      background: var(--cl-bg-surface);
+      box-shadow: var(--cl-elev-raised);
+
+      @media (max-width: 767.98px) {
+        width: auto;
+      }
+    }
+  }
+
+  &__image {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+  }
+
+  &__scrim {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      90deg,
+      var(--cl-media-scrim-strong) 0%,
+      var(--cl-media-scrim-soft) 100%
+    );
   }
 }

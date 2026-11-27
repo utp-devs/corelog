@@ -27,3 +27,19 @@ describe('StatusTag', () => {
     expect(textFor('closed')).toBe('Cerrado');
   });
 });
+
+describe('StatusTag with a workflow status', () => {
+  it('shows the workflow status name and the color of its category', () => {
+    TestBed.configureTestingModule({});
+    const fixture = TestBed.createComponent(StatusTag);
+    fixture.componentRef.setInput('status', 'open');
+    fixture.componentRef.setInput('workflowStatus', {
+      name: 'En revisión',
+      category: 'in_progress',
+    });
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.textContent?.trim()).toBe('En revisión');
+    expect(el.querySelector('.tone-tag--blue')).not.toBeNull();
+  });
+});

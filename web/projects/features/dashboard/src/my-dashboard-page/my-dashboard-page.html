@@ -1,8 +1,25 @@
 <app-page-container variant="wide" pageName="dashboard" [ready]="ready()" [fill]="true">
-  <app-page-header title="Mi resumen" [subtitle]="subtitle()" />
+  <app-page-header title="Mi resumen" />
+
+  <section class="dashboard-welcome" aria-label="Bienvenida">
+    <img
+      class="dashboard-welcome__image"
+      alt=""
+      width="1800"
+      height="600"
+      decoding="async"
+      fetchpriority="high"
+      src="/images/dashboard/dashboard-welcome-banner.webp"
+    />
+    <span class="dashboard-welcome__scrim" aria-hidden="true"></span>
+    <div class="dashboard-welcome__text">
+      <p class="dashboard-welcome__greeting">{{ firstName() ? 'Hola, ' + firstName() : 'Hola' }}</p>
+      <p class="dashboard-welcome__date">Hoy es {{ today }}.</p>
+    </div>
+  </section>
 
   @if (dashboard.errorMessage(); as message) {
-    <app-error-state [message]="message" [canRetry]="true" (retry)="retry()" />
+    <app-error-state image="error-500" [message]="message" [canRetry]="true" (retry)="retry()" />
   } @else if (showSkeleton()) {
     <app-loading-skeleton variant="detail" [rows]="6" />
   } @else if (summary(); as data) {

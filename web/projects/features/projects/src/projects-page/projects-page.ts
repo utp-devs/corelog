@@ -9,6 +9,7 @@ import {
   signal,
   untracked,
 } from '@angular/core';
+import { projectCover } from '../project-cover';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NgTemplateOutlet } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -189,6 +190,10 @@ export class ProjectsPage implements OnInit {
   ngOnInit(): void {
     this.favorites.fetchFavorites();
     this.loadLeads();
+  }
+
+  protected cover(project: Project): string {
+    return projectCover(project.color, project.key);
   }
 
   protected leadName(project: Project): string {

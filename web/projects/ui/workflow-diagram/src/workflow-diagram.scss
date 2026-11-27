@@ -1,0 +1,151 @@
+@use '../../styles/mixins' as m;
+
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.workflow-diagram {
+  position: relative;
+  border: 1px solid var(--cl-divider);
+  border-radius: var(--cl-radius-md);
+  background: var(--cl-bg-sunken);
+
+  &__toolbar {
+    @include m.flex-row(1);
+    position: absolute;
+    top: var(--cl-space-2);
+    right: var(--cl-space-2);
+    z-index: 1;
+    padding: var(--cl-space-1);
+    border: 1px solid var(--cl-divider);
+    border-radius: var(--cl-radius-md);
+    background: var(--cl-bg-elevated);
+  }
+
+  &__zoom {
+    min-width: 3.5em;
+    color: var(--cl-text-subtle);
+    font-size: var(--cl-font-small);
+    text-align: center;
+  }
+
+  &__svg {
+    display: block;
+    width: 100%;
+    height: auto;
+    aspect-ratio: var(--workflow-diagram-ratio);
+    max-height: 70vh;
+    min-height: 16rem;
+    cursor: grab;
+    touch-action: none;
+    user-select: none;
+
+    &:focus-visible {
+      outline: none;
+      box-shadow: inset var(--cl-shadow-focus);
+    }
+
+    &--panning {
+      cursor: grabbing;
+    }
+  }
+
+  &__marker path {
+    fill: var(--cl-text-subtle);
+  }
+
+  &__hit {
+    fill: none;
+    stroke: transparent;
+    stroke-width: 14;
+  }
+
+  &__line {
+    fill: none;
+    stroke: var(--cl-text-subtle);
+    stroke-width: 1.5;
+  }
+
+  &__plate {
+    fill: var(--cl-bg-elevated);
+    stroke: var(--cl-divider);
+  }
+
+  &__label {
+    fill: var(--cl-text);
+    font-size: var(--cl-font-body);
+  }
+
+  &__edge {
+    cursor: pointer;
+
+    &:hover,
+    &:focus-visible,
+    &--selected {
+      outline: none;
+
+      .workflow-diagram__line {
+        stroke: var(--cl-brand);
+        stroke-width: 2.5;
+      }
+
+      .workflow-diagram__plate {
+        stroke: var(--cl-brand);
+      }
+    }
+  }
+
+  &__node {
+    cursor: pointer;
+
+    &:focus-visible {
+      outline: none;
+
+      .workflow-diagram__box {
+        stroke: var(--cl-brand);
+        stroke-width: 3;
+      }
+    }
+
+    &--todo .workflow-diagram__box {
+      fill: var(--cl-cat-todo-bg);
+      stroke: var(--cl-cat-todo);
+    }
+
+    &--progress .workflow-diagram__box {
+      fill: var(--cl-cat-progress-bg);
+      stroke: var(--cl-cat-progress);
+    }
+
+    &--done .workflow-diagram__box {
+      fill: var(--cl-success-bg);
+      stroke: var(--cl-cat-done);
+    }
+
+    &--any {
+      cursor: default;
+
+      .workflow-diagram__box {
+        fill: var(--cl-bg-surface);
+        stroke: var(--cl-border);
+        stroke-dasharray: 4 3;
+      }
+    }
+
+    &--initial .workflow-diagram__box {
+      stroke-width: 3;
+    }
+  }
+
+  &__box {
+    stroke-width: 1.5;
+  }
+
+  &__name {
+    fill: var(--cl-text);
+    font-size: var(--cl-font-body-strong);
+    font-weight: var(--cl-weight-semibold);
+    pointer-events: none;
+  }
+}

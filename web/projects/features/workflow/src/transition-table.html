@@ -1,0 +1,144 @@
+<div class="transition-table">
+  @if (rows().length === 0) {
+    <p class="transition-table__empty" data-testid="workflow-no-transitions">
+      Este flujo todavía no tiene transiciones. Sin ellas nadie puede cambiar el estado de una
+      incidencia.
+    </p>
+  } @else {
+    <div
+      class="transition-table__scroll"
+      role="region"
+      aria-label="Tabla de transiciones"
+      tabindex="0"
+    >
+      <table class="transition-table__table" data-testid="workflow-transitions">
+        <caption class="transition-table__caption">
+          Transiciones del flujo de trabajo
+        </caption>
+        <thead>
+          <tr>
+            <th scope="col">Nombre</th>
+            <th scope="col">Desde</th>
+            <th scope="col">Hasta</th>
+            <th scope="col">Reglas</th>
+            @if (canEdit()) {
+              <th scope="col"><span class="transition-table__sr">Acciones</span></th>
+            }
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of rows(); track row.transition.id) {
+            <tr
+              class="transition-table__row"
+              data-testid="workflow-transition"
+              [class.transition-table__row--selected]="row.transition.id === selectedId()"
+              [attr.data-name]="row.transition.name"
+            >
+              <th scope="row" class="transition-table__name">
+                <button
+                  type="button"
+                  class="transition-table__select"
+                  [attr.aria-pressed]="row.transition.id === selectedId() ? 'true' : 'false'"
+                  (click)="selected.emit(row.transition.id)"
+                >
+                  {{ row.transition.name }}
+                </button>
+              </th>
+              <td data-label="Desde">
+                @if (row.transition.from.length === 0) {
+                  <span class="transition-table__any">Cualquiera</span>
+                } @else {
+                  <span class="transition-table__statuses">
+                    @for (status of row.from; track status.ref) {
+                      <span
+                        class="transition-table__status"
+                        [class.transition-table__status--todo]="visual(status.category) === 'todo'"
+                        [class.transition-table__status--progress]="
+                          visual(status.category) === 'progress'
+                        "
+                        [class.transition-table__status--done]="visual(status.category) === 'done'"
+                        >{{ status.name }}</span
+                      >
+                    }
+                  </span>
+                }
+              </td>
+              <td data-label="Hasta">
+                @if (row.to; as to) {
+                  <span
+                    class="transition-table__status"
+                    [class.transition-table__status--todo]="visual(to.category) === 'todo'"
+                    [class.transition-table__status--progress]="visual(to.category) === 'progress'"
+                    [class.transition-table__status--done]="visual(to.category) === 'done'"
+                    >{{ to.name }}</span
+                  >
+                }
+              </td>
+              <td data-label="Reglas">
+                <span class="transition-table__badges">
+                  @if (row.counts.conditions > 0) {
+                    <span class="transition-table__badge">{{
+                      badge(row.counts.conditions, 'condición', 'condiciones')
+                    }}</span>
+                  }
+                  @if (row.counts.validators > 0) {
+                    <span class="transition-table__badge">{{
+                      badge(row.counts.validators, 'validación', 'validaciones')
+                    }}</span>
+                  }
+                  @if (row.counts.postFunctions > 0) {
+                    <span class="transition-table__badge">{{
+                      badge(row.counts.postFunctions, 'acción posterior', 'acciones posteriores')
+                    }}</span>
+                  }
+                  @if (
+                    row.counts.conditions + row.counts.validators + row.counts.postFunctions === 0
+                  ) {
+                    <span class="transition-table__none">Sin reglas</span>
+                  }
+                </span>
+              </td>
+              @if (canEdit()) {
+                <td class="transition-table__actions">
+                  <p-button
+                    icon="pi pi-copy"
+                    severity="secondary"
+                    [text]="true"
+                    class="touch-target"
+                    [ariaLabel]="'Duplicar ' + row.transition.name"
+                    appTooltip="Duplicar"
+                    (onClick)="duplicated.emit(row.transition.id)"
+                  />
+                  <p-button
+                    icon="pi pi-trash"
+                    severity="danger"
+                    [text]="true"
+                    class="touch-target"
+                    [ariaLabel]="'Eliminar ' + row.transition.name"
+                    appTooltip="Eliminar"
+                    (onClick)="removed.emit(row.transition.id)"
+                  />
+                </td>
+              }
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+
+  @if (canEdit()) {
+    <div class="transition-table__footer">
+      <p-button
+        icon="pi pi-plus"
+        label="Añadir transición"
+        severity="secondary"
+        [outlined]="true"
+        size="small"
+        data-testid="workflow-add-transition"
+        [disabled]="statuses().length < 2"
+        (onClick)="added.emit()"
+      />
+    </div>
+  }
+</div>

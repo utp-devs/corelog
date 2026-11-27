@@ -9,6 +9,7 @@ import {
   inject,
   signal,
   untracked,
+  viewChild,
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
@@ -19,14 +20,12 @@ import {
   CatalogStore,
   BreakpointService,
   ISSUES_PATH,
-  ISSUE_STATUSES,
-  ISSUE_STATUS_META,
   IssueActivity,
   IssueAttachment,
   IssueComment,
   IssueLink,
   IssueLinkKind,
-  IssueStatus,
+  IssueTransition,
   NotificationService,
   ProjectApiService,
   ProjectMember,
@@ -34,10 +33,12 @@ import {
   Issue,
   IssueStore,
   UpdateIssueDetailsInput,
-  canTransitionTo,
+  asApiError,
+  transitionErrorMessage,
   effectiveProjectRole,
   hasProjectPermission,
   issueKeyOf,
+  issueStatusView,
   shortIssueKeyOf,
   issuePath,
   projectPath,
@@ -49,12 +50,15 @@ import { CatalogIcon } from '@corelog/ui/catalog-icon';
 import { IssueTypeIcon } from '@corelog/ui/issue-type-icon';
 import { ErrorState } from '@corelog/ui/error-state';
 import { FieldRow } from '@corelog/ui/field-row';
-import { InlineEdit, InlineEditOption, InlineEditTone } from '@corelog/ui/inline-edit';
+import { InlineEdit, InlineEditOption } from '@corelog/ui/inline-edit';
 import { IssueKey } from '@corelog/ui/issue-key';
 import { LoadingSkeleton } from '@corelog/ui/loading-skeleton';
 import { PageContainer, PageSidebar } from '@corelog/ui/page-container';
 import { Section } from '@corelog/ui/section';
 import { SelectField } from '@corelog/ui/select-field';
+import { StatusTag } from '@corelog/ui/status-tag';
+import { TransitionButton } from '@corelog/ui/transition-button';
+import { TransitionRunner } from '@corelog/ui/transition-dialog';
 import { AppTooltip } from '@corelog/ui/tooltip';
 import { PickableUser, UserPicker } from '@corelog/ui/user-picker';
 import { UserAvatar } from '@corelog/ui/user-avatar';
@@ -92,13 +96,6 @@ const LINK_KIND_OPTIONS: { value: IssueLinkKind; label: string }[] = [
   { value: 'relates', label: 'Se relaciona con' },
   { value: 'duplicates', label: 'Duplica' },
 ];
-const STATUS_TONES: Readonly<Record<IssueStatus, InlineEditTone>> = {
-  open: 'neutral',
-  in_progress: 'progress',
-  resolved: 'done',
-  closed: 'done',
-};
-
 interface ProjectMembership {
   readonly projectId: string;
   readonly members: ProjectMember[];
@@ -135,6 +132,9 @@ interface ProjectMembership {
     RouterLink,
     Section,
     SelectField,
+    StatusTag,
+    TransitionButton,
+    TransitionRunner,
     IssueActivityFeed,
     IssueDescriptionSection,
     IssueNotesSection,
@@ -205,12 +205,30 @@ export class IssueDetailPage {
   protected readonly linkKindOptions = LINK_KIND_OPTIONS;
   protected readonly noAssignPermission = NO_PERMISSION_TO_ASSIGN;
 
-  protected readonly statusOptions = computed<InlineEditOption[]>(() => {
+  // Workflow transitions of the issue: loaded again whenever its status changes.
+  protected readonly runner = viewChild(TransitionRunner);
+  protected readonly transitions = signal<readonly IssueTransition[]>([]);
+  protected readonly transitionsLoading = signal(false);
+  protected readonly transitionsError = signal<string | null>(null);
+  /** The caller may not run transitions at all (read-only roles): the control is not shown. */
+  protected readonly transitionsForbidden = signal(false);
+  protected readonly transitionBusy = signal(false);
+  private transitionsRequest: Subscription | null = null;
+  protected readonly currentStatus = computed(() => {
     const issue = this.detail();
-    if (!issue) return [];
-    return ISSUE_STATUSES.filter(
-      (status) => status === issue.status || canTransitionTo(issue.status, status),
-    ).map((status) => ({ value: status, label: ISSUE_STATUS_META[status].label }));
+    if (!issue) return null;
+    return (
+      issue.workflowStatus ?? {
+        id: '',
+        name: issueStatusView(issue).label,
+        category:
+          issue.status === 'in_progress'
+            ? ('in_progress' as const)
+            : issue.status === 'open'
+              ? ('todo' as const)
+              : ('done' as const),
+      }
+    );
   });
 
   // Layout: details beside the content on desktop, a collapsible block after the title below 992 px.
@@ -276,6 +294,16 @@ export class IssueDetailPage {
     return hasProjectPermission(
       effectiveProjectRole(user?.role, user?.id, loaded.members),
       'edit_project',
+    );
+  });
+  /** Whether the caller may change the status of issues in this project (read-only roles may not). */
+  protected readonly canTransition = computed(() => {
+    const loaded = this.membership();
+    const user = this.auth.user();
+    if (!loaded || loaded.projectId !== this.projectId()) return false;
+    return hasProjectPermission(
+      effectiveProjectRole(user?.role, user?.id, loaded.members),
+      'move_cards',
     );
   });
   /** Why an archived project blocks every edit. */
@@ -387,6 +415,15 @@ export class IssueDetailPage {
 
     this.catalog.ensureLoaded();
 
+    // Available transitions: reloaded when the issue changes or moves to another status.
+    effect(() => {
+      const id = this.loadedId();
+      this.detail()?.workflowStatus?.id;
+      const allowed = this.canTransition();
+      if (id && allowed) untracked(() => this.loadTransitions(id));
+      else if (!allowed) untracked(() => this.transitions.set([]));
+    });
+
     // The rest of the page loads once the issue itself is known: a refused issue makes one error, not seven.
     effect(() => {
       const id = this.loadedId();
@@ -437,6 +474,7 @@ export class IssueDetailPage {
     });
 
     this.destroyRef.onDestroy(() => {
+      this.transitionsRequest?.unsubscribe();
       this.membersRequest?.unsubscribe();
       this.archivedRequest?.unsubscribe();
     });
@@ -451,14 +489,6 @@ export class IssueDetailPage {
     if (!summary) throw new Error('El resumen es obligatorio');
     await firstValueFrom(this.store.updateDetails(issue.id, payloadFrom(issue, { summary })));
     this.notify.success('Resumen actualizado');
-  };
-
-  protected readonly saveStatus = async (next: string | null): Promise<void> => {
-    const issue = this.detail();
-    if (!issue) return;
-    if (!next) throw new Error('El estado es obligatorio');
-    await firstValueFrom(this.store.updateStatus(issue.id, next as IssueStatus));
-    this.notify.success('Estado actualizado');
   };
 
   protected readonly savePriority = async (next: string | null): Promise<void> => {
@@ -694,11 +724,53 @@ export class IssueDetailPage {
   }
 
   protected isResolved(issue: Issue): boolean {
-    return issue.status === 'resolved' || issue.status === 'closed';
+    return issue.workflowStatus
+      ? issue.workflowStatus.category === 'done'
+      : issue.status === 'resolved' || issue.status === 'closed';
   }
 
-  protected statusTone(status: IssueStatus): InlineEditTone {
-    return STATUS_TONES[status];
+  protected onTransitionSelected(transition: IssueTransition): void {
+    this.runner()?.run(transition);
+  }
+
+  protected onTransitionFinished(): void {
+    const id = this.loadedId();
+    if (!id) return;
+    // The change adds activity and may add a comment; the available transitions depend on the new status.
+    this.store.fetchActivities(id);
+    this.store.fetchComments(id);
+    this.loadTransitions(id);
+  }
+
+  protected onTransitionFailed(): void {
+    const id = this.loadedId();
+    if (!id) return;
+    this.store.fetchIssue(id);
+    this.loadTransitions(id);
+  }
+
+  protected loadTransitions(id: string = this.loadedId() ?? ''): void {
+    if (!id) return;
+    this.transitionsRequest?.unsubscribe();
+    this.transitionsLoading.set(true);
+    this.transitionsError.set(null);
+    this.transitionsRequest = this.store.listTransitions(id).subscribe({
+      next: (items) => {
+        this.transitions.set(items);
+        this.transitionsForbidden.set(false);
+        this.transitionsLoading.set(false);
+      },
+      error: (raw: unknown) => {
+        const error = asApiError(raw);
+        this.transitions.set([]);
+        this.transitionsLoading.set(false);
+        if (error.status === 403) {
+          this.transitionsForbidden.set(true);
+        } else {
+          this.transitionsError.set(transitionErrorMessage(error));
+        }
+      },
+    });
   }
 
   protected ago(iso: string): string {

@@ -1,5 +1,9 @@
 <app-page-container variant="wide" pageName="org-catalogs" [ready]="!loading()" [fill]="true">
-  <app-page-header title="Tipos, prioridades y resoluciones" [subtitle]="subtitle()">
+  <app-page-header
+    banner="settings"
+    title="Tipos, prioridades y resoluciones"
+    [subtitle]="subtitle()"
+  >
     @if (canManage() && !loadError()) {
       <div appPageHeaderActions>
         <p-button

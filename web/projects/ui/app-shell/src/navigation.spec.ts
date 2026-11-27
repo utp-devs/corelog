@@ -101,6 +101,7 @@ describe('buildSidebar', () => {
       '/organization/settings',
       '/organization/members',
       '/organization/catalogs',
+      '/organization/statuses',
       '/organization/invitations',
     ]);
   });

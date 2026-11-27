@@ -38,6 +38,7 @@ import {
   legacyPriorityKeyOf,
   legacyTypeKeyOf,
 } from '@corelog/core';
+import { BulkAction } from '@corelog/ui/bulk-bar';
 import { DataTablePageChange, DataTablePagination, RowMenuItem } from '@corelog/ui/data-table';
 import { Dialog } from '@corelog/ui/dialog';
 import { EmptyState } from '@corelog/ui/empty-state';
@@ -49,6 +50,7 @@ import { Toolbar, ToolbarLeft, ToolbarRight, ToolbarSecondary } from '@corelog/u
 
 import { injectMemberNames } from '../hooks/member-names';
 import { IssueList } from '../issue-list/issue-list';
+import { IssueStatusDialog } from '../status-change/issue-status-dialog';
 
 const DEFAULT_PAGE_SIZE = 20;
 const SAVED_FILTER_NAME_MAX = 80;
@@ -99,6 +101,7 @@ function endOfDayIso(date: Date): string {
     Section,
     Select,
     IssueList,
+    IssueStatusDialog,
     Toolbar,
     ToolbarLeft,
     ToolbarRight,
@@ -286,6 +289,12 @@ export class IssuesListPage {
       onClick: () => void this.copyKey(issue),
     },
     {
+      key: 'status',
+      label: 'Cambiar estado',
+      icon: 'pi pi-arrow-right-arrow-left',
+      onClick: () => this.openStatusDialog([issue]),
+    },
+    {
       key: 'up',
       label: 'Mover arriba',
       icon: 'pi pi-arrow-up',
@@ -298,6 +307,33 @@ export class IssuesListPage {
       onClick: () => this.moveIssue(issue, 1),
     },
   ];
+
+  // Status change of one issue (row action) or of the ticked ones (bulk action).
+  protected readonly selectedKeys = signal<string[]>([]);
+  protected readonly statusIssues = signal<readonly Issue[]>([]);
+  protected readonly statusOpen = signal(false);
+  protected readonly bulkActions = computed<BulkAction[]>(() => [
+    {
+      key: 'status',
+      label: 'Cambiar estado',
+      icon: 'pi pi-arrow-right-arrow-left',
+      onClick: () => {
+        const keys = new Set(this.selectedKeys());
+        this.openStatusDialog(this.issues().filter((issue) => keys.has(issue.id)));
+      },
+    },
+  ]);
+
+  protected openStatusDialog(issues: readonly Issue[]): void {
+    if (issues.length === 0) return;
+    this.statusIssues.set(issues);
+    this.statusOpen.set(true);
+  }
+
+  protected onStatusChanged(): void {
+    this.selectedKeys.set([]);
+    this.store.fetchIssues(this.filter());
+  }
 
   constructor() {
     this.catalog.ensureLoaded();

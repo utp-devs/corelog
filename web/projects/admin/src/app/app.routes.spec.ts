@@ -58,7 +58,7 @@ describe('admin routes', () => {
     expect(organization?.canActivate).not.toContain(shell?.canActivate?.[0]);
   });
 
-  it('mounts settings, members, catalogs and invitations under /organization', () => {
+  it('mounts settings, members, catalogs, statuses and invitations under /organization', () => {
     const shell = routes.find((route) => route.path === '');
     const organization = shell?.children?.find((route) => route.path === 'organization');
     expect(organization?.children?.map((route) => route.path)).toEqual([
@@ -66,6 +66,7 @@ describe('admin routes', () => {
       'settings',
       'members',
       'catalogs',
+      'statuses',
       'invitations',
     ]);
   });
@@ -88,6 +89,7 @@ describe('admin routes', () => {
         '/organization/settings',
         '/organization/members',
         '/organization/catalogs',
+        '/organization/statuses',
         '/organization/invitations',
       ]) {
         TestBed.resetTestingModule();

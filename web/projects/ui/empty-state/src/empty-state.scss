@@ -14,6 +14,11 @@
   padding: var(--cl-space-8) var(--cl-space-4);
   text-align: center;
 
+  &__image {
+    width: 100%;
+    margin-bottom: var(--cl-space-2);
+  }
+
   &__icon {
     display: inline-flex;
     align-items: center;

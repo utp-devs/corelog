@@ -11,7 +11,7 @@
 
   &__wizard {
     @include m.flex-column(6);
-    width: min(44rem, 100%);
+    width: min(62rem, 100%);
     margin: 0 auto;
     padding: var(--cl-space-6) 0 var(--cl-space-12);
   }
@@ -111,6 +111,34 @@
     @include m.visually-hidden;
   }
 
+  // Step content beside a large photograph; the photograph is hidden on phones.
+  &__body {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 22rem);
+    gap: var(--cl-space-6);
+    align-items: stretch;
+  }
+
+  &__content {
+    min-width: 0;
+  }
+
+  &__art {
+    overflow: hidden;
+    min-height: 16rem;
+    margin: 0;
+    border-radius: var(--cl-radius-lg);
+    background: var(--cl-media-bg);
+    box-shadow: var(--cl-elev-raised);
+  }
+
+  &__art-image {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
   // The card is as tall as its content.
   &__panel {
     @include m.flex-column(3);
@@ -159,6 +187,12 @@
     font-size: var(--cl-font-h2);
   }
 
+  @include m.respond-down(900px) {
+    &__body {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 14rem);
+    }
+  }
+
   // Phone: only the current step keeps its title; the others stay as numbered dots.
   @include m.respond-down(768px) {
     &__step:not([data-state='current']) &__step-title {
@@ -175,6 +209,14 @@
       font-size: var(--cl-font-small);
       color: var(--cl-text-subtle);
       text-align: center;
+    }
+
+    &__body {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    &__art {
+      display: none;
     }
 
     &__panel {

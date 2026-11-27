@@ -4,4 +4,12 @@
   &__form {
     @include a.form;
   }
+
+  &__input {
+    @include a.input;
+  }
+
+  &__submit {
+    @include a.submit;
+  }
 }

@@ -1,4 +1,5 @@
 <app-auth-layout
+  variant="register"
   title="Crear cuenta"
   subtitle="Regístrate para empezar a trabajar en CoreLog."
   switchText="¿Ya tienes cuenta?"
@@ -17,8 +18,9 @@
       <app-auth-alert tone="error">{{ message }}</app-auth-alert>
     }
 
-    <app-field-row
+    <app-auth-field
       label="Nombre"
+      icon="pi-user"
       [required]="true"
       [control]="form.controls.name"
       [messages]="nameMessages"
@@ -26,18 +28,17 @@
       [error]="serverError(form.controls.name)"
     >
       <input
-        pInputText
-        appFieldControl
-        pSize="large"
+        appAuthControl
+        class="register-page__input"
         formControlName="name"
         type="text"
         autocomplete="name"
-        [fluid]="true"
       />
-    </app-field-row>
+    </app-auth-field>
 
-    <app-field-row
+    <app-auth-field
       label="Correo electrónico"
+      icon="pi-envelope"
       [required]="true"
       [control]="form.controls.email"
       [messages]="emailMessages"
@@ -45,20 +46,18 @@
       [error]="serverError(form.controls.email)"
     >
       <input
-        pInputText
-        appFieldControl
-        pSize="large"
+        appAuthControl
+        class="register-page__input"
         formControlName="email"
         type="email"
         autocomplete="email"
         inputmode="email"
         autocapitalize="none"
         spellcheck="false"
-        [fluid]="true"
       />
-    </app-field-row>
+    </app-auth-field>
 
-    <app-field-row
+    <app-auth-field
       #passwordRow
       label="Contraseña"
       [required]="true"
@@ -78,16 +77,16 @@
         [describedBy]="passwordRow.describedBy()"
       />
       <app-password-strength [password]="password()" />
-    </app-field-row>
+    </app-auth-field>
 
     <p class="register-page__terms">
       Al crear tu cuenta aceptas las condiciones de uso y la política de privacidad de CoreLog.
     </p>
 
     <p-button
+      class="register-page__submit"
       type="submit"
       label="Crear cuenta"
-      size="large"
       [fluid]="true"
       [loading]="submitting()"
     />

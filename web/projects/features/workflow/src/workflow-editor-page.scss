@@ -1,0 +1,154 @@
+@use '../../../ui/styles/mixins' as m;
+
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.workflow-page {
+  @include m.flex-column(4);
+
+  &__intro {
+    @include m.flex-row(3, flex-start, space-between);
+    flex-wrap: wrap;
+  }
+
+  &__title {
+    margin: 0;
+    color: var(--cl-text);
+    font-size: var(--cl-font-h3);
+    font-weight: var(--cl-weight-semibold);
+  }
+
+  &__lead {
+    margin: var(--cl-space-1) 0 0;
+    color: var(--cl-text-subtle);
+  }
+
+  &__notice {
+    @include m.flex-column(1);
+    align-items: flex-start;
+  }
+
+  &__dirty {
+    @include m.flex-row(3, center, space-between);
+    flex-wrap: wrap;
+    padding: var(--cl-space-3) var(--cl-space-4);
+    border: 1px solid var(--cl-warning);
+    border-radius: var(--cl-radius-md);
+    background: var(--cl-warning-bg);
+    color: var(--cl-warning-text);
+  }
+
+  &__dirty-text {
+    @include m.flex-row(2);
+    flex-wrap: wrap;
+  }
+
+  &__ok {
+    color: var(--cl-success-text);
+  }
+
+  &__dirty-actions {
+    @include m.flex-row(2);
+    flex-wrap: wrap;
+  }
+
+  &__issues {
+    padding: var(--cl-space-3) var(--cl-space-4);
+    border: 1px solid var(--cl-danger);
+    border-radius: var(--cl-radius-md);
+    background: var(--cl-danger-bg);
+  }
+
+  &__issues-title {
+    margin: 0 0 var(--cl-space-2);
+    color: var(--cl-danger-text);
+    font-size: var(--cl-font-body);
+    font-weight: var(--cl-weight-semibold);
+  }
+
+  &__issues-list {
+    margin: 0;
+    padding-left: var(--cl-space-5);
+    color: var(--cl-text);
+  }
+
+  &__issue--warning {
+    color: var(--cl-warning-text);
+  }
+
+  &__layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--cl-space-4);
+    align-items: start;
+
+    @include m.respond-up(1100px) {
+      grid-template-columns: minmax(18rem, 22rem) minmax(0, 1fr);
+      grid-template-areas:
+        'statuses main'
+        'statuses panel';
+    }
+
+    /* The diagram gets the whole width; the statuses and the panel go below it. */
+    &--diagram {
+      @include m.respond-up(1100px) {
+        grid-template-areas:
+          'main main'
+          'statuses panel';
+      }
+    }
+  }
+
+  &__statuses {
+    @include m.respond-up(1100px) {
+      grid-area: statuses;
+    }
+  }
+
+  &__main {
+    @include m.respond-up(1100px) {
+      grid-area: main;
+    }
+  }
+
+  &__panel {
+    min-width: 0;
+
+    @include m.respond-up(1100px) {
+      grid-area: panel;
+    }
+  }
+
+  &__tabs {
+    @include m.flex-row(1);
+    margin-bottom: var(--cl-space-3);
+    border-bottom: 1px solid var(--cl-divider);
+  }
+
+  &__tab {
+    padding: var(--cl-space-2) var(--cl-space-4);
+    border: 0;
+    border-bottom: 2px solid transparent;
+    background: transparent;
+    color: var(--cl-text-subtle);
+    font: inherit;
+    font-weight: var(--cl-weight-semibold);
+    cursor: pointer;
+
+    &:focus-visible {
+      outline: none;
+      box-shadow: var(--cl-shadow-focus);
+    }
+
+    &--active {
+      border-bottom-color: var(--cl-brand);
+      color: var(--cl-text);
+    }
+  }
+
+  &__sr {
+    @include m.visually-hidden;
+  }
+}

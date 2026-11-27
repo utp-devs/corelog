@@ -2,49 +2,96 @@
 
 <main class="auth-layout__main" [attr.id]="mainId" tabindex="-1">
   <div class="auth-layout__page" data-page="auth">
-    <div class="auth-layout__brand">
-      <div class="auth-layout__brand-inner">
+    <div class="auth-layout__backdrop" aria-hidden="true" data-scroll-x>
+      @if (phone()) {
         <img
-          class="auth-layout__logo"
-          src="/brand/corelog-banner-480.png"
-          srcset="/brand/corelog-banner-480.png 480w, /brand/corelog-banner-960.png 960w"
-          sizes="180px"
-          alt="CoreLog"
-          width="180"
-          height="48"
+          class="auth-layout__background"
+          alt=""
+          aria-hidden="true"
+          width="1024"
+          height="1536"
+          decoding="async"
+          fetchpriority="high"
+          [attr.src]="mobileBackground"
         />
-        <div class="auth-layout__pitch">
-          <p class="auth-layout__headline">Todo el trabajo de tu equipo, claro y a tiempo.</p>
-          <ul class="auth-layout__points">
-            @for (point of points; track point.text) {
-              <li class="auth-layout__point">
-                <i [class]="'pi auth-layout__point-icon ' + point.icon" aria-hidden="true"></i>
-                <span>{{ point.text }}</span>
-              </li>
-            }
-          </ul>
-        </div>
-      </div>
-      <span class="auth-layout__shape auth-layout__shape--one" aria-hidden="true"></span>
-      <span class="auth-layout__shape auth-layout__shape--two" aria-hidden="true"></span>
+      } @else {
+        @for (slide of hero().slides; track slide.src; let i = $index) {
+          <img
+            class="auth-layout__backdrop-image"
+            alt=""
+            aria-hidden="true"
+            width="1536"
+            height="1024"
+            decoding="async"
+            [class.auth-layout__backdrop-image--active]="i === activeSlide()"
+            [attr.src]="slide.src"
+            [attr.loading]="i === 0 ? 'eager' : 'lazy'"
+          />
+        }
+      }
+      <span class="auth-layout__veil"></span>
     </div>
 
-    <section class="auth-layout__panel" [attr.aria-labelledby]="titleId">
-      <div class="auth-layout__card">
-        <h1 class="auth-layout__title" [attr.id]="titleId">{{ title() }}</h1>
-        @if (subtitle(); as text) {
-          <p class="auth-layout__subtitle">{{ text }}</p>
-        }
-        <ng-content />
-        @if (switchPath(); as path) {
-          <p class="auth-layout__switch">
-            {{ switchText() }}
-            <a class="auth-layout__switch-link" [routerLink]="path" [queryParams]="switchQuery()">
-              {{ switchLabel() }}
-            </a>
-          </p>
-        }
+    <div class="auth-layout__shell">
+      <div class="auth-layout__brand">
+        <span class="auth-layout__logo-plate">
+          <img
+            class="auth-layout__logo"
+            decoding="async"
+            [attr.src]="logo.src"
+            [attr.srcset]="logo.srcset"
+            [attr.sizes]="logo.sizes"
+            [attr.alt]="logo.alt"
+            [attr.width]="logo.width"
+            [attr.height]="logo.height"
+          />
+        </span>
       </div>
-    </section>
+
+      @if (!phone()) {
+        <div class="auth-layout__hero">
+          <app-hero-carousel
+            [slides]="hero().slides"
+            [label]="hero().label"
+            (slideChange)="activeSlide.set($event)"
+          >
+            <div class="auth-layout__pitch">
+              <div class="auth-layout__pitch-card">
+                <p class="auth-layout__headline">
+                  <span class="auth-layout__headline-line">{{ hero().lineOne }}</span>
+                  <span class="auth-layout__headline-line">
+                    {{ hero().before }}<span class="auth-layout__accent">{{ hero().accent }}</span
+                    >{{ hero().after }}
+                  </span>
+                </p>
+                <p class="auth-layout__lead">{{ hero().subtitle }}</p>
+              </div>
+            </div>
+          </app-hero-carousel>
+        </div>
+      }
+
+      <section class="auth-layout__panel" [attr.aria-labelledby]="titleId">
+        <div class="auth-layout__card">
+          <header class="auth-layout__heading">
+            <h1 class="auth-layout__title" [attr.id]="titleId">{{ title() }}</h1>
+            @if (subtitle(); as text) {
+              <p class="auth-layout__subtitle">{{ text }}</p>
+            }
+          </header>
+          <ng-content />
+          @if (switchPath(); as path) {
+            <p class="auth-layout__switch">
+              {{ switchText() }}
+              <a class="auth-layout__switch-link" [routerLink]="path" [queryParams]="switchQuery()">
+                {{ switchLabel() }}
+              </a>
+            </p>
+          }
+        </div>
+      </section>
+    </div>
   </div>
 </main>
+
+<app-theme-toggle-fab />

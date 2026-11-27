@@ -17,8 +17,22 @@
     }
 
     @if (project(); as current) {
-      <header class="project-workspace__header">
-        <app-project-avatar [name]="current.name" [projectKey]="current.key" [size]="40" />
+      <header class="project-workspace__header project-workspace__header--cover">
+        <img
+          class="project-workspace__cover"
+          alt=""
+          width="1200"
+          height="675"
+          decoding="async"
+          [attr.src]="cover(current)"
+        />
+        <span class="project-workspace__scrim" aria-hidden="true"></span>
+        <app-project-avatar
+          class="project-workspace__avatar"
+          [name]="current.name"
+          [projectKey]="current.key"
+          [size]="40"
+        />
         <div class="project-workspace__identity">
           <div class="project-workspace__title-row">
             <h2 class="project-workspace__title">{{ current.name }}</h2>

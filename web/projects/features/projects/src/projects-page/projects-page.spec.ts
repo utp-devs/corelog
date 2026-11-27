@@ -195,6 +195,25 @@ describe('ProjectsPage', () => {
     });
   });
 
+  it('draws a cover photograph over each card, chosen from the project color or key', async () => {
+    const { fixture, root } = await render({ projectApi: { listPage: () => page(projects) } });
+
+    root.querySelector<HTMLButtonElement>('button[aria-label="Vista de tarjetas"]')?.click();
+    await settle(fixture);
+
+    const card = byTestId(root, 'project-card-CORE');
+    const cover = card?.querySelector('.projects-page__cover img');
+    expect(cover?.getAttribute('src')).toContain('/images/covers/cover-0');
+    expect(cover?.getAttribute('alt')).toBe('');
+    expect(card?.querySelector('.projects-page__cover app-project-avatar')).not.toBeNull();
+  });
+
+  it('shows the empty projects photograph when the organization has no projects', async () => {
+    const { root } = await render({ projectApi: { listPage: () => page([]) } });
+
+    expect(root.querySelector('img[src="/images/states/empty-projects.webp"]')).not.toBeNull();
+  });
+
   it('teases the templates when the organization has no projects', async () => {
     const { root } = await render({ projectApi: { listPage: () => page([]) } });
 

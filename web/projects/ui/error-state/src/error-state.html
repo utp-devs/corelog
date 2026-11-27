@@ -1,5 +1,9 @@
 <div class="error-state" role="alert">
-  <span class="error-state__icon" aria-hidden="true"><i [class]="icon()"></i></span>
+  @if (image(); as name) {
+    <app-empty-illustration class="error-state__image" [image]="name" />
+  } @else {
+    <span class="error-state__icon" aria-hidden="true"><i [class]="icon()"></i></span>
+  }
   <p class="error-state__title">{{ heading() }}</p>
   <p class="error-state__message">{{ helper() }}</p>
   @if (canRetry()) {

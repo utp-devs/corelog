@@ -1,0 +1,178 @@
+@use '../../../ui/styles/mixins' as m;
+
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.transition-table {
+  @include m.flex-column(3);
+
+  &__scroll {
+    overflow-x: auto;
+    border: 1px solid var(--cl-border);
+    border-radius: var(--cl-radius-lg);
+    background: var(--cl-bg-surface);
+  }
+
+  &__table {
+    width: 100%;
+    border-collapse: collapse;
+
+    th,
+    td {
+      padding: var(--cl-space-2) var(--cl-space-3);
+      border-bottom: 1px solid var(--cl-divider);
+      color: var(--cl-text);
+      font-size: var(--cl-font-body);
+      text-align: left;
+      vertical-align: middle;
+    }
+
+    thead th {
+      color: var(--cl-text-subtle);
+      font-size: var(--cl-font-small);
+      font-weight: var(--cl-weight-semibold);
+      white-space: nowrap;
+    }
+
+    tbody tr:last-child th,
+    tbody tr:last-child td {
+      border-bottom: 0;
+    }
+  }
+
+  &__caption,
+  &__sr {
+    @include m.visually-hidden;
+  }
+
+  &__row {
+    &--selected {
+      background: var(--cl-bg-selected);
+    }
+  }
+
+  &__name {
+    font-weight: var(--cl-weight-semibold);
+  }
+
+  /* On narrow screens each transition becomes a card; the cells carry their column name. */
+  @include m.respond-down(900px) {
+    &__table,
+    &__table tbody,
+    &__table tr,
+    &__table th,
+    &__table td {
+      display: block;
+    }
+
+    &__table thead {
+      @include m.visually-hidden;
+    }
+
+    &__table tbody tr {
+      padding: var(--cl-space-2) 0;
+      border-bottom: 1px solid var(--cl-divider);
+    }
+
+    &__table tbody tr:last-child {
+      border-bottom: 0;
+    }
+
+    &__table th,
+    &__table td {
+      border-bottom: 0;
+    }
+
+    &__table td[data-label]::before {
+      display: block;
+      color: var(--cl-text-subtle);
+      font-size: var(--cl-font-small);
+      font-weight: var(--cl-weight-semibold);
+      content: attr(data-label);
+    }
+
+    &__actions {
+      text-align: left;
+    }
+  }
+
+  &__select {
+    padding: var(--cl-space-1) 0;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+    overflow-wrap: anywhere;
+
+    &:hover {
+      text-decoration: underline;
+    }
+
+    &:focus-visible {
+      outline: none;
+      box-shadow: var(--cl-shadow-focus);
+    }
+  }
+
+  &__statuses,
+  &__badges {
+    @include m.flex-row(1);
+    flex-wrap: wrap;
+  }
+
+  &__status {
+    padding: 0 var(--cl-space-2);
+    border-radius: var(--cl-radius-sm);
+    font-size: var(--cl-font-small);
+    font-weight: var(--cl-weight-semibold);
+    line-height: var(--cl-lh-tight);
+    white-space: nowrap;
+
+    &--todo {
+      background: var(--cl-cat-todo-bg);
+      color: var(--cl-cat-todo-text);
+    }
+
+    &--progress {
+      background: var(--cl-cat-progress-bg);
+      color: var(--cl-cat-progress-text);
+    }
+
+    &--done {
+      background: var(--cl-success-bg);
+      color: var(--cl-success-text);
+    }
+  }
+
+  &__any,
+  &__none {
+    color: var(--cl-text-subtle);
+    font-size: var(--cl-font-small);
+  }
+
+  &__badge {
+    padding: 0 var(--cl-space-2);
+    border: 1px solid var(--cl-border);
+    border-radius: var(--cl-radius-full);
+    color: var(--cl-text);
+    font-size: var(--cl-font-small);
+    white-space: nowrap;
+  }
+
+  &__actions {
+    white-space: nowrap;
+    text-align: right;
+  }
+
+  &__empty {
+    margin: 0;
+    padding: var(--cl-space-4);
+    border: 1px dashed var(--cl-border);
+    border-radius: var(--cl-radius-lg);
+    color: var(--cl-text-subtle);
+  }
+}

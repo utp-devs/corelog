@@ -4,7 +4,11 @@
   </app-page-container>
 } @else {
   <app-page-container variant="wide" pageName="projects" [ready]="!firstLoad()" [fill]="true">
-    <app-page-header title="Proyectos" subtitle="Encuentra y organiza el trabajo de tus equipos.">
+    <app-page-header
+      banner="projects"
+      title="Proyectos"
+      subtitle="Encuentra y organiza el trabajo de tus equipos."
+    >
       <div appPageHeaderActions>
         @if (canCreate()) {
           <p-button
@@ -94,10 +98,16 @@
     }
 
     @if (failed()) {
-      <app-error-state [message]="errorMessage()" [canRetry]="true" (retry)="retry()" />
+      <app-error-state
+        image="error-500"
+        [message]="errorMessage()"
+        [canRetry]="true"
+        (retry)="retry()"
+      />
     } @else if (neverCreated()) {
       <section class="projects-page__teaser" aria-label="Aún no hay proyectos">
         <app-empty-state
+          image="empty-projects"
           title="Aún no hay proyectos"
           description="Crea el primero a partir de una plantilla y empieza a trabajar en minutos."
         >
@@ -131,6 +141,7 @@
     } @else if (isEmpty()) {
       <section class="projects-page__empty">
         <app-empty-state
+          image="empty-search"
           title="Ningún proyecto coincide"
           description="Cambia la búsqueda o quita algún filtro para ver más resultados."
         >
@@ -244,8 +255,24 @@
     [class.projects-page__card--archived]="project.archivedAt"
     [attr.data-testid]="'project-card-' + project.key"
   >
+    <div class="projects-page__cover">
+      <img
+        class="projects-page__cover-image"
+        alt=""
+        width="1200"
+        height="675"
+        loading="lazy"
+        decoding="async"
+        [attr.src]="cover(project)"
+      />
+      <app-project-avatar
+        class="projects-page__cover-avatar"
+        [name]="project.name"
+        [projectKey]="project.key"
+        [size]="40"
+      />
+    </div>
     <header class="projects-page__card-header">
-      <app-project-avatar [name]="project.name" [projectKey]="project.key" [size]="40" />
       <div class="projects-page__card-title">
         <h3 class="projects-page__card-name">
           <a

@@ -1,6 +1,6 @@
 @if (org() && !canView()) {
   <app-page-container variant="wide" pageName="org-members" [ready]="true">
-    <app-page-header title="Miembros" [subtitle]="subtitle()" />
+    <app-page-header banner="settings" title="Miembros" [subtitle]="subtitle()" />
     <app-empty-state
       title="No tienes permiso para ver esto"
       description="Pide acceso a un administrador de la organización."
@@ -8,7 +8,7 @@
   </app-page-container>
 } @else {
   <app-page-container variant="wide" pageName="org-members" [ready]="!loading()" [fill]="true">
-    <app-page-header title="Miembros" [subtitle]="subtitle()">
+    <app-page-header banner="settings" title="Miembros" [subtitle]="subtitle()">
       @if (canManage()) {
         <div appPageHeaderActions>
           <p-button label="Invitar personas" type="button" (onClick)="goToInvitations()" />

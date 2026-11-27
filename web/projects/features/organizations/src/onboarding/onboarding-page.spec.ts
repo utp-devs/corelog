@@ -81,6 +81,14 @@ describe('OnboardingPage', () => {
     expect(input('Enlace o código de invitación')).toBeDefined();
   });
 
+  it('shows the photograph of the current step beside it', () => {
+    const first = create();
+    const art = (): Element | null => document.querySelector('.onboarding__art-image');
+    expect(art()?.getAttribute('src')).toBe('/images/onboarding/onboarding-create-org.webp');
+    expect(art()?.getAttribute('alt')).toBe('');
+    first.fixture.destroy();
+  });
+
   it('starts at the organization step with ?new=1', () => {
     create({ new: true });
     expect(heading('Datos de la organización')).toBeDefined();

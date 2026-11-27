@@ -59,4 +59,25 @@ describe('PageHeader', () => {
     expect(el.querySelector('.page-header__actions')).toBeNull();
     expect(el.querySelector('h1')?.textContent).toBe('Equipos');
   });
+
+  it('draws no banner image by default', () => {
+    const el = create({ title: 'Equipos' });
+    expect(el.querySelector('img')).toBeNull();
+    expect(el.querySelector('.page-header--banner')).toBeNull();
+  });
+
+  it('draws the section banner as a decorative image behind the title', () => {
+    TestBed.configureTestingModule({});
+    const fixture = TestBed.createComponent(PageHeader);
+    fixture.componentRef.setInput('title', 'Proyectos');
+    fixture.componentRef.setInput('banner', 'projects');
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    const img = el.querySelector('img');
+    expect(img?.getAttribute('src')).toBe('/images/banners/banner-projects.webp');
+    expect(img?.getAttribute('alt')).toBe('');
+    expect(img?.getAttribute('width')).toBe('1800');
+    expect(el.querySelector('.page-header--banner')).not.toBeNull();
+    expect(el.querySelector('h1')?.textContent).toBe('Proyectos');
+  });
 });
