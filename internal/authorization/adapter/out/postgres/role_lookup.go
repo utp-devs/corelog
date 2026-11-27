@@ -47,7 +47,7 @@ FROM projects p
 LEFT JOIN organizations o ON o.id = p.organization_id AND o.deleted_at IS NULL
 LEFT JOIN organization_members om ON om.organization_id = o.id AND om.user_id = $2
 LEFT JOIN project_members pm ON pm.project_id = p.id AND pm.user_id = $2
-WHERE p.id = $1`
+WHERE p.id = $1 AND p.deleted_at IS NULL`
 
 // FindAccess devuelve el contexto efectivo del usuario sobre el proyecto. Un proyecto inexistente
 // devuelve un Access vacio (sin acceso) y ningun error.

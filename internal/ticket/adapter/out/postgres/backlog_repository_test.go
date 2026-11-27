@@ -34,6 +34,9 @@ func TestBacklogRepositoryOrderAndSaveRanksPostgres(t *testing.T) {
 	if _, err := db.Exec(`SET search_path TO ` + schema); err != nil {
 		t.Fatal(err)
 	}
+	if _, err := db.Exec(`CREATE TABLE projects (id UUID PRIMARY KEY, deleted_at TIMESTAMPTZ)`); err != nil {
+		t.Fatal(err)
+	}
 	if _, err := db.Exec(`CREATE TABLE issues (
 		id UUID PRIMARY KEY, project_id UUID NOT NULL, title TEXT NOT NULL, description TEXT NOT NULL DEFAULT '',
 		status TEXT NOT NULL, priority TEXT NOT NULL, issue_type TEXT NOT NULL, parent_id UUID,
@@ -44,6 +47,9 @@ func TestBacklogRepositoryOrderAndSaveRanksPostgres(t *testing.T) {
 	}
 
 	project, other := uuid.New(), uuid.New()
+	if _, err := db.Exec(`INSERT INTO projects (id) VALUES ($1)`, project); err != nil {
+		t.Fatal(err)
+	}
 	a, b, c, foreign := uuid.New(), uuid.New(), uuid.New(), uuid.New()
 	for _, row := range []struct {
 		id      uuid.UUID

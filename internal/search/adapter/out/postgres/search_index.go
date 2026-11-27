@@ -51,6 +51,7 @@ func (s *SearchIndex) Search(ctx context.Context, actorID uuid.UUID, admin bool,
 		SELECT p.id, p.key, p.name
 		FROM projects p
 		WHERE ($1 OR EXISTS (SELECT 1 FROM project_members pm WHERE pm.project_id = p.id AND pm.user_id = $2))
+		  AND p.deleted_at IS NULL
 		  AND (p.name ILIKE $3 ESCAPE '\' OR p.key ILIKE $3 ESCAPE '\')
 		ORDER BY p.key
 		LIMIT $4`, admin, actorID, pattern, limit); err != nil {
@@ -61,7 +62,7 @@ func (s *SearchIndex) Search(ctx context.Context, actorID uuid.UUID, admin bool,
 	if err := s.db.SelectContext(ctx, &issues, `
 		SELECT i.id, i.title, p.key
 		FROM issues i
-		JOIN projects p ON p.id = i.project_id
+		JOIN projects p ON p.id = i.project_id AND p.deleted_at IS NULL
 		WHERE ($1 OR EXISTS (SELECT 1 FROM project_members pm WHERE pm.project_id = i.project_id AND pm.user_id = $2))
 		  AND (i.title ILIKE $3 ESCAPE '\' OR i.description ILIKE $3 ESCAPE '\')
 		ORDER BY i.updated_at DESC

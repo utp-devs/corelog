@@ -52,6 +52,15 @@ func (r *TicketRepository) Save(ctx context.Context, t *domain.Ticket) error {
 		}
 	}
 
+	// A soft-deleted project accepts no new issues: it looks missing, as it does to every other read.
+	var live bool
+	if err := r.db.GetContext(ctx, &live, `SELECT EXISTS (SELECT 1 FROM projects WHERE id = $1 AND deleted_at IS NULL)`, t.ProjectID); err != nil {
+		return apperror.Wrap(apperror.KindInternal, "failed to check project", err)
+	}
+	if !live {
+		return apperror.New(apperror.KindNotFound, "project not found")
+	}
+
 	const query = `
 		INSERT INTO issues (
 			project_id, title, description, status, priority, issue_type, parent_id,
@@ -84,7 +93,7 @@ func (r *TicketRepository) FindByID(ctx context.Context, id uuid.UUID) (*domain.
 	const query = `
 		SELECT id, project_id, title, description, status, priority, issue_type, parent_id,
 		       due_date, story_points, rank, closed_at, requester_id, assignee_id, created_at, updated_at
-		FROM issues WHERE id = $1`
+		FROM issues WHERE id = $1 AND EXISTS (SELECT 1 FROM projects p WHERE p.id = issues.project_id AND p.deleted_at IS NULL)`
 
 	if err := r.db.GetContext(ctx, &row, query, id); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -99,7 +108,7 @@ func (r *TicketRepository) FindByID(ctx context.Context, id uuid.UUID) (*domain.
 // listWhere arma la clausula WHERE compartida por la consulta de datos y el conteo,
 // para que ambas devuelvan exactamente el mismo conjunto de issues.
 func listWhere(filter port.ListFilter) (string, []any) {
-	query := " WHERE 1 = 1"
+	query := " WHERE 1 = 1 AND EXISTS (SELECT 1 FROM projects p WHERE p.id = issues.project_id AND p.deleted_at IS NULL)"
 	args := []any{}
 	if len(filter.ProjectIDs) > 0 {
 		placeholders := make([]string, 0, len(filter.ProjectIDs))
@@ -194,7 +203,7 @@ func (r *TicketRepository) Update(ctx context.Context, t *domain.Ticket) error {
 		    issue_type = :issue_type, parent_id = :parent_id, due_date = :due_date,
 		    story_points = :story_points, rank = :rank, closed_at = :closed_at,
 		    assignee_id = :assignee_id, updated_at = :updated_at
-		WHERE id = :id`
+		WHERE id = :id AND EXISTS (SELECT 1 FROM projects p WHERE p.id = issues.project_id AND p.deleted_at IS NULL)`
 
 	result, err := sqlx.NamedExecContext(ctx, database.Executor(ctx, r.db), query, row)
 	if err != nil {
@@ -232,7 +241,7 @@ func (r *TicketRepository) updateAndWatchAssignee(ctx context.Context, t *domain
 		    issue_type = :issue_type, parent_id = :parent_id, due_date = :due_date,
 		    story_points = :story_points, rank = :rank, closed_at = :closed_at,
 		    assignee_id = :assignee_id, updated_at = :updated_at
-		WHERE id = :id`
+		WHERE id = :id AND EXISTS (SELECT 1 FROM projects p WHERE p.id = issues.project_id AND p.deleted_at IS NULL)`
 	result, err := sqlx.NamedExecContext(ctx, exec, query, row)
 	if err != nil {
 		if isForeignKeyViolation(err) {

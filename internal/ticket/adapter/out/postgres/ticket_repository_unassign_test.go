@@ -33,6 +33,9 @@ func TestTicketRepositoryUnassignClearsAssigneePostgres(t *testing.T) {
 	if _, err := db.Exec(`SET search_path TO ` + schema); err != nil {
 		t.Fatal(err)
 	}
+	if _, err := db.Exec(`CREATE TABLE projects (id UUID PRIMARY KEY, deleted_at TIMESTAMPTZ)`); err != nil {
+		t.Fatal(err)
+	}
 	if _, err := db.Exec(`CREATE TABLE issues (
 		id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
 		project_id UUID NOT NULL,
@@ -60,7 +63,9 @@ func TestTicketRepositoryUnassignClearsAssigneePostgres(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ticket.ProjectID = uuid.New()
+	projectID := uuid.New()
+	insertProjectRow(t, db, projectID)
+	ticket.ProjectID = projectID
 	assignee := uuid.New()
 	ticket.AssigneeID = &assignee
 	if err := repo.Save(ctx, ticket); err != nil {

@@ -37,7 +37,7 @@ func TestSprintRepositoryPostgres(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, statement := range []string{
-		`CREATE TABLE projects (id UUID PRIMARY KEY)`,
+		`CREATE TABLE projects (id UUID PRIMARY KEY, deleted_at TIMESTAMPTZ)`,
 		`CREATE TABLE sprints (
 			id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
 			project_id UUID NOT NULL REFERENCES projects (id) ON DELETE CASCADE,
@@ -154,5 +154,31 @@ func TestSprintRepositoryPostgres(t *testing.T) {
 	}
 	if err := repo.RemoveIssueFromSprint(ctx, project, second.ID, issue); !errors.Is(err, domain.ErrIssueNotInProject) {
 		t.Fatalf("removing twice = %v, want ErrIssueNotInProject", err)
+	}
+
+	// Issues of a soft-deleted project leave sprint reads and writes: the sprint looks empty and its
+	// issues cannot be moved or removed.
+	gone, goneSprint, goneIssue := uuid.New(), uuid.New(), uuid.New()
+	if _, err := db.Exec(`INSERT INTO projects (id, deleted_at) VALUES ($1, now())`, gone); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`INSERT INTO sprints (id, project_id, name, status) VALUES ($1, $2, 'Borrado', 'active')`, goneSprint, gone); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`INSERT INTO issues (id, project_id, title, status, sprint_id) VALUES ($1, $2, 'x', 'open', $3)`, goneIssue, gone, goneSprint); err != nil {
+		t.Fatal(err)
+	}
+	if refs, err := repo.ListIssues(ctx, goneSprint); err != nil || len(refs) != 0 {
+		t.Fatalf("ListIssues of deleted project = %d, %v; want 0", len(refs), err)
+	}
+	if err := repo.RemoveIssueFromSprint(ctx, gone, goneSprint, goneIssue); !errors.Is(err, domain.ErrIssueNotInProject) {
+		t.Fatalf("remove issue of deleted project = %v, want ErrIssueNotInProject", err)
+	}
+	if err := repo.MoveUnfinished(ctx, goneSprint, nil); err != nil {
+		t.Fatalf("MoveUnfinished on deleted project: %v", err)
+	}
+	var stillIn uuid.UUID
+	if err := db.Get(&stillIn, `SELECT sprint_id FROM issues WHERE id = $1`, goneIssue); err != nil || stillIn != goneSprint {
+		t.Fatalf("issue of deleted project moved: sprint = %v, err %v", stillIn, err)
 	}
 }

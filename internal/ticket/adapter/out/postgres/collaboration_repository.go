@@ -217,6 +217,7 @@ func (r *CollaborationRepository) FindMentionIDs(ctx context.Context, issueID uu
 		FROM users u
 		JOIN project_members pm ON pm.user_id = u.id
 		JOIN issues i ON i.project_id = pm.project_id
+		JOIN projects p ON p.id = i.project_id AND p.deleted_at IS NULL
 		WHERE i.id = $1 AND (` + strings.Join(patterns, " OR ") + `)`
 	if err := r.db.SelectContext(ctx, &ids, query, args...); err != nil {
 		return nil, apperror.Wrap(apperror.KindInternal, "failed to resolve comment mentions", err)

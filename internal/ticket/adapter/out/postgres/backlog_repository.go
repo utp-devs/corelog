@@ -20,6 +20,7 @@ func (r *TicketRepository) ListBacklog(ctx context.Context, projectID uuid.UUID)
 		       due_date, story_points, rank, closed_at, requester_id, assignee_id, created_at, updated_at
 		FROM issues
 		WHERE project_id = $1
+		  AND EXISTS (SELECT 1 FROM projects p WHERE p.id = issues.project_id AND p.deleted_at IS NULL)
 		ORDER BY rank ASC, id ASC`,
 		projectID,
 	); err != nil {
@@ -40,7 +41,7 @@ func (r *TicketRepository) SaveRanks(ctx context.Context, projectID uuid.UUID, r
 	}
 	defer func() { _ = tx.Rollback() }()
 	for id, rank := range ranks {
-		if _, err := tx.ExecContext(ctx, `UPDATE issues SET rank = $3, updated_at = now() WHERE id = $1 AND project_id = $2`, id, projectID, rank); err != nil {
+		if _, err := tx.ExecContext(ctx, `UPDATE issues SET rank = $3, updated_at = now() WHERE id = $1 AND project_id = $2 AND EXISTS (SELECT 1 FROM projects p WHERE p.id = issues.project_id AND p.deleted_at IS NULL)`, id, projectID, rank); err != nil {
 			return apperror.Wrap(apperror.KindInternal, "failed to save backlog order", err)
 		}
 	}

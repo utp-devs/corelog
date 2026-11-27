@@ -65,6 +65,7 @@ func newAssignTxDB(t *testing.T) *sqlx.DB {
 		t.Fatal(err)
 	}
 	for _, ddl := range []string{
+		`CREATE TABLE projects (id UUID PRIMARY KEY, deleted_at TIMESTAMPTZ)`,
 		`CREATE TABLE issues (
 			id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
 			project_id UUID NOT NULL,
@@ -124,6 +125,7 @@ func TestAssignAndUnassignAreAtomicWithHistoryPostgres(t *testing.T) {
 		db := newAssignTxDB(t)
 		svc := newAssignTxService(db, NewCollaborationRepository(db))
 		actor, assignee, projectID := uuid.New(), uuid.New(), uuid.New()
+		insertProjectRow(t, db, projectID)
 		ticket, err := svc.Create(ctx, port.CreateInput{Title: "Atomica", Description: "Desc", Priority: domain.PriorityLow, RequesterID: actor, ProjectID: &projectID})
 		if err != nil {
 			t.Fatal(err)
@@ -163,6 +165,7 @@ func TestAssignAndUnassignAreAtomicWithHistoryPostgres(t *testing.T) {
 		db := newAssignTxDB(t)
 		healthy := newAssignTxService(db, NewCollaborationRepository(db))
 		actor, assignee, projectID := uuid.New(), uuid.New(), uuid.New()
+		insertProjectRow(t, db, projectID)
 		ticket, err := healthy.Create(ctx, port.CreateInput{Title: "Rollback", Description: "Desc", Priority: domain.PriorityLow, RequesterID: actor, ProjectID: &projectID})
 		if err != nil {
 			t.Fatal(err)
@@ -193,6 +196,7 @@ func TestAssignAndUnassignAreAtomicWithHistoryPostgres(t *testing.T) {
 		db := newAssignTxDB(t)
 		healthy := newAssignTxService(db, NewCollaborationRepository(db))
 		actor, assignee, projectID := uuid.New(), uuid.New(), uuid.New()
+		insertProjectRow(t, db, projectID)
 		ticket, err := healthy.Create(ctx, port.CreateInput{Title: "Unassign rollback", Description: "Desc", Priority: domain.PriorityLow, RequesterID: actor, ProjectID: &projectID})
 		if err != nil {
 			t.Fatal(err)

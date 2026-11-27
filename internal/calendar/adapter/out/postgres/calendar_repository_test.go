@@ -35,6 +35,7 @@ func TestCalendarRepositoryEventsPostgres(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, statement := range []string{
+		`CREATE TABLE projects (id UUID PRIMARY KEY, deleted_at TIMESTAMPTZ)`,
 		`CREATE TABLE sprints (id UUID PRIMARY KEY, project_id UUID NOT NULL, name TEXT NOT NULL, start_date DATE, end_date DATE)`,
 		`CREATE TABLE issues (id UUID PRIMARY KEY, project_id UUID NOT NULL, title TEXT NOT NULL, due_date TIMESTAMPTZ)`,
 	} {
@@ -44,6 +45,9 @@ func TestCalendarRepositoryEventsPostgres(t *testing.T) {
 	}
 
 	project, other := uuid.New(), uuid.New()
+	if _, err := db.Exec(`INSERT INTO projects (id) VALUES ($1), ($2)`, project, other); err != nil {
+		t.Fatal(err)
+	}
 	sprint, issue, foreignIssue := uuid.New(), uuid.New(), uuid.New()
 	if _, err := db.Exec(`INSERT INTO sprints VALUES ($1, $2, 'Sprint 1', '2026-11-02', '2026-11-08')`, sprint, project); err != nil {
 		t.Fatal(err)
@@ -78,5 +82,24 @@ func TestCalendarRepositoryEventsPostgres(t *testing.T) {
 		if event.Kind == "issue_due" && (event.Date.Day() != 5 || event.Link != "/issues/"+issue.String()) {
 			t.Fatalf("issue due event = %+v", event)
 		}
+	}
+
+	// A soft-deleted project has no calendar events, even when its sprints and issues are still in the tables.
+	gone := uuid.New()
+	if _, err := db.Exec(`INSERT INTO projects (id, deleted_at) VALUES ($1, now())`, gone); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`INSERT INTO sprints VALUES ($1, $2, 'Borrado', '2026-11-03', '2026-11-09')`, uuid.New(), gone); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`INSERT INTO issues VALUES ($1, $2, 'Borrada', '2026-11-05 10:00:00+00')`, uuid.New(), gone); err != nil {
+		t.Fatal(err)
+	}
+	deletedEvents, err := NewCalendarRepository(db).Events(context.Background(), gone, from, to)
+	if err != nil {
+		t.Fatalf("Events of deleted project: %v", err)
+	}
+	if len(deletedEvents) != 0 {
+		t.Fatalf("deleted project returned %d events, want 0", len(deletedEvents))
 	}
 }

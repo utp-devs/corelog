@@ -2,12 +2,14 @@ package postgres
 
 import (
 	"context"
+	"errors"
 	"os"
 	"strings"
 	"testing"
 
 	"github.com/google/uuid"
 	_ "github.com/jackc/pgx/v5/stdlib"
+	"github.com/jhonsferg/corelog/internal/platform/apperror"
 	"github.com/jhonsferg/corelog/internal/ticket/application/port"
 	"github.com/jhonsferg/corelog/internal/ticket/domain"
 	"github.com/jmoiron/sqlx"
@@ -35,6 +37,9 @@ func newListTestRepository(t *testing.T) *TicketRepository {
 	if _, err := db.Exec(`SET search_path TO ` + schema); err != nil {
 		t.Fatal(err)
 	}
+	if _, err := db.Exec(`CREATE TABLE projects (id UUID PRIMARY KEY, deleted_at TIMESTAMPTZ)`); err != nil {
+		t.Fatal(err)
+	}
 	if _, err := db.Exec(`CREATE TABLE issues (
 		id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
 		project_id UUID NOT NULL,
@@ -58,11 +63,20 @@ func newListTestRepository(t *testing.T) *TicketRepository {
 	return NewTicketRepository(db)
 }
 
+// insertProjectRow adds a live project so that issue writes pass the project check.
+func insertProjectRow(t *testing.T, db *sqlx.DB, id uuid.UUID) {
+	t.Helper()
+	if _, err := db.Exec(`INSERT INTO projects (id) VALUES ($1)`, id); err != nil {
+		t.Fatal(err)
+	}
+}
+
 // TestTicketRepositoryCountMatchesFindAllPostgres verifica que Count y FindAll usan la misma
 // clausula WHERE: el total cuenta todas las coincidencias y la pagina devuelve solo su parte.
 func TestTicketRepositoryCountMatchesFindAllPostgres(t *testing.T) {
 	repo := newListTestRepository(t)
 	projectID := uuid.New()
+	insertProjectRow(t, repo.db, projectID)
 	requesterID := uuid.New()
 	for i := 0; i < 3; i++ {
 		ticket, err := domain.NewTicket("Issue", "Description", domain.PriorityLow, requesterID)
@@ -108,6 +122,7 @@ func TestTicketRepositoryAssigneeFilterPostgres(t *testing.T) {
 	repo := newListTestRepository(t)
 	ctx := context.Background()
 	projectID := uuid.New()
+	insertProjectRow(t, repo.db, projectID)
 	requesterID := uuid.New()
 	assigneeID := uuid.New()
 
@@ -151,5 +166,73 @@ func TestTicketRepositoryAssigneeFilterPostgres(t *testing.T) {
 	}
 	if len(items) != 1 || items[0].ID != assigned.ID {
 		t.Errorf("FindAll by assignee returned %d items, want only the assigned issue", len(items))
+	}
+}
+
+// TestTicketRepositoryHidesIssuesOfDeletedProjectPostgres checks that the issues of a soft-deleted project
+// are not readable, listed, counted or writable, while the issues of a live project are unaffected.
+func TestTicketRepositoryHidesIssuesOfDeletedProjectPostgres(t *testing.T) {
+	repo := newListTestRepository(t)
+	ctx := context.Background()
+	requester := uuid.New()
+	live, gone := uuid.New(), uuid.New()
+	insertProjectRow(t, repo.db, live)
+	insertProjectRow(t, repo.db, gone)
+
+	liveTicket, err := domain.NewTicket("Live", "Description", domain.PriorityLow, requester)
+	if err != nil {
+		t.Fatal(err)
+	}
+	liveTicket.ProjectID = live
+	goneTicket, err := domain.NewTicket("Gone", "Description", domain.PriorityLow, requester)
+	if err != nil {
+		t.Fatal(err)
+	}
+	goneTicket.ProjectID = gone
+	for _, ticket := range []*domain.Ticket{liveTicket, goneTicket} {
+		if err := repo.Save(ctx, ticket); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	if _, err := repo.db.Exec(`UPDATE projects SET deleted_at = now() WHERE id = $1`, gone); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := repo.FindByID(ctx, goneTicket.ID); !errors.Is(err, domain.ErrTicketNotFound) {
+		t.Fatalf("FindByID of deleted project = %v, want ErrTicketNotFound", err)
+	}
+	if _, err := repo.FindByID(ctx, liveTicket.ID); err != nil {
+		t.Fatalf("FindByID of live project: %v", err)
+	}
+
+	all := port.ListFilter{Page: 1, PageSize: 50}
+	items, err := repo.FindAll(ctx, all)
+	if err != nil || len(items) != 1 || items[0].ID != liveTicket.ID {
+		t.Fatalf("FindAll = %d items, %v; want only the live issue", len(items), err)
+	}
+	if total, err := repo.Count(ctx, all); err != nil || total != 1 {
+		t.Fatalf("Count = %d, %v; want 1", total, err)
+	}
+	ofGone := port.ListFilter{ProjectIDs: []uuid.UUID{gone}, Page: 1, PageSize: 50}
+	if total, err := repo.Count(ctx, ofGone); err != nil || total != 0 {
+		t.Fatalf("Count filtered by deleted project = %d, %v; want 0", total, err)
+	}
+	if backlog, err := repo.ListBacklog(ctx, gone); err != nil || len(backlog) != 0 {
+		t.Fatalf("ListBacklog of deleted project = %d, %v; want 0", len(backlog), err)
+	}
+
+	goneTicket.Title = "Changed"
+	if err := repo.Update(ctx, goneTicket); !errors.Is(err, domain.ErrTicketNotFound) {
+		t.Fatalf("Update of deleted project = %v, want ErrTicketNotFound", err)
+	}
+
+	created, err := domain.NewTicket("New", "Description", domain.PriorityLow, requester)
+	if err != nil {
+		t.Fatal(err)
+	}
+	created.ProjectID = gone
+	if err := repo.Save(ctx, created); apperror.KindOf(err) != apperror.KindNotFound {
+		t.Fatalf("Save into deleted project = %v, want a not found error", err)
 	}
 }

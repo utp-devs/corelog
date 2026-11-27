@@ -51,7 +51,8 @@ func (r *BoardRepository) FindDefaultByProject(ctx context.Context, projectID uu
 		       i.priority, i.assignee_id, assignee.name AS assignee_name,
 		       i.story_points, i.rank
 		FROM boards b
-	JOIN board_columns c ON c.board_id = b.id
+		JOIN projects p ON p.id = b.project_id AND p.deleted_at IS NULL
+		JOIN board_columns c ON c.board_id = b.id
 	LEFT JOIN issues i ON i.project_id = b.project_id AND i.status = c.status
 	LEFT JOIN users assignee ON assignee.id = i.assignee_id
 	WHERE b.project_id = $1 AND b.is_default = true

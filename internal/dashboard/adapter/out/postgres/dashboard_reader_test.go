@@ -35,7 +35,7 @@ func TestDashboardReaderSummaryPostgres(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, statement := range []string{
-		`CREATE TABLE projects (id UUID PRIMARY KEY, key TEXT NOT NULL, name TEXT NOT NULL)`,
+		`CREATE TABLE projects (id UUID PRIMARY KEY, key TEXT NOT NULL, name TEXT NOT NULL, deleted_at TIMESTAMPTZ)`,
 		`CREATE TABLE project_members (project_id UUID NOT NULL, user_id UUID NOT NULL, PRIMARY KEY (project_id, user_id))`,
 		`CREATE TABLE issues (id UUID PRIMARY KEY, project_id UUID NOT NULL REFERENCES projects (id), title TEXT NOT NULL,
 			status TEXT NOT NULL, priority TEXT NOT NULL DEFAULT 'medium', assignee_id UUID, due_date TIMESTAMPTZ,
@@ -50,7 +50,7 @@ func TestDashboardReaderSummaryPostgres(t *testing.T) {
 
 	me, other := uuid.New(), uuid.New()
 	mine, foreign := uuid.New(), uuid.New()
-	if _, err := db.Exec(`INSERT INTO projects VALUES ($1, 'CORE', 'Core'), ($2, 'OPS', 'Ops')`, mine, foreign); err != nil {
+	if _, err := db.Exec(`INSERT INTO projects (id, key, name) VALUES ($1, 'CORE', 'Core'), ($2, 'OPS', 'Ops')`, mine, foreign); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := db.Exec(`INSERT INTO project_members VALUES ($1, $2)`, mine, me); err != nil {
@@ -81,6 +81,22 @@ func TestDashboardReaderSummaryPostgres(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := db.Exec(`INSERT INTO sprints VALUES ($1, $2, 'Ajeno', 'active', $3)`, uuid.New(), foreign, end); err != nil {
+		t.Fatal(err)
+	}
+
+	// A soft-deleted project where I am a member, with an overdue open issue and an active sprint, must not count.
+	gone := uuid.New()
+	if _, err := db.Exec(`INSERT INTO projects (id, key, name, deleted_at) VALUES ($1, 'GONE', 'Gone', now())`, gone); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`INSERT INTO project_members VALUES ($1, $2)`, gone, me); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`INSERT INTO issues (id, project_id, title, status, assignee_id, due_date) VALUES ($1, $2, 'deleted', 'open', $3, $4)`,
+		uuid.New(), gone, me, past); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`INSERT INTO sprints VALUES ($1, $2, 'Sprint borrado', 'active', $3)`, uuid.New(), gone, end); err != nil {
 		t.Fatal(err)
 	}
 

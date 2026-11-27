@@ -49,7 +49,8 @@ func openAccessSchema(t *testing.T) *sqlx.DB {
 			id UUID PRIMARY KEY,
 			organization_id UUID NOT NULL,
 			visibility VARCHAR(10) NOT NULL,
-			archived_at TIMESTAMPTZ
+			archived_at TIMESTAMPTZ,
+			deleted_at TIMESTAMPTZ
 		)`,
 		`CREATE TABLE project_members (
 			project_id UUID NOT NULL,
@@ -219,6 +220,14 @@ func TestRoleLookupFindAccessArchivedPostgres(t *testing.T) {
 	}
 	if access.Archived {
 		t.Fatal("restored project must report Archived=false")
+	}
+
+	if _, err := db.Exec(`UPDATE projects SET deleted_at = now() WHERE id = $1`, project); err != nil {
+		t.Fatal(err)
+	}
+	deleted, err := lookup.FindAccess(ctx, project, lead)
+	if err != nil || deleted.OrgRole != "" || deleted.ProjectRole != nil {
+		t.Fatalf("deleted project = %+v, %v; want empty access without error", deleted, err)
 	}
 
 	missing, err := lookup.FindAccess(ctx, uuid.New(), lead)

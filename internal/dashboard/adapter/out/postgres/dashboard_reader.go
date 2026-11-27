@@ -48,7 +48,9 @@ func (r *DashboardReader) Summary(ctx context.Context, userID uuid.UUID, now tim
 
 	var byStatus []statusCount
 	if err := r.db.SelectContext(ctx, &byStatus, `
-		SELECT status, COUNT(*) AS count FROM issues WHERE assignee_id = $1 GROUP BY status`, userID); err != nil {
+		SELECT i.status, COUNT(*) AS count FROM issues i
+		JOIN projects p ON p.id = i.project_id AND p.deleted_at IS NULL
+		WHERE i.assignee_id = $1 GROUP BY i.status`, userID); err != nil {
 		return summary, apperror.Wrap(apperror.KindInternal, "failed to count assigned issues", err)
 	}
 	for _, item := range byStatus {
@@ -59,12 +61,16 @@ func (r *DashboardReader) Summary(ctx context.Context, userID uuid.UUID, now tim
 	}
 
 	if err := r.db.GetContext(ctx, &summary.Overdue, `
-		SELECT COUNT(*) FROM issues WHERE assignee_id = $1 AND status <> 'closed' AND due_date < $2`, userID, now); err != nil {
+		SELECT COUNT(*) FROM issues i
+		JOIN projects p ON p.id = i.project_id AND p.deleted_at IS NULL
+		WHERE i.assignee_id = $1 AND i.status <> 'closed' AND i.due_date < $2`, userID, now); err != nil {
 		return summary, apperror.Wrap(apperror.KindInternal, "failed to count overdue issues", err)
 	}
 
 	if err := r.db.GetContext(ctx, &summary.ProjectCount, `
-		SELECT COUNT(*) FROM project_members WHERE user_id = $1`, userID); err != nil {
+		SELECT COUNT(*) FROM project_members pm
+		JOIN projects p ON p.id = pm.project_id AND p.deleted_at IS NULL
+		WHERE pm.user_id = $1`, userID); err != nil {
 		return summary, apperror.Wrap(apperror.KindInternal, "failed to count projects", err)
 	}
 
@@ -72,7 +78,7 @@ func (r *DashboardReader) Summary(ctx context.Context, userID uuid.UUID, now tim
 	if err := r.db.SelectContext(ctx, &sprints, `
 		SELECT s.id, s.name, p.key AS project_key, s.end_date
 		FROM sprints s
-		JOIN projects p ON p.id = s.project_id
+		JOIN projects p ON p.id = s.project_id AND p.deleted_at IS NULL
 		JOIN project_members pm ON pm.project_id = s.project_id AND pm.user_id = $1
 		WHERE s.status = 'active'
 		ORDER BY s.end_date ASC NULLS LAST, s.id
@@ -87,7 +93,7 @@ func (r *DashboardReader) Summary(ctx context.Context, userID uuid.UUID, now tim
 	if err := r.db.SelectContext(ctx, &issues, `
 		SELECT i.id, i.title, i.status, i.priority, p.key AS project_key, i.due_date
 		FROM issues i
-		JOIN projects p ON p.id = i.project_id
+		JOIN projects p ON p.id = i.project_id AND p.deleted_at IS NULL
 		WHERE i.assignee_id = $1 AND i.status <> 'closed'
 		ORDER BY i.due_date ASC NULLS LAST, i.updated_at DESC
 		LIMIT 5`, userID); err != nil {
