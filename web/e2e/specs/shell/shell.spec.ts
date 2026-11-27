@@ -156,10 +156,11 @@ test.describe('barra lateral de contexto', () => {
   test.describe('@visual encabezado de marca', () => {
     skipVisualOutsideLinux();
 
+    // The brand lives in the top bar: a link named after the product whose image has no text of its own.
     test('expandido: banner de marca', async ({ as }) => {
       const page = await openProfileSection(as, 'owner');
-      await expect(page.getByRole('img', { name: 'CoreLog' }).first()).toHaveScreenshot(
-        'sidebar-brand-expanded.png',
+      await expect(page.getByRole('link', { name: 'CoreLog, ir a incidencias' })).toHaveScreenshot(
+        'brand-banner.png',
         { maxDiffPixels: 100 },
       );
     });

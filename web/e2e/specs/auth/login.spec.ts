@@ -8,10 +8,20 @@ import {
 } from '../../lib/known-violations.ts';
 import { collectLayoutAudit } from '../../lib/layout-audit.ts';
 import { skipVisualOutsideLinux } from '../../lib/visual.ts';
+import { THEME_STORAGE_KEY } from '../../lib/storage-state.ts';
 import { waitForImages } from '../../lib/wait.ts';
 import { expect, test } from '../../fixtures/test.ts';
 
 test.describe('pantalla de login', () => {
+  // The app starts in the light theme: the dark projects store the dark theme first, like the theme switch does.
+  test.beforeEach(async ({ page }, testInfo) => {
+    if (!testInfo.project.name.endsWith('-dark')) return;
+    await page.addInitScript(
+      (key: string) => window.localStorage.setItem(key, 'dark'),
+      THEME_STORAGE_KEY,
+    );
+  });
+
   test('muestra el formulario de acceso y el panel de marca', async ({ page }) => {
     await page.goto(appPath('/login'));
     await waitForImages(page);

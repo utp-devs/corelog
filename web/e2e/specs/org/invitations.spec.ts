@@ -43,8 +43,8 @@ test.describe('invitaciones de la organizacion (S-22)', () => {
     data,
   }, testInfo) => {
     test.skip(
-      (testInfo.project.use.viewport?.width ?? 0) < 768,
-      'row actions are listed in the desktop table',
+      (testInfo.project.use.viewport?.width ?? 0) < 900,
+      'row actions are listed in the table, which becomes cards below 900px',
     );
     const email = freshEmail();
     const acme = await orgIdBySlug(await api('owner'), 'acme');
@@ -65,8 +65,8 @@ test.describe('invitaciones de la organizacion (S-22)', () => {
 
   test('owner revoca una invitacion pendiente', async ({ as, api, data }, testInfo) => {
     test.skip(
-      (testInfo.project.use.viewport?.width ?? 0) < 768,
-      'row actions are listed in the desktop table',
+      (testInfo.project.use.viewport?.width ?? 0) < 900,
+      'row actions are listed in the table, which becomes cards below 900px',
     );
     const email = freshEmail();
     const acme = await orgIdBySlug(await api('owner'), 'acme');
