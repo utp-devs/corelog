@@ -8,13 +8,18 @@ const watched = (process.env.WATCH ?? '')
   .map((name) => name.trim())
   .filter(Boolean);
 const selected = watched.includes('all') ? apps : apps.filter((app) => watched.includes(app));
-const poll = process.env.POLL ?? '1000';
+// POLL is set only where file events are not propagated (Docker on Windows); natively it stays unset.
+const poll = process.env.POLL ?? '';
+const pollArgs = poll ? ['--poll', poll] : [];
 
 const children = [];
 
 function run(name, args, waitForEnd = false) {
   return new Promise((resolve) => {
-    const child = spawn('npx', args, { stdio: ['ignore', 'pipe', 'pipe'], shell: false });
+    const child = spawn('npx', args, {
+      stdio: ['ignore', 'pipe', 'pipe'],
+      shell: process.platform === 'win32',
+    });
     children.push(child);
     let settled = false;
     const listen = (stream, target) => {
@@ -55,7 +60,7 @@ for (const app of apps.filter((name) => !selected.includes(name))) {
 }
 
 for (const app of selected) {
-  await run(app, ['ng', 'build', app, '--configuration', 'local', '--watch', '--poll', poll]);
+  await run(app, ['ng', 'build', app, '--configuration', 'local', '--watch', ...pollArgs]);
 }
 
 console.log(
