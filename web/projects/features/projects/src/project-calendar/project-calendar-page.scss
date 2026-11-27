@@ -1,190 +1,233 @@
+@use '../../../../ui/styles/mixins' as m;
+
 :host {
   display: block;
   min-width: 0;
 }
 
-/* Fluid template: the frame keeps the gutter and the month grid fills the full width. */
-.frame {
-  display: flex;
-  flex-direction: column;
+/* Fluid template: the frame keeps the gutter and the month grid fills the available height. */
+.project-calendar {
+  @include m.flex-column(4);
   flex: 1 1 auto;
-  gap: var(--cl-space-4);
   box-sizing: border-box;
   width: 100%;
   min-width: 0;
   min-height: 0;
   padding-inline: var(--cl-gutter);
-}
 
-.toolbar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--cl-space-3);
-}
-
-.month-nav {
-  display: flex;
-  align-items: center;
-  gap: var(--cl-space-3);
-}
-
-.icon-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  border: 1px solid var(--cl-border);
-  border-radius: var(--cl-radius-md);
-  background: var(--cl-bg-surface);
-  color: var(--cl-text);
-  cursor: pointer;
-}
-
-.icon-button:focus-visible {
-  outline: none;
-  box-shadow: var(--cl-shadow-focus);
-}
-
-.month-title {
-  min-width: 14ch;
-  margin: 0;
-  color: var(--cl-text);
-  font-size: var(--cl-font-body-strong);
-  font-weight: 600;
-  text-align: center;
-  text-transform: capitalize;
-}
-
-.grid {
-  display: grid;
-  flex: 1 1 auto;
-  grid-auto-rows: minmax(96px, 1fr);
-  grid-template-columns: repeat(7, minmax(0, 1fr));
-  width: 100%;
-  min-width: 0;
-  border: 1px solid var(--cl-border);
-  border-radius: var(--cl-radius-lg);
-  overflow: hidden;
-}
-
-.weekday {
-  padding: var(--cl-space-2);
-  border-bottom: 1px solid var(--cl-border);
-  background: var(--cl-bg-sunken);
-  color: var(--cl-text-subtle);
-  font-size: var(--cl-font-small);
-  text-align: center;
-}
-
-.day,
-.blank {
-  box-sizing: border-box;
-  min-width: 0;
-  min-height: 112px;
-  padding: var(--cl-space-2);
-  border-right: 1px solid var(--cl-border);
-  border-bottom: 1px solid var(--cl-border);
-  background: var(--cl-bg-surface);
-}
-
-.blank {
-  background: var(--cl-bg-sunken);
-}
-
-.day-number {
-  display: block;
-  margin-bottom: var(--cl-space-1);
-  color: var(--cl-text-subtle);
-  font-variant-numeric: tabular-nums;
-}
-
-.day-events {
-  display: grid;
-  gap: var(--cl-space-1);
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.event {
-  display: grid;
-  gap: var(--cl-space-1);
-  min-width: 0;
-  font-size: var(--cl-font-small);
-}
-
-.event-link {
-  display: block;
-  overflow: hidden;
-  color: var(--cl-brand);
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-/* The list and the empty state sit on a surface panel that fills the rest of the page. */
-.list {
-  display: grid;
-  flex: 1 1 auto;
-  align-content: start;
-  gap: var(--cl-space-4);
-  min-height: 0;
-  padding: var(--cl-space-4);
-  border: 1px solid var(--cl-border);
-  border-radius: var(--cl-radius-lg);
-  background: var(--cl-bg-surface);
-}
-
-.list-day {
-  display: grid;
-  gap: var(--cl-space-2);
-}
-
-.list-date {
-  margin: 0;
-  color: var(--cl-text);
-  font-size: var(--cl-font-body-strong);
-  font-weight: 600;
-}
-
-.panel {
-  display: flex;
-  flex: 1 1 auto;
-  flex-direction: column;
-  min-height: 0;
-  padding: var(--cl-space-4);
-  border: 1px solid var(--cl-border);
-  border-radius: var(--cl-radius-lg);
-  background: var(--cl-bg-surface);
-}
-
-/* Narrow screens: the grid turns into a stack of days with their events. */
-@media (max-width: 900px) {
-  .grid {
-    display: flex;
-    flex-direction: column;
+  &__toolbar {
+    @include m.cluster(3, center, space-between);
   }
 
-  .weekday,
-  .blank {
-    display: none;
+  &__nav {
+    @include m.flex-row(2);
   }
 
-  .day {
+  &__arrow {
+    @include m.flex-row(0, center, center);
+    width: var(--cl-control-h-md);
+    height: var(--cl-control-h-md);
+    padding: 0;
+    border: 1px solid var(--cl-border-strong);
+    border-radius: var(--cl-radius-md);
+    background: var(--cl-bg-surface);
+    color: var(--cl-text);
+    cursor: pointer;
+
+    &:hover {
+      background: var(--cl-bg-hover);
+    }
+
+    &:focus-visible {
+      outline: none;
+      box-shadow: var(--cl-shadow-focus);
+    }
+
+    @media (pointer: coarse) {
+      width: var(--cl-control-h-lg);
+      height: var(--cl-control-h-lg);
+    }
+  }
+
+  /* The month name stays lowercase, as Spanish writes it: "noviembre de 2026". */
+  &__title {
+    min-width: 12ch;
+    margin: 0;
+    color: var(--cl-text);
+    font-size: var(--cl-font-body-strong);
+    font-weight: var(--cl-weight-semibold);
+    text-align: center;
+  }
+
+  &__empty {
+    @include m.flex-row(3);
+    margin: 0;
+    padding: var(--cl-space-3) var(--cl-space-4);
+    border: 1px solid var(--cl-border);
+    border-radius: var(--cl-radius-md);
+    background: var(--cl-bg-sunken);
+    color: var(--cl-text-subtle);
+    font-size: var(--cl-font-small);
+  }
+
+  &__grid {
+    display: grid;
+    flex: 1 1 auto;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    grid-template-rows: auto;
+    grid-auto-rows: minmax(6.5rem, 1fr);
+    width: 100%;
+    min-width: 0;
+    border: 1px solid var(--cl-border);
+    border-radius: var(--cl-radius-lg);
+    overflow: hidden;
+  }
+
+  &__weekday {
+    padding: var(--cl-space-2);
+    border-bottom: 1px solid var(--cl-border);
+    background: var(--cl-bg-sunken);
+    color: var(--cl-text-subtle);
+    font-size: var(--cl-font-small);
+    font-weight: var(--cl-weight-semibold);
+    text-align: center;
+  }
+
+  &__day,
+  &__blank {
+    box-sizing: border-box;
+    min-width: 0;
+    min-height: 6.5rem;
+    padding: var(--cl-space-2);
+    border-right: 1px solid var(--cl-divider);
+    border-bottom: 1px solid var(--cl-divider);
+    background: var(--cl-bg-surface);
+  }
+
+  &__blank {
+    background: var(--cl-bg-sunken);
+  }
+
+  &__day--today {
+    background: var(--cl-brand-subtle);
+  }
+
+  &__number {
+    display: inline-block;
+    margin-bottom: var(--cl-space-1);
+    color: var(--cl-text-subtle);
+    font-variant-numeric: tabular-nums;
+  }
+
+  &__today {
+    margin-left: var(--cl-space-1);
+    padding: 0 var(--cl-space-2);
+    border-radius: var(--cl-radius-full);
+    background: var(--cl-brand);
+    color: var(--cl-text-on-brand);
+    font-size: var(--cl-font-caption);
+    font-weight: var(--cl-weight-semibold);
+  }
+
+  &__day--today &__number {
+    color: var(--cl-brand);
+    font-weight: var(--cl-weight-semibold);
+  }
+
+  &__events {
+    @include m.flex-column(1);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  &__chip {
+    @include m.flex-row(1);
+    min-width: 0;
+    padding: var(--cl-space-1) var(--cl-space-2);
+    border-left: 3px solid var(--cl-border-strong);
+    border-radius: var(--cl-radius-sm);
+    background: var(--cl-bg-hover);
+    color: var(--cl-text);
+    font-size: var(--cl-font-small);
+    text-decoration: none;
+
+    &:hover {
+      background: var(--cl-bg-selected);
+    }
+
+    &:focus-visible {
+      outline: none;
+      box-shadow: var(--cl-shadow-focus);
+    }
+
+    &--sprint_start {
+      border-left-color: var(--cl-brand);
+    }
+
+    &--sprint_end {
+      border-left-color: var(--cl-text-subtle);
+    }
+
+    &--issue_due {
+      border-left-color: var(--cl-warning);
+    }
+
+    @media (pointer: coarse) {
+      min-height: var(--cl-control-h-lg);
+    }
+  }
+
+  &__key {
+    flex: none;
+    color: var(--cl-text-subtle);
+    font-weight: var(--cl-weight-semibold);
+  }
+
+  &__chip-title {
+    @include m.truncate;
+  }
+
+  &__sr {
+    @include m.visually-hidden;
+  }
+
+  /* Agenda: only the days that have events, each with its chips. */
+  &__list {
+    @include m.flex-column(4);
+    flex: 1 1 auto;
+    align-content: start;
     min-height: 0;
-  }
-}
-
-@media (max-width: 767px) {
-  .icon-button {
-    width: 44px;
-    height: 44px;
+    padding: var(--cl-space-4);
+    border: 1px solid var(--cl-border);
+    border-radius: var(--cl-radius-lg);
+    background: var(--cl-bg-surface);
   }
 
-  .event-link {
-    min-height: 44px;
-    line-height: 44px;
+  &__list-day {
+    @include m.flex-column(2);
+  }
+
+  &__list-date {
+    margin: 0;
+    color: var(--cl-text);
+    font-size: var(--cl-font-body-strong);
+    font-weight: var(--cl-weight-semibold);
+  }
+
+  @include m.respond-down(768px) {
+    &__grid {
+      display: flex;
+      flex-direction: column;
+    }
+
+    &__weekday,
+    &__blank {
+      display: none;
+    }
+
+    &__day {
+      min-height: 0;
+    }
   }
 }

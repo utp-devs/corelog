@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Project } from '@corelog/core';
 
-import { filterProjects } from './projects-page.utils';
+import { createProjectRights, filterProjects } from './projects-page.utils';
 
 function project(overrides: Partial<Project>): Project {
   return {
@@ -36,5 +36,26 @@ describe('filterProjects', () => {
   it('filters by visibility and by archived state', () => {
     expect(filterProjects(list, '', 'private', 'all').map((p) => p.id)).toEqual(['p-2']);
     expect(filterProjects(list, '', 'all', 'archived').map((p) => p.id)).toEqual(['p-3']);
+  });
+});
+
+describe('createProjectRights', () => {
+  it('allows global admins and organization owners and admins', () => {
+    expect(createProjectRights('admin', null, 'admins').allowed).toBe(true);
+    expect(createProjectRights('user', 'owner', 'admins').allowed).toBe(true);
+    expect(createProjectRights('user', 'admin', 'admins').allowed).toBe(true);
+  });
+
+  it('lets members create only when the policy says so', () => {
+    expect(createProjectRights('user', 'member', 'members').allowed).toBe(true);
+    const closed = createProjectRights('user', 'member', 'admins');
+    expect(closed.allowed).toBe(false);
+    expect(closed.reason).toContain('administradores');
+  });
+
+  it('never lets guests create', () => {
+    const guest = createProjectRights('user', 'guest', 'members');
+    expect(guest.allowed).toBe(false);
+    expect(guest.reason).toContain('invitados');
   });
 });

@@ -5,6 +5,9 @@ import {
   ORGANIZATION_ID_PROVIDER,
   AuthStore,
   OrganizationApiService,
+  OrgRole,
+  OrgWhoCan,
+  OrganizationStore,
   Project,
   ProjectApiService,
   ProjectComponent,
@@ -13,6 +16,7 @@ import {
   SessionService,
   User,
 } from '@corelog/core';
+import { ActivatedRoute, Router, convertToParamMap } from '@angular/router';
 import { MessageService } from 'primeng/api';
 import { Observable, of } from 'rxjs';
 import { Mock, vi } from 'vitest';
@@ -104,6 +108,10 @@ export interface ProjectTestOptions {
   readonly projectApi?: Partial<Record<keyof ProjectApiService, Stub>>;
   readonly orgApi?: Partial<Record<keyof OrganizationApiService, Stub>>;
   readonly calendarApi?: Partial<Record<keyof CalendarApiService, Stub>>;
+  /** Role in the active organization and who its policy lets create projects. */
+  readonly organization?: { readonly role: OrgRole | null; readonly policy: OrgWhoCan };
+  /** Query params of the current URL; the router is replaced by a stub that records navigations. */
+  readonly queryParams?: Record<string, string>;
 }
 
 export interface ProjectTestEnvironment {
@@ -112,6 +120,7 @@ export interface ProjectTestEnvironment {
   readonly orgApi: Record<string, Mock>;
   readonly calendarApi: Record<string, Mock>;
   readonly user: WritableSignal<User | null>;
+  readonly navigate: Mock;
 }
 
 /**
@@ -160,5 +169,27 @@ export function projectTestEnvironment(options: ProjectTestOptions = {}): Projec
     MessageService,
   ];
 
-  return { providers, projectApi, orgApi, calendarApi, user };
+  if (options.organization) {
+    const { role, policy } = options.organization;
+    providers.push({
+      provide: OrganizationStore,
+      useValue: {
+        currentRole: signal(role).asReadonly(),
+        currentOrg: signal({ settings: { whoCanCreateProjects: policy } }).asReadonly(),
+        currentOrgId: signal(ORG_ID).asReadonly(),
+      },
+    });
+  }
+  const navigate = vi.fn(() => Promise.resolve(true));
+  if (options.queryParams) {
+    providers.push(
+      {
+        provide: ActivatedRoute,
+        useValue: { snapshot: { queryParamMap: convertToParamMap(options.queryParams) } },
+      },
+      { provide: Router, useValue: { navigate } },
+    );
+  }
+
+  return { providers, projectApi, orgApi, calendarApi, user, navigate };
 }

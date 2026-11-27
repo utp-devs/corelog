@@ -1,56 +1,68 @@
-<div class="workspace">
+<div class="project-workspace">
   @if (accessVariant(); as variant) {
     <app-page-container variant="wide" pageName="project-access" [ready]="true" [fill]="true">
       <app-error-page [variant]="variant" />
     </app-page-container>
   } @else {
-    <app-breadcrumbs [items]="breadcrumbs()" />
-
     @if (state().status === 'loading') {
-      <div class="header" aria-busy="true">
+      <div class="project-workspace__header" aria-busy="true">
         <app-loading-skeleton variant="detail" [rows]="1" />
       </div>
     }
 
     @if (failed()) {
-      <div class="header">
+      <div class="project-workspace__header">
         <app-error-state [message]="loadFailedMessage" [canRetry]="true" (retry)="retry()" />
       </div>
     }
 
     @if (project(); as current) {
-      <header class="header">
-        <div class="identity">
-          <app-project-avatar [name]="current.name" [projectKey]="current.key" [size]="40" />
-          <div class="title-block">
-            <h2 class="title">{{ current.name }}</h2>
-            <div class="meta">
-              <span class="key-tag">{{ current.key }}</span>
-              <app-lozenge [tone]="current.visibility === 'open' ? 'info' : 'warning'">{{
-                visibilityLabel(current)
-              }}</app-lozenge>
-              <app-lozenge>{{ typeLabel(current) }}</app-lozenge>
-            </div>
-            <p class="lead">
+      <header class="project-workspace__header">
+        <app-project-avatar [name]="current.name" [projectKey]="current.key" [size]="40" />
+        <div class="project-workspace__identity">
+          <div class="project-workspace__title-row">
+            <h2 class="project-workspace__title">{{ current.name }}</h2>
+            <span class="project-workspace__key">{{ current.key }}</span>
+            <app-lozenge [tone]="current.visibility === 'open' ? 'info' : 'warning'">{{
+              visibilityLabel(current)
+            }}</app-lozenge>
+            <app-lozenge>{{ typeLabel(current) }}</app-lozenge>
+          </div>
+          <div class="project-workspace__meta">
+            <span class="project-workspace__lead">
               Responsable: <span data-testid="workspace-lead">{{ leadName(current) }}</span>
-            </p>
+            </span>
+            @if (current.description) {
+              <span
+                class="project-workspace__description"
+                [class.project-workspace__description--open]="descriptionOpen()"
+                >{{ current.description }}</span
+              >
+              @if (isLongDescription(current)) {
+                <button
+                  type="button"
+                  class="project-workspace__toggle"
+                  [attr.aria-expanded]="descriptionOpen()"
+                  (click)="toggleDescription()"
+                >
+                  {{ descriptionOpen() ? 'Ver menos' : 'Ver más' }}
+                </button>
+              }
+            }
           </div>
         </div>
-        @if (current.description) {
-          <p class="description">{{ current.description }}</p>
-        }
       </header>
     }
 
     @if (!failed()) {
-      <nav aria-label="Secciones del proyecto" class="nav" data-scroll-x>
-        <ul class="tabs">
+      <nav aria-label="Secciones del proyecto" class="project-workspace__nav" data-scroll-x>
+        <ul class="project-workspace__tabs">
           @for (section of sections; track section.key) {
-            <li>
+            <li class="project-workspace__tab-item">
               <a
-                class="tab"
+                class="project-workspace__tab"
                 [routerLink]="['/projects', id(), section.key]"
-                [class.active]="isActive(section.key)"
+                [class.project-workspace__tab--active]="isActive(section.key)"
                 [attr.aria-current]="isActive(section.key) ? 'page' : null"
                 >{{ section.label }}</a
               >

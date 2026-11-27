@@ -1,139 +1,169 @@
+@use '../../../../ui/styles/mixins' as m;
+
 :host {
   display: block;
   min-width: 0;
 }
 
-.your-role {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--cl-space-3);
-}
+.project-permissions {
+  &__explain {
+    @include m.flex-row(3, flex-start);
+    margin: 0;
+    padding: var(--cl-space-3) var(--cl-space-4);
+    border: 1px solid var(--cl-border);
+    border-radius: var(--cl-radius-md);
+    background: var(--cl-bg-sunken);
+    color: var(--cl-text);
+    font-size: var(--cl-font-small);
+  }
 
-.muted {
-  color: var(--cl-text-subtle);
-  font-size: var(--cl-font-small);
-}
+  &__role {
+    @include m.cluster(3);
+  }
 
-.count-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  gap: var(--cl-space-3);
-}
+  &__muted {
+    margin: 0;
+    color: var(--cl-text-subtle);
+    font-size: var(--cl-font-small);
+  }
 
-.table-wrap {
-  max-width: 100%;
-  overflow-x: auto;
-}
+  &__counts {
+    @include m.grid-auto(10rem, 3);
+  }
 
-.matrix {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: var(--cl-font-small);
-}
+  &__legend {
+    @include m.cluster(5);
+    margin: 0;
+    padding: var(--cl-space-3) var(--cl-space-4);
+    border-bottom: 1px solid var(--cl-border);
+    color: var(--cl-text);
+    font-size: var(--cl-font-small);
+    list-style: none;
+  }
 
-.matrix th,
-.matrix td {
-  padding: var(--cl-space-3);
-  border-bottom: 1px solid var(--cl-border);
-  text-align: left;
-  vertical-align: middle;
-}
+  &__legend-item {
+    @include m.flex-row(2);
+  }
 
-.permission-col {
-  min-width: 220px;
-}
+  &__swatch {
+    width: 1rem;
+    height: 1rem;
+    border: 1px solid var(--cl-brand);
+    border-radius: var(--cl-radius-sm);
+    background: var(--cl-brand-subtle);
+  }
 
-.role-col,
-.role-cell {
-  width: 140px;
-  text-align: center;
-}
+  &__table-wrap {
+    max-width: 100%;
+    overflow-x: auto;
+  }
 
-.role-col {
-  color: var(--cl-text);
-  font-weight: 600;
-  white-space: nowrap;
-}
+  &__matrix {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--cl-font-small);
 
-.permission-cell {
-  display: flex;
-  flex-direction: column;
-  gap: var(--cl-space-1);
-  font-weight: 600;
-}
+    th,
+    td {
+      padding: var(--cl-space-3);
+      border-bottom: 1px solid var(--cl-divider);
+      text-align: left;
+      vertical-align: middle;
+    }
+  }
 
-.permission-label {
-  color: var(--cl-text);
-}
+  &__permission-col {
+    min-width: 14rem;
+  }
 
-.permission-description {
-  color: var(--cl-text-subtle);
-  font-weight: 400;
-}
+  &__role-col,
+  &__role-cell {
+    width: 8.75rem;
+    text-align: center;
+  }
 
-.current {
-  background: var(--cl-brand-subtle);
-}
+  &__role-col {
+    color: var(--cl-text);
+    font-weight: var(--cl-weight-semibold);
+    white-space: nowrap;
+  }
 
-.role-col.current {
-  color: var(--cl-brand);
-}
+  &__permission-cell {
+    @include m.flex-column(1);
+    font-weight: var(--cl-weight-semibold);
+  }
 
-.you-tag {
-  margin-inline-start: var(--cl-space-1);
-  padding: 0 var(--cl-space-1);
-  border-radius: var(--cl-radius-sm);
-  background: var(--cl-brand);
-  color: var(--cl-bg-surface);
-  font-size: var(--cl-font-caption);
-  font-weight: 600;
-}
+  &__permission-label {
+    color: var(--cl-text);
+  }
 
-.granted {
-  color: var(--cl-success);
-  font-size: var(--cl-font-h3);
-}
+  &__permission-description {
+    color: var(--cl-text-subtle);
+    font-weight: var(--cl-weight-regular);
+  }
 
-.denied {
-  color: var(--cl-text-subtle);
-}
+  &__current {
+    background: var(--cl-brand-subtle);
+  }
 
-.mobile-list {
-  display: grid;
-  gap: var(--cl-space-3);
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
+  &__role-col#{&}__current {
+    color: var(--cl-brand);
+  }
 
-.mobile-card {
-  display: flex;
-  flex-direction: column;
-  gap: var(--cl-space-2);
-  min-width: 0;
-  padding: var(--cl-space-3);
-  border: 1px solid var(--cl-border);
-  border-radius: var(--cl-radius-md);
-}
+  &__you {
+    margin-inline-start: var(--cl-space-1);
+    padding: 0 var(--cl-space-1);
+    border-radius: var(--cl-radius-sm);
+    background: var(--cl-brand);
+    color: var(--cl-text-on-brand);
+    font-size: var(--cl-font-caption);
+    font-weight: var(--cl-weight-semibold);
+  }
 
-.mobile-roles {
-  display: grid;
-  gap: var(--cl-space-2);
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
+  /* Both marks sit in a small round badge, so the dash reads as a deliberate "no" and not as a gap. */
+  &__granted,
+  &__denied {
+    @include m.flex-row(0, center, center);
+    display: inline-flex;
+    width: 1.5rem;
+    height: 1.5rem;
+    border-radius: var(--cl-radius-full);
+    font-size: var(--cl-font-small);
+  }
 
-.mobile-role {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--cl-space-2);
-}
+  &__granted {
+    background: var(--cl-success-bg);
+    color: var(--cl-success-text);
+  }
 
-@media (max-width: 767px) {
-  .count-grid {
-    grid-template-columns: minmax(0, 1fr);
+  &__denied {
+    background: var(--cl-bg-hover);
+    color: var(--cl-text);
+  }
+
+  &__cards {
+    @include m.flex-column(3);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  &__card {
+    @include m.flex-column(2);
+    min-width: 0;
+    padding: var(--cl-space-3);
+    border: 1px solid var(--cl-border);
+    border-radius: var(--cl-radius-md);
+  }
+
+  &__card-roles {
+    @include m.flex-column(2);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  &__card-role {
+    @include m.flex-row(2, center, space-between);
   }
 }

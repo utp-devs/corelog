@@ -15,15 +15,15 @@
       <app-loading-skeleton variant="detail" [rows]="6" />
     } @else {
       @if (actionError(); as message) {
-        <div class="alert" role="alert">
+        <div class="project-sprints__alert" role="alert">
           <p-message severity="warn" [closable]="true" (onClose)="store.clearActionError()">{{
             message
           }}</p-message>
         </div>
       }
 
-      <div class="layout">
-        <div class="side">
+      <div class="project-sprints__layout">
+        <div class="project-sprints__side">
           <app-section title="Sprints" ariaLabel="Sprints del proyecto">
             @if (sprints().length === 0) {
               <app-empty-state
@@ -31,17 +31,22 @@
                 description="Planifica el primero con el formulario de abajo."
               />
             } @else {
-              <ul class="sprint-list" aria-label="Lista de sprints">
+              <ul class="project-sprints__list" aria-label="Lista de sprints">
                 @for (sprint of sprints(); track sprint.id) {
                   <li>
                     <button
                       type="button"
-                      [class.sprint-selected]="sprint.id === selectedId()"
-                      [class.sprint-item]="sprint.id !== selectedId()"
+                      class="project-sprints__item"
+                      [class.project-sprints__item--selected]="sprint.id === selectedId()"
                       [attr.aria-pressed]="sprint.id === selectedId()"
                       (click)="store.selectSprint(sprint.id)"
                     >
-                      <span class="sprint-name" [title]="sprint.name">{{ sprint.name }}</span>
+                      <span class="project-sprints__item-main">
+                        <span class="project-sprints__name" [title]="sprint.name">{{
+                          sprint.name
+                        }}</span>
+                        <span class="project-sprints__dates">{{ dateRangeOf(sprint) }}</span>
+                      </span>
                       <app-lozenge [tone]="statusTone(sprint.status)">{{
                         statusLabel(sprint.status)
                       }}</app-lozenge>
@@ -53,123 +58,141 @@
           </app-section>
 
           <app-section title="Nuevo sprint">
-            <div class="form">
-              <input
-                pInputText
-                type="text"
-                placeholder="Nombre"
-                aria-label="Nombre del sprint"
-                maxlength="80"
-                [value]="draft().name"
-                (input)="setDraft('name', $event)"
-              />
-              <input
-                pInputText
-                type="text"
-                placeholder="Objetivo"
-                aria-label="Objetivo del sprint"
-                maxlength="500"
-                [value]="draft().goal"
-                (input)="setDraft('goal', $event)"
-              />
-              <input
-                pInputText
-                type="date"
-                aria-label="Fecha de inicio"
-                [value]="draft().startDate"
-                (input)="setDraft('startDate', $event)"
-              />
-              <input
-                pInputText
-                type="date"
-                aria-label="Fecha de fin"
-                [value]="draft().endDate"
-                (input)="setDraft('endDate', $event)"
-              />
-              <p-button label="Planificar sprint" (onClick)="store.create()" />
+            <div class="project-sprints__form">
+              <app-field-row #nameRow label="Nombre" [required]="true">
+                <input
+                  pInputText
+                  appFieldControl
+                  type="text"
+                  placeholder="Sprint 3"
+                  maxlength="80"
+                  [value]="draft().name"
+                  (input)="setDraft('name', $event)"
+                />
+              </app-field-row>
+              <app-field-row #goalRow label="Objetivo" [optional]="true">
+                <input
+                  pInputText
+                  appFieldControl
+                  type="text"
+                  maxlength="500"
+                  [value]="draft().goal"
+                  (input)="setDraft('goal', $event)"
+                />
+              </app-field-row>
+              <div class="project-sprints__dates-row">
+                <app-field-row #startRow label="Inicio" [optional]="true">
+                  <app-date-field
+                    [inputId]="startRow.controlId"
+                    [ngModel]="draft().startDate || null"
+                    (ngModelChange)="setDraftDate('startDate', $event)"
+                  />
+                </app-field-row>
+                <app-field-row #endRow label="Fin" [optional]="true">
+                  <app-date-field
+                    [inputId]="endRow.controlId"
+                    [min]="draft().startDate || null"
+                    [ngModel]="draft().endDate || null"
+                    (ngModelChange)="setDraftDate('endDate', $event)"
+                  />
+                </app-field-row>
+              </div>
+              <p-button label="Planificar sprint" icon="pi pi-plus" (onClick)="store.create()" />
             </div>
           </app-section>
         </div>
 
-        <div class="main">
+        <div class="project-sprints__main">
           @if (selected(); as sprint) {
             <app-section
               [title]="sprint.name"
               [description]="sprint.goal || 'Sin objetivo definido.'"
             >
-              <div appSectionActions class="actions">
+              <div appSectionActions class="project-sprints__actions">
+                <app-lozenge [tone]="statusTone(sprint.status)">{{
+                  statusLabel(sprint.status)
+                }}</app-lozenge>
                 @if (sprint.status === 'planned') {
                   <p-button label="Iniciar sprint" (onClick)="store.start(sprint.id)" />
                 }
                 @if (sprint.status === 'active') {
-                  <div class="close-row">
-                    <fieldset
-                      class="close-mode"
-                      role="radiogroup"
-                      aria-label="Destino de las incidencias no cerradas"
-                    >
-                      <label class="radio">
-                        <input
-                          type="radio"
-                          name="close-mode"
-                          value="backlog"
-                          [checked]="closePolicy() === 'backlog'"
-                          (change)="setCloseMode('backlog')"
-                        />
-                        Al backlog
-                      </label>
-                      <label class="radio">
-                        <input
-                          type="radio"
-                          name="close-mode"
-                          value="sprint"
-                          [checked]="closePolicy() === 'sprint'"
-                          (change)="setCloseMode('sprint')"
-                        />
-                        A otro sprint
-                      </label>
-                    </fieldset>
-                    @if (closePolicy() === 'sprint') {
-                      <p-select
-                        ariaLabel="Sprint destino"
-                        placeholder="Sprint planificado"
-                        styleClass="target-select"
-                        [options]="plannedTargets()"
-                        optionLabel="name"
-                        optionValue="id"
-                        [ngModel]="closeTargetId()"
-                        (ngModelChange)="store.setCloseTarget($event)"
-                      />
-                    }
-                    <p-button
-                      severity="danger"
-                      label="Cerrar sprint"
-                      [disabled]="!store.canClose()"
-                      (onClick)="store.close(sprint.id)"
-                    />
-                  </div>
+                  <p-button
+                    severity="danger"
+                    [outlined]="true"
+                    label="Cerrar sprint"
+                    [disabled]="!store.canClose()"
+                    (onClick)="askClose()"
+                  />
                 }
               </div>
-              <div appSectionFooter>
-                <app-lozenge [tone]="statusTone(sprint.status)">{{
-                  statusLabel(sprint.status)
-                }}</app-lozenge>
-              </div>
 
-              <div class="stats">
+              <div class="project-sprints__stats">
                 <app-stat-tile label="Incidencias" [value]="totals().count" />
                 <app-stat-tile label="Puntos" [value]="totals().points" />
-                <app-stat-tile label="Fechas" [value]="dateRangeOf(sprint)" />
               </div>
+              <p class="project-sprints__period">
+                <i class="pi pi-calendar" aria-hidden="true"></i>
+                {{ dateRangeOf(sprint) }}
+              </p>
+
+              @if (sprint.status === 'active') {
+                <fieldset class="project-sprints__policy">
+                  <legend class="project-sprints__policy-title">
+                    Al cerrar, las incidencias sin terminar van
+                  </legend>
+                  <div
+                    class="project-sprints__radios"
+                    role="radiogroup"
+                    aria-label="Destino de las incidencias no cerradas"
+                  >
+                    <label class="project-sprints__radio">
+                      <input
+                        type="radio"
+                        name="close-mode"
+                        value="backlog"
+                        [checked]="closePolicy() === 'backlog'"
+                        (change)="setCloseMode('backlog')"
+                      />
+                      Al backlog
+                    </label>
+                    <label class="project-sprints__radio">
+                      <input
+                        type="radio"
+                        name="close-mode"
+                        value="sprint"
+                        [checked]="closePolicy() === 'sprint'"
+                        (change)="setCloseMode('sprint')"
+                      />
+                      A otro sprint
+                    </label>
+                  </div>
+                  @if (closePolicy() === 'sprint') {
+                    <p-select
+                      ariaLabel="Sprint destino"
+                      placeholder="Sprint planificado"
+                      styleClass="project-sprints__target"
+                      [options]="plannedTargets()"
+                      optionLabel="name"
+                      optionValue="id"
+                      [ngModel]="closeTargetId()"
+                      (ngModelChange)="store.setCloseTarget($event)"
+                    />
+                  }
+                </fieldset>
+              }
             </app-section>
+
+            @if (sprint.status === 'active') {
+              <app-burndown-chart [points]="burndown()" />
+            }
 
             <app-section title="Incidencias del sprint">
               @if (sprint.status !== 'closed') {
-                <div class="add-row">
+                <div class="project-sprints__add">
                   <p-select
                     ariaLabel="Incidencia a añadir"
                     placeholder="Añadir desde el backlog"
-                    styleClass="target-select"
+                    styleClass="project-sprints__target"
                     [options]="assignableOptions()"
                     optionLabel="label"
                     optionValue="value"
@@ -192,10 +215,14 @@
                 [mobileRender]="issueMobile"
               >
                 <ng-template appDataTableCell="title" let-issue>
-                  <span class="issue-title" [title]="issue.title">{{ issue.title }}</span>
+                  <span class="project-sprints__issue-title" [title]="issue.title">{{
+                    issue.title
+                  }}</span>
                 </ng-template>
                 <ng-template appDataTableCell="status" let-issue>
-                  <app-lozenge tone="neutral">{{ issueStatusLabel(issue.status) }}</app-lozenge>
+                  <app-lozenge [category]="issueCategory(issue.status)">{{
+                    issueStatusLabel(issue.status)
+                  }}</app-lozenge>
                 </ng-template>
                 <ng-template appDataTableCell="points" let-issue>
                   {{ issue.storyPoints ?? '-' }}
@@ -221,14 +248,18 @@
               </ng-template>
 
               <ng-template #issueMobile let-issue>
-                <div class="mobile-issue">
-                  <span class="issue-title">{{ issue.title }}</span>
-                  <app-lozenge tone="neutral">{{ issueStatusLabel(issue.status) }}</app-lozenge>
+                <div class="project-sprints__mobile-issue">
+                  <span class="project-sprints__issue-title">{{ issue.title }}</span>
+                  <app-lozenge [category]="issueCategory(issue.status)">{{
+                    issueStatusLabel(issue.status)
+                  }}</app-lozenge>
                 </div>
               </ng-template>
             </app-section>
 
-            <app-burndown-chart [points]="burndown()" />
+            @if (sprint.status !== 'active') {
+              <app-burndown-chart [points]="burndown()" />
+            }
           } @else {
             <app-section>
               <app-empty-state
@@ -245,9 +276,9 @@
                 description="La velocidad aparecerá al cerrar el primer sprint."
               />
             } @else {
-              <ul class="velocity-list">
+              <ul class="project-sprints__velocity">
                 @for (point of velocity(); track point.sprintId) {
-                  <li class="velocity-item">
+                  <li class="project-sprints__velocity-item">
                     <span>{{ point.name }}</span>
                     <strong>{{ point.points }} puntos</strong>
                   </li>
@@ -257,6 +288,16 @@
           </app-section>
         </div>
       </div>
+
+      <app-confirm-modal
+        [open]="closeOpen()"
+        title="Cerrar sprint"
+        [description]="closeDescription()"
+        confirmText="Cerrar sprint"
+        [danger]="true"
+        (confirmed)="confirmClose()"
+        (cancelled)="closeOpen.set(false)"
+      />
     }
   </app-page-container>
 }

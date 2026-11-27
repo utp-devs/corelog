@@ -1,20 +1,24 @@
 @if (accessVariant(); as variant) {
   <app-page-container variant="fluid" pageName="board" [fill]="true">
-    <div class="frame">
+    <div class="project-board">
       <app-error-page [variant]="variant" />
     </div>
   </app-page-container>
 } @else {
   <app-page-container variant="fluid" pageName="board" [ready]="ready()" [fill]="true">
-    <div class="frame">
+    <div class="project-board">
       <app-page-header
         title="Tablero"
-        subtitle="Arrastra una incidencia a otra columna, o usa su selector para cambiarla de columna."
+        [subtitle]="
+          readOnly()
+            ? 'Solo lectura: puedes consultar el tablero, pero no mover incidencias.'
+            : 'Arrastra una incidencia a otra columna, o usa el menú «Mover a» de cada tarjeta.'
+        "
       />
-      <p class="sr-only" role="status" aria-live="polite">{{ store.announcement() }}</p>
+      <p class="project-board__live" role="status" aria-live="polite">{{ announcement() }}</p>
 
       @if (store.moveError(); as message) {
-        <div class="alert" role="alert">
+        <div class="project-board__alert" role="alert">
           <p-message severity="warn" [closable]="true" (onClose)="store.clearMoveError()">{{
             message
           }}</p-message>
@@ -25,9 +29,13 @@
         <app-error-state [message]="loadErrorMessage" [canRetry]="true" (retry)="retry()" />
       } @else if (board(); as current) {
         @if (store.hasColumns()) {
-          <div class="filters" role="search" aria-label="Filtrar tarjetas del tablero">
+          <div
+            class="project-board__filters"
+            role="search"
+            aria-label="Filtrar tarjetas del tablero"
+          >
             <app-search-input
-              class="search-field"
+              class="project-board__search"
               [placeholder]="'Buscar en el tablero'"
               [ariaLabel]="'Buscar en el tablero'"
               [debounceMs]="0"
@@ -35,7 +43,7 @@
               (valueChange)="setSearch($event)"
             />
             <p-select
-              styleClass="priority-field"
+              styleClass="project-board__priority"
               placeholder="Prioridad"
               ariaLabel="Filtrar por prioridad"
               [options]="priorityOptions"
@@ -45,7 +53,7 @@
               [ngModel]="filter().priority"
               (ngModelChange)="setPriority($event)"
             />
-            <label class="mine-toggle">
+            <label class="project-board__mine">
               <p-toggleswitch
                 size="small"
                 ariaLabel="Solo mis incidencias"
@@ -56,8 +64,26 @@
             </label>
           </div>
 
+          @if (isMobile()) {
+            <div class="project-board__switcher" role="tablist" aria-label="Columnas del tablero">
+              @for (column of columns(); track column.id) {
+                <button
+                  type="button"
+                  role="tab"
+                  class="project-board__switch"
+                  [class.project-board__switch--active]="mobileColumn()?.id === column.id"
+                  [attr.aria-selected]="mobileColumn()?.id === column.id"
+                  (click)="selectMobileColumn(column.id)"
+                >
+                  {{ columnName(column) }}
+                  <span class="project-board__switch-count">{{ column.count }}</span>
+                </button>
+              }
+            </div>
+          }
+
           <div
-            class="board"
+            class="project-board__columns"
             role="region"
             [attr.aria-label]="'Tablero ' + current.name"
             data-scroll="inside-board"
@@ -65,41 +91,102 @@
             [attr.data-layout]="isMobile() ? 'mobile-columns' : 'desktop-columns'"
             cdkDropListGroup
           >
-            @for (column of columns(); track column.id) {
+            @for (column of shownColumns(); track column.id) {
               <section
-                class="column"
-                [class.column-over]="overColumnId() === column.id && !isFull(column)"
-                [class.column-full]="isFull(column)"
+                class="project-board__column"
+                data-board-column
+                [class.project-board__column--over]="
+                  overColumnId() === column.id && !isFull(column)
+                "
+                [class.project-board__column--full]="isFull(column)"
                 [attr.aria-labelledby]="'column-' + column.id"
               >
-                <header class="column-header">
-                  <h3 class="column-title" [id]="'column-' + column.id" [attr.title]="column.name">
-                    {{ column.name }}
+                <header class="project-board__column-header">
+                  <h3
+                    class="project-board__column-title"
+                    [id]="'column-' + column.id"
+                    [attr.title]="columnName(column)"
+                  >
+                    {{ columnName(column) }}
                   </h3>
-                  <div class="column-meta">
-                    @if (current.canManageBoard) {
-                      <p-inputnumber
-                        size="small"
-                        styleClass="wip-input"
-                        [min]="1"
-                        placeholder="Sin límite"
-                        [ariaLabel]="'Límite WIP de ' + column.name"
-                        [ngModel]="column.wipLimit ?? null"
-                        (onBlur)="saveWip(column, $event)"
-                        (onKeyDown)="onWipKey(column, $event)"
-                      />
+                  <div class="project-board__column-meta">
+                    <app-lozenge
+                      [tone]="isFull(column) ? 'danger' : 'neutral'"
+                      [appTooltip]="
+                        column.wipLimit !== undefined
+                          ? 'Límite de trabajo en curso: ' + column.wipLimit
+                          : 'Sin límite de trabajo en curso'
+                      "
+                      >{{ countLabel(column) }}</app-lozenge
+                    >
+                    @if (canManage()) {
+                      <app-dropdown-menu
+                        class="project-board__column-menu"
+                        [label]="'Opciones de ' + columnName(column)"
+                        align="end"
+                      >
+                        <button
+                          appMenuTrigger
+                          type="button"
+                          class="project-board__menu-trigger"
+                          appTooltip="Opciones de la columna"
+                          [attr.aria-label]="'Opciones de ' + columnName(column)"
+                        >
+                          <i class="pi pi-ellipsis-v" aria-hidden="true"></i>
+                        </button>
+                        <button
+                          type="button"
+                          role="menuitem"
+                          class="project-board__menu-item"
+                          (click)="startWip(column)"
+                        >
+                          <i class="pi pi-sliders-h" aria-hidden="true"></i>
+                          <span>Editar límite WIP</span>
+                        </button>
+                        @if (column.wipLimit !== undefined) {
+                          <button
+                            type="button"
+                            role="menuitem"
+                            class="project-board__menu-item"
+                            (click)="removeWip(column)"
+                          >
+                            <i class="pi pi-times" aria-hidden="true"></i>
+                            <span>Quitar límite</span>
+                          </button>
+                        }
+                      </app-dropdown-menu>
                     }
-                    <app-lozenge [tone]="isFull(column) ? 'danger' : 'neutral'">{{
-                      countLabel(column)
-                    }}</app-lozenge>
                   </div>
                 </header>
 
+                @if (wipEditing() === column.id) {
+                  <form
+                    class="project-board__wip"
+                    (ngSubmit)="saveWip(column)"
+                    (keydown.escape)="cancelWip()"
+                  >
+                    <p-inputnumber
+                      size="small"
+                      styleClass="project-board__wip-input"
+                      [min]="1"
+                      placeholder="Sin límite"
+                      [ariaLabel]="'Límite WIP de ' + columnName(column)"
+                      [ngModel]="wipDraft()"
+                      [ngModelOptions]="{ standalone: true }"
+                      (ngModelChange)="wipDraft.set($event)"
+                    />
+                    <button type="submit" class="project-board__wip-save">Guardar</button>
+                    <button type="button" class="project-board__wip-cancel" (click)="cancelWip()">
+                      Cancelar
+                    </button>
+                  </form>
+                }
+
                 <div
-                  class="column-body"
+                  class="project-board__column-body"
                   cdkDropList
                   [cdkDropListData]="column.id"
-                  [cdkDropListDisabled]="isFull(column)"
+                  [cdkDropListDisabled]="isFull(column) || readOnly()"
                   (cdkDropListEntered)="onEnter($event.container.data)"
                   (cdkDropListExited)="overColumnId.set(null)"
                   (cdkDropListDropped)="onDrop($event)"
@@ -107,45 +194,35 @@
                   @if (column.cards.length === 0) {
                     <app-empty-state
                       title="Sin incidencias"
-                      description="Arrastra incidencias aquí."
+                      [description]="readOnly() ? '' : 'Arrastra incidencias aquí.'"
                     />
                   } @else {
-                    <ul class="cards" [attr.aria-label]="'Incidencias en ' + column.name">
+                    <ul
+                      class="project-board__cards"
+                      [attr.aria-label]="'Incidencias en ' + columnName(column)"
+                    >
                       @for (card of column.cards; track trackCard(card)) {
-                        <li class="card-item">
+                        <li class="project-board__card-item">
                           <div
-                            class="card-row"
+                            class="project-board__card-row"
                             cdkDrag
                             [cdkDragData]="card.id"
-                            [class.is-dragging]="activeCardId() === card.id"
+                            [cdkDragDisabled]="readOnly() || isMobile()"
+                            [class.project-board__card-row--draggable]="!readOnly() && !isMobile()"
+                            [class.project-board__card-row--dragging]="activeCardId() === card.id"
                             (cdkDragStarted)="activeCardId.set(card.id)"
                             (cdkDragEnded)="activeCardId.set(null)"
                           >
-                            <button
-                              type="button"
-                              class="handle"
-                              cdkDragHandle
-                              [attr.aria-label]="'Arrastrar ' + card.summary"
-                            >
-                              <i class="pi pi-bars" aria-hidden="true"></i>
-                            </button>
-                            <app-board-card [card]="card" />
+                            <app-board-card
+                              [card]="card"
+                              [readOnly]="readOnly()"
+                              [targets]="targetsOf(card.id)"
+                              (moved)="moveCard(card.id, $event)"
+                            />
                             <ng-template cdkDragPreview>
-                              <app-board-card [card]="card" [dragging]="true" />
+                              <app-board-card [card]="card" [dragging]="true" [readOnly]="true" />
                             </ng-template>
                           </div>
-                          <p-select
-                            size="small"
-                            styleClass="move-select"
-                            placeholder="Mover a..."
-                            [ariaLabel]="'Mover ' + card.summary + ' a columna'"
-                            [ngModel]="null"
-                            [options]="moveTargets(card.id)"
-                            optionLabel="name"
-                            optionValue="id"
-                            optionDisabled="disabled"
-                            (onChange)="moveCard(card.id, $event.value)"
-                          />
                         </li>
                       }
                     </ul>
@@ -161,9 +238,9 @@
           />
         }
       } @else {
-        <div class="board board-loading" aria-busy="true" aria-label="Cargando tablero">
+        <div class="project-board__columns" aria-busy="true" aria-label="Cargando tablero">
           @for (index of skeletonColumns; track index) {
-            <div class="column">
+            <div class="project-board__column">
               <p-skeleton height="8rem" />
               <p-skeleton height="8rem" />
               <p-skeleton height="8rem" />

@@ -1,64 +1,98 @@
-.alert {
-  margin: 0;
-}
+@use '../../../../ui/styles/mixins' as m;
+@use '../../../../ui/app-shell/src/menu' as menu;
 
-.position {
-  color: var(--cl-text-subtle);
-  font-variant-numeric: tabular-nums;
-}
-
-.main {
-  display: flex;
-  flex-direction: column;
-  gap: var(--cl-space-1);
-  min-width: 0;
-}
-
-.summary {
-  display: block;
-  min-width: 0;
-  max-width: 100%;
-  overflow: hidden;
-  color: var(--cl-brand);
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.secondary {
-  color: var(--cl-text-subtle);
-  font-size: var(--cl-font-small);
-}
-
-.move-buttons {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--cl-space-1);
-}
-
-.mobile-card {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: var(--cl-space-2);
-  min-width: 0;
-}
-
-.mobile-meta {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--cl-space-2);
-}
-
-@media (max-width: 767px) {
-  /* Touch: the move buttons on the mobile cards and the title link reach 44 px. */
-  .move-buttons p-button {
-    min-width: 44px;
-    min-height: 44px;
+.project-backlog {
+  &__alert {
+    margin: 0;
   }
 
-  .summary {
-    min-height: 44px;
-    line-height: 44px;
+  &__position {
+    color: var(--cl-text-subtle);
+    font-variant-numeric: tabular-nums;
+  }
+
+  &__main {
+    @include m.flex-column(1);
+    min-width: 0;
+  }
+
+  &__summary {
+    @include m.truncate;
+    display: block;
+    max-width: 100%;
+    color: var(--cl-text);
+    font-weight: var(--cl-weight-medium);
+    text-decoration: none;
+
+    &:hover {
+      color: var(--cl-brand);
+      text-decoration: underline;
+    }
+
+    &:focus-visible {
+      outline: none;
+      box-shadow: var(--cl-shadow-focus);
+    }
+  }
+
+  &__key,
+  &__type {
+    color: var(--cl-text-subtle);
+    font-size: var(--cl-font-small);
+  }
+
+  &__order {
+    @include m.flex-row(1, center, flex-end);
+  }
+
+  /* 32 px targets on pointer devices, 44 px on touch screens. */
+  &__arrow {
+    @include m.flex-row(0, center, center);
+    width: var(--cl-control-h-sm);
+    height: var(--cl-control-h-sm);
+    padding: 0;
+    border: 1px solid var(--cl-border-strong);
+    border-radius: var(--cl-radius-md);
+    background: var(--cl-bg-surface);
+    color: var(--cl-text);
+    cursor: pointer;
+
+    &:hover:not(:disabled) {
+      background: var(--cl-bg-hover);
+    }
+
+    &:disabled {
+      border-color: var(--cl-border);
+      color: var(--cl-text-disabled);
+      cursor: not-allowed;
+    }
+
+    &:focus-visible {
+      outline: none;
+      box-shadow: var(--cl-shadow-focus);
+    }
+
+    @media (pointer: coarse) {
+      width: var(--cl-control-h-lg);
+      height: var(--cl-control-h-lg);
+    }
+  }
+
+  &__menu-item {
+    @include menu.menu-item;
+
+    &:disabled {
+      color: var(--cl-text-disabled);
+      cursor: not-allowed;
+    }
+  }
+
+  &__card {
+    @include m.flex-column(2);
+    min-width: 0;
+  }
+
+  &__meta {
+    @include m.cluster(2);
   }
 }

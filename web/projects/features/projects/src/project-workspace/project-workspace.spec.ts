@@ -74,7 +74,7 @@ describe('ProjectWorkspace', () => {
     return fixture.nativeElement as HTMLElement;
   }
 
-  it('shows the project identity, its section tabs and the breadcrumb', async () => {
+  it('shows the project identity, its section tabs and no duplicate breadcrumb', async () => {
     const { fixture } = await open({ projectApi: { get: () => of(demoProject()) } });
 
     expect(root(fixture).querySelector('h2')?.textContent).toContain('Proyecto demo');
@@ -83,10 +83,37 @@ describe('ProjectWorkspace', () => {
         .querySelector('nav[aria-label="Secciones del proyecto"]')
         ?.hasAttribute('data-scroll-x'),
     ).toBe(true);
-    expect(
-      root(fixture).querySelector('nav[aria-label="Ruta de navegación"]')?.textContent,
-    ).toContain('Proyectos');
+    expect(root(fixture).querySelector('nav[aria-label="Ruta de navegación"]')).toBeNull();
     consoleGuard.expectNoConsoleOutput();
+  });
+
+  it('collapses a long description to one line and expands it on demand', async () => {
+    const { fixture } = await open({
+      projectApi: { get: () => of(demoProject({ description: 'x'.repeat(200) })) },
+    });
+
+    const description = root(fixture).querySelector('.project-workspace__description');
+    expect(description?.classList.contains('project-workspace__description--open')).toBe(false);
+    const toggle = root(fixture).querySelector<HTMLButtonElement>('.project-workspace__toggle');
+    expect(toggle?.textContent).toContain('Ver más');
+    toggle?.click();
+    fixture.detectChanges();
+    expect(description?.classList.contains('project-workspace__description--open')).toBe(true);
+    expect(toggle?.getAttribute('aria-expanded')).toBe('true');
+  });
+
+  it('lists the five section tabs and marks the current one', async () => {
+    const { fixture } = await open({ projectApi: { get: () => of(demoProject()) } });
+
+    const tabs = Array.from(root(fixture).querySelectorAll<HTMLElement>('.project-workspace__tab'));
+    expect(tabs.map((tab) => tab.textContent?.trim())).toEqual([
+      'Tablero',
+      'Backlog',
+      'Sprints',
+      'Calendario',
+      'Permisos',
+    ]);
+    expect(tabs[0].getAttribute('aria-current')).toBe('page');
   });
 
   it('shows the 403 page instead of the tabs when the project is forbidden', async () => {

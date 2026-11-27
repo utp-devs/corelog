@@ -1,4 +1,11 @@
-import type { Project, ProjectMemberRole, ProjectType, ProjectVisibility } from '@corelog/core';
+import type {
+  OrgRole,
+  OrgWhoCan,
+  Project,
+  ProjectMemberRole,
+  ProjectType,
+  ProjectVisibility,
+} from '@corelog/core';
 
 export type VisibilityFilter = 'all' | 'open' | 'private';
 export type ArchivedFilter = 'active' | 'archived' | 'all';
@@ -35,4 +42,32 @@ export function filterProjects(
     if (term && !`${project.name} ${project.key}`.toLowerCase().includes(term)) return false;
     return true;
   });
+}
+
+export interface CreateProjectRights {
+  readonly allowed: boolean;
+  /** Spanish explanation shown as a tooltip when creation is not allowed. */
+  readonly reason: string | null;
+}
+
+/**
+ * Who may create projects: global admins, organization owners and admins, and organization members
+ * when the organization policy opens creation to members.
+ */
+export function createProjectRights(
+  globalRole: string | null | undefined,
+  orgRole: OrgRole | null | undefined,
+  policy: OrgWhoCan | null | undefined,
+): CreateProjectRights {
+  if (globalRole === 'admin' || orgRole === 'owner' || orgRole === 'admin') {
+    return { allowed: true, reason: null };
+  }
+  if (orgRole === 'member' && policy === 'members') return { allowed: true, reason: null };
+  if (orgRole === 'guest') {
+    return { allowed: false, reason: 'Los invitados no pueden crear proyectos.' };
+  }
+  return {
+    allowed: false,
+    reason: 'Solo los administradores de la organización pueden crear proyectos.',
+  };
 }

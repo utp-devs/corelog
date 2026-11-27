@@ -1,214 +1,229 @@
-/* Fluid template: the frame keeps the gutter, the board fills the width and scrolls horizontally inside itself. */
-.frame {
-  display: flex;
-  flex-direction: column;
+@use '../../../../ui/styles/mixins' as m;
+@use '../../../../ui/app-shell/src/menu' as menu;
+@use '../../../../ui/app-shell/src/icon-button' as ib;
+
+/* Fluid template: the frame keeps the gutter, the columns fill the width and scroll inside their own box. */
+.project-board {
+  @include m.flex-column(4);
   flex: 1 1 auto;
-  min-height: 0;
-  gap: var(--cl-space-4);
   box-sizing: border-box;
   width: 100%;
   min-width: 0;
+  min-height: 0;
   padding-inline: var(--cl-gutter);
-}
 
-.sr-only {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0 0 0 0);
-  white-space: nowrap;
-}
-
-.alert {
-  margin: 0;
-}
-
-.filters {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--cl-space-3);
-}
-
-.search-field {
-  width: 280px;
-  max-width: 100%;
-}
-
-.priority-field {
-  width: 160px;
-  max-width: 100%;
-}
-
-.mine-toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--cl-space-2);
-  cursor: pointer;
-}
-
-/* Horizontal scroll is confined to this box; the page itself never scrolls sideways. */
-.board {
-  flex: 1 1 auto;
-  min-height: 0;
-  display: grid;
-  grid-auto-columns: minmax(260px, 1fr);
-  grid-auto-flow: column;
-  gap: var(--cl-space-4);
-  align-items: stretch;
-  box-sizing: border-box;
-  width: 100%;
-  min-width: 0;
-  max-width: 100%;
-  overflow-x: auto;
-  /* Paint containment keeps the columns inside this box; without it the board widens the whole document. */
-  contain: paint;
-  padding-bottom: var(--cl-space-3);
-}
-
-.column {
-  display: flex;
-  flex-direction: column;
-  gap: var(--cl-space-3);
-  box-sizing: border-box;
-  min-width: 0;
-  padding: var(--cl-space-3);
-  border: 1px solid var(--cl-border);
-  border-radius: var(--cl-radius-lg);
-  background: var(--cl-bg-sunken);
-}
-
-.column-over {
-  border-color: var(--cl-brand);
-  background: var(--cl-brand-subtle);
-}
-
-.column-full {
-  border-color: var(--cl-danger);
-}
-
-.column-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--cl-space-2);
-  min-width: 0;
-}
-
-.column-title {
-  overflow: hidden;
-  margin: 0;
-  color: var(--cl-text);
-  font-size: var(--cl-font-body-strong);
-  font-weight: 600;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.column-meta {
-  display: flex;
-  align-items: center;
-  gap: var(--cl-space-2);
-  flex-shrink: 0;
-}
-
-.wip-input {
-  width: 96px;
-}
-
-/* Vertical scroll is inside each column, so long columns never stretch the page. */
-.column-body {
-  display: flex;
-  flex-direction: column;
-  min-height: 120px;
-  max-height: min(60vh, 640px);
-  overflow-y: auto;
-}
-
-.cards {
-  display: grid;
-  gap: var(--cl-space-3);
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.card-item {
-  display: grid;
-  gap: var(--cl-space-2);
-  min-width: 0;
-}
-
-.card-row {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--cl-space-2);
-  min-width: 0;
-}
-
-.card-row app-board-card {
-  display: flex;
-  flex: 1 1 auto;
-  min-width: 0;
-}
-
-.card-row.is-dragging {
-  opacity: 0.4;
-}
-
-.handle {
-  flex-shrink: 0;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 32px;
-  padding: 0;
-  border: 1px solid transparent;
-  border-radius: var(--cl-radius-sm);
-  background: transparent;
-  color: var(--cl-text-subtle);
-  cursor: grab;
-  touch-action: none;
-}
-
-.handle:focus-visible {
-  outline: 2px solid var(--cl-brand);
-  outline-offset: 2px;
-}
-
-.move-select {
-  width: 100%;
-}
-
-@media (max-width: 767px) {
-  .board {
-    grid-auto-columns: minmax(82vw, 1fr);
+  &__live {
+    @include m.visually-hidden;
   }
 
-  .search-field {
+  &__alert {
+    margin: 0;
+  }
+
+  &__filters {
+    @include m.cluster(3);
+  }
+
+  &__search {
+    width: 17.5rem;
+    max-width: 100%;
+  }
+
+  &__priority {
+    width: 10rem;
+    max-width: 100%;
+  }
+
+  &__mine {
+    @include m.flex-row(2);
+    cursor: pointer;
+  }
+
+  /* One column at a time on phones: a segmented switcher with the count of each column. */
+  &__switcher {
+    @include m.flex-row(1);
+    padding: var(--cl-space-1);
+    overflow-x: auto;
+    border-radius: var(--cl-radius-md);
+    background: var(--cl-bg-sunken);
+  }
+
+  &__switch {
+    @include m.flex-row(2, center, center);
+    flex: 1 0 auto;
+    min-height: var(--cl-control-h-lg);
+    padding: 0 var(--cl-space-3);
+    border: 0;
+    border-radius: var(--cl-radius-sm);
+    background: transparent;
+    color: var(--cl-text-subtle);
+    font: inherit;
+    white-space: nowrap;
+    cursor: pointer;
+
+    &--active {
+      background: var(--cl-bg-surface);
+      color: var(--cl-text);
+      font-weight: var(--cl-weight-semibold);
+      box-shadow: var(--cl-shadow-1);
+    }
+
+    &:focus-visible {
+      outline: none;
+      box-shadow: var(--cl-shadow-focus);
+    }
+  }
+
+  &__switch-count {
+    min-width: 1.5em;
+    padding: 0 var(--cl-space-2);
+    border-radius: var(--cl-radius-full);
+    background: var(--cl-bg-hover);
+    font-size: var(--cl-font-small);
+    text-align: center;
+  }
+
+  /* Horizontal and vertical scroll stay inside this box; the page itself never scrolls sideways. */
+  &__columns {
+    display: grid;
+    flex: 1 1 auto;
+    grid-auto-columns: minmax(16.25rem, 1fr);
+    grid-auto-flow: column;
+    gap: var(--cl-space-4);
+    align-items: start;
+    box-sizing: border-box;
     width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    min-height: 0;
+    overflow: auto;
+    padding-bottom: var(--cl-space-8);
   }
 
-  /* Touch targets: the drag handle, the "Mover a..." selector and the filter toggle reach 44 px. */
-  .handle {
-    width: 44px;
-    height: 44px;
+  &__column {
+    @include m.flex-column(3);
+    box-sizing: border-box;
+    min-width: 0;
+    padding: var(--cl-space-3);
+    border: 1px solid var(--cl-border);
+    border-radius: var(--cl-radius-lg);
+    background: var(--cl-bg-sunken);
+
+    &--over {
+      border-color: var(--cl-brand);
+      background: var(--cl-brand-subtle);
+    }
+
+    &--full {
+      border-color: var(--cl-danger);
+    }
   }
 
-  .move-select {
-    min-height: 44px;
+  &__column-header {
+    @include m.flex-row(2, center, space-between);
+    min-width: 0;
   }
 
-  .mine-toggle {
-    min-height: 44px;
+  &__column-title {
+    @include m.truncate;
+    margin: 0;
+    color: var(--cl-text);
+    font-size: var(--cl-font-body-strong);
+    font-weight: var(--cl-weight-semibold);
   }
-}
 
-@media (prefers-reduced-motion: reduce) {
-  .card-row {
-    transition: none;
+  &__column-meta {
+    @include m.flex-row(1);
+    flex: none;
+  }
+
+  &__menu-trigger {
+    @include ib.icon-button;
+    width: var(--cl-control-h-sm);
+    height: var(--cl-control-h-sm);
+    color: var(--cl-text-subtle);
+  }
+
+  &__menu-item {
+    @include menu.menu-item;
+  }
+
+  &__wip {
+    @include m.cluster(2);
+  }
+
+  &__wip-input {
+    width: 7rem;
+  }
+
+  &__wip-save,
+  &__wip-cancel {
+    min-height: var(--cl-control-h-sm);
+    padding: 0 var(--cl-space-3);
+    border: 1px solid var(--cl-border-strong);
+    border-radius: var(--cl-radius-md);
+    background: var(--cl-bg-surface);
+    color: var(--cl-text);
+    font: inherit;
+    cursor: pointer;
+
+    &:focus-visible {
+      outline: none;
+      box-shadow: var(--cl-shadow-focus);
+    }
+
+    @media (pointer: coarse) {
+      min-height: var(--cl-control-h-lg);
+    }
+  }
+
+  &__wip-save {
+    border-color: var(--cl-brand);
+    background: var(--cl-brand);
+    color: var(--cl-text-on-brand);
+  }
+
+  &__column-body {
+    @include m.flex-column;
+    min-height: 7.5rem;
+  }
+
+  &__cards {
+    @include m.flex-column(3);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  &__card-item {
+    min-width: 0;
+  }
+
+  &__card-row {
+    display: flex;
+    min-width: 0;
+
+    &--draggable {
+      cursor: grab;
+    }
+
+    &--dragging {
+      opacity: 0.4;
+    }
+  }
+
+  @include m.respond-down(768px) {
+    &__columns {
+      grid-auto-columns: minmax(0, 1fr);
+      grid-auto-flow: row;
+    }
+
+    &__search {
+      width: 100%;
+    }
+
+    &__mine {
+      min-height: var(--cl-control-h-lg);
+    }
   }
 }

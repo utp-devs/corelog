@@ -1,4 +1,11 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, computed, inject } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  DestroyRef,
+  computed,
+  inject,
+  signal,
+} from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
@@ -12,22 +19,26 @@ import {
   WorkItemStatus,
   projectAccessVariantOf,
 } from '@corelog/core';
-import { projectIdParam } from '../shared/project-scope';
+import { ConfirmModal } from '@corelog/ui/confirm-modal';
 import { DataTable, DataTableCell, DataTableColumn } from '@corelog/ui/data-table';
+import { DateField } from '@corelog/ui/date-field';
 import { EmptyState } from '@corelog/ui/empty-state';
 import { ErrorPage } from '@corelog/ui/error-page';
 import { ErrorState } from '@corelog/ui/error-state';
-import { Lozenge, LozengeTone } from '@corelog/ui/lozenge';
+import { FieldControl, FieldRow } from '@corelog/ui/field-row';
+import { Lozenge, LozengeCategory, LozengeTone } from '@corelog/ui/lozenge';
 import { LoadingSkeleton } from '@corelog/ui/loading-skeleton';
 import { PageContainer } from '@corelog/ui/page-container';
 import { PageHeader } from '@corelog/ui/page-header';
-import { Section, SectionActions, SectionFooter } from '@corelog/ui/section';
+import { Section, SectionActions } from '@corelog/ui/section';
 import { StatTile } from '@corelog/ui/stat-tile';
 import { Button } from 'primeng/button';
 import { InputText } from 'primeng/inputtext';
 import { Message } from 'primeng/message';
 import { Select } from 'primeng/select';
 
+import { projectIdParam } from '../shared/project-scope';
+import { STATUS_CATEGORIES, statusName } from '../shared/work-labels';
 import { BurndownChart } from './burndown-chart';
 
 const STATUS_LABELS: Record<SprintStatus, string> = {
@@ -40,13 +51,6 @@ const STATUS_TONES: Record<SprintStatus, LozengeTone> = {
   active: 'success',
   closed: 'neutral',
 };
-const ISSUE_STATUS_LABELS: Record<WorkItemStatus, string> = {
-  open: 'Abierta',
-  in_progress: 'En curso',
-  resolved: 'Resuelta',
-  closed: 'Cerrada',
-};
-
 const ISSUE_COLUMNS: DataTableColumn[] = [
   { key: 'title', title: 'Incidencia', mobilePrimary: true },
   { key: 'status', title: 'Estado' },
@@ -68,6 +72,10 @@ const ISSUE_COLUMNS: DataTableColumn[] = [
     Message,
     Select,
     BurndownChart,
+    ConfirmModal,
+    DateField,
+    FieldControl,
+    FieldRow,
     DataTable,
     DataTableCell,
     EmptyState,
@@ -79,7 +87,6 @@ const ISSUE_COLUMNS: DataTableColumn[] = [
     PageHeader,
     Section,
     SectionActions,
-    SectionFooter,
     StatTile,
   ],
   templateUrl: './project-sprints-page.html',
@@ -105,6 +112,17 @@ export class ProjectSprintsPage {
   protected readonly actionError = this.store.actionError;
   protected readonly loadErrorMessage = this.store.loadErrorMessage;
   protected readonly issueColumns = ISSUE_COLUMNS;
+  /** The confirmation of the close action is open. */
+  protected readonly closeOpen = signal(false);
+  protected readonly closeDescription = computed(() => {
+    const sprint = this.selected();
+    const target =
+      this.closePolicy() === 'sprint'
+        ? this.plannedTargets().find((item) => item.id === this.closeTargetId())?.name
+        : undefined;
+    const destination = target ? `al sprint ${target}` : 'al backlog';
+    return `Se cerrará ${sprint?.name ?? 'el sprint'}. Las incidencias sin terminar pasarán ${destination}. Esta acción no se puede deshacer.`;
+  });
   protected readonly assignableOptions = computed(() =>
     this.store.assignableBacklog().map((item) => ({ value: item.id, label: item.summary })),
   );
@@ -130,17 +148,37 @@ export class ProjectSprintsPage {
   }
 
   protected issueStatusLabel(status: WorkItemStatus): string {
-    return ISSUE_STATUS_LABELS[status] ?? status;
+    return statusName(status, status);
   }
 
+  protected issueCategory(status: WorkItemStatus): LozengeCategory {
+    return STATUS_CATEGORIES[status] ?? 'todo';
+  }
+
+  /** Dates of a sprint as dd/MM/yyyy. */
   protected dateRangeOf(sprint: Sprint): string {
     return sprint.startDate && sprint.endDate
-      ? `${sprint.startDate} → ${sprint.endDate}`
+      ? `${formatDay(sprint.startDate)} - ${formatDay(sprint.endDate)}`
       : 'Sin fechas';
   }
 
   protected setDraft(field: keyof SprintDraft, event: Event): void {
     this.store.setDraft({ [field]: (event.target as HTMLInputElement).value });
+  }
+
+  /** Date fields give ISO days or null; the draft keeps an empty text for no date. */
+  protected setDraftDate(field: 'startDate' | 'endDate', value: string | null): void {
+    this.store.setDraft({ [field]: value ?? '' });
+  }
+
+  protected askClose(): void {
+    if (this.store.canClose()) this.closeOpen.set(true);
+  }
+
+  protected confirmClose(): void {
+    const sprint = this.selected();
+    this.closeOpen.set(false);
+    if (sprint) this.store.close(sprint.id);
   }
 
   protected setCloseMode(policy: SprintUnfinishedPolicy): void {
@@ -154,4 +192,10 @@ export class ProjectSprintsPage {
   protected canRemove(sprint: Sprint): boolean {
     return sprint.status !== 'closed';
   }
+}
+
+/** ISO day (2026-11-19) as dd/MM/yyyy. Other text is returned unchanged. */
+function formatDay(value: string): string {
+  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(value);
+  return match ? `${match[3]}/${match[2]}/${match[1]}` : value;
 }

@@ -12,12 +12,14 @@
     <app-page-header title="Proyectos" subtitle="Organiza el trabajo en espacios independientes.">
       <div appPageHeaderActions>
         <span
-          [pTooltip]="isAdmin() ? undefined : 'Solo los administradores pueden crear proyectos.'"
+          class="projects-page__create"
+          [appTooltip]="rights().reason ?? ''"
+          [appTooltipDisabled]="canCreate()"
         >
           <p-button
             label="Nuevo proyecto"
             icon="pi pi-plus"
-            [disabled]="!isAdmin()"
+            [disabled]="!canCreate()"
             (onClick)="openCreate()"
           />
         </span>
@@ -25,7 +27,7 @@
     </app-page-header>
 
     <app-toolbar>
-      <div appToolbarLeft class="filters">
+      <div appToolbarLeft class="projects-page__filters">
         <app-search-input
           [(value)]="query"
           [placeholder]="'Buscar por nombre o clave'"
@@ -42,7 +44,7 @@
         </div>
         <p-select
           ariaLabel="Filtrar por estado"
-          styleClass="archived-filter"
+          styleClass="projects-page__archived"
           [options]="archivedOptions"
           optionLabel="label"
           optionValue="value"
@@ -53,9 +55,9 @@
     </app-toolbar>
 
     @if (loading()) {
-      <ul class="grid" aria-label="Cargando proyectos" aria-busy="true">
+      <ul class="projects-page__skeletons" aria-label="Cargando proyectos" aria-busy="true">
         @for (slot of skeletonSlots; track slot) {
-          <li class="card-item">
+          <li class="projects-page__skeleton">
             <app-section>
               <app-loading-skeleton variant="card" [rows]="2" />
             </app-section>
@@ -71,8 +73,10 @@
           description="Crea el primero para organizar el trabajo en espacios independientes."
         >
           <div action>
-            @if (isAdmin()) {
-              <p-button label="Nuevo proyecto" (onClick)="openCreate()" />
+            @if (canCreate()) {
+              <p-button label="Nuevo proyecto" icon="pi pi-plus" (onClick)="openCreate()" />
+            } @else {
+              <p class="projects-page__hint">{{ rights().reason }}</p>
             }
           </div>
         </app-empty-state>
@@ -87,27 +91,32 @@
     } @else {
       <app-card-grid ariaLabel="Proyectos" [minCardWidth]="280" [fill]="true">
         @for (project of visible(); track project.id) {
-          <article class="card" [attr.data-testid]="'project-card-' + project.key">
-            <header class="card-header">
+          <article
+            class="projects-page__card"
+            [class.projects-page__card--archived]="project.archivedAt"
+            [attr.data-testid]="'project-card-' + project.key"
+          >
+            <header class="projects-page__card-header">
               <app-project-avatar [name]="project.name" [projectKey]="project.key" [size]="40" />
-              <div class="card-title">
-                <h3 class="name" [attr.title]="project.name">{{ project.name }}</h3>
-                <span class="key">{{ project.key }}</span>
+              <div class="projects-page__card-title">
+                <h3 class="projects-page__name" [attr.title]="project.name">{{ project.name }}</h3>
+                <span class="projects-page__key">{{ project.key }}</span>
               </div>
             </header>
 
-            <p class="description" [attr.title]="project.description || null">
+            <p class="projects-page__description" [attr.title]="project.description || null">
               {{ project.description || 'Sin descripción' }}
             </p>
 
-            <p class="lead">
-              Responsable:
+            <p class="projects-page__lead">
+              <i class="pi pi-user" aria-hidden="true"></i>
+              <span class="projects-page__lead-label">Responsable:</span>
               <span [attr.data-testid]="'project-lead-' + project.key">{{
                 leadName(project)
               }}</span>
             </p>
 
-            <div class="tags">
+            <div class="projects-page__tags">
               <app-lozenge [tone]="project.visibility === 'open' ? 'info' : 'warning'">{{
                 visibilityLabel(project)
               }}</app-lozenge>
@@ -117,14 +126,14 @@
               }
             </div>
 
-            <footer class="card-actions">
-              <button type="button" class="link-action" (click)="openBoard(project)">
+            <footer class="projects-page__card-actions">
+              <button type="button" class="projects-page__link" (click)="openBoard(project)">
                 <i class="pi pi-briefcase" aria-hidden="true"></i>
                 <span>Abrir tablero</span>
               </button>
               <button
                 type="button"
-                class="link-action"
+                class="projects-page__link"
                 [attr.aria-pressed]="isSelected(project)"
                 (click)="selectProject(project)"
               >
@@ -141,10 +150,10 @@
         [title]="membersTitle()"
         description="Líder, colaborador o lector. Los cambios se aplican al momento."
       >
-        <div class="inline-form">
+        <div class="projects-page__form">
           <input
             pInputText
-            class="member-input"
+            class="projects-page__input-member"
             type="text"
             placeholder="UUID del usuario"
             aria-label="UUID del usuario"
@@ -168,11 +177,13 @@
             description="Agrega a un usuario con su UUID para empezar."
           />
         } @else {
-          <ul class="item-list" aria-label="Miembros del proyecto">
+          <ul class="projects-page__list" aria-label="Miembros del proyecto">
             @for (member of members(); track member.userId) {
-              <li class="item">
-                <span class="item-text" [attr.title]="member.userId">{{ member.userId }}</span>
-                <div class="item-actions">
+              <li class="projects-page__item">
+                <span class="projects-page__item-text" [attr.title]="member.userId">{{
+                  member.userId
+                }}</span>
+                <div class="projects-page__item-actions">
                   <p-select
                     size="small"
                     [ariaLabel]="'Rol de ' + member.userId"
@@ -200,13 +211,13 @@
         title="Etiquetas y componentes"
         description="Organizan las incidencias dentro del proyecto."
       >
-        <div class="two-columns">
-          <div class="column">
-            <h3 class="subtitle">Etiquetas</h3>
-            <div class="inline-form">
+        <div class="projects-page__columns">
+          <div class="projects-page__column">
+            <h3 class="projects-page__subtitle">Etiquetas</h3>
+            <div class="projects-page__form">
               <input
                 pInputText
-                class="label-input"
+                class="projects-page__input-label"
                 type="text"
                 placeholder="Nueva etiqueta"
                 aria-label="Nombre de la etiqueta"
@@ -230,10 +241,12 @@
             @if (labels().length === 0) {
               <app-empty-state title="Aún no hay etiquetas" />
             } @else {
-              <ul class="item-list" aria-label="Etiquetas del proyecto">
+              <ul class="projects-page__list" aria-label="Etiquetas del proyecto">
                 @for (label of labels(); track label.id) {
-                  <li class="item">
-                    <span class="item-text">{{ label.name }} ({{ label.color }})</span>
+                  <li class="projects-page__item">
+                    <span class="projects-page__item-text"
+                      >{{ label.name }} ({{ label.color }})</span
+                    >
                     <p-button
                       label="Eliminar"
                       severity="danger"
@@ -247,12 +260,12 @@
             }
           </div>
 
-          <div class="column">
-            <h3 class="subtitle">Componentes</h3>
-            <div class="inline-form">
+          <div class="projects-page__column">
+            <h3 class="projects-page__subtitle">Componentes</h3>
+            <div class="projects-page__form">
               <input
                 pInputText
-                class="component-name-input"
+                class="projects-page__input-name"
                 type="text"
                 placeholder="Nuevo componente"
                 aria-label="Nombre del componente"
@@ -261,7 +274,7 @@
               />
               <input
                 pInputText
-                class="component-description-input"
+                class="projects-page__input-description"
                 type="text"
                 placeholder="Descripción"
                 aria-label="Descripción del componente"
@@ -277,10 +290,10 @@
             @if (components().length === 0) {
               <app-empty-state title="Aún no hay componentes" />
             } @else {
-              <ul class="item-list" aria-label="Componentes del proyecto">
+              <ul class="projects-page__list" aria-label="Componentes del proyecto">
                 @for (component of components(); track component.id) {
-                  <li class="item">
-                    <span class="item-text"
+                  <li class="projects-page__item">
+                    <span class="projects-page__item-text"
                       >{{ component.name
                       }}{{ component.description ? ' - ' + component.description : '' }}</span
                     >

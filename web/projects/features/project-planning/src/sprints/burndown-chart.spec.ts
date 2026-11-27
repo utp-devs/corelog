@@ -4,7 +4,7 @@ import { BurndownPoint } from '@corelog/core';
 import { guardConsole } from '@corelog/core/testing';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { BurndownChart } from './burndown-chart';
+import { BurndownChart, formatBurndownDate } from './burndown-chart';
 
 @Component({
   imports: [BurndownChart],
@@ -55,9 +55,19 @@ describe('BurndownChart', () => {
   it('explains that the chart needs dates when there are no points', () => {
     const fixture = render([]);
 
+    expect(fixture.nativeElement.textContent).toContain('Aún no hay datos de burndown');
     expect(fixture.nativeElement.textContent).toContain(
-      'El burndown necesita fechas de inicio y fin.',
+      'El burndown necesita fechas de inicio y fin del sprint.',
     );
     consoleGuard.expectNoConsoleOutput();
+  });
+
+  it('labels the date axis and the table with short Spanish dates', () => {
+    const fixture = render(points);
+
+    const firstRowHeader = fixture.nativeElement.querySelector('tbody th[scope="row"]');
+    expect(firstRowHeader?.textContent).toBe('2 nov');
+    expect(formatBurndownDate('2026-12-15')).toBe('15 dic');
+    expect(formatBurndownDate('sin fecha')).toBe('sin fecha');
   });
 });

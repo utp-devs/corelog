@@ -1,3 +1,4 @@
+import { NgTemplateOutlet } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -9,24 +10,26 @@ import {
   untracked,
 } from '@angular/core';
 import {
+  BreakpointService,
   CalendarEvent,
   CalendarEventKind,
   CalendarStore,
   isoDate,
   monthCells,
+  PROJECT_MOBILE_QUERY,
   projectAccessVariantOf,
 } from '@corelog/core';
-import { EmptyState } from '@corelog/ui/empty-state';
 import { ErrorPage } from '@corelog/ui/error-page';
 import { ErrorState } from '@corelog/ui/error-state';
 import { LoadingSkeleton } from '@corelog/ui/loading-skeleton';
-import { Lozenge, LozengeTone } from '@corelog/ui/lozenge';
 import { PageContainer } from '@corelog/ui/page-container';
 import { PageHeader } from '@corelog/ui/page-header';
+import { AppTooltip } from '@corelog/ui/tooltip';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { SelectButton } from 'primeng/selectbutton';
 
+import { shortKeyOf } from '../shared/issue-key';
 import { injectProjectId } from '../shared/project-route';
 
 type CalendarView = 'month' | 'list';
@@ -42,10 +45,10 @@ const KIND_LABELS: Record<CalendarEventKind, string> = {
   issue_due: 'Fecha límite',
 };
 
-const KIND_TONES: Record<CalendarEventKind, LozengeTone> = {
-  sprint_start: 'info',
-  sprint_end: 'neutral',
-  issue_due: 'warning',
+const KIND_ICONS: Record<CalendarEventKind, string> = {
+  sprint_start: 'pi pi-play',
+  sprint_end: 'pi pi-flag',
+  issue_due: 'pi pi-clock',
 };
 
 const WEEKDAYS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
@@ -58,15 +61,15 @@ const LOAD_FAILED_MESSAGE =
   selector: 'app-project-calendar-page',
   imports: [
     FormsModule,
+    NgTemplateOutlet,
     RouterLink,
     SelectButton,
+    AppTooltip,
     PageContainer,
     PageHeader,
-    EmptyState,
     ErrorPage,
     ErrorState,
     LoadingSkeleton,
-    Lozenge,
   ],
   templateUrl: './project-calendar-page.html',
   styleUrl: './project-calendar-page.scss',
@@ -75,9 +78,15 @@ const LOAD_FAILED_MESSAGE =
 export class ProjectCalendarPage implements OnInit {
   protected readonly calendar = inject(CalendarStore);
   protected readonly projectId = injectProjectId();
+  /** Phones always get the agenda: a month grid does not fit there. */
+  protected readonly isMobile = inject(BreakpointService).matches(PROJECT_MOBILE_QUERY);
 
   protected readonly view = signal<CalendarView>('month');
   protected readonly viewOptions = VIEW_OPTIONS;
+  protected readonly activeView = computed<CalendarView>(() =>
+    this.isMobile() ? 'list' : this.view(),
+  );
+  protected readonly today = isoDate(new Date());
   protected readonly weekdays = WEEKDAYS;
   protected readonly loadFailedMessage = LOAD_FAILED_MESSAGE;
 
@@ -125,8 +134,26 @@ export class ProjectCalendarPage implements OnInit {
     return KIND_LABELS[kind];
   }
 
-  protected kindTone(kind: CalendarEventKind): LozengeTone {
-    return KIND_TONES[kind];
+  protected kindIcon(kind: CalendarEventKind): string {
+    return KIND_ICONS[kind];
+  }
+
+  protected shortKey(issueId: string): string {
+    return shortKeyOf(issueId);
+  }
+
+  protected isToday(cell: Date): boolean {
+    return isoDate(cell) === this.today;
+  }
+
+  /** Day of the agenda as a Spanish date, for example "jueves 5 de noviembre". */
+  protected formatListDate(iso: string): string {
+    const [year, month, day] = iso.split('-').map(Number);
+    return new Date(year, month - 1, day).toLocaleDateString('es-ES', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+    });
   }
 
   protected shift(months: number): void {

@@ -126,4 +126,13 @@ describe('ProjectPermissionsPage', () => {
       fixture.nativeElement.querySelector('[aria-label="Matriz de permisos por rol"]'),
     ).not.toBeNull();
   });
+
+  it('explains the matrix with a legend and how roles change', async () => {
+    const fixture = await open();
+
+    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
+    expect(text).toContain('Permitido');
+    expect(text).toContain('Tu rol');
+    expect(text).toContain('Esta página es de consulta');
+  });
 });

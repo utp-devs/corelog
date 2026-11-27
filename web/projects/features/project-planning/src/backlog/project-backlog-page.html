@@ -6,11 +6,26 @@
   <app-page-container variant="wide" pageName="backlog" [ready]="ready()" [fill]="true">
     <app-page-header
       title="Backlog"
-      subtitle="Las incidencias de arriba se trabajan primero. Usa las flechas para reordenarlas."
-    />
+      [subtitle]="
+        readOnly()
+          ? 'Solo lectura: las incidencias de arriba se trabajan primero.'
+          : 'Las incidencias de arriba se trabajan primero. Usa las flechas o el menú de cada fila para reordenarlas.'
+      "
+    >
+      @if (scope.projectId(); as projectId) {
+        <div appPageHeaderActions>
+          <p-button
+            label="Planificar sprints"
+            icon="pi pi-calendar"
+            [outlined]="true"
+            [routerLink]="['/projects', projectId, 'sprints']"
+          />
+        </div>
+      }
+    </app-page-header>
 
     @if (store.moveError(); as message) {
-      <div class="alert" role="alert">
+      <div class="project-backlog__alert" role="alert">
         <p-message severity="warn" [closable]="true" (onClose)="store.clearMoveError()">{{
           message
         }}</p-message>
@@ -31,15 +46,21 @@
         (retry)="retry()"
       >
         <ng-template appDataTableCell="position" let-row>
-          <span class="position">{{ positionOf(row) }}</span>
+          <span class="project-backlog__position">{{ positionOf(row) }}</span>
         </ng-template>
         <ng-template appDataTableCell="summary" let-row>
-          <div class="main">
-            <a class="summary" [routerLink]="['/issues', row.id]" [title]="row.summary">{{
-              row.summary
-            }}</a>
-            <span class="secondary">{{ row.type }}</span>
+          <div class="project-backlog__main">
+            <a
+              class="project-backlog__summary"
+              [routerLink]="['/issues', row.id]"
+              [title]="row.summary"
+              >{{ row.summary }}</a
+            >
+            <span class="project-backlog__key">{{ shortKey(row) }}</span>
           </div>
+        </ng-template>
+        <ng-template appDataTableCell="type" let-row>
+          {{ typeLabel(row.type) }}
         </ng-template>
         <ng-template appDataTableCell="priority" let-row>
           <app-priority-tag [priority]="row.priority" />
@@ -65,11 +86,16 @@
       </ng-template>
 
       <ng-template #mobileTpl let-row>
-        <div class="mobile-card">
-          <a class="summary" [routerLink]="['/issues', row.id]" [title]="row.summary">{{
-            row.summary
-          }}</a>
-          <div class="mobile-meta">
+        <div class="project-backlog__card">
+          <a
+            class="project-backlog__summary"
+            [routerLink]="['/issues', row.id]"
+            [title]="row.summary"
+            >{{ row.summary }}</a
+          >
+          <div class="project-backlog__meta">
+            <span class="project-backlog__key">{{ shortKey(row) }}</span>
+            <span class="project-backlog__type">{{ typeLabel(row.type) }}</span>
             <app-priority-tag [priority]="row.priority" />
             <app-lozenge [category]="statusCategory(row.status)">{{
               statusLabel(row.status)
@@ -80,22 +106,61 @@
       </ng-template>
 
       <ng-template #moveTpl let-row>
-        <div class="move-buttons">
-          <p-button
-            size="small"
-            icon="pi pi-arrow-up"
-            [ariaLabel]="'Subir ' + row.summary"
-            [disabled]="!canMoveUp(row)"
-            (onClick)="moveUp(row)"
-          />
-          <p-button
-            size="small"
-            icon="pi pi-arrow-down"
-            [ariaLabel]="'Bajar ' + row.summary"
-            [disabled]="!canMoveDown(row)"
-            (onClick)="moveDown(row)"
-          />
-        </div>
+        @if (!readOnly()) {
+          <div class="project-backlog__order">
+            <button
+              type="button"
+              class="project-backlog__arrow"
+              appTooltip="Subir"
+              [attr.aria-label]="'Subir ' + row.summary"
+              [disabled]="!canMoveUp(row)"
+              (click)="moveUp(row)"
+            >
+              <i class="pi pi-arrow-up" aria-hidden="true"></i>
+            </button>
+            <button
+              type="button"
+              class="project-backlog__arrow"
+              appTooltip="Bajar"
+              [attr.aria-label]="'Bajar ' + row.summary"
+              [disabled]="!canMoveDown(row)"
+              (click)="moveDown(row)"
+            >
+              <i class="pi pi-arrow-down" aria-hidden="true"></i>
+            </button>
+            <app-dropdown-menu [label]="'Más opciones de orden de ' + row.summary" align="end">
+              <button
+                appMenuTrigger
+                type="button"
+                class="project-backlog__arrow"
+                appTooltip="Más opciones"
+                [attr.aria-label]="'Más opciones de orden de ' + row.summary"
+              >
+                <i class="pi pi-ellipsis-h" aria-hidden="true"></i>
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                class="project-backlog__menu-item"
+                [disabled]="!canMoveUp(row)"
+                (click)="moveToStart(row)"
+              >
+                <i class="pi pi-angle-double-up" aria-hidden="true"></i>
+                <span>Mover al inicio</span>
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                class="project-backlog__menu-item"
+                [disabled]="!canMoveDown(row)"
+                (click)="moveToEnd(row)"
+              >
+                <i class="pi pi-angle-double-down" aria-hidden="true"></i>
+                <span>Mover al final</span>
+              </button>
+            </app-dropdown-menu>
+          </div>
+        }
       </ng-template>
     </app-section>
   </app-page-container>

@@ -6,6 +6,7 @@ import {
   BoardApiService,
   ProjectApiService,
   ProjectBoard,
+  ProjectMember,
   SessionService,
 } from '@corelog/core';
 import { guardConsole, installViewport, provideCorelogTesting } from '@corelog/core/testing';
@@ -16,8 +17,8 @@ import {
   PROJECT_ID,
   byAriaLabel,
   ensureMatchMedia,
+  ME_ID,
   failWith,
-  pickOption,
   projectOf,
   projectRoutes,
   signedInAuth,
@@ -92,6 +93,7 @@ async function settle(harness: RouterTestingHarness): Promise<void> {
 async function renderPage(
   board: Observable<ProjectBoard> = of(baseBoard()),
   projectRead: Observable<unknown> = of(projectOf()),
+  members: ProjectMember[] = [],
 ) {
   TestBed.resetTestingModule();
   const boardApi = {
@@ -99,7 +101,10 @@ async function renderPage(
     moveCard: vi.fn(() => of(movedBoard)),
     updateColumnWip: vi.fn(() => of(baseBoard())),
   };
-  const projectApi = { get: vi.fn(() => projectRead) };
+  const projectApi = {
+    get: vi.fn(() => projectRead),
+    listMembers: vi.fn(() => of(members)),
+  };
   TestBed.configureTestingModule({
     providers: [
       provideCorelogTesting(),
@@ -127,6 +132,27 @@ function regionNamed(name: string): HTMLElement | null {
   return document.querySelector<HTMLElement>(`[role="region"][aria-label="${name}"]`);
 }
 
+/** Opens the "Mover a" menu of a card and picks a column. */
+function moveWithMenu(summary: string, column: string, harness: RouterTestingHarness): void {
+  byAriaLabel(`Mover ${summary} a columna`)?.click();
+  harness.fixture.detectChanges();
+  const item = Array.from(document.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')).find(
+    (el) => el.textContent?.trim().startsWith(column),
+  );
+  if (!item) throw new Error(`no menu item ${column}`);
+  item.click();
+  harness.fixture.detectChanges();
+}
+
+function viewerMember(): ProjectMember {
+  return {
+    projectId: PROJECT_ID,
+    userId: ME_ID,
+    role: 'viewer',
+    createdAt: '2026-01-01T00:00:00Z',
+  };
+}
+
 describe('ProjectBoardPage', () => {
   const consoleGuard = guardConsole();
   let restoreViewport: (() => void) | undefined;
@@ -143,27 +169,24 @@ describe('ProjectBoardPage', () => {
 
     expect(bodyText()).toContain('No carga la pantalla');
     expect(document.querySelector('h1')?.textContent).toContain('Tablero');
-    expect(bodyText()).toContain('Responsable: Ada Lovelace');
-    expect(bodyText()).toContain('3 puntos');
+    expect(document.querySelector('[data-testid="board-card-issue-1"] app-avatar')).not.toBeNull();
+    expect(bodyText()).toContain('3 pts');
+    expect(bodyText()).toContain('INC-ISSUE-');
     expect(boardApi.getProjectBoard).toHaveBeenCalledWith(PROJECT_ID);
     expect(bodyText()).toContain('Sin incidencias');
     consoleGuard.expectNoConsoleOutput();
     harness.fixture.destroy();
   });
 
-  it('moves a card to another column with the keyboard select alternative', async () => {
+  it('moves a card to another column with the card menu alternative', async () => {
     const { boardApi, harness } = await renderPage();
 
-    pickOption(
-      byAriaLabel('Mover No carga la pantalla a columna') as HTMLElement,
-      'En progreso',
-      harness.fixture,
-    );
+    moveWithMenu('No carga la pantalla', 'En curso', harness);
     await settle(harness);
 
     expect(boardApi.moveCard).toHaveBeenCalledWith(PROJECT_ID, 'issue-1', 'column-2');
     expect(document.querySelector('[role="status"]')?.textContent).toContain(
-      'Incidencia movida a En progreso',
+      'Incidencia movida a En curso',
     );
     consoleGuard.expectNoConsoleOutput();
     harness.fixture.destroy();
@@ -204,7 +227,7 @@ describe('ProjectBoardPage', () => {
 
     expect(bodyText()).toContain('2 / 2');
     expect(bodyText()).toContain('Trabajo en curso');
-    expect(document.querySelector('section.column-full')).not.toBeNull();
+    expect(document.querySelector('section.project-board__column--full')).not.toBeNull();
     harness.fixture.destroy();
   });
 
@@ -224,7 +247,15 @@ describe('ProjectBoardPage', () => {
     });
     const { harness } = await renderPage(of(board));
 
-    expect(byAriaLabel('Límite WIP de En progreso')).not.toBeNull();
+    expect(byAriaLabel('Límite WIP de En curso')).toBeNull();
+    byAriaLabel('Opciones de En curso')?.click();
+    harness.fixture.detectChanges();
+    const edit = Array.from(document.querySelectorAll<HTMLElement>('[role="menuitem"]')).find(
+      (el) => el.textContent?.includes('Editar límite WIP'),
+    );
+    edit?.click();
+    harness.fixture.detectChanges();
+    expect(byAriaLabel('Límite WIP de En curso')).not.toBeNull();
     harness.fixture.destroy();
   });
 
@@ -244,8 +275,33 @@ describe('ProjectBoardPage', () => {
     });
     const { harness } = await renderPage(of(board));
 
-    expect(bodyText()).toContain('En progreso');
-    expect(byAriaLabel('Límite WIP de En progreso')).toBeNull();
+    expect(bodyText()).toContain('En curso');
+    expect(byAriaLabel('Opciones de En curso')).toBeNull();
+    harness.fixture.destroy();
+  });
+
+  it('names the columns in Spanish by status code, never with the raw API text', async () => {
+    const board = baseBoard({
+      columns: [
+        { id: 'c1', name: 'In progress', status: 'in_progress', position: 0, count: 0, cards: [] },
+        { id: 'c2', name: 'Resolved', status: 'resolved', position: 1, count: 0, cards: [] },
+      ],
+    });
+    const { harness } = await renderPage(of(board));
+
+    expect(bodyText()).toContain('En curso');
+    expect(bodyText()).toContain('Resuelto');
+    expect(bodyText()).not.toContain('In progress');
+    harness.fixture.destroy();
+  });
+
+  it('gives viewers a read-only board without move controls', async () => {
+    const { harness } = await renderPage(of(baseBoard()), of(projectOf()), [viewerMember()]);
+
+    expect(bodyText()).toContain('No carga la pantalla');
+    expect(bodyText()).toContain('Solo lectura');
+    expect(byAriaLabel('Mover No carga la pantalla a columna')).toBeNull();
+    expect(document.querySelector('.project-board__card-row--draggable')).toBeNull();
     harness.fixture.destroy();
   });
 
@@ -291,6 +347,11 @@ describe('ProjectBoardPage', () => {
     expect(mobileBoard?.getAttribute('data-scroll')).toBe('inside-board');
     expect(mobileBoard?.getAttribute('data-layout')).toBe('mobile-columns');
     expect(mobileBoard?.hasAttribute('data-scroll-x')).toBe(true);
+    // One column at a time, chosen with the switcher that shows each count.
+    expect(mobileBoard?.querySelectorAll('section')).toHaveLength(1);
+    const tabs = document.querySelectorAll('[role="tablist"] [role="tab"]');
+    expect(tabs).toHaveLength(2);
+    expect(tabs[0].textContent).toContain('Abierto');
     mobile.harness.fixture.destroy();
 
     restoreViewport();
@@ -305,11 +366,7 @@ describe('ProjectBoardPage', () => {
     const { boardApi, harness } = await renderPage();
     boardApi.moveCard.mockReturnValue(failWith(409));
 
-    pickOption(
-      byAriaLabel('Mover No carga la pantalla a columna') as HTMLElement,
-      'En progreso',
-      harness.fixture,
-    );
+    moveWithMenu('No carga la pantalla', 'En curso', harness);
     await settle(harness);
 
     expect(alertText()).toContain('límite WIP');

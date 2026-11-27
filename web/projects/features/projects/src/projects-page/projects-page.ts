@@ -3,13 +3,14 @@ import {
   Component,
   DestroyRef,
   OnInit,
+  effect,
   computed,
   inject,
   signal,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import {
   AuthStore,
   Project,
@@ -17,6 +18,7 @@ import {
   ProjectStore,
   leadNameOf,
   NotificationService,
+  OrganizationStore,
   projectAccessVariantOf,
   useOrgMembersById,
 } from '@corelog/core';
@@ -36,7 +38,7 @@ import { Button } from 'primeng/button';
 import { InputText } from 'primeng/inputtext';
 import { Select } from 'primeng/select';
 import { SelectButton } from 'primeng/selectbutton';
-import { Tooltip } from 'primeng/tooltip';
+import { AppTooltip } from '@corelog/ui/tooltip';
 
 import { failureMessage, inputValue } from '../shared/failure-message';
 import { ProjectCreateDialog } from './project-create-dialog';
@@ -46,6 +48,7 @@ import {
   TYPE_LABELS,
   VISIBILITY_LABELS,
   VisibilityFilter,
+  createProjectRights,
   filterProjects,
 } from './projects-page.utils';
 
@@ -79,7 +82,7 @@ const SKELETON_SLOTS = [0, 1, 2];
     InputText,
     Select,
     SelectButton,
-    Tooltip,
+    AppTooltip,
     CardGrid,
     EmptyState,
     ErrorPage,
@@ -99,11 +102,14 @@ const SKELETON_SLOTS = [0, 1, 2];
   templateUrl: './projects-page.html',
   styleUrl: './projects-page.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { class: 'projects-page' },
 })
 export class ProjectsPage implements OnInit {
   private readonly store = inject(ProjectStore);
   private readonly auth = inject(AuthStore);
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
+  private readonly orgs = inject(OrganizationStore);
   private readonly notify = inject(NotificationService);
   private readonly destroyRef = inject(DestroyRef);
 
@@ -114,7 +120,14 @@ export class ProjectsPage implements OnInit {
   protected readonly labels = this.store.labels;
   protected readonly components = this.store.components;
 
-  protected readonly isAdmin = computed(() => this.auth.user()?.role === 'admin');
+  protected readonly rights = computed(() =>
+    createProjectRights(
+      this.auth.user()?.role,
+      this.orgs.currentRole(),
+      this.orgs.currentOrg()?.settings.whoCanCreateProjects,
+    ),
+  );
+  protected readonly canCreate = computed(() => this.rights().allowed);
   protected readonly accessVariant = computed(() => projectAccessVariantOf(this.error()));
   protected readonly loading = computed(
     () => this.status() === 'loading' && this.projects().length === 0,
@@ -156,8 +169,29 @@ export class ProjectsPage implements OnInit {
   protected readonly labelColorOptions = LABEL_COLOR_OPTIONS;
   protected readonly skeletonSlots = SKELETON_SLOTS;
 
+  /** `?new=1` asks for the create dialog to open as soon as the caller is known to be allowed. */
+  private readonly createRequested = signal(false);
+
+  constructor() {
+    effect(() => {
+      if (this.createRequested() && this.canCreate()) {
+        this.createRequested.set(false);
+        this.createOpen.set(true);
+      }
+    });
+  }
+
   ngOnInit(): void {
     this.store.fetchProjects();
+    if (this.route.snapshot.queryParamMap.get('new') === '1') {
+      this.createRequested.set(true);
+      void this.router.navigate([], {
+        relativeTo: this.route,
+        queryParams: { new: null },
+        queryParamsHandling: 'merge',
+        replaceUrl: true,
+      });
+    }
   }
 
   protected visibilityLabel(project: Project): string {
@@ -173,7 +207,7 @@ export class ProjectsPage implements OnInit {
   }
 
   protected openCreate(): void {
-    if (this.isAdmin()) this.createOpen.set(true);
+    if (this.canCreate()) this.createOpen.set(true);
   }
 
   protected openBoard(project: Project): void {

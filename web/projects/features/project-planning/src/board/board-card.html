@@ -1,31 +1,62 @@
 <article
-  class="card"
-  [class.card-preview]="dragging()"
+  class="board-card"
+  [class.board-card--preview]="dragging()"
   [attr.data-testid]="'board-card-' + card().id"
 >
-  <div class="card-top">
+  <div class="board-card__top">
     <app-issue-key
-      [issueKey]="shortId()"
+      [issueKey]="fullKey()"
+      [displayKey]="shortKey()"
       [href]="href()"
       [summary]="card().summary"
       [type]="issueType()"
     />
-  </div>
-  <a class="summary" [routerLink]="['/issues', card().id]" [title]="card().summary">{{
-    card().summary
-  }}</a>
-  <div class="card-meta">
-    <app-priority-tag [priority]="card().priority" />
-    @if (card().storyPoints !== undefined) {
-      <app-lozenge>{{ card().storyPoints }} puntos</app-lozenge>
+    @if (showMenu()) {
+      <app-dropdown-menu class="board-card__menu" label="Mover a" align="end">
+        <button
+          appMenuTrigger
+          type="button"
+          class="board-card__menu-trigger"
+          appTooltip="Mover a otra columna"
+          [attr.aria-label]="'Mover ' + card().summary + ' a columna'"
+        >
+          <i class="pi pi-ellipsis-h" aria-hidden="true"></i>
+        </button>
+        <p class="board-card__menu-heading">Mover a</p>
+        @for (target of targets(); track target.id) {
+          <button
+            type="button"
+            role="menuitem"
+            class="board-card__menu-item"
+            [disabled]="target.disabled"
+            (click)="moved.emit(target.id)"
+          >
+            {{ target.name }}
+            @if (target.disabled) {
+              <span class="board-card__menu-hint">Límite WIP alcanzado</span>
+            }
+          </button>
+        }
+      </app-dropdown-menu>
     }
   </div>
-  <div class="assignee">
+  <a class="board-card__summary" [routerLink]="['/issues', card().id]" [title]="card().summary">{{
+    card().summary
+  }}</a>
+  <div class="board-card__footer">
+    <app-priority-tag [priority]="card().priority" />
+    @if (card().storyPoints !== undefined) {
+      <app-lozenge>{{ card().storyPoints }} pts</app-lozenge>
+    }
+    <span class="board-card__spacer"></span>
     @if (card().assignee; as assignee) {
-      <app-avatar [id]="card().assigneeId ?? card().id" [name]="assignee" [size]="20" />
-      <span class="assignee-name" [title]="assignee">Responsable: {{ assignee }}</span>
-    } @else {
-      <span class="muted">Sin asignar</span>
+      <app-avatar
+        class="board-card__assignee"
+        [id]="card().assigneeId ?? card().id"
+        [name]="assignee"
+        [size]="24"
+        [appTooltip]="assignee"
+      />
     }
   </div>
 </article>

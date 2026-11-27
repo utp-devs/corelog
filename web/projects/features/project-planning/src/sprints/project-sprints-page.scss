@@ -1,174 +1,166 @@
-/* Two columns from 992 px: sprint list and form on the left, the selected sprint on the right. Content starts at the top. */
-.layout {
-  display: grid;
-  grid-template-columns: minmax(280px, 340px) minmax(0, 1fr);
-  gap: var(--cl-space-4);
-  align-items: start;
-  min-width: 0;
-}
+@use '../../../../ui/styles/mixins' as m;
 
-.side,
-.main {
-  display: flex;
-  flex-direction: column;
-  gap: var(--cl-space-4);
-  min-width: 0;
-}
-
-.alert {
-  margin: 0;
-}
-
-.sprint-list,
-.velocity-list {
-  display: grid;
-  gap: var(--cl-space-2);
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.sprint-item,
-.sprint-selected {
-  display: flex;
-  width: 100%;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--cl-space-2);
-  padding: var(--cl-space-2) var(--cl-space-3);
-  border: 1px solid var(--cl-border);
-  border-radius: var(--cl-radius-md);
-  background: var(--cl-bg-sunken);
-  color: var(--cl-text);
-  text-align: left;
-  cursor: pointer;
-}
-
-.sprint-selected {
-  border-color: var(--cl-brand);
-  background: var(--cl-brand-subtle);
-}
-
-.sprint-item:focus-visible,
-.sprint-selected:focus-visible {
-  outline: 2px solid var(--cl-brand);
-  outline-offset: 2px;
-}
-
-.sprint-name {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.form {
-  display: flex;
-  flex-direction: column;
-  gap: var(--cl-space-3);
-  width: 100%;
-}
-
-.form input,
-.form p-button {
-  width: 100%;
-}
-
-.actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--cl-space-2);
-}
-
-.close-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--cl-space-2);
-}
-
-.close-mode {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--cl-space-3);
-  margin: 0;
-  padding: 0;
-  border: 0;
-}
-
-.radio {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--cl-space-1);
-  cursor: pointer;
-}
-
-.stats {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  gap: var(--cl-space-3);
-}
-
-.add-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--cl-space-2);
-  margin-bottom: var(--cl-space-3);
-}
-
-.target-select {
-  min-width: 220px;
-  max-width: 100%;
-}
-
-.issue-title {
-  display: block;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.mobile-issue {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: var(--cl-space-2);
-  min-width: 0;
-}
-
-.velocity-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--cl-space-3);
-  padding: var(--cl-space-2) var(--cl-space-3);
-  border: 1px solid var(--cl-border);
-  border-radius: var(--cl-radius-md);
-}
-
-@media (max-width: 991px) {
-  .layout {
-    grid-template-columns: minmax(0, 1fr);
-  }
-}
-
-@media (max-width: 767px) {
-  /* Touch: the sprint buttons and the target selectors reach 44 px. */
-  .sprint-item,
-  .sprint-selected {
-    min-height: 44px;
+/* Two columns from 992 px: sprint list and form on the left, the selected sprint on the right. */
+.project-sprints {
+  &__layout {
+    display: grid;
+    grid-template-columns: minmax(17.5rem, 21rem) minmax(0, 1fr);
+    gap: var(--cl-space-4);
+    align-items: start;
+    min-width: 0;
   }
 
-  .target-select {
-    min-height: 44px;
+  &__side,
+  &__main {
+    @include m.flex-column(4);
+    min-width: 0;
   }
 
-  .actions p-button,
-  .close-row p-button,
-  .add-row p-button {
-    min-height: 44px;
+  &__alert {
+    margin: 0;
+  }
+
+  &__list,
+  &__velocity {
+    @include m.flex-column(2);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  &__item {
+    @include m.flex-row(2, center, space-between);
+    box-sizing: border-box;
+    width: 100%;
+    min-height: var(--cl-control-h-lg);
+    padding: var(--cl-space-2) var(--cl-space-3);
+    border: 1px solid var(--cl-border);
+    border-radius: var(--cl-radius-md);
+    background: var(--cl-bg-surface);
+    color: var(--cl-text);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+
+    &:hover {
+      background: var(--cl-bg-hover);
+    }
+
+    &--selected {
+      border-color: var(--cl-brand);
+      background: var(--cl-brand-subtle);
+    }
+
+    &:focus-visible {
+      outline: none;
+      box-shadow: var(--cl-shadow-focus);
+    }
+  }
+
+  &__item-main {
+    @include m.flex-column(1);
+    min-width: 0;
+  }
+
+  &__name {
+    @include m.truncate;
+    font-weight: var(--cl-weight-medium);
+  }
+
+  &__dates {
+    color: var(--cl-text-subtle);
+    font-size: var(--cl-font-small);
+  }
+
+  &__form {
+    @include m.flex-column(3);
+    width: 100%;
+  }
+
+  &__dates-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+    gap: var(--cl-space-3);
+  }
+
+  &__actions {
+    @include m.cluster(2);
+  }
+
+  &__stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+    gap: var(--cl-space-3);
+  }
+
+  &__period {
+    @include m.flex-row(2);
+    margin: var(--cl-space-3) 0 0;
+    color: var(--cl-text-subtle);
+    font-size: var(--cl-font-small);
+  }
+
+  &__policy {
+    @include m.flex-column(3);
+    margin: var(--cl-space-4) 0 0;
+    padding: var(--cl-space-3) var(--cl-space-4);
+    border: 1px solid var(--cl-border);
+    border-radius: var(--cl-radius-md);
+    background: var(--cl-bg-sunken);
+  }
+
+  &__policy-title {
+    padding: 0 var(--cl-space-1);
+    color: var(--cl-text-subtle);
+    font-size: var(--cl-font-small);
+  }
+
+  &__radios {
+    @include m.cluster(5);
+  }
+
+  &__radio {
+    @include m.flex-row(2);
+    min-height: var(--cl-control-h-md);
+    cursor: pointer;
+  }
+
+  &__add {
+    @include m.cluster(2);
+    margin-bottom: var(--cl-space-3);
+  }
+
+  &__target {
+    min-width: 14rem;
+    max-width: 100%;
+  }
+
+  &__issue-title {
+    @include m.truncate;
+    display: block;
+  }
+
+  &__mobile-issue {
+    @include m.flex-column(2, flex-start);
+    min-width: 0;
+  }
+
+  &__velocity-item {
+    @include m.flex-row(3, center, space-between);
+    padding: var(--cl-space-2) var(--cl-space-3);
+    border: 1px solid var(--cl-border);
+    border-radius: var(--cl-radius-md);
+  }
+
+  @include m.respond-down(1024px) {
+    &__layout {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+
+  @include m.respond-down(768px) {
+    &__target {
+      width: 100%;
+    }
   }
 }

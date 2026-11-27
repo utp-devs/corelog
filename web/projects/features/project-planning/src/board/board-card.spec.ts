@@ -20,7 +20,7 @@ const card: BoardCard = {
   rank: '0|a',
 };
 
-function render(): HTMLElement {
+function render(inputs: Record<string, unknown> = {}): HTMLElement {
   TestBed.configureTestingModule({
     providers: [
       provideRouter([]),
@@ -33,6 +33,7 @@ function render(): HTMLElement {
   });
   const fixture = TestBed.createComponent(BoardCardView);
   fixture.componentRef.setInput('card', card);
+  for (const [name, value] of Object.entries(inputs)) fixture.componentRef.setInput(name, value);
   fixture.detectChanges();
   return fixture.nativeElement as HTMLElement;
 }
@@ -50,8 +51,18 @@ describe('BoardCardView links under the workspace base href', () => {
 
   it('links the summary to the issue with the base prefixed once', () => {
     const el = render();
-    const summary = el.querySelector<HTMLAnchorElement>('a.summary');
+    const summary = el.querySelector<HTMLAnchorElement>('a.board-card__summary');
     expect(summary?.textContent?.trim()).toBe('Exportar el tablero');
     expect(summary?.getAttribute('href')).toBe(`/workspace/issues/${ISSUE_ID}`);
+  });
+
+  it('offers the move menu only to editors and emits the chosen column', () => {
+    const targets = [{ id: 'c2', name: 'En curso', disabled: false }];
+    const el = render({ targets });
+    expect(el.querySelector('.board-card__menu-trigger')).not.toBeNull();
+
+    TestBed.resetTestingModule();
+    const readOnly = render({ targets, readOnly: true });
+    expect(readOnly.querySelector('.board-card__menu-trigger')).toBeNull();
   });
 });

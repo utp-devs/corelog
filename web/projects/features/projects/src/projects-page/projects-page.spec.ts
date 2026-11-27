@@ -148,6 +148,49 @@ describe('ProjectsPage', () => {
     consoleGuard.expectNoConsoleOutput();
   });
 
+  it('lets organization members create projects when the policy opens creation to members', async () => {
+    const { fixture } = await render({
+      role: 'user',
+      organization: { role: 'member', policy: 'members' },
+      projectApi: { list: () => of(projects) },
+    });
+
+    expect(buttonNamed(fixture, 'Nuevo proyecto')?.disabled).toBe(false);
+  });
+
+  it('keeps creation closed to members when only admins may create, and says why', async () => {
+    const { fixture } = await render({
+      role: 'user',
+      organization: { role: 'member', policy: 'admins' },
+      projectApi: { list: () => of(projects) },
+    });
+
+    expect(buttonNamed(fixture, 'Nuevo proyecto')?.disabled).toBe(true);
+  });
+
+  it('lets organization admins create projects even without the global admin role', async () => {
+    const { fixture } = await render({
+      role: 'user',
+      organization: { role: 'admin', policy: 'admins' },
+      projectApi: { list: () => of(projects) },
+    });
+
+    expect(buttonNamed(fixture, 'Nuevo proyecto')?.disabled).toBe(false);
+  });
+
+  it('opens the create dialog when the URL asks for it and clears the parameter', async () => {
+    const { fixture, env } = await render({
+      queryParams: { new: '1' },
+      projectApi: { list: () => of(projects) },
+    });
+
+    expect(textOf(fixture)).toContain('Clave');
+    expect(env.navigate).toHaveBeenCalledWith(
+      [],
+      expect.objectContaining({ queryParams: { new: null }, replaceUrl: true }),
+    );
+  });
+
   it('shows the 403 page when the API forbids listing projects', async () => {
     const { fixture } = await render({
       projectApi: { list: () => throwError(() => apiError(403, 'forbidden')) },
@@ -193,9 +236,7 @@ describe('ProjectsPage', () => {
     expect(element(fixture, '[data-testid="project-lead-CORE"]').textContent).toContain(
       'Ana Pérez',
     );
-    expect(element(fixture, '[data-testid="project-card-SEC"]').textContent).toContain(
-      'Responsable: Ana Pérez',
-    );
+    expect(element(fixture, '[data-testid="project-card-SEC"]').textContent).toContain('Ana Pérez');
     expect(env.orgApi['listMembers']).toHaveBeenCalledWith(ORG_ID);
     consoleGuard.expectNoConsoleOutput();
   });

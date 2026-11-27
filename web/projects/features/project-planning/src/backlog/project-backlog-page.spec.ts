@@ -3,17 +3,26 @@ import { TestBed } from '@angular/core/testing';
 import { Provider } from '@angular/core';
 import { provideRouter } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
-import { BacklogApiService, BacklogItem, ProjectApiService, SessionService } from '@corelog/core';
+import {
+  AuthStore,
+  BacklogApiService,
+  BacklogItem,
+  ProjectApiService,
+  ProjectMember,
+  SessionService,
+} from '@corelog/core';
 import { guardConsole, installViewport, provideCorelogTesting } from '@corelog/core/testing';
 import { NEVER, Observable, of } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   PROJECT_ID,
+  ME_ID,
   ensureMatchMedia,
   failWith,
   projectOf,
   projectRoutes,
+  signedInAuth,
   signedInSession,
 } from '../testing/planning-test-kit';
 import { ProjectBacklogPage } from './project-backlog-page';
@@ -52,6 +61,7 @@ async function settle(harness: RouterTestingHarness): Promise<void> {
 async function renderPage(
   list: Observable<BacklogItem[]> = of(items),
   extraProviders: Provider[] = [],
+  members: ProjectMember[] = [],
 ) {
   TestBed.resetTestingModule();
   const backlogApi = {
@@ -60,7 +70,10 @@ async function renderPage(
       of([items[1], items[0]]),
     ),
   };
-  const projectApi = { get: vi.fn(() => of(projectOf())) };
+  const projectApi = {
+    get: vi.fn(() => of(projectOf())),
+    listMembers: vi.fn(() => of(members)),
+  };
   TestBed.configureTestingModule({
     providers: [
       provideCorelogTesting(),
@@ -68,6 +81,7 @@ async function renderPage(
       { provide: SessionService, useValue: signedInSession() },
       { provide: BacklogApiService, useValue: backlogApi },
       { provide: ProjectApiService, useValue: projectApi },
+      { provide: AuthStore, useValue: signedInAuth() },
       ...extraProviders,
     ],
   });
@@ -126,6 +140,46 @@ describe('ProjectBacklogPage', () => {
     expect(bodyText()).toContain('Segunda');
     expect(buttonNamed('Subir Primera')?.disabled).toBe(true);
     expect(buttonNamed('Bajar Segunda')?.disabled).toBe(true);
+    harness.fixture.destroy();
+  });
+
+  it('shows type and status in Spanish with the short key', async () => {
+    const { harness } = await renderPage();
+
+    expect(bodyText()).toContain('Tarea');
+    expect(bodyText()).toContain('Error');
+    expect(bodyText()).toContain('Abierto');
+    expect(bodyText()).toContain('En curso');
+    expect(bodyText()).not.toContain('Abierta');
+    harness.fixture.destroy();
+  });
+
+  it('gives the arrow buttons a visible target and a start/end menu', async () => {
+    const { backlogApi, harness } = await renderPage();
+
+    expect(document.querySelector('.project-backlog__arrow')).not.toBeNull();
+    buttonNamed('Más opciones de orden de Segunda')?.click();
+    harness.fixture.detectChanges();
+    const toStart = Array.from(document.querySelectorAll<HTMLElement>('[role="menuitem"]')).find(
+      (el) => el.textContent?.includes('Mover al inicio'),
+    );
+    toStart?.click();
+    await settle(harness);
+
+    expect(backlogApi.move).toHaveBeenCalledWith(PROJECT_ID, 'issue-2', 0);
+    harness.fixture.destroy();
+  });
+
+  it('hides the reorder controls from viewers', async () => {
+    const { harness } = await renderPage(
+      of(items),
+      [],
+      [{ projectId: PROJECT_ID, userId: ME_ID, role: 'viewer', createdAt: '2026-01-01T00:00:00Z' }],
+    );
+
+    expect(bodyText()).toContain('Primera');
+    expect(buttonNamed('Bajar Primera')).toBeNull();
+    expect(bodyText()).toContain('Solo lectura');
     harness.fixture.destroy();
   });
 
@@ -203,9 +257,9 @@ describe('ProjectBacklogPage', () => {
     const { harness } = await renderPage(of(items), [
       { provide: APP_BASE_HREF, useValue: '/workspace/' },
     ]);
-    const hrefs = Array.from(document.querySelectorAll<HTMLAnchorElement>('a.summary')).map(
-      (link) => link.getAttribute('href'),
-    );
+    const hrefs = Array.from(
+      document.querySelectorAll<HTMLAnchorElement>('a.project-backlog__summary'),
+    ).map((link) => link.getAttribute('href'));
     expect(hrefs).toContain('/workspace/issues/issue-1');
     expect(hrefs.some((href) => href?.includes('/workspace/workspace/'))).toBe(false);
     harness.fixture.destroy();

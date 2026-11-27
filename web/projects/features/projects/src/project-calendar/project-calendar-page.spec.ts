@@ -105,6 +105,28 @@ describe('ProjectCalendarPage', () => {
     expect(second?.textContent).toContain('Inicio de sprint');
   });
 
+  it('writes the month in lowercase Spanish and marks today', async () => {
+    const { fixture } = await open({ calendarApi: { events: () => of([EXPORT_EVENT]) } });
+
+    expect(find(fixture, 'h2')?.textContent?.trim()).toBe('noviembre de 2026');
+    expect(find(fixture, '[role="gridcell"][aria-current="date"]')?.textContent).toContain('hoy');
+  });
+
+  it('shows the short issue key on due-date chips', async () => {
+    const { fixture } = await open({ calendarApi: { events: () => of([EXPORT_EVENT]) } });
+
+    expect(find(fixture, '.project-calendar__chip--issue_due')?.textContent).toContain(
+      'INC-ISSUE-',
+    );
+  });
+
+  it('keeps the grid visible and shows a compact notice for an empty month', async () => {
+    const { fixture } = await open({ calendarApi: { events: () => of([]) } });
+
+    expect(find(fixture, '.project-calendar__empty')).not.toBeNull();
+    expect(find(fixture, '[role="grid"]')).not.toBeNull();
+  });
+
   it('lists the events grouped by date in list view', async () => {
     const { fixture } = await open({
       calendarApi: { events: () => of([EXPORT_EVENT, SPRINT_EVENT]) },

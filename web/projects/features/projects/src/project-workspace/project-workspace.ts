@@ -1,4 +1,12 @@
-import { ChangeDetectionStrategy, Component, computed, effect, inject } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  DOCUMENT,
+  computed,
+  effect,
+  inject,
+  signal,
+} from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
 import {
@@ -10,7 +18,6 @@ import {
   pushRecent,
   useOrgMembersById,
 } from '@corelog/core';
-import { BreadcrumbItem, Breadcrumbs } from '@corelog/ui/breadcrumbs';
 import { ErrorPage } from '@corelog/ui/error-page';
 import { PageContainer } from '@corelog/ui/page-container';
 import { ErrorState } from '@corelog/ui/error-state';
@@ -30,6 +37,9 @@ const SECTIONS: { key: string; label: string }[] = [
   { key: 'permisos', label: 'Permisos' },
 ];
 
+/** Descriptions longer than this show the expand toggle. */
+const DESCRIPTION_PREVIEW_CHARS = 70;
+
 const LOAD_FAILED_MESSAGE =
   'No se pudo abrir el proyecto. Verifica que tengas acceso e intenta de nuevo.';
 
@@ -45,7 +55,6 @@ type LoadState =
     PageContainer,
     RouterLink,
     RouterOutlet,
-    Breadcrumbs,
     ErrorPage,
     ErrorState,
     LoadingSkeleton,
@@ -60,6 +69,7 @@ export class ProjectWorkspace {
   private readonly projects = inject(ProjectStore);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
+  private readonly document = inject(DOCUMENT);
 
   protected readonly sections = SECTIONS;
   protected readonly loadFailedMessage = LOAD_FAILED_MESSAGE;
@@ -105,14 +115,7 @@ export class ProjectWorkspace {
     return SECTIONS.find((section) => url.startsWith(prefix + section.key))?.key ?? 'board';
   });
 
-  private readonly activeLabel = computed(
-    () => SECTIONS.find((section) => section.key === this.activeKey())?.label ?? 'Tablero',
-  );
-
-  protected readonly breadcrumbs = computed<BreadcrumbItem[]>(() => [
-    { label: 'Proyectos', to: '/projects' },
-    { label: this.project()?.key ?? this.activeLabel() },
-  ]);
+  protected readonly descriptionOpen = signal(false);
 
   protected readonly lead = useOrgMembersById(computed(() => this.project()?.organizationId));
 
@@ -123,6 +126,15 @@ export class ProjectWorkspace {
       if (id) {
         this.projects.loadOne(id);
       }
+    });
+
+    // Keeps the active tab visible when the tabs scroll (phones).
+    effect(() => {
+      this.activeKey();
+      queueMicrotask(() => {
+        const active = this.document.querySelector<HTMLElement>('.project-workspace__tab--active');
+        active?.scrollIntoView?.({ inline: 'nearest', block: 'nearest' });
+      });
     });
 
     // Recents: the project once its header has loaded.
@@ -150,6 +162,16 @@ export class ProjectWorkspace {
 
   protected typeLabel(project: Project): string {
     return TYPE_LABELS[project.type];
+  }
+
+  protected isLongDescription(project: Project): boolean {
+    return (
+      project.description.length > DESCRIPTION_PREVIEW_CHARS || project.description.includes('\n')
+    );
+  }
+
+  protected toggleDescription(): void {
+    this.descriptionOpen.update((open) => !open);
   }
 
   protected isActive(key: string): boolean {

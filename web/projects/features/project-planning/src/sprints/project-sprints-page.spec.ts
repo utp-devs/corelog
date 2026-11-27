@@ -132,6 +132,33 @@ describe('ProjectSprintsPage', () => {
     harness.fixture.destroy();
   });
 
+  it('shows the sprint dates as dd/MM/yyyy with date fields instead of native date inputs', async () => {
+    const { harness } = await renderPage();
+
+    expect(bodyText()).toContain('02/11/2026 - 08/11/2026');
+    expect(document.querySelector('input[type="date"]')).toBeNull();
+    expect(document.querySelectorAll('app-date-field')).toHaveLength(2);
+    harness.fixture.destroy();
+  });
+
+  it('asks for confirmation before closing the active sprint', async () => {
+    const { sprintApi, harness } = await renderPage();
+
+    buttonNamed('Cerrar sprint')?.click();
+    await settle(harness);
+    expect(sprintApi.close).not.toHaveBeenCalled();
+    expect(bodyText()).toContain('Esta acción no se puede deshacer');
+
+    const confirm = Array.from(document.querySelectorAll<HTMLButtonElement>('button')).filter(
+      (button) => button.textContent?.trim() === 'Cerrar sprint',
+    );
+    confirm[confirm.length - 1]?.click();
+    await settle(harness);
+
+    expect(sprintApi.close).toHaveBeenCalled();
+    harness.fixture.destroy();
+  });
+
   it('starts a planned sprint and reloads the list', async () => {
     const { sprintApi, harness } = await renderPage();
 

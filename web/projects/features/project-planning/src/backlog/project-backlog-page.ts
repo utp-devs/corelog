@@ -3,41 +3,39 @@ import { ChangeDetectionStrategy, Component, DestroyRef, computed, inject } from
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import {
   BacklogItem,
+  AuthStore,
   BacklogStore,
+  OrganizationStore,
   ProjectStore,
   WorkItemStatus,
   projectAccessVariantOf,
 } from '@corelog/core';
+import { DropdownMenu } from '@corelog/ui/app-shell';
 import { DataTable, DataTableCell, DataTableColumn } from '@corelog/ui/data-table';
 import { EmptyState } from '@corelog/ui/empty-state';
 import { ErrorPage } from '@corelog/ui/error-page';
 import { Lozenge, LozengeCategory } from '@corelog/ui/lozenge';
 import { PageContainer } from '@corelog/ui/page-container';
-import { PageHeader } from '@corelog/ui/page-header';
+import { PageHeader, PageHeaderActions } from '@corelog/ui/page-header';
 import { PriorityTag } from '@corelog/ui/priority-tag';
 import { Section } from '@corelog/ui/section';
+import { AppTooltip } from '@corelog/ui/tooltip';
 import { Button } from 'primeng/button';
 import { Message } from 'primeng/message';
 
 import { trackProjectScope } from '../shared/project-scope';
-
-const STATUS_LABELS: Record<WorkItemStatus, string> = {
-  open: 'Abierta',
-  in_progress: 'En curso',
-  resolved: 'Resuelta',
-  closed: 'Cerrada',
-};
-
-const STATUS_CATEGORIES: Record<WorkItemStatus, LozengeCategory> = {
-  open: 'todo',
-  in_progress: 'progress',
-  resolved: 'done',
-  closed: 'done',
-};
+import {
+  STATUS_CATEGORIES,
+  isReadOnlyRole,
+  shortKeyOf,
+  statusName,
+  typeName,
+} from '../shared/work-labels';
 
 const COLUMNS: DataTableColumn[] = [
   { key: 'position', title: '#', align: 'left' },
   { key: 'summary', title: 'Incidencia', mobilePrimary: true },
+  { key: 'type', title: 'Tipo' },
   { key: 'priority', title: 'Prioridad' },
   { key: 'status', title: 'Estado' },
   { key: 'points', title: 'Puntos', align: 'right' },
@@ -57,6 +55,9 @@ const LOAD_ERROR_MESSAGE =
     NgTemplateOutlet,
     RouterLink,
     Button,
+    AppTooltip,
+    DropdownMenu,
+    PageHeaderActions,
     Message,
     DataTable,
     DataTableCell,
@@ -74,6 +75,9 @@ const LOAD_ERROR_MESSAGE =
 })
 export class ProjectBacklogPage {
   protected readonly store = inject(BacklogStore);
+  private readonly auth = inject(AuthStore);
+  private readonly orgs = inject(OrganizationStore);
+  private readonly projects = inject(ProjectStore);
   private readonly destroyRef = inject(DestroyRef);
 
   protected readonly items = computed(() => [...this.store.ordered()]);
@@ -93,11 +97,32 @@ export class ProjectBacklogPage {
     inject(ActivatedRoute),
     inject(ProjectStore),
     this.destroyRef,
-    (projectId) => this.store.load(projectId),
+    (projectId) => {
+      this.store.load(projectId);
+      this.projects.fetchMembers(projectId);
+    },
+  );
+
+  /** Viewers and guests read the backlog; only editors reorder it. */
+  protected readonly readOnly = computed(() =>
+    isReadOnlyRole(
+      this.auth.user()?.role,
+      this.orgs.currentRole(),
+      this.auth.user()?.id,
+      this.projects.members(),
+    ),
   );
 
   protected statusLabel(status: WorkItemStatus): string {
-    return STATUS_LABELS[status] ?? status;
+    return statusName(status, status);
+  }
+
+  protected typeLabel(type: string): string {
+    return typeName(type);
+  }
+
+  protected shortKey(item: BacklogItem): string {
+    return shortKeyOf(item.id);
   }
 
   protected statusCategory(status: WorkItemStatus): LozengeCategory {
@@ -125,6 +150,14 @@ export class ProjectBacklogPage {
   protected moveDown(item: BacklogItem): void {
     const index = this.items().indexOf(item);
     this.store.move(index, index + 1);
+  }
+
+  protected moveToStart(item: BacklogItem): void {
+    this.store.move(this.items().indexOf(item), 0);
+  }
+
+  protected moveToEnd(item: BacklogItem): void {
+    this.store.move(this.items().indexOf(item), this.items().length - 1);
   }
 
   protected retry(): void {

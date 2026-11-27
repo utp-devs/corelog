@@ -6,6 +6,15 @@
   <app-page-container variant="reading" pageName="permissions" [ready]="!loading()" [fill]="true">
     <app-page-header title="Permisos" subtitle="Qué puede hacer cada rol en este proyecto." />
 
+    <p class="project-permissions__explain">
+      <i class="pi pi-info-circle" aria-hidden="true"></i>
+      <span>
+        Esta página es de consulta. Los líderes del proyecto cambian el rol de cada miembro desde
+        «Miembros y etiquetas» en la lista de proyectos; el rol de administrador es global y lo
+        asigna la organización.
+      </span>
+    </p>
+
     @if (status() === 'error') {
       <div role="alert">
         <p-message severity="warn" [closable]="false">
@@ -18,9 +27,9 @@
       @if (loading()) {
         <app-loading-skeleton variant="detail" [rows]="2" />
       } @else {
-        <div class="your-role">
+        <div class="project-permissions__role">
           <app-lozenge tone="info">{{ roleLabel() }}</app-lozenge>
-          <p class="muted">{{ roleText() }}</p>
+          <p class="project-permissions__muted">{{ roleText() }}</p>
         </div>
       }
     </app-section>
@@ -29,7 +38,7 @@
       @if (loading()) {
         <app-loading-skeleton variant="detail" [rows]="2" />
       } @else {
-        <div class="count-grid">
+        <div class="project-permissions__counts">
           @for (role of memberRoles; track role) {
             <app-stat-tile [label]="roleNames[role]" [value]="roleCounts()[role]" />
           }
@@ -43,17 +52,38 @@
       [flush]="true"
       [fill]="true"
     >
+      <ul class="project-permissions__legend" aria-label="Leyenda de la matriz">
+        <li class="project-permissions__legend-item">
+          <span class="project-permissions__granted" aria-hidden="true"
+            ><i class="pi pi-check"></i
+          ></span>
+          Permitido
+        </li>
+        <li class="project-permissions__legend-item">
+          <span class="project-permissions__denied" aria-hidden="true"
+            ><i class="pi pi-minus"></i
+          ></span>
+          No permitido
+        </li>
+        <li class="project-permissions__legend-item">
+          <span class="project-permissions__swatch" aria-hidden="true"></span>
+          Tu rol
+        </li>
+      </ul>
       @if (loading()) {
         <app-loading-skeleton variant="table" [rows]="4" />
       } @else if (isMobile()) {
-        <ul class="mobile-list" aria-label="Matriz de permisos por rol">
+        <ul class="project-permissions__cards" aria-label="Matriz de permisos por rol">
           @for (permission of permissions; track permission.key) {
-            <li class="mobile-card">
+            <li class="project-permissions__card">
               <strong>{{ permission.label }}</strong>
-              <span class="muted">{{ permission.description }}</span>
-              <ul class="mobile-roles" [attr.aria-label]="'Roles con ' + permission.label">
+              <span class="project-permissions__muted">{{ permission.description }}</span>
+              <ul
+                class="project-permissions__card-roles"
+                [attr.aria-label]="'Roles con ' + permission.label"
+              >
                 @for (column of columns; track column.key) {
-                  <li class="mobile-role">
+                  <li class="project-permissions__card-role">
                     <span>{{ column.label }}{{ column.key === myRole() ? ' (tú)' : '' }}</span>
                     @if (granted(column.key, permission)) {
                       <app-lozenge tone="success">Permitido</app-lozenge>
@@ -67,16 +97,20 @@
           }
         </ul>
       } @else {
-        <div class="table-wrap">
-          <table class="matrix">
+        <div class="project-permissions__table-wrap">
+          <table class="project-permissions__matrix">
             <thead>
               <tr>
-                <th scope="col" class="permission-col">Permiso</th>
+                <th scope="col" class="project-permissions__permission-col">Permiso</th>
                 @for (column of columns; track column.key) {
-                  <th scope="col" class="role-col" [class.current]="column.key === myRole()">
+                  <th
+                    scope="col"
+                    class="project-permissions__role-col"
+                    [class.project-permissions__current]="column.key === myRole()"
+                  >
                     {{ column.label }}
                     @if (column.key === myRole()) {
-                      <span class="you-tag">Tú</span>
+                      <span class="project-permissions__you">Tú</span>
                     }
                   </th>
                 }
@@ -85,15 +119,22 @@
             <tbody>
               @for (permission of permissions; track permission.key) {
                 <tr>
-                  <th scope="row" class="permission-cell">
-                    <span class="permission-label">{{ permission.label }}</span>
-                    <span class="permission-description">{{ permission.description }}</span>
+                  <th scope="row" class="project-permissions__permission-cell">
+                    <span class="project-permissions__permission-label">{{
+                      permission.label
+                    }}</span>
+                    <span class="project-permissions__permission-description">{{
+                      permission.description
+                    }}</span>
                   </th>
                   @for (column of columns; track column.key) {
-                    <td class="role-cell" [class.current]="column.key === myRole()">
+                    <td
+                      class="project-permissions__role-cell"
+                      [class.project-permissions__current]="column.key === myRole()"
+                    >
                       @if (granted(column.key, permission)) {
                         <span
-                          class="granted"
+                          class="project-permissions__granted"
                           role="img"
                           [attr.aria-label]="column.label + ': permitido'"
                         >
@@ -101,7 +142,7 @@
                         </span>
                       } @else {
                         <span
-                          class="denied"
+                          class="project-permissions__denied"
                           role="img"
                           [attr.aria-label]="column.label + ': no permitido'"
                         >
