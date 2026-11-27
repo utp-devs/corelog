@@ -3,18 +3,17 @@
 # saturate the host. Usage: scripts/in-docker.sh "npx ng test core --watch=false"
 # The container sees the sources through a bind mount, uses the Linux dependencies stored in the
 # dev volume, and keeps its own throwaway dist and cache so parallel runs never collide.
-# Limits (override with env): DOCKER_CPUS (default 4) and DOCKER_MEMORY (default 6g).
+# No CPU or memory limit by default (the machine is dedicated to this work); set DOCKER_CPUS or DOCKER_MEMORY
+# to cap a run. Several of these containers may run at the same time.
 set -eu
-. "$(dirname "$0")/docker-lock.sh"
-acquire_docker_lock
 if [ "$#" -lt 1 ]; then
   echo "usage: scripts/in-docker.sh \"<command>\"" >&2
   exit 2
 fi
 ROOT="$(cd "$(dirname "$0")/.." && pwd -W 2>/dev/null || pwd)"
 docker run --rm \
-  --cpus="${DOCKER_CPUS:-4}" --memory="${DOCKER_MEMORY:-6g}" \
-  -e CI=true -e NG_CLI_ANALYTICS=false -e NODE_OPTIONS="--max-old-space-size=4096" \
+  ${DOCKER_CPUS:+--cpus="$DOCKER_CPUS"} ${DOCKER_MEMORY:+--memory="$DOCKER_MEMORY"} \
+  -e CI=true -e NG_CLI_ANALYTICS=false -e NODE_OPTIONS="--max-old-space-size=8192" \
   -v "$ROOT:/app" \
   -v corelog-local_web_dev_node_modules:/app/node_modules:ro \
   -v /app/dist -v /app/.angular -v /app/out-tsc \
