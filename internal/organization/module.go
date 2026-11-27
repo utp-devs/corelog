@@ -13,6 +13,7 @@ import (
 type Module struct {
 	Service port.Service
 	Handler *httpadapter.Handler
+	service *usecase.OrganizationService
 }
 
 // NewModule connects the repository, the transaction manager, the event publisher and the clock, and
@@ -23,6 +24,13 @@ func NewModule(repo port.Repository, tx database.TxManager, pub events.Publisher
 	service := usecase.NewOrganizationService(repo, tx, pub, clk)
 	return &Module{
 		Service: service,
+		service: service,
 		Handler: httpadapter.NewHandler(service, emails, clk, jwtSecret, publicURL),
 	}
+}
+
+// WithCatalogSeeder makes new organizations start with the default catalogs created by seeder.
+func (m *Module) WithCatalogSeeder(seeder port.CatalogSeeder) *Module {
+	m.service.WithCatalogSeeder(seeder)
+	return m
 }

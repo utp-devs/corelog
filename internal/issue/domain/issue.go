@@ -24,7 +24,17 @@ type Issue struct {
 	StoryPoints *float64
 	Rank        string
 	ClosedAt    *time.Time
-	ReporterID  uuid.UUID
+	// IssueTypeID, PriorityID and ResolutionID reference the organization catalogs. The legacy enum fields
+	// IssueType and Priority mirror the catalog items through their legacy key and are written for old readers.
+	IssueTypeID  uuid.UUID
+	PriorityID   uuid.UUID
+	ResolutionID *uuid.UUID
+	ResolvedAt   *time.Time
+	// Refs carry the display data of the referenced catalog items. They are filled when the issue is read.
+	IssueTypeRef  *CatalogRef
+	PriorityRef   *CatalogRef
+	ResolutionRef *CatalogRef
+	ReporterID    uuid.UUID
 	// KeyNumber is the per-project issue number; ProjectKey is read from the project and not stored on the issue.
 	KeyNumber  int
 	ProjectKey string
@@ -93,6 +103,17 @@ func (t *Issue) ChangeStatus(newStatus Status) error {
 		t.ClosedAt = &now
 	} else if newStatus != StatusClosed {
 		t.ClosedAt = nil
+	}
+	// Done states (resolved, closed) record when the work was resolved; reopening clears the resolution.
+	if newStatus == StatusResolved || newStatus == StatusClosed {
+		if t.ResolvedAt == nil {
+			now := time.Now().UTC()
+			t.ResolvedAt = &now
+		}
+	} else {
+		t.ResolvedAt = nil
+		t.ResolutionID = nil
+		t.ResolutionRef = nil
 	}
 	t.UpdatedAt = time.Now().UTC()
 	return nil

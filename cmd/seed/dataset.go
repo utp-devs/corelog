@@ -109,8 +109,9 @@ func persist(ctx context.Context, db *sqlx.DB, ds *dataset) error {
 		return fmt.Errorf("iniciar transaccion: %w", err)
 	}
 	defer func() { _ = tx.Rollback() }()
+	cache := map[catalogRef]uuid.UUID{}
 	for _, t := range ds.tables {
-		if err := insertRows(ctx, tx, t); err != nil {
+		if err := insertRows(ctx, tx, t, cache); err != nil {
 			return err
 		}
 	}
@@ -120,7 +121,7 @@ func persist(ctx context.Context, db *sqlx.DB, ds *dataset) error {
 	return nil
 }
 
-func insertRows(ctx context.Context, tx *sqlx.Tx, t *table) error {
+func insertRows(ctx context.Context, tx *sqlx.Tx, t *table, cache map[catalogRef]uuid.UUID) error {
 	if len(t.rows) == 0 {
 		return nil
 	}
@@ -139,6 +140,13 @@ func insertRows(ctx context.Context, tx *sqlx.Tx, t *table) error {
 			for j, v := range row {
 				if j > 0 {
 					sb.WriteString(", ")
+				}
+				if ref, ok := v.(catalogRef); ok {
+					id, err := resolveCatalogRef(ctx, tx, cache, ref)
+					if err != nil {
+						return err
+					}
+					v = id
 				}
 				args = append(args, v)
 				fmt.Fprintf(&sb, "$%d", len(args))

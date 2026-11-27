@@ -129,6 +129,9 @@ func TestIssueKeyResolutionIsolatedByOrganization(t *testing.T) {
 	repo := NewIssueRepository(db)
 	orgA := uuid.MustParse(keyTestDefaultOrg)
 	orgB := keyTestOrg(t, db)
+	if err := NewCatalogRepository(db).SeedDefaults(ctx, orgB); err != nil {
+		t.Fatal(err)
+	}
 	userA := keyTestUser(t, db, orgA)
 	userB := keyTestUser(t, db, orgB)
 	both := keyTestUser(t, db, orgA)

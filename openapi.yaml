@@ -3358,6 +3358,497 @@ paths:
         '422':
           description: confirm_slug does not match the slug (code org.confirmation_mismatch), or the body is invalid (org.body_invalid, validation.failed).
           content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+  /organizations/{org}/issue-types:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationId'
+    get:
+      tags: [catalogs]
+      summary: Listar tipos de incidencia
+      description: >-
+        Devuelve los elementos del catalogo en orden de posicion, con el numero de incidencias que los usan (usage_count).
+        Cualquier miembro de la organizacion puede leerlos.
+      operationId: listIssueTypes
+      responses:
+        '200':
+          description: Elementos del catalogo
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: {$ref: '#/components/schemas/CatalogItem'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+    post:
+      tags: [catalogs]
+      summary: Crear tipo de incidencia
+      description: >-
+        Anade un elemento al final del catalogo. Solo propietarios y administradores. El nombre es unico en la organizacion
+        sin distinguir mayusculas. Los campos icon y color solo aplican a tipos de incidencia y prioridades; en resoluciones se ignoran.
+      operationId: createIssueType
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/CatalogCreateRequest'}
+      responses:
+        '201':
+          description: Elemento creado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: {$ref: '#/components/schemas/CatalogItem'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409':
+          description: Ya existe un elemento con ese nombre (catalog.name_taken) o, en tipos de incidencia, ya existe otro con el mismo nivel jerarquico epica o subtarea (catalog.hierarchy_level_taken).
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+        '422': {$ref: '#/components/responses/ValidationError'}
+  /organizations/{org}/issue-types/reorder:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationId'
+    put:
+      tags: [catalogs]
+      summary: Reordenar tipos de incidencia
+      description: >-
+        Fija la posicion de cada elemento segun el orden de ids. La lista debe contener exactamente todos los elementos del catalogo,
+        una sola vez (catalog.order_mismatch). Solo propietarios y administradores.
+      operationId: reorderIssueTypes
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/CatalogReorderRequest'}
+      responses:
+        '200':
+          description: Catalogo en el nuevo orden
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: {$ref: '#/components/schemas/CatalogItem'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+  /organizations/{org}/issue-types/{id}:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationId'
+      - name: id
+        in: path
+        required: true
+        description: Identificador del elemento de catalogo.
+        schema: {type: string, format: uuid}
+    patch:
+      tags: [catalogs]
+      summary: Actualizar tipo de incidencia
+      description: >-
+        Cambia nombre, descripcion, icono o color. El nivel jerarquico de un tipo de incidencia no cambia. is_default true
+        convierte el elemento en el predeterminado; false no tiene efecto (para cambiar el predeterminado se marca otro elemento).
+        Solo propietarios y administradores.
+      operationId: updateIssueType
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/CatalogPatchRequest'}
+      responses:
+        '200':
+          description: Elemento actualizado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: {$ref: '#/components/schemas/CatalogItem'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409':
+          description: Ya existe otro elemento con ese nombre (catalog.name_taken).
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+        '422': {$ref: '#/components/responses/ValidationError'}
+    delete:
+      tags: [catalogs]
+      summary: Eliminar tipo de incidencia
+      description: >-
+        Elimina el elemento. Si hay incidencias que lo usan, reassign_to debe nombrar otro elemento compatible: las incidencias
+        se mueven a el en la misma transaccion. El ultimo elemento obligatorio (tipo estandar, epica y subtarea en tipos; al menos
+        uno en prioridades y resoluciones) no se puede eliminar. Si era el predeterminado, lo toma el primero por posicion.
+        Solo propietarios y administradores.
+      operationId: deleteIssueType
+      parameters:
+        - name: reassign_to
+          in: query
+          required: false
+          description: Elemento que recibe las incidencias cuando el elemento que se elimina esta en uso.
+          schema: {type: string, format: uuid}
+      responses:
+        '204':
+          description: Elemento eliminado
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409':
+          description: El elemento esta en uso y falta reassign_to (catalog.in_use).
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+        '422':
+          description: >-
+            reassign_to no existe o no es compatible (catalog.reassign_target_invalid, catalog.reassign_to_self), o es el ultimo
+            elemento obligatorio de su tipo (catalog.last_required_item).
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+  /organizations/{org}/priorities:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationId'
+    get:
+      tags: [catalogs]
+      summary: Listar prioridades
+      description: >-
+        Devuelve los elementos del catalogo en orden de posicion, con el numero de incidencias que los usan (usage_count).
+        Cualquier miembro de la organizacion puede leerlos.
+      operationId: listPriorities
+      responses:
+        '200':
+          description: Elementos del catalogo
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: {$ref: '#/components/schemas/CatalogItem'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+    post:
+      tags: [catalogs]
+      summary: Crear prioridad
+      description: >-
+        Anade un elemento al final del catalogo. Solo propietarios y administradores. El nombre es unico en la organizacion
+        sin distinguir mayusculas. Los campos icon y color solo aplican a tipos de incidencia y prioridades; en resoluciones se ignoran.
+      operationId: createPriority
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/CatalogCreateRequest'}
+      responses:
+        '201':
+          description: Elemento creado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: {$ref: '#/components/schemas/CatalogItem'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409':
+          description: Ya existe un elemento con ese nombre (catalog.name_taken) o, en tipos de incidencia, ya existe otro con el mismo nivel jerarquico epica o subtarea (catalog.hierarchy_level_taken).
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+        '422': {$ref: '#/components/responses/ValidationError'}
+  /organizations/{org}/priorities/reorder:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationId'
+    put:
+      tags: [catalogs]
+      summary: Reordenar prioridades
+      description: >-
+        Fija la posicion de cada elemento segun el orden de ids. La lista debe contener exactamente todos los elementos del catalogo,
+        una sola vez (catalog.order_mismatch). Solo propietarios y administradores.
+      operationId: reorderPriorities
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/CatalogReorderRequest'}
+      responses:
+        '200':
+          description: Catalogo en el nuevo orden
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: {$ref: '#/components/schemas/CatalogItem'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+  /organizations/{org}/priorities/{id}:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationId'
+      - name: id
+        in: path
+        required: true
+        description: Identificador del elemento de catalogo.
+        schema: {type: string, format: uuid}
+    patch:
+      tags: [catalogs]
+      summary: Actualizar prioridad
+      description: >-
+        Cambia nombre, descripcion, icono o color. El nivel jerarquico de un tipo de incidencia no cambia. is_default true
+        convierte el elemento en el predeterminado; false no tiene efecto (para cambiar el predeterminado se marca otro elemento).
+        Solo propietarios y administradores.
+      operationId: updatePriority
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/CatalogPatchRequest'}
+      responses:
+        '200':
+          description: Elemento actualizado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: {$ref: '#/components/schemas/CatalogItem'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409':
+          description: Ya existe otro elemento con ese nombre (catalog.name_taken).
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+        '422': {$ref: '#/components/responses/ValidationError'}
+    delete:
+      tags: [catalogs]
+      summary: Eliminar prioridad
+      description: >-
+        Elimina el elemento. Si hay incidencias que lo usan, reassign_to debe nombrar otro elemento compatible: las incidencias
+        se mueven a el en la misma transaccion. El ultimo elemento obligatorio (tipo estandar, epica y subtarea en tipos; al menos
+        uno en prioridades y resoluciones) no se puede eliminar. Si era el predeterminado, lo toma el primero por posicion.
+        Solo propietarios y administradores.
+      operationId: deletePriority
+      parameters:
+        - name: reassign_to
+          in: query
+          required: false
+          description: Elemento que recibe las incidencias cuando el elemento que se elimina esta en uso.
+          schema: {type: string, format: uuid}
+      responses:
+        '204':
+          description: Elemento eliminado
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409':
+          description: El elemento esta en uso y falta reassign_to (catalog.in_use).
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+        '422':
+          description: >-
+            reassign_to no existe o no es compatible (catalog.reassign_target_invalid, catalog.reassign_to_self), o es el ultimo
+            elemento obligatorio de su tipo (catalog.last_required_item).
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+  /organizations/{org}/resolutions:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationId'
+    get:
+      tags: [catalogs]
+      summary: Listar resoluciones
+      description: >-
+        Devuelve los elementos del catalogo en orden de posicion, con el numero de incidencias que los usan (usage_count).
+        Cualquier miembro de la organizacion puede leerlos.
+      operationId: listResolutions
+      responses:
+        '200':
+          description: Elementos del catalogo
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: {$ref: '#/components/schemas/CatalogItem'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+    post:
+      tags: [catalogs]
+      summary: Crear resolucion
+      description: >-
+        Anade un elemento al final del catalogo. Solo propietarios y administradores. El nombre es unico en la organizacion
+        sin distinguir mayusculas. Los campos icon y color solo aplican a tipos de incidencia y prioridades; en resoluciones se ignoran.
+      operationId: createResolution
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/CatalogCreateRequest'}
+      responses:
+        '201':
+          description: Elemento creado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: {$ref: '#/components/schemas/CatalogItem'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409':
+          description: Ya existe un elemento con ese nombre (catalog.name_taken) o, en tipos de incidencia, ya existe otro con el mismo nivel jerarquico epica o subtarea (catalog.hierarchy_level_taken).
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+        '422': {$ref: '#/components/responses/ValidationError'}
+  /organizations/{org}/resolutions/reorder:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationId'
+    put:
+      tags: [catalogs]
+      summary: Reordenar resoluciones
+      description: >-
+        Fija la posicion de cada elemento segun el orden de ids. La lista debe contener exactamente todos los elementos del catalogo,
+        una sola vez (catalog.order_mismatch). Solo propietarios y administradores.
+      operationId: reorderResolutions
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/CatalogReorderRequest'}
+      responses:
+        '200':
+          description: Catalogo en el nuevo orden
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: {$ref: '#/components/schemas/CatalogItem'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+  /organizations/{org}/resolutions/{id}:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationId'
+      - name: id
+        in: path
+        required: true
+        description: Identificador del elemento de catalogo.
+        schema: {type: string, format: uuid}
+    patch:
+      tags: [catalogs]
+      summary: Actualizar resolucion
+      description: >-
+        Cambia nombre, descripcion, icono o color. El nivel jerarquico de un tipo de incidencia no cambia. is_default true
+        convierte el elemento en el predeterminado; false no tiene efecto (para cambiar el predeterminado se marca otro elemento).
+        Solo propietarios y administradores.
+      operationId: updateResolution
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/CatalogPatchRequest'}
+      responses:
+        '200':
+          description: Elemento actualizado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: {$ref: '#/components/schemas/CatalogItem'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409':
+          description: Ya existe otro elemento con ese nombre (catalog.name_taken).
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+        '422': {$ref: '#/components/responses/ValidationError'}
+    delete:
+      tags: [catalogs]
+      summary: Eliminar resolucion
+      description: >-
+        Elimina el elemento. Si hay incidencias que lo usan, reassign_to debe nombrar otro elemento compatible: las incidencias
+        se mueven a el en la misma transaccion. El ultimo elemento obligatorio (tipo estandar, epica y subtarea en tipos; al menos
+        uno en prioridades y resoluciones) no se puede eliminar. Si era el predeterminado, lo toma el primero por posicion.
+        Solo propietarios y administradores.
+      operationId: deleteResolution
+      parameters:
+        - name: reassign_to
+          in: query
+          required: false
+          description: Elemento que recibe las incidencias cuando el elemento que se elimina esta en uso.
+          schema: {type: string, format: uuid}
+      responses:
+        '204':
+          description: Elemento eliminado
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409':
+          description: El elemento esta en uso y falta reassign_to (catalog.in_use).
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+        '422':
+          description: >-
+            reassign_to no existe o no es compatible (catalog.reassign_target_invalid, catalog.reassign_to_self), o es el ultimo
+            elemento obligatorio de su tipo (catalog.last_required_item).
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+  /projects/{id}/issue-types:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: Identificador del proyecto. Los no miembros reciben 404.
+        schema: {type: string, format: uuid}
+    get:
+      tags: [catalogs]
+      summary: Tipos de incidencia del proyecto
+      description: >-
+        Devuelve los tipos de incidencia que usa el proyecto. Sin configuracion propia, son todos los tipos de la organizacion
+        (configured false). Requiere ver el proyecto.
+      operationId: getProjectIssueTypes
+      responses:
+        '200':
+          description: Tipos del proyecto
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: {$ref: '#/components/schemas/ProjectIssueTypes'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+    put:
+      tags: [catalogs]
+      summary: Configurar los tipos de incidencia del proyecto
+      description: >-
+        Reemplaza la lista de tipos del proyecto, en el orden recibido. Debe incluir al menos un tipo estandar, el tipo epica
+        y el tipo subtarea (project.issue_types_required). Requiere editar el proyecto.
+      operationId: replaceProjectIssueTypes
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/ProjectIssueTypesRequest'}
+      responses:
+        '200':
+          description: Configuracion guardada
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: {$ref: '#/components/schemas/ProjectIssueTypes'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
   /organizations/{org}/logo:
     parameters:
       - $ref: '#/components/parameters/OrganizationId'
@@ -5230,7 +5721,7 @@ components:
           description: Number of issues matching the filters, across all pages.
     CreateIssueRequest:
       type: object
-      required: [summary, description, priority]
+      required: [summary, description]
       properties:
         summary:
           type: string
@@ -5239,15 +5730,27 @@ components:
         description:
           type: string
           minLength: 3
+        priority_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: Prioridad del catalogo. Si se omite, se usa la prioridad predeterminada de la organizacion.
         priority:
           $ref: '#/components/schemas/IssuePriority'
+          description: Valor legado (low, medium, high, critical) que se traduce al elemento del catalogo con esa clave. Usa priority_id.
         project_id:
           type: string
           format: uuid
           nullable: true
           description: Proyecto de la incidencia. Si se omite, se usa el proyecto por defecto (CORE).
+        issue_type_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: Tipo de incidencia del catalogo. Si se omite, se usa el tipo predeterminado del proyecto (Tarea). Debe estar habilitado en el proyecto (issue.type_not_enabled).
         issue_type:
           $ref: '#/components/schemas/IssueType'
+          description: Valor legado que se traduce al tipo del catalogo con esa clave. Usa issue_type_id.
         parent_id:
           type: string
           format: uuid
@@ -5277,7 +5780,7 @@ components:
           nullable: true
     UpdateIssueDetailsRequest:
       type: object
-      required: [summary, description, priority, issue_type]
+      required: [summary, description]
       properties:
         summary:
           type: string
@@ -5286,10 +5789,22 @@ components:
         description:
           type: string
           minLength: 3
+        priority_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: Prioridad del catalogo. Si se omite, se conserva la actual.
         priority:
           $ref: '#/components/schemas/IssuePriority'
+          description: Valor legado. Usa priority_id.
+        issue_type_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: Tipo de incidencia del catalogo. Si se omite, se conserva el actual.
         issue_type:
           $ref: '#/components/schemas/IssueType'
+          description: Valor legado. Usa issue_type_id.
         parent_id:
           type: string
           format: uuid
@@ -5312,10 +5827,15 @@ components:
           maxLength: 64
     UpdateIssueMetadataRequest:
       type: object
-      required: [issue_type]
       properties:
+        issue_type_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: Tipo de incidencia del catalogo. Si se omite, se conserva el actual.
         issue_type:
           $ref: '#/components/schemas/IssueType'
+          description: Valor legado. Usa issue_type_id.
         parent_id:
           type: string
           format: uuid
@@ -5530,9 +6050,15 @@ components:
         status:
           $ref: '#/components/schemas/IssueStatus'
         priority:
-          $ref: '#/components/schemas/IssuePriority'
+          $ref: '#/components/schemas/PriorityRef'
         issue_type:
-          $ref: '#/components/schemas/IssueType'
+          $ref: '#/components/schemas/IssueTypeRef'
+        resolution:
+          $ref: '#/components/schemas/ResolutionRef'
+        resolved_at:
+          type: string
+          format: date-time
+          nullable: true
         parent_id:
           type: string
           format: uuid
@@ -5571,6 +6097,111 @@ components:
         updated_at:
           type: string
           format: date-time
+    CatalogItem:
+      type: object
+      description: Elemento de un catalogo de la organizacion (tipo de incidencia, prioridad o resolucion).
+      properties:
+        id: {type: string, format: uuid}
+        name: {type: string, example: Tarea}
+        description: {type: string}
+        icon:
+          type: string
+          description: Clave de icono de la paleta. Solo tipos de incidencia y prioridades.
+          example: task
+        color:
+          type: string
+          description: Clave de color de la paleta. Solo tipos de incidencia y prioridades.
+          example: blue
+        hierarchy_level:
+          type: integer
+          enum: [-1, 0, 1]
+          description: Solo tipos de incidencia. 1 epica, 0 estandar, -1 subtarea.
+        position: {type: integer, minimum: 0}
+        is_default: {type: boolean, description: Elemento que se usa cuando la peticion no indica tipo o prioridad.}
+        usage_count: {type: integer, minimum: 0, description: Incidencias que usan el elemento.}
+        created_at: {type: string, format: date-time}
+        updated_at: {type: string, format: date-time}
+    CatalogCreateRequest:
+      type: object
+      required: [name]
+      additionalProperties: false
+      properties:
+        name: {type: string, minLength: 1, maxLength: 60, description: 40 caracteres para prioridades.}
+        description: {type: string, maxLength: 500}
+        icon:
+          type: string
+          description: Clave de la paleta de iconos (task, bug, story, epic, subtask, star, flag, bolt, alert, check, layers, tag, book, rocket, shield, clock, circle, arrow-up, arrow-down, minus, chevrons-up, chevrons-down).
+        color:
+          type: string
+          description: Clave de la paleta de colores (gray, red, orange, amber, green, teal, blue, indigo, purple, pink).
+        hierarchy_level:
+          type: integer
+          enum: [-1, 0, 1]
+          default: 0
+          description: Solo tipos de incidencia. Una epica (1) o una subtarea (-1) solo se pueden crear si no existe ya una de ese nivel.
+        is_default: {type: boolean, default: false}
+    CatalogPatchRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        name: {type: string, minLength: 1, maxLength: 60}
+        description: {type: string, maxLength: 500}
+        icon: {type: string}
+        color: {type: string}
+        is_default: {type: boolean}
+    CatalogReorderRequest:
+      type: object
+      required: [ids]
+      additionalProperties: false
+      properties:
+        ids:
+          type: array
+          minItems: 1
+          items: {type: string, format: uuid}
+          description: Todos los identificadores del catalogo, en el nuevo orden.
+    ProjectIssueTypesRequest:
+      type: object
+      required: [issue_type_ids]
+      additionalProperties: false
+      properties:
+        issue_type_ids:
+          type: array
+          minItems: 1
+          items: {type: string, format: uuid}
+          description: Tipos de incidencia del proyecto, en orden. Debe incluir al menos un tipo estandar, el tipo epica y el tipo subtarea (project.issue_types_required).
+    ProjectIssueTypes:
+      type: object
+      properties:
+        items:
+          type: array
+          items: {$ref: '#/components/schemas/CatalogItem'}
+        configured:
+          type: boolean
+          description: false cuando el proyecto no tiene configuracion propia y usa todos los tipos de la organizacion.
+    IssueTypeRef:
+      type: object
+      description: Tipo de incidencia de una incidencia.
+      properties:
+        id: {type: string, format: uuid}
+        name: {type: string}
+        icon: {type: string}
+        color: {type: string}
+        hierarchy_level: {type: integer, enum: [-1, 0, 1]}
+    PriorityRef:
+      type: object
+      description: Prioridad de una incidencia.
+      properties:
+        id: {type: string, format: uuid}
+        name: {type: string}
+        icon: {type: string}
+        color: {type: string}
+    ResolutionRef:
+      type: object
+      nullable: true
+      description: Resolucion de una incidencia terminada. Null mientras la incidencia no esta resuelta.
+      properties:
+        id: {type: string, format: uuid}
+        name: {type: string}
     ErrorResponse:
       type: object
       properties:

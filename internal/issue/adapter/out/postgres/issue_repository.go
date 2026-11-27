@@ -76,17 +76,22 @@ func (r *IssueRepository) save(ctx context.Context, t *domain.Issue) error {
 		return apperror.Wrap(apperror.KindInternal, "failed to allocate issue number", err)
 	}
 	t.KeyNumber, t.ProjectKey = number, projectKey
+	if err := r.fillDefaultCatalogIDs(ctx, exec, t); err != nil {
+		return err
+	}
 	dbRow := fromDomain(t)
 
 	const query = `
 		INSERT INTO issues (
 			project_id, summary, description, status, priority, issue_type, parent_id,
-			due_date, story_points, rank, closed_at, reporter_id, assignee_id, key_number, created_at, updated_at
+			due_date, story_points, rank, closed_at, reporter_id, assignee_id, key_number, created_at, updated_at,
+			issue_type_id, priority_id, resolution_id, resolved_at
 		)
 		VALUES (
 			:project_id, :summary, :description, :status, :priority,
 			:issue_type, :parent_id, :due_date, :story_points, :rank, :closed_at,
-			:reporter_id, :assignee_id, :key_number, :created_at, :updated_at
+			:reporter_id, :assignee_id, :key_number, :created_at, :updated_at,
+			:issue_type_id, :priority_id, :resolution_id, :resolved_at
 		)
 		RETURNING id`
 
@@ -101,6 +106,28 @@ func (r *IssueRepository) save(ctx context.Context, t *domain.Issue) error {
 		return apperror.Wrap(apperror.KindInternal, "failed to save issue", err)
 	}
 	t.ID = id
+	return nil
+}
+
+// fillDefaultCatalogIDs gives a new issue the organization default type and priority when the caller did not
+// choose them. A new issue is never done, so it gets no resolution.
+func (r *IssueRepository) fillDefaultCatalogIDs(ctx context.Context, exec sqlx.ExtContext, t *domain.Issue) error {
+	if t.IssueTypeID == uuid.Nil {
+		if err := exec.QueryRowxContext(ctx, `
+			SELECT it.id FROM issue_types it
+			JOIN projects p ON p.organization_id = it.organization_id
+			WHERE p.id = $1 AND it.is_default`, t.ProjectID).Scan(&t.IssueTypeID); err != nil {
+			return apperror.Wrap(apperror.KindInternal, "failed to find default issue type", err)
+		}
+	}
+	if t.PriorityID == uuid.Nil {
+		if err := exec.QueryRowxContext(ctx, `
+			SELECT pr.id FROM priorities pr
+			JOIN projects p ON p.organization_id = pr.organization_id
+			WHERE p.id = $1 AND pr.is_default`, t.ProjectID).Scan(&t.PriorityID); err != nil {
+			return apperror.Wrap(apperror.KindInternal, "failed to find default priority", err)
+		}
+	}
 	return nil
 }
 
@@ -254,7 +281,9 @@ func (r *IssueRepository) Update(ctx context.Context, t *domain.Issue) error {
 		SET summary = :summary, description = :description, status = :status, priority = :priority,
 		    issue_type = :issue_type, parent_id = :parent_id, due_date = :due_date,
 		    story_points = :story_points, rank = :rank, closed_at = :closed_at,
-		    assignee_id = :assignee_id, updated_at = :updated_at
+		    assignee_id = :assignee_id, updated_at = :updated_at,
+		    issue_type_id = :issue_type_id, priority_id = :priority_id,
+		    resolution_id = :resolution_id, resolved_at = :resolved_at
 		WHERE id = :id AND EXISTS (SELECT 1 FROM projects p WHERE p.id = issues.project_id AND p.deleted_at IS NULL)`
 
 	result, err := sqlx.NamedExecContext(ctx, database.Executor(ctx, r.db), query, row)
@@ -292,7 +321,9 @@ func (r *IssueRepository) updateAndWatchAssignee(ctx context.Context, t *domain.
 		SET summary = :summary, description = :description, status = :status, priority = :priority,
 		    issue_type = :issue_type, parent_id = :parent_id, due_date = :due_date,
 		    story_points = :story_points, rank = :rank, closed_at = :closed_at,
-		    assignee_id = :assignee_id, updated_at = :updated_at
+		    assignee_id = :assignee_id, updated_at = :updated_at,
+		    issue_type_id = :issue_type_id, priority_id = :priority_id,
+		    resolution_id = :resolution_id, resolved_at = :resolved_at
 		WHERE id = :id AND EXISTS (SELECT 1 FROM projects p WHERE p.id = issues.project_id AND p.deleted_at IS NULL)`
 	result, err := sqlx.NamedExecContext(ctx, exec, query, row)
 	if err != nil {

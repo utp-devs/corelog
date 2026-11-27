@@ -25,10 +25,11 @@ const (
 
 // OrganizationService implements port.Service.
 type OrganizationService struct {
-	repo  port.Repository
-	tx    database.TxManager
-	pub   events.Publisher
-	clock clock.Clock
+	repo     port.Repository
+	tx       database.TxManager
+	pub      events.Publisher
+	clock    clock.Clock
+	catalogs port.CatalogSeeder
 }
 
 var _ port.Service = (*OrganizationService)(nil)
@@ -75,6 +76,11 @@ func (s *OrganizationService) CreateOrganization(ctx context.Context, actorID uu
 		owner.OrganizationID = org.ID
 		if err := s.repo.AddMember(ctx, owner); err != nil {
 			return err
+		}
+		if s.catalogs != nil {
+			if err := s.catalogs.SeedDefaults(ctx, org.ID); err != nil {
+				return err
+			}
 		}
 		if err := s.publish(ctx, org.ID, actorID, EventOrgCreated, "organization", org.ID,
 			map[string]any{"slug": org.Slug, "name": org.Name}); err != nil {
@@ -259,4 +265,11 @@ func notFoundAs(err, replacement error) error {
 		return replacement
 	}
 	return err
+}
+
+// WithCatalogSeeder fixes the component that creates the default catalogs of new organizations. Without it
+// organizations are created with no catalogs.
+func (s *OrganizationService) WithCatalogSeeder(seeder port.CatalogSeeder) *OrganizationService {
+	s.catalogs = seeder
+	return s
 }

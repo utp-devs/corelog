@@ -36,6 +36,7 @@ type IssueService struct {
 	assigneeWatch port.AssigneeWatcherRepository
 	savedFilters  port.SavedFilterRepository
 	authorizer    port.ProjectAuthorizer
+	catalog       port.IssueCatalog
 }
 
 func NewIssueService(repo port.Repository, directory port.UserDirectory, repositories ...any) *IssueService {
@@ -88,8 +89,19 @@ func (s *IssueService) WithTxManager(tx database.TxManager) *IssueService {
 	return s
 }
 
+// WithCatalog fija el lector de catalogos. Sin el, las incidencias usan solo los valores legacy.
+func (s *IssueService) WithCatalog(catalog port.IssueCatalog) *IssueService {
+	s.catalog = catalog
+	return s
+}
+
 func (s *IssueService) Create(ctx context.Context, in port.CreateInput) (*domain.Issue, error) {
-	issue, err := domain.NewIssue(in.Summary, in.Description, in.Priority, in.ReporterID)
+	priority := in.Priority
+	if priority == "" {
+		// The catalog default replaces this placeholder below; without a catalog it is the legacy default.
+		priority = domain.PriorityMedium
+	}
+	issue, err := domain.NewIssue(in.Summary, in.Description, priority, in.ReporterID)
 	if err != nil {
 		return nil, err
 	}
@@ -100,7 +112,11 @@ func (s *IssueService) Create(ctx context.Context, in port.CreateInput) (*domain
 	if err := s.requireIssueCreate(ctx, issue.ProjectID, in.ReporterID, in.GlobalRole); err != nil {
 		return nil, err
 	}
-	if in.IssueType != "" {
+	if s.catalog != nil {
+		if err := s.applyCreateCatalog(ctx, issue, in); err != nil {
+			return nil, err
+		}
+	} else if in.IssueType != "" {
 		if err := issue.UpdateMetadata(in.IssueType, in.ParentID, in.DueDate, in.StoryPoints); err != nil {
 			return nil, err
 		}
@@ -305,6 +321,9 @@ func (s *IssueService) UpdateStatus(ctx context.Context, id, actorID uuid.UUID, 
 	if err := issue.ChangeStatus(status); err != nil {
 		return nil, err
 	}
+	if err := s.applyResolution(ctx, issue); err != nil {
+		return nil, err
+	}
 
 	if err := s.repo.Update(ctx, issue); err != nil {
 		return nil, err
@@ -414,7 +433,14 @@ func (s *IssueService) UpdateMetadata(ctx context.Context, id, actorID uuid.UUID
 	if err := s.requireIssueEdit(ctx, issue.ProjectID, actorID, globalRole); err != nil {
 		return nil, err
 	}
-	if err := issue.UpdateMetadata(input.IssueType, input.ParentID, input.DueDate, input.StoryPoints); err != nil {
+	issueType := input.IssueType
+	if s.catalog != nil {
+		if err := s.resolveTypeInto(ctx, issue, input.IssueTypeID, input.IssueType); err != nil {
+			return nil, err
+		}
+		issueType = issue.IssueType
+	}
+	if err := issue.UpdateMetadata(issueType, input.ParentID, input.DueDate, input.StoryPoints); err != nil {
 		return nil, err
 	}
 	if err := s.repo.Update(ctx, issue); err != nil {
@@ -431,10 +457,20 @@ func (s *IssueService) UpdateDetails(ctx context.Context, id, actorID uuid.UUID,
 	if err := s.requireIssueEdit(ctx, issue.ProjectID, actorID, globalRole); err != nil {
 		return nil, err
 	}
-	if err := issue.UpdateDetails(input.Summary, input.Description, input.Priority); err != nil {
+	priority, issueType := input.Priority, input.IssueType
+	if s.catalog != nil {
+		if err := s.resolvePriorityInto(ctx, issue, input.PriorityID, input.Priority); err != nil {
+			return nil, err
+		}
+		if err := s.resolveTypeInto(ctx, issue, input.IssueTypeID, input.IssueType); err != nil {
+			return nil, err
+		}
+		priority, issueType = issue.Priority, issue.IssueType
+	}
+	if err := issue.UpdateDetails(input.Summary, input.Description, priority); err != nil {
 		return nil, err
 	}
-	if err := issue.UpdateMetadata(input.IssueType, input.ParentID, input.DueDate, input.StoryPoints); err != nil {
+	if err := issue.UpdateMetadata(issueType, input.ParentID, input.DueDate, input.StoryPoints); err != nil {
 		return nil, err
 	}
 	if err := s.repo.Update(ctx, issue); err != nil {

@@ -69,6 +69,7 @@ func buildRouter(cfg *config.Config, db *sqlx.DB, log *slog.Logger) (chi.Router,
 	projectMemberRepo = projectpostgres.NewMemberRepository(db)
 	projectCatalogRepo := projectpostgres.NewCatalogRepository(db)
 	sessionRepo := userpostgres.NewSessionRepository(db)
+	issueCatalogRepo := issuepostgres.NewCatalogRepository(db)
 
 	userModule := user.NewModule(userRepo, sessionRepo, database.NewTxManager(db), userpostgres.NewMembershipDetacher(db), cfg.Auth.JWTSecret, cfg.Auth.JWTExpiration)
 	orgModule := organization.NewModule(
@@ -79,7 +80,7 @@ func buildRouter(cfg *config.Config, db *sqlx.DB, log *slog.Logger) (chi.Router,
 		cfg.Auth.JWTSecret,
 		orgUserEmails{db: db},
 		os.Getenv("PUBLIC_URL"),
-	)
+	).WithCatalogSeeder(issueCatalogRepo)
 	orgs := newOrgDirectory(db)
 	teamModule := team.NewModule(teamRepo, orgs, database.NewTxManager(db), cfg.Auth.JWTSecret)
 	authorizer := authusecase.NewAuthorizer(authpostgres.NewRoleLookup(db)).WithSchemes(authpostgres.NewSchemeRepository(db))
@@ -113,6 +114,8 @@ func buildRouter(cfg *config.Config, db *sqlx.DB, log *slog.Logger) (chi.Router,
 	calendarModule := calendar.NewModule(calendarpostgres.NewCalendarRepository(db), projectAuthorizer, cfg.Auth.JWTSecret)
 	sprintModule := sprint.NewModule(sprintpostgres.NewSprintRepository(db), projectAuthorizer, cfg.Auth.JWTSecret)
 	boardModule := board.NewModule(boardpostgres.NewBoardRepository(db), projectModule.Service, projectAuthorizer, boardIssueMover{issues: issueModule.Service}, cfg.Auth.JWTSecret)
+	issueModule.WithCatalog(issueCatalogRepo)
+	catalogModule := issue.NewCatalogModule(issueCatalogRepo, orgCatalogRoleChecker{svc: orgModule.Service}, projectAuthorizer, database.NewTxManager(db), clock.RealClock{}, cfg.Auth.JWTSecret)
 	issueModule.Handler.WithAttachments(attachmentRepo, fileStorage)
 
 	avatarStorage := filestorage.NewDiskStorage(dirFromEnv("AVATARS_DIR", filepath.Join("data", "avatars")))
@@ -124,6 +127,7 @@ func buildRouter(cfg *config.Config, db *sqlx.DB, log *slog.Logger) (chi.Router,
 	router.Route("/api/v1", func(r chi.Router) {
 		avatar.RegisterRoutes(r)
 		logo.RegisterRoutes(r)
+		catalogModule.Handler.RegisterCatalogRoutes(r)
 		httpserver.Mount(r, userModule.Handler, teamModule.Handler, projectModule.Handler, boardModule.Handler, issueModule.Handler, sprintModule.Handler, notificationModule.Handler, calendarModule.Handler, searchModule.Handler, dashboardModule.Handler, favoriteModule.Handler, noteModule.Handler, orgModule.Handler)
 	})
 	return router, nil

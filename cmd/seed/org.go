@@ -65,6 +65,7 @@ type projectModel struct {
 
 // orgModel holds the ids produced by buildOrg that the issue generator needs.
 type orgModel struct {
+	orgID      uuid.UUID
 	users      []uuid.UUID // every platform user, same order as the people list
 	requesters []uuid.UUID // organization guests
 	agents     []uuid.UUID // organization members, admins and owners
@@ -160,8 +161,9 @@ func buildUsers(ds *dataset, people []person, passwordHash string) []uuid.UUID {
 func buildOrg(ds *dataset, spec orgSpec, users []uuid.UUID) orgModel {
 	orgs := ds.ignoreDuplicates("organizations", "id", "slug", "name", "description", "created_by", "created_at", "updated_at")
 	orgs.add(spec.id, spec.slug, spec.name, spec.description, nil, orgCreated, orgCreated)
+	buildCatalogs(ds, spec.id, spec.slug)
 
-	model := orgModel{users: users}
+	model := orgModel{users: users, orgID: spec.id}
 	orgMembers := ds.table("organization_members", "organization_id", "user_id", "role", "joined_at")
 	for _, m := range spec.members {
 		uid := users[m.person]

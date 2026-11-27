@@ -50,6 +50,7 @@ func TestBacklogRepositoryOrderAndSaveRanksPostgres(t *testing.T) {
 	if _, err := db.Exec(`INSERT INTO projects (id) VALUES ($1)`, project); err != nil {
 		t.Fatal(err)
 	}
+	addCatalogFixtures(t, db)
 	a, b, c, foreign := uuid.New(), uuid.New(), uuid.New(), uuid.New()
 	for _, row := range []struct {
 		id      uuid.UUID

@@ -64,6 +64,7 @@ func TestIssueRepositoryUnassignClearsAssigneePostgres(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	addCatalogFixtures(t, db)
 	projectID := uuid.New()
 	insertProjectRow(t, db, projectID)
 	issue.ProjectID = projectID

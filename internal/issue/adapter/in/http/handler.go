@@ -59,6 +59,8 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		GlobalRole:  globalRole,
 		ProjectID:   parseOptionalUUID(req.ProjectID),
 		IssueType:   domain.IssueType(req.IssueType),
+		IssueTypeID: parseOptionalUUID(req.IssueTypeID),
+		PriorityID:  parseOptionalUUID(req.PriorityID),
 		ParentID:    parseOptionalUUID(req.ParentID),
 		DueDate:     req.DueDate,
 		StoryPoints: req.StoryPoints,
@@ -341,6 +343,7 @@ func (h *Handler) UpdateMetadata(w http.ResponseWriter, r *http.Request) {
 	}
 	issue, err := h.service.UpdateMetadata(r.Context(), id, actorID, globalRole, port.UpdateMetadataInput{
 		IssueType:   domain.IssueType(req.IssueType),
+		IssueTypeID: parseOptionalUUID(req.IssueTypeID),
 		ParentID:    parseOptionalUUID(req.ParentID),
 		DueDate:     req.DueDate,
 		StoryPoints: req.StoryPoints,
@@ -377,7 +380,9 @@ func (h *Handler) UpdateDetails(w http.ResponseWriter, r *http.Request) {
 		Summary:     req.Summary,
 		Description: req.Description,
 		Priority:    domain.Priority(req.Priority),
+		PriorityID:  parseOptionalUUID(req.PriorityID),
 		IssueType:   domain.IssueType(req.IssueType),
+		IssueTypeID: parseOptionalUUID(req.IssueTypeID),
 		ParentID:    parseOptionalUUID(req.ParentID),
 		DueDate:     req.DueDate,
 		StoryPoints: req.StoryPoints,

@@ -29,16 +29,19 @@ func toSavedFilterResponse(filter *domain.SavedFilter) savedFilterResponse {
 type createIssueRequest struct {
 	Summary     string     `json:"summary" validate:"required,min=3,max=200"`
 	Description string     `json:"description" validate:"required,min=3"`
-	Priority    string     `json:"priority" validate:"required,oneof=low medium high critical"`
+	Priority    string     `json:"priority" validate:"omitempty,oneof=low medium high critical"`
+	PriorityID  string     `json:"priority_id" validate:"omitempty,uuid"`
 	ProjectID   string     `json:"project_id" validate:"omitempty,uuid"`
 	IssueType   string     `json:"issue_type" validate:"omitempty,oneof=task bug story epic subtask"`
+	IssueTypeID string     `json:"issue_type_id" validate:"omitempty,uuid"`
 	ParentID    string     `json:"parent_id" validate:"omitempty,uuid4"`
 	DueDate     *time.Time `json:"due_date"`
 	StoryPoints *float64   `json:"story_points"`
 }
 
 type updateMetadataRequest struct {
-	IssueType   string     `json:"issue_type" validate:"required,oneof=task bug story epic subtask"`
+	IssueType   string     `json:"issue_type" validate:"omitempty,oneof=task bug story epic subtask"`
+	IssueTypeID string     `json:"issue_type_id" validate:"omitempty,uuid"`
 	ParentID    string     `json:"parent_id" validate:"omitempty,uuid4"`
 	DueDate     *time.Time `json:"due_date"`
 	StoryPoints *float64   `json:"story_points"`
@@ -47,8 +50,10 @@ type updateMetadataRequest struct {
 type updateDetailsRequest struct {
 	Summary     string     `json:"summary" validate:"required,min=3,max=200"`
 	Description string     `json:"description" validate:"required,min=3"`
-	Priority    string     `json:"priority" validate:"required,oneof=low medium high critical"`
-	IssueType   string     `json:"issue_type" validate:"required,oneof=task bug story epic subtask"`
+	Priority    string     `json:"priority" validate:"omitempty,oneof=low medium high critical"`
+	PriorityID  string     `json:"priority_id" validate:"omitempty,uuid"`
+	IssueType   string     `json:"issue_type" validate:"omitempty,oneof=task bug story epic subtask"`
+	IssueTypeID string     `json:"issue_type_id" validate:"omitempty,uuid"`
 	ParentID    string     `json:"parent_id" validate:"omitempty,uuid4"`
 	DueDate     *time.Time `json:"due_date"`
 	StoryPoints *float64   `json:"story_points"`
@@ -143,26 +148,28 @@ type assignedUserValidation struct {
 }
 
 type issueResponse struct {
-	ID           string     `json:"id"`
-	Key          string     `json:"key"`
-	ProjectID    string     `json:"project_id"`
-	ProjectKey   string     `json:"project_key"`
-	Summary      string     `json:"summary"`
-	Description  string     `json:"description"`
-	Status       string     `json:"status"`
-	Priority     string     `json:"priority"`
-	IssueType    string     `json:"issue_type"`
-	ParentID     *string    `json:"parent_id,omitempty"`
-	DueDate      *time.Time `json:"due_date,omitempty"`
-	StoryPoints  *float64   `json:"story_points,omitempty"`
-	Rank         string     `json:"rank"`
-	ClosedAt     *time.Time `json:"closed_at,omitempty"`
-	ReporterID   string     `json:"reporter_id"`
-	ReporterName string     `json:"reporter_name"`
-	AssigneeID   *string    `json:"assignee_id,omitempty"`
-	AssigneeName *string    `json:"assignee_name,omitempty"`
-	CreatedAt    time.Time  `json:"created_at"`
-	UpdatedAt    time.Time  `json:"updated_at"`
+	ID           string         `json:"id"`
+	Key          string         `json:"key"`
+	ProjectID    string         `json:"project_id"`
+	ProjectKey   string         `json:"project_key"`
+	Summary      string         `json:"summary"`
+	Description  string         `json:"description"`
+	Status       string         `json:"status"`
+	IssueType    *issueTypeRef  `json:"issue_type"`
+	Priority     *priorityRef   `json:"priority"`
+	Resolution   *resolutionRef `json:"resolution"`
+	ResolvedAt   *time.Time     `json:"resolved_at"`
+	ParentID     *string        `json:"parent_id,omitempty"`
+	DueDate      *time.Time     `json:"due_date,omitempty"`
+	StoryPoints  *float64       `json:"story_points,omitempty"`
+	Rank         string         `json:"rank"`
+	ClosedAt     *time.Time     `json:"closed_at,omitempty"`
+	ReporterID   string         `json:"reporter_id"`
+	ReporterName string         `json:"reporter_name"`
+	AssigneeID   *string        `json:"assignee_id,omitempty"`
+	AssigneeName *string        `json:"assignee_name,omitempty"`
+	CreatedAt    time.Time      `json:"created_at"`
+	UpdatedAt    time.Time      `json:"updated_at"`
 }
 
 // toIssueResponse arma la respuesta de una incidencia. names contiene el nombre de cada persona implicada.
@@ -175,8 +182,10 @@ func toIssueResponse(t *domain.Issue, names map[uuid.UUID]string) issueResponse 
 		Summary:      t.Summary,
 		Description:  t.Description,
 		Status:       string(t.Status),
-		Priority:     string(t.Priority),
-		IssueType:    string(t.IssueType),
+		IssueType:    toIssueTypeRef(t.IssueTypeRef),
+		Priority:     toPriorityRef(t.PriorityRef),
+		Resolution:   toResolutionRef(t.ResolutionRef),
+		ResolvedAt:   t.ResolvedAt,
 		DueDate:      t.DueDate,
 		StoryPoints:  t.StoryPoints,
 		Rank:         t.Rank,
@@ -262,4 +271,48 @@ func toIssueLinkResponses(links []*domain.IssueLink) []issueLinkResponse {
 		out = append(out, toIssueLinkResponse(link))
 	}
 	return out
+}
+
+// issueTypeRef is the issue type of an issue as the API shows it.
+type issueTypeRef struct {
+	ID             string `json:"id"`
+	Name           string `json:"name"`
+	Icon           string `json:"icon"`
+	Color          string `json:"color"`
+	HierarchyLevel int    `json:"hierarchy_level"`
+}
+
+// priorityRef is the priority of an issue as the API shows it.
+type priorityRef struct {
+	ID    string `json:"id"`
+	Name  string `json:"name"`
+	Icon  string `json:"icon"`
+	Color string `json:"color"`
+}
+
+// resolutionRef is the resolution of a done issue as the API shows it.
+type resolutionRef struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+}
+
+func toIssueTypeRef(ref *domain.CatalogRef) *issueTypeRef {
+	if ref == nil {
+		return nil
+	}
+	return &issueTypeRef{ID: ref.ID.String(), Name: ref.Name, Icon: ref.Icon, Color: ref.Color, HierarchyLevel: ref.HierarchyLevel}
+}
+
+func toPriorityRef(ref *domain.CatalogRef) *priorityRef {
+	if ref == nil {
+		return nil
+	}
+	return &priorityRef{ID: ref.ID.String(), Name: ref.Name, Icon: ref.Icon, Color: ref.Color}
+}
+
+func toResolutionRef(ref *domain.CatalogRef) *resolutionRef {
+	if ref == nil {
+		return nil
+	}
+	return &resolutionRef{ID: ref.ID.String(), Name: ref.Name}
 }

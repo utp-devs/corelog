@@ -61,6 +61,7 @@ func newListTestRepository(t *testing.T) *IssueRepository {
 	)`); err != nil {
 		t.Fatal(err)
 	}
+	addCatalogFixtures(t, db)
 	return NewIssueRepository(db)
 }
 

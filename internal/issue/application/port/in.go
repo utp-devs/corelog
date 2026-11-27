@@ -18,6 +18,8 @@ type CreateInput struct {
 	// ProjectID es opcional: si es nil el issue se asigna al proyecto por defecto.
 	ProjectID   *uuid.UUID
 	IssueType   domain.IssueType
+	IssueTypeID *uuid.UUID
+	PriorityID  *uuid.UUID
 	ParentID    *uuid.UUID
 	DueDate     *time.Time
 	StoryPoints *float64
@@ -25,6 +27,7 @@ type CreateInput struct {
 
 type UpdateMetadataInput struct {
 	IssueType   domain.IssueType
+	IssueTypeID *uuid.UUID
 	ParentID    *uuid.UUID
 	DueDate     *time.Time
 	StoryPoints *float64
@@ -35,6 +38,8 @@ type UpdateDetailsInput struct {
 	Description string
 	Priority    domain.Priority
 	IssueType   domain.IssueType
+	IssueTypeID *uuid.UUID
+	PriorityID  *uuid.UUID
 	ParentID    *uuid.UUID
 	DueDate     *time.Time
 	StoryPoints *float64

@@ -105,6 +105,7 @@ func newAssignTxDB(t *testing.T) *sqlx.DB {
 			t.Fatal(err)
 		}
 	}
+	addCatalogFixtures(t, db)
 	return db
 }
 

@@ -231,6 +231,7 @@ func buildE2E(passwordHash string) *dataset {
 		proj := org.projects[spec.project]
 		created := daysFromBase(-spec.createdDays)
 		rec := issueRec{
+			orgID:       org.orgID,
 			id:          issueID(n + 1),
 			projectID:   proj.id,
 			reporter:    org.users[spec.requester],

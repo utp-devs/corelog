@@ -52,8 +52,23 @@ func seedProject(t *testing.T, db *sqlx.DB, org, lead uuid.UUID, visibility stri
 func seedIssue(t *testing.T, db *sqlx.DB, project, reporter uuid.UUID) uuid.UUID {
 	t.Helper()
 	id := uuid.New()
-	if _, err := db.Exec(`INSERT INTO issues (id, project_id, issue_type, summary, description, status, priority, reporter_id, key_number)
-		VALUES ($1, $2, 'task', 'Issue', '', 'open', 'medium', $3, (SELECT COALESCE(MAX(key_number), 0) + 1 FROM issues WHERE project_id = $2))`, id, project, reporter); err != nil {
+	// Throwaway organizations have no catalogs: add one default type and priority when missing.
+	for _, q := range []string{
+		`INSERT INTO issue_types (organization_id, name, is_default, legacy_key)
+		 SELECT p.organization_id, 'Task', TRUE, 'task' FROM projects p WHERE p.id = $1
+		 AND NOT EXISTS (SELECT 1 FROM issue_types t WHERE t.organization_id = p.organization_id AND t.is_default)`,
+		`INSERT INTO priorities (organization_id, name, is_default, legacy_key)
+		 SELECT p.organization_id, 'Medium', TRUE, 'medium' FROM projects p WHERE p.id = $1
+		 AND NOT EXISTS (SELECT 1 FROM priorities r WHERE r.organization_id = p.organization_id AND r.is_default)`,
+	} {
+		if _, err := db.Exec(q, project); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if _, err := db.Exec(`INSERT INTO issues (id, project_id, issue_type, summary, description, status, priority, reporter_id, key_number, issue_type_id, priority_id)
+		VALUES ($1, $2, 'task', 'Issue', '', 'open', 'medium', $3, (SELECT COALESCE(MAX(key_number), 0) + 1 FROM issues WHERE project_id = $2),
+			(SELECT t.id FROM issue_types t WHERE t.organization_id = (SELECT organization_id FROM projects WHERE id = $2) AND t.is_default LIMIT 1),
+			(SELECT p.id FROM priorities p WHERE p.organization_id = (SELECT organization_id FROM projects WHERE id = $2) AND p.is_default LIMIT 1))`, id, project, reporter); err != nil {
 		t.Fatal(err)
 	}
 	return id

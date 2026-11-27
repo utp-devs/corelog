@@ -66,6 +66,7 @@ type commentRec struct {
 // issueRec is one generated issue with its relations. It is plain data, so the
 // generators can be tested without a database.
 type issueRec struct {
+	orgID                        uuid.UUID
 	id, projectID, reporter      uuid.UUID
 	assignee, parent, sprint     *uuid.UUID
 	summary, description, status string
@@ -145,6 +146,7 @@ func generateIssues(rng *rand.Rand, org orgModel, n int) []issueRec {
 
 		created := daysFromBase(-(int(rCreated*150) + 1))
 		rec := issueRec{
+			orgID:       org.orgID,
 			id:          issueID(i),
 			projectID:   proj.id,
 			reporter:    requesters[int(rPeople*float64(len(requesters)))],
@@ -244,7 +246,8 @@ func columnIndex(t *table, column string) int {
 func emitIssues(ds *dataset, recs []issueRec) {
 	issues := ds.table("issues", "id", "project_id", "summary", "description", "status", "priority",
 		"reporter_id", "assignee_id", "issue_type", "parent_id", "due_date", "story_points",
-		"rank", "closed_at", "created_at", "updated_at", "sprint_id", "key_number")
+		"rank", "closed_at", "created_at", "updated_at", "sprint_id", "key_number",
+		"issue_type_id", "priority_id", "resolution_id", "resolved_at")
 	issueLabels := ds.ignoreDuplicates("issue_labels", "issue_id", "label_id")
 	issueComponents := ds.ignoreDuplicates("issue_components", "issue_id", "component_id")
 	watchers := ds.ignoreDuplicates("watchers", "issue_id", "user_id", "created_at")
@@ -253,10 +256,21 @@ func emitIssues(ds *dataset, recs []issueRec) {
 
 	keyNumbers := map[uuid.UUID]int{}
 	for _, r := range recs {
+		var resolutionID any
+		var resolvedAt any
+		if r.status == "resolved" || r.status == "closed" {
+			resolutionID = catalogRef{org: r.orgID, table: "resolutions"}
+			resolvedAt = r.updated
+			if r.closed != nil {
+				resolvedAt = *r.closed
+			}
+		}
 		keyNumbers[r.projectID]++
 		issues.add(r.id, r.projectID, r.summary, r.description, r.status, r.priority,
 			r.reporter, opt(r.assignee), r.itype, opt(r.parent), opt(r.due), opt(r.points),
-			r.rank, opt(r.closed), r.created, r.updated, opt(r.sprint), keyNumbers[r.projectID])
+			r.rank, opt(r.closed), r.created, r.updated, opt(r.sprint), keyNumbers[r.projectID],
+			catalogRef{org: r.orgID, table: "issue_types", legacy: r.itype},
+			catalogRef{org: r.orgID, table: "priorities", legacy: r.priority}, resolutionID, resolvedAt)
 		for _, l := range r.labels {
 			issueLabels.add(r.id, l)
 		}
