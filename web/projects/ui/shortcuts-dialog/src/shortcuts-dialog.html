@@ -1,0 +1,51 @@
+@if (open()) {
+  <div class="backdrop" (mousedown)="onBackdropMouseDown($event)">
+    <div
+      #dialog
+      class="dialog"
+      role="dialog"
+      aria-modal="true"
+      tabindex="-1"
+      [attr.aria-labelledby]="titleId"
+      (keydown)="onKeydown($event)"
+    >
+      <header class="header">
+        <h2 class="title" [id]="titleId">Atajos de teclado</h2>
+        <button type="button" class="close" aria-label="Close" (click)="close()">
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path d="M6 6l12 12M18 6 6 18" />
+          </svg>
+        </button>
+      </header>
+
+      @if (groups().length === 0) {
+        <p class="empty">No hay atajos disponibles en esta pantalla.</p>
+      }
+
+      @for (group of groups(); track group.id) {
+        <section class="group" [attr.aria-labelledby]="group.id">
+          <h3 class="group-title" [id]="group.id">{{ group.name }}</h3>
+          <ul class="list">
+            @for (item of group.items; track $index) {
+              <li class="item">
+                <span class="description">{{ item.description }}</span>
+                @if (item.comingSoon) {
+                  <span class="soon">Próximamente</span>
+                } @else {
+                  <span class="keys">
+                    @for (token of item.tokens; track $index; let first = $first) {
+                      @if (!first) {
+                        <span class="then">luego</span>
+                      }
+                      <kbd class="kbd">{{ token }}</kbd>
+                    }
+                  </span>
+                }
+              </li>
+            }
+          </ul>
+        </section>
+      }
+    </div>
+  </div>
+}

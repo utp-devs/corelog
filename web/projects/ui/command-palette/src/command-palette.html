@@ -1,0 +1,81 @@
+@if (open()) {
+  <div class="overlay" (mousedown)="onOverlayMouseDown($event)">
+    <div
+      #dialog
+      class="dialog"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Paleta de comandos"
+      (keydown)="onKeydown($event)"
+    >
+      <div class="input-row">
+        <svg class="input-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <circle cx="11" cy="11" r="7" />
+          <path d="m20 20-4-4" />
+        </svg>
+        <input
+          #searchInput
+          type="text"
+          role="combobox"
+          class="input"
+          aria-label="Buscar o escribir un comando"
+          [attr.aria-expanded]="hasOptions() ? 'true' : 'false'"
+          [attr.aria-controls]="listId"
+          aria-autocomplete="list"
+          [attr.aria-activedescendant]="activeId()"
+          placeholder="Buscar proyectos, incidencias o comandos…"
+          autocomplete="off"
+          [value]="query()"
+          (input)="onInput(searchInput.value)"
+        />
+      </div>
+
+      <div class="status" role="status" aria-live="polite">
+        @if (loading()) {
+          <span>Buscando…</span>
+        }
+        @if (hasError()) {
+          <span class="error">
+            No se pudo buscar. Intenta de nuevo.
+            <button type="button" class="retry" (click)="retry()">Reintentar</button>
+          </span>
+        }
+        @if (!searchable()) {
+          <span>Escribe al menos 2 caracteres para buscar proyectos e incidencias.</span>
+        }
+        @if (showEmpty()) {
+          <span>Sin resultados</span>
+        }
+      </div>
+
+      @if (hasOptions()) {
+        <div [id]="listId" role="listbox" aria-label="Resultados" class="list">
+          @for (section of sections(); track section.name) {
+            <div role="group" class="group" [attr.aria-label]="section.name">
+              <div class="group-title" aria-hidden="true">{{ section.name }}</div>
+              @for (item of section.items; track item.option.key) {
+                <div
+                  role="option"
+                  class="option"
+                  [class.option-active]="item.selected"
+                  [id]="optionId(item.index)"
+                  [attr.aria-selected]="item.selected ? 'true' : 'false'"
+                  (mouseenter)="active.set(item.index)"
+                  (click)="select(item.option)"
+                >
+                  <svg class="option-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                    <path [attr.d]="sectionIcon[item.option.section]" />
+                  </svg>
+                  <span class="option-title">{{ item.option.title }}</span>
+                  @if (item.option.subtitle) {
+                    <span class="option-subtitle">{{ item.option.subtitle }}</span>
+                  }
+                </div>
+              }
+            </div>
+          }
+        </div>
+      }
+    </div>
+  </div>
+}
