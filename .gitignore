@@ -228,3 +228,7 @@ GEMINI.md
 .claude-flow/
 .swarm/
 *.agent-session
+
+# Private working material (not versioned)
+/.images/
+/pinterest/
