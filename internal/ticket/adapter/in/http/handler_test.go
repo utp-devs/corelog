@@ -83,6 +83,12 @@ func (r *memoryTicketRepo) FindAll(_ context.Context, filter ticketport.ListFilt
 		if filter.Priority != "" && t.Priority != filter.Priority {
 			continue
 		}
+		if filter.Unassigned && t.AssigneeID != nil {
+			continue
+		}
+		if filter.AssigneeID != nil && (t.AssigneeID == nil || *t.AssigneeID != *filter.AssigneeID) {
+			continue
+		}
 		copied := *t
 		list = append(list, &copied)
 	}
@@ -451,6 +457,74 @@ func TestTicketHTTP_ListReturnsPaginationMeta(t *testing.T) {
 	if payload.Meta.Page != 1 || payload.Meta.PageSize != 2 {
 		t.Errorf("meta page/page_size = %d/%d, want 1/2", payload.Meta.Page, payload.Meta.PageSize)
 	}
+}
+
+func TestTicketHTTP_ListFiltersByAssignee(t *testing.T) {
+	router, jwtSecret, repo, _ := setupTicketRouter()
+	token, _ := authtoken.Generate(jwtSecret, time.Hour, uuid.New(), "admin")
+	assigneeID := uuid.New()
+
+	unassigned, _ := domain.NewTicket("Unassigned list", "Desc", domain.PriorityLow, uuid.New())
+	assigned, _ := domain.NewTicket("Assigned list", "Desc", domain.PriorityLow, uuid.New())
+	assigned.AssigneeID = &assigneeID
+	for _, ticket := range []*domain.Ticket{unassigned, assigned} {
+		if err := repo.Save(context.Background(), ticket); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	list := func(t *testing.T, query string) (int, []string) {
+		t.Helper()
+		req := httptest.NewRequest(http.MethodGet, "/issues?"+query, nil)
+		req.Header.Set("Authorization", "Bearer "+token)
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+		if rec.Code != http.StatusOK {
+			return rec.Code, nil
+		}
+		var payload struct {
+			Data []struct {
+				ID string `json:"id"`
+			} `json:"data"`
+		}
+		if err := json.Unmarshal(rec.Body.Bytes(), &payload); err != nil {
+			t.Fatalf("invalid JSON: %v", err)
+		}
+		ids := make([]string, 0, len(payload.Data))
+		for _, item := range payload.Data {
+			ids = append(ids, item.ID)
+		}
+		return rec.Code, ids
+	}
+
+	t.Run("none returns unassigned issues", func(t *testing.T) {
+		code, ids := list(t, "assignee_id=none")
+		if code != http.StatusOK {
+			t.Fatalf("status = %d, want %d", code, http.StatusOK)
+		}
+		if len(ids) != 1 || ids[0] != unassigned.ID.String() {
+			t.Errorf("ids = %v, want only %s", ids, unassigned.ID)
+		}
+	})
+
+	t.Run("uuid returns issues of that assignee", func(t *testing.T) {
+		code, ids := list(t, "assignee_id="+assigneeID.String())
+		if code != http.StatusOK {
+			t.Fatalf("status = %d, want %d", code, http.StatusOK)
+		}
+		if len(ids) != 1 || ids[0] != assigned.ID.String() {
+			t.Errorf("ids = %v, want only %s", ids, assigned.ID)
+		}
+	})
+
+	t.Run("other values are rejected", func(t *testing.T) {
+		for _, value := range []string{"nobody", "None", "null"} {
+			code, _ := list(t, "assignee_id="+value)
+			if code != http.StatusUnprocessableEntity {
+				t.Errorf("assignee_id=%s status = %d, want %d", value, code, http.StatusUnprocessableEntity)
+			}
+		}
+	})
 }
 
 func TestTicketHTTP_ResponsesIncludePersonNames(t *testing.T) {

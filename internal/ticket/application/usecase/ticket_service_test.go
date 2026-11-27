@@ -74,6 +74,12 @@ func (r *fakeTicketRepo) FindAll(_ context.Context, filter port.ListFilter) ([]*
 		if filter.Priority != "" && t.Priority != filter.Priority {
 			continue
 		}
+		if filter.Unassigned && t.AssigneeID != nil {
+			continue
+		}
+		if filter.AssigneeID != nil && (t.AssigneeID == nil || *t.AssigneeID != *filter.AssigneeID) {
+			continue
+		}
 		copied := *t
 		list = append(list, &copied)
 	}
@@ -757,6 +763,39 @@ func TestTicketService_ListReportsTotalAcrossPages(t *testing.T) {
 	}
 	if result.Page != 2 || result.PageSize != 2 {
 		t.Errorf("page/page_size = %d/%d, want 2/2", result.Page, result.PageSize)
+	}
+}
+
+func TestTicketService_ListFiltersByAssignee(t *testing.T) {
+	ctx := context.Background()
+	repo := newFakeTicketRepo()
+	svc := NewTicketService(repo, newFakeUserDirectory(), contributorRoleResolver())
+	requesterID := uuid.New()
+	assigneeID := uuid.New()
+
+	unassigned, _ := domain.NewTicket("Unassigned", "Desc", domain.PriorityLow, requesterID)
+	assigned, _ := domain.NewTicket("Assigned", "Desc", domain.PriorityLow, requesterID)
+	assigned.AssigneeID = &assigneeID
+	for _, ticket := range []*domain.Ticket{unassigned, assigned} {
+		if err := repo.Save(ctx, ticket); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	none, err := svc.List(ctx, requesterID, "admin", port.ListFilter{Unassigned: true, Page: 1, PageSize: 20})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if none.Total != 1 || len(none.Items) != 1 || none.Items[0].ID != unassigned.ID {
+		t.Errorf("unassigned filter returned total=%d items=%d, want only the unassigned issue", none.Total, len(none.Items))
+	}
+
+	byAssignee, err := svc.List(ctx, requesterID, "admin", port.ListFilter{AssigneeID: &assigneeID, Page: 1, PageSize: 20})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if byAssignee.Total != 1 || len(byAssignee.Items) != 1 || byAssignee.Items[0].ID != assigned.ID {
+		t.Errorf("assignee filter returned total=%d items=%d, want only the assigned issue", byAssignee.Total, len(byAssignee.Items))
 	}
 }
 

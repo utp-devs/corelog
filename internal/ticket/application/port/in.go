@@ -55,6 +55,8 @@ type ListFilter struct {
 	IssueType  domain.IssueType
 	LabelID    uuid.UUID
 	AssigneeID *uuid.UUID
+	// Unassigned restricts the list to issues without an assignee. It is exclusive with AssigneeID.
+	Unassigned bool
 	DueFrom    *time.Time
 	DueTo      *time.Time
 	Page       int

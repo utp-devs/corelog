@@ -134,6 +134,9 @@ func listWhere(filter port.ListFilter) (string, []any) {
 		args = append(args, *filter.AssigneeID)
 		query += fmt.Sprintf(" AND assignee_id = $%d", len(args))
 	}
+	if filter.Unassigned {
+		query += " AND assignee_id IS NULL"
+	}
 	if filter.DueFrom != nil {
 		args = append(args, *filter.DueFrom)
 		query += fmt.Sprintf(" AND due_date >= $%d", len(args))

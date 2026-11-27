@@ -1206,9 +1206,13 @@ paths:
         - name: assignee_id
           in: query
           required: false
+          description: UUID de la persona asignada. El valor `none` devuelve las incidencias sin responsable. Cualquier otro valor responde 422.
           schema:
-            type: string
-            format: uuid
+            oneOf:
+              - type: string
+                format: uuid
+              - type: string
+                enum: [none]
         - name: due_from
           in: query
           required: false
@@ -2155,6 +2159,13 @@ paths:
       responses:
         '200':
           description: Comment updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/IssueComment'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':

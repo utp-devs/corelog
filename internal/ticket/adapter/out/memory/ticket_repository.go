@@ -84,6 +84,12 @@ func (r *TicketRepository) FindAll(_ context.Context, filter port.ListFilter) ([
 		if filter.Priority != "" && t.Priority != filter.Priority {
 			continue
 		}
+		if filter.Unassigned && t.AssigneeID != nil {
+			continue
+		}
+		if filter.AssigneeID != nil && (t.AssigneeID == nil || *t.AssigneeID != *filter.AssigneeID) {
+			continue
+		}
 		matches = append(matches, cloneTicket(t))
 	}
 

@@ -103,6 +103,9 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 	h.writeTicket(w, r, http.StatusOK, ticket)
 }
 
+// unassignedFilterValue is the assignee_id query value that lists issues without an assignee.
+const unassignedFilterValue = "none"
+
 func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 	actorID, ok := appmw.UserIDFromContext(r.Context())
 	if !ok {
@@ -129,7 +132,11 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 		}
 		filter.LabelID = id
 	}
-	if assigneeID := q.Get("assignee_id"); assigneeID != "" {
+	switch assigneeID := q.Get("assignee_id"); assigneeID {
+	case "":
+	case unassignedFilterValue:
+		filter.Unassigned = true
+	default:
 		id, err := uuid.Parse(assigneeID)
 		if err != nil {
 			httpresponse.Error(w, apperror.New(apperror.KindValidation, "invalid assignee id"))

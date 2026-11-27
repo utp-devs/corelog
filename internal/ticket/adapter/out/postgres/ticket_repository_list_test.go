@@ -13,9 +13,9 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
-// TestTicketRepositoryCountMatchesFindAllPostgres verifica que Count y FindAll usan la misma
-// clausula WHERE: el total cuenta todas las coincidencias y la pagina devuelve solo su parte.
-func TestTicketRepositoryCountMatchesFindAllPostgres(t *testing.T) {
+// newListTestRepository crea un esquema aislado con la tabla issues y devuelve el repositorio sobre el.
+func newListTestRepository(t *testing.T) *TicketRepository {
+	t.Helper()
 	dsn := os.Getenv("CORELOG_TEST_DATABASE_URL")
 	if dsn == "" {
 		t.Skip("set CORELOG_TEST_DATABASE_URL to run PostgreSQL integration tests")
@@ -55,8 +55,13 @@ func TestTicketRepositoryCountMatchesFindAllPostgres(t *testing.T) {
 	)`); err != nil {
 		t.Fatal(err)
 	}
+	return NewTicketRepository(db)
+}
 
-	repo := NewTicketRepository(db)
+// TestTicketRepositoryCountMatchesFindAllPostgres verifica que Count y FindAll usan la misma
+// clausula WHERE: el total cuenta todas las coincidencias y la pagina devuelve solo su parte.
+func TestTicketRepositoryCountMatchesFindAllPostgres(t *testing.T) {
+	repo := newListTestRepository(t)
 	projectID := uuid.New()
 	requesterID := uuid.New()
 	for i := 0; i < 3; i++ {
@@ -94,5 +99,57 @@ func TestTicketRepositoryCountMatchesFindAllPostgres(t *testing.T) {
 	}
 	if zero != 0 {
 		t.Errorf("Count with no matches = %d, want 0", zero)
+	}
+}
+
+// TestTicketRepositoryAssigneeFilterPostgres verifica el filtro de responsable: Unassigned devuelve solo
+// las incidencias sin persona asignada y AssigneeID solo las de esa persona.
+func TestTicketRepositoryAssigneeFilterPostgres(t *testing.T) {
+	repo := newListTestRepository(t)
+	ctx := context.Background()
+	projectID := uuid.New()
+	requesterID := uuid.New()
+	assigneeID := uuid.New()
+
+	unassigned, err := domain.NewTicket("Unassigned", "Description", domain.PriorityLow, requesterID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	unassigned.ProjectID = projectID
+	assigned, err := domain.NewTicket("Assigned", "Description", domain.PriorityLow, requesterID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assigned.ProjectID = projectID
+	assigned.AssigneeID = &assigneeID
+	for _, ticket := range []*domain.Ticket{unassigned, assigned} {
+		if err := repo.Save(ctx, ticket); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	noneFilter := port.ListFilter{ProjectIDs: []uuid.UUID{projectID}, Unassigned: true, Page: 1, PageSize: 20}
+	items, err := repo.FindAll(ctx, noneFilter)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(items) != 1 || items[0].ID != unassigned.ID {
+		t.Errorf("FindAll unassigned returned %d items, want only the unassigned issue", len(items))
+	}
+	total, err := repo.Count(ctx, noneFilter)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if total != 1 {
+		t.Errorf("Count unassigned = %d, want 1", total)
+	}
+
+	byAssignee := port.ListFilter{ProjectIDs: []uuid.UUID{projectID}, AssigneeID: &assigneeID, Page: 1, PageSize: 20}
+	items, err = repo.FindAll(ctx, byAssignee)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(items) != 1 || items[0].ID != assigned.ID {
+		t.Errorf("FindAll by assignee returned %d items, want only the assigned issue", len(items))
 	}
 }
