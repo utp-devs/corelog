@@ -267,13 +267,38 @@ func (s *ProjectService) DeleteLabel(ctx context.Context, actorID uuid.UUID, glo
 	if err != nil {
 		return err
 	}
-	if err := s.requireManage(ctx, port.ActionEditIssue, project, actorID, globalRole, orgRole); err != nil {
+	if err := s.requireManage(ctx, port.ActionEditProject, project, actorID, globalRole, orgRole); err != nil {
 		return err
 	}
 	if s.catalogRepo == nil {
 		return domain.ErrInvalidProject
 	}
 	return s.catalogRepo.DeleteLabel(ctx, projectID, labelID)
+}
+
+// UpdateLabel renames or recolors a label. Managing labels needs edit_project, the same as deleting them.
+func (s *ProjectService) UpdateLabel(ctx context.Context, actorID uuid.UUID, globalRole string, projectID, labelID uuid.UUID, name, color *string) (*domain.Label, error) {
+	project, orgRole, err := s.loadVisible(ctx, actorID, globalRole, projectID)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.requireManage(ctx, port.ActionEditProject, project, actorID, globalRole, orgRole); err != nil {
+		return nil, err
+	}
+	if s.catalogRepo == nil {
+		return nil, domain.ErrInvalidProject
+	}
+	label, err := s.catalogRepo.FindLabel(ctx, projectID, labelID)
+	if err != nil {
+		return nil, err
+	}
+	if err := label.Update(name, color); err != nil {
+		return nil, err
+	}
+	if err := s.catalogRepo.UpdateLabel(ctx, label); err != nil {
+		return nil, err
+	}
+	return label, nil
 }
 
 func (s *ProjectService) ListComponents(ctx context.Context, actorID uuid.UUID, globalRole string, projectID uuid.UUID) ([]domain.Component, error) {

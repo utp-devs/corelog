@@ -152,6 +152,8 @@ type MemberRepository interface {
 
 type CatalogRepository interface {
 	ListLabels(ctx context.Context, projectID uuid.UUID) ([]domain.Label, error)
+	FindLabel(ctx context.Context, projectID, labelID uuid.UUID) (*domain.Label, error)
+	UpdateLabel(ctx context.Context, label *domain.Label) error
 	CreateLabel(ctx context.Context, label *domain.Label) error
 	DeleteLabel(ctx context.Context, projectID, labelID uuid.UUID) error
 	ListComponents(ctx context.Context, projectID uuid.UUID) ([]domain.Component, error)

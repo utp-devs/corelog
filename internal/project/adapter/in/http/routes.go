@@ -28,6 +28,7 @@ func (h *Handler) RegisterRoutes(r chi.Router) {
 		r.Get("/{id}/permissions/me", h.MyPermissions)
 		r.Get("/{id}/labels", h.ListLabels)
 		r.Post("/{id}/labels", h.CreateLabel)
+		r.Patch("/{id}/labels/{label_id}", h.UpdateLabel)
 		r.Delete("/{id}/labels/{label_id}", h.DeleteLabel)
 		r.Get("/{id}/components", h.ListComponents)
 		r.Post("/{id}/components", h.CreateComponent)

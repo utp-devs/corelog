@@ -31,6 +31,8 @@ type Service interface {
 	ListLabels(ctx context.Context, actorID uuid.UUID, globalRole string, projectID uuid.UUID) ([]domain.Label, error)
 	CreateLabel(ctx context.Context, actorID uuid.UUID, globalRole string, projectID uuid.UUID, name, color string) (*domain.Label, error)
 	DeleteLabel(ctx context.Context, actorID uuid.UUID, globalRole string, projectID, labelID uuid.UUID) error
+	// UpdateLabel renames or recolors a label. Nil arguments keep the current value.
+	UpdateLabel(ctx context.Context, actorID uuid.UUID, globalRole string, projectID, labelID uuid.UUID, name, color *string) (*domain.Label, error)
 	ListComponents(ctx context.Context, actorID uuid.UUID, globalRole string, projectID uuid.UUID) ([]domain.Component, error)
 	CreateComponent(ctx context.Context, actorID uuid.UUID, globalRole string, projectID uuid.UUID, name, description string) (*domain.Component, error)
 	DeleteComponent(ctx context.Context, actorID uuid.UUID, globalRole string, projectID, componentID uuid.UUID) error

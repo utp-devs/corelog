@@ -105,18 +105,25 @@ type labelRequest struct {
 	Color string `json:"color" validate:"omitempty,max=20"`
 }
 
+// labelUpdateRequest carries the fields of a label rename or recolor. Absent fields keep their value.
+type labelUpdateRequest struct {
+	Name  *string `json:"name" validate:"omitempty,min=1,max=40"`
+	Color *string `json:"color" validate:"omitempty,max=20"`
+}
+
 type componentRequest struct {
 	Name        string `json:"name" validate:"required,min=1,max=80"`
 	Description string `json:"description" validate:"max=5000"`
 }
 
 type labelResponse struct {
-	ID        string    `json:"id"`
-	ProjectID string    `json:"project_id"`
-	Name      string    `json:"name"`
-	Color     string    `json:"color"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+	ID         string    `json:"id"`
+	ProjectID  string    `json:"project_id"`
+	Name       string    `json:"name"`
+	Color      string    `json:"color"`
+	UsageCount int       `json:"usage_count"`
+	CreatedAt  time.Time `json:"created_at"`
+	UpdatedAt  time.Time `json:"updated_at"`
 }
 
 type componentResponse struct {
@@ -202,7 +209,8 @@ func timePtr(value time.Time) *time.Time {
 func toLabelResponse(label domain.Label) labelResponse {
 	return labelResponse{
 		ID: label.ID.String(), ProjectID: label.ProjectID.String(), Name: label.Name, Color: label.Color,
-		CreatedAt: label.CreatedAt, UpdatedAt: label.UpdatedAt,
+		UsageCount: label.UsageCount,
+		CreatedAt:  label.CreatedAt, UpdatedAt: label.UpdatedAt,
 	}
 }
 

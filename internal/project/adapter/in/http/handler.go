@@ -445,6 +445,38 @@ func (h *Handler) DeleteLabel(w http.ResponseWriter, r *http.Request) {
 	httpresponse.JSON(w, http.StatusNoContent, nil)
 }
 
+func (h *Handler) UpdateLabel(w http.ResponseWriter, r *http.Request) {
+	labelID, err := uuid.Parse(chi.URLParam(r, "label_id"))
+	if err != nil {
+		httpresponse.Error(w, apperror.New(apperror.KindValidation, "invalid label id"))
+		return
+	}
+	var req labelUpdateRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		httpresponse.Error(w, apperror.New(apperror.KindValidation, "invalid request body"))
+		return
+	}
+	if err := validation.Struct(req); err != nil {
+		httpresponse.Error(w, validation.Failed(req, err))
+		return
+	}
+	actorID, globalRole, ok := actorFromRequest(r)
+	if !ok {
+		httpresponse.Error(w, apperror.New(apperror.KindUnauthorized, "no autorizado"))
+		return
+	}
+	projectID, ok := h.projectIDFromPath(w, r, actorID, globalRole)
+	if !ok {
+		return
+	}
+	label, err := h.service.UpdateLabel(r.Context(), actorID, globalRole, projectID, labelID, req.Name, req.Color)
+	if err != nil {
+		httpresponse.Error(w, err)
+		return
+	}
+	httpresponse.JSON(w, http.StatusOK, toLabelResponse(*label))
+}
+
 func (h *Handler) ListComponents(w http.ResponseWriter, r *http.Request) {
 	actorID, globalRole, ok := actorFromRequest(r)
 	if !ok {
