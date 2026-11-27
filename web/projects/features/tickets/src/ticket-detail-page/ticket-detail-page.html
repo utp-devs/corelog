@@ -1,0 +1,321 @@
+@if (showSkeleton()) {
+  <app-page-container variant="wide" pageName="issue-detail" [ready]="false">
+    <app-loading-skeleton variant="detail" />
+  </app-page-container>
+} @else if (showError()) {
+  <app-page-container variant="wide" pageName="issue-detail" [ready]="true">
+    <app-error-state [message]="errorText()" [canRetry]="id() !== ''" (retry)="retry()" />
+    <div class="back-row">
+      <p-button
+        label="Volver a incidencias"
+        severity="secondary"
+        [outlined]="true"
+        class="touch-target"
+        (onClick)="back()"
+      />
+    </div>
+  </app-page-container>
+} @else {
+  @for (selected of detailItems(); track selected.id) {
+    <app-page-container variant="wide" pageName="issue-detail" [ready]="true">
+      @if (collaborationError(); as message) {
+        <p-message severity="error" [closable]="false">{{ message }}</p-message>
+      }
+
+      <header class="header">
+        <p-button
+          label="Volver a incidencias"
+          icon="pi pi-arrow-left"
+          [text]="true"
+          class="back touch-target"
+          (onClick)="back()"
+        />
+        <app-issue-key
+          [issueKey]="issueKeyOf(selected.id)"
+          [href]="pathOf(selected)"
+          [summary]="selected.title"
+          [type]="selected.issueType"
+          [resolved]="isResolved(selected)"
+        />
+        <h1 class="title">
+          <app-inline-edit
+            label="Título"
+            type="text"
+            [value]="selected.title"
+            [onSave]="saveTitle"
+          />
+        </h1>
+      </header>
+
+      <app-ticket-description-section
+        [ticket]="selected"
+        [saveDetails]="saveDetails"
+        [searchUsers]="mentionSearch"
+      />
+
+      <app-section title="Detalles">
+        <dl class="details">
+          <dt>Tipo</dt>
+          <dd>{{ issueTypeLabels[selected.issueType] }}</dd>
+          <dt>Fecha límite</dt>
+          <dd>
+            {{ selected.dueDate ? (selected.dueDate | date: 'dd/MM/yyyy') : 'Sin fecha límite' }}
+          </dd>
+          <dt>Puntos de historia</dt>
+          <dd>{{ selected.storyPoints ?? 'Sin estimar' }}</dd>
+          <dt>Incidencia padre</dt>
+          <dd>{{ selected.parentId ?? 'Sin incidencia padre' }}</dd>
+          <dt>Solicitante</dt>
+          <dd>{{ selected.requesterName }}</dd>
+          <dt>Creado</dt>
+          <dd>{{ selected.createdAt | date: 'dd/MM/yyyy HH:mm' }}</dd>
+          <dt>Actualizado</dt>
+          <dd>{{ selected.updatedAt | date: 'dd/MM/yyyy HH:mm' }}</dd>
+        </dl>
+      </app-section>
+
+      <app-section title="Vínculos">
+        <div class="link-form">
+          <app-issue-picker [excludeId]="selected.id" [(value)]="linkTarget" />
+          <p-select
+            ariaLabel="Tipo de vínculo"
+            [options]="linkKindOptions"
+            optionLabel="label"
+            optionValue="value"
+            [ngModel]="linkKind()"
+            (ngModelChange)="onLinkKind($event)"
+          />
+          <p-button
+            label="Vincular"
+            class="touch-target"
+            [disabled]="collaborationLoading() || !linkTarget()"
+            (onClick)="createLink()"
+          />
+        </div>
+
+        @if (collaborationLoading()) {
+          <app-loading-skeleton variant="card" />
+        } @else if (visibleLinks().length === 0 && !collaborationError()) {
+          <app-empty-state title="Aún no hay vínculos" />
+        } @else {
+          <ul class="list">
+            @for (link of visibleLinks(); track link.id) {
+              <li class="list-item">
+                <a class="link" [routerLink]="linkPath(link)">{{ linkLabel(link) }}</a>
+                <p-button
+                  label="Eliminar"
+                  severity="danger"
+                  [text]="true"
+                  class="touch-target"
+                  (onClick)="removeLink(link.id)"
+                />
+              </li>
+            }
+          </ul>
+        }
+      </app-section>
+
+      <app-section title="Adjuntos">
+        @if (attachmentError(); as message) {
+          <div role="alert">
+            <p-message severity="error" [closable]="false">{{ message }}</p-message>
+          </div>
+        }
+
+        <input
+          #fileInput
+          type="file"
+          class="visually-hidden"
+          tabindex="-1"
+          aria-hidden="true"
+          (change)="onFileSelected($event)"
+        />
+        <p-button
+          label="Cargar archivo (máximo 10 MB)"
+          severity="secondary"
+          [outlined]="true"
+          class="touch-target"
+          [disabled]="attachmentsLoading()"
+          (onClick)="fileInput.click()"
+        />
+
+        @if (attachmentsLoading()) {
+          <app-loading-skeleton variant="card" />
+        } @else if (visibleAttachments().length === 0 && !attachmentError()) {
+          <app-empty-state title="Aún no hay archivos" />
+        } @else {
+          <ul class="list">
+            @for (attachment of visibleAttachments(); track attachment.id) {
+              <li class="list-item">
+                <span class="file-info">
+                  <span class="file-name">{{ attachment.fileName }}</span>
+                  <span class="muted">
+                    {{ attachment.contentType }} · {{ sizeInKb(attachment.sizeBytes) }} KB · Subido
+                    por {{ names.nameOf(attachment.uploaderId) }}
+                  </span>
+                </span>
+                <p-button
+                  label="Descargar"
+                  severity="secondary"
+                  [outlined]="true"
+                  class="touch-target"
+                  (onClick)="downloadAttachment(attachment)"
+                />
+              </li>
+            }
+          </ul>
+        }
+      </app-section>
+
+      <app-section title="Comentarios">
+        <app-rich-text-editor
+          ariaLabel="Nuevo comentario"
+          [formControl]="commentControl"
+          placeholder="Escribe un comentario. Usa @ para mencionar."
+          [minRows]="3"
+          [searchUsers]="mentionSearch"
+          [submittable]="true"
+          (submitted)="submitComment()"
+        />
+        <div class="actions">
+          <p-button
+            label="Comentar"
+            class="touch-target"
+            [disabled]="!canComment()"
+            (onClick)="submitComment()"
+          />
+        </div>
+
+        @if (collaborationLoading()) {
+          <app-loading-skeleton variant="card" />
+        } @else if (visibleComments().length === 0 && !collaborationError()) {
+          <app-empty-state title="Aún no hay comentarios" />
+        } @else {
+          <ol class="list">
+            @for (comment of visibleComments(); track comment.id) {
+              <li class="comment">
+                <div class="comment-header">
+                  <span class="author">{{ names.nameOf(comment.authorId) }}</span>
+                  <time class="muted" [attr.datetime]="comment.createdAt">{{
+                    comment.createdAt | date: 'dd/MM/yyyy HH:mm'
+                  }}</time>
+                  <p-button
+                    label="Eliminar"
+                    severity="danger"
+                    [text]="true"
+                    class="touch-target"
+                    (onClick)="removeComment(comment.id)"
+                  />
+                </div>
+                <app-rich-text-view [value]="comment.body" />
+              </li>
+            }
+          </ol>
+        }
+      </app-section>
+
+      <app-section title="Historial">
+        @if (collaborationLoading()) {
+          <app-loading-skeleton variant="card" />
+        } @else if (visibleActivities().length === 0 && !collaborationError()) {
+          <app-empty-state title="Aún no hay actividad" />
+        } @else {
+          <ol class="list">
+            @for (activity of visibleActivities(); track activity.id) {
+              <li class="activity">
+                <span>
+                  {{ activityText(activity) }}
+                  <span class="muted"> · {{ names.nameOf(activity.actorId) }}</span>
+                </span>
+                <time class="muted" [attr.datetime]="activity.createdAt">{{
+                  activity.createdAt | date: 'dd/MM/yyyy HH:mm'
+                }}</time>
+              </li>
+            }
+          </ol>
+        }
+      </app-section>
+
+      <div appPageSidebar class="sidebar">
+        <app-section title="Estado y prioridad">
+          <dl class="details">
+            <dt>Estado</dt>
+            <dd>
+              <app-inline-edit
+                label="Estado"
+                type="select"
+                [value]="selected.status"
+                [options]="statusOptions()"
+                [onSave]="saveStatus"
+              />
+            </dd>
+            <dt>Prioridad</dt>
+            <dd>
+              <app-inline-edit
+                label="Prioridad"
+                type="select"
+                [value]="selected.priority"
+                [options]="priorityOptions"
+                [onSave]="savePriority"
+              />
+            </dd>
+          </dl>
+        </app-section>
+
+        <app-section title="Responsable">
+          <app-field-row label="Buscar compañero" [helper]="assigneeHelper()">
+            @if (canChangeAssignee()) {
+              <app-user-picker
+                [users]="assigneeUsers()"
+                [value]="selected.assigneeId ?? undefined"
+                [allowClear]="false"
+                [loading]="teammates.loading() || assigning()"
+                [placeholder]="selected.assigneeId ? 'Nombre o correo' : 'Sin asignar'"
+                (valueChange)="assign($event)"
+                (search)="teammates.search($event)"
+              />
+            } @else {
+              <span class="readonly">{{ selected.assigneeName ?? 'Sin asignar' }}</span>
+            }
+          </app-field-row>
+          @if (canChangeAssignee() && selected.assigneeId) {
+            <div class="inline-row">
+              <p-button
+                label="Quitar responsable"
+                severity="secondary"
+                [outlined]="true"
+                class="touch-target"
+                [disabled]="assigning()"
+                (onClick)="unassign()"
+              />
+            </div>
+          }
+          <p role="status" aria-live="polite" class="sr-only">{{ assignAnnouncement() }}</p>
+        </app-section>
+
+        <app-section title="Seguimiento">
+          @if (watcherError(); as message) {
+            <div role="alert">
+              <p-message severity="error" [closable]="false">{{ message }}</p-message>
+            </div>
+          }
+          <div class="inline-row">
+            <p-button
+              [label]="watcherState()?.isWatching ? 'Dejar de seguir' : 'Seguir incidencia'"
+              severity="secondary"
+              [outlined]="true"
+              class="touch-target"
+              [loading]="watcherLoading() || watcherBusy()"
+              [disabled]="watcherLoading() || !watcherState()"
+              (onClick)="toggleWatch()"
+            />
+          </div>
+          <p class="muted">
+            {{ watcherCount() }}
+            {{ watcherCount() === 1 ? 'persona sigue' : 'personas siguen' }} esta incidencia
+          </p>
+        </app-section>
+      </div>
+    </app-page-container>
+  }
+}

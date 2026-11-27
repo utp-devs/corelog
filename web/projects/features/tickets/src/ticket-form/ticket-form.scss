@@ -1,0 +1,68 @@
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cl-space-4);
+  width: 100%;
+  min-width: 0;
+}
+
+/* One column below 992 px; from 992 px the main fields and the classification sit side by side. */
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--cl-space-4);
+  align-items: start;
+  min-width: 0;
+}
+
+.main,
+.side,
+.stack,
+.editor {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cl-space-4);
+  min-width: 0;
+}
+
+.editor {
+  gap: var(--cl-space-2);
+}
+
+.full {
+  width: 100%;
+  min-width: 0;
+}
+
+.error {
+  margin: 0;
+  color: var(--cl-danger);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--cl-space-2);
+}
+
+@media (min-width: 992px) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr) minmax(260px, 320px);
+  }
+}
+
+@media (max-width: 767px) {
+  .actions {
+    flex-direction: column-reverse;
+  }
+
+  .actions > * {
+    width: 100%;
+  }
+}

@@ -1,0 +1,15 @@
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.picker {
+  width: 100%;
+  min-width: 0;
+}
+
+@media (max-width: 767px) {
+  .picker {
+    min-height: 44px;
+  }
+}

@@ -1,0 +1,85 @@
+<app-section title="Descripción">
+  <div appSectionActions>
+    @if (!editing()) {
+      <p-button
+        label="Editar"
+        icon="pi pi-pencil"
+        severity="secondary"
+        [outlined]="true"
+        class="touch-target"
+        (onClick)="startEdit()"
+      />
+    }
+  </div>
+
+  @if (editing()) {
+    <form
+      class="edit-form"
+      aria-label="Editar descripción y datos"
+      novalidate
+      [formGroup]="form"
+      (ngSubmit)="save()"
+    >
+      <app-rich-text-editor
+        ariaLabel="Descripción"
+        formControlName="description"
+        [minRows]="6"
+        [searchUsers]="searchUsers()"
+      />
+
+      <div class="field-grid">
+        <app-field-row #typeRow label="Tipo">
+          <p-select
+            formControlName="issueType"
+            [inputId]="typeRow.controlId"
+            [options]="issueTypeOptions"
+            optionLabel="label"
+            optionValue="value"
+            class="full"
+          />
+        </app-field-row>
+        <app-field-row #dueRow label="Fecha límite">
+          <p-datepicker
+            formControlName="dueDate"
+            [inputId]="dueRow.controlId"
+            dateFormat="dd/mm/yy"
+            [showIcon]="true"
+          />
+        </app-field-row>
+        <app-field-row #storyRow label="Puntos de historia">
+          <p-inputnumber
+            formControlName="storyPoints"
+            [inputId]="storyRow.controlId"
+            [min]="0"
+            [max]="999"
+          />
+        </app-field-row>
+        <app-field-row
+          label="Incidencia padre"
+          helper="Identificador de la incidencia padre, si la hay."
+        >
+          <input pInputText appFieldControl type="text" formControlName="parentId" class="full" />
+        </app-field-row>
+      </div>
+
+      <div class="actions">
+        <p-button
+          label="Cancelar"
+          severity="secondary"
+          [outlined]="true"
+          class="touch-target"
+          [disabled]="saving()"
+          (onClick)="cancelEdit()"
+        />
+        <p-button label="Guardar" type="submit" class="touch-target" [loading]="saving()" />
+      </div>
+    </form>
+  } @else if (ticket().description.trim()) {
+    <app-rich-text-view [value]="ticket().description" />
+  } @else {
+    <app-empty-state
+      title="Sin descripción"
+      description="Añade una descripción para dar contexto a la incidencia."
+    />
+  }
+</app-section>

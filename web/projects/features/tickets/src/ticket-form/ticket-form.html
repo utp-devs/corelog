@@ -1,0 +1,91 @@
+<form
+  class="form"
+  aria-label="Nueva incidencia"
+  novalidate
+  [formGroup]="form()"
+  (ngSubmit)="submit()"
+>
+  <div class="layout">
+    <div class="main">
+      <app-section title="Datos principales">
+        <app-field-row
+          #titleRow
+          label="Título"
+          [required]="true"
+          [error]="titleError()"
+          helper="Describe el problema en una frase."
+        >
+          <input
+            pInputText
+            appFieldControl
+            type="text"
+            formControlName="title"
+            class="full"
+            [maxlength]="titleMaxLength"
+            [attr.aria-invalid]="titleError() ? 'true' : null"
+          />
+        </app-field-row>
+      </app-section>
+
+      <app-section title="Descripción">
+        <div class="editor">
+          <app-rich-text-editor
+            ariaLabel="Descripción"
+            formControlName="description"
+            placeholder="Describe el problema, los pasos para reproducirlo y el resultado esperado. Usa @ para mencionar."
+            [minRows]="8"
+            [searchUsers]="searchUsers()"
+            [submittable]="true"
+            (submitted)="submit()"
+          />
+          @if (descriptionError(); as message) {
+            <p class="error" role="alert">{{ message }}</p>
+          }
+        </div>
+      </app-section>
+    </div>
+
+    <aside class="side" aria-label="Clasificación">
+      <app-section title="Clasificación">
+        <div class="stack">
+          <app-field-row #typeRow label="Tipo" [required]="true">
+            <p-select
+              formControlName="issueType"
+              [inputId]="typeRow.controlId"
+              [options]="issueTypeOptions"
+              optionLabel="label"
+              optionValue="value"
+              class="full"
+            />
+          </app-field-row>
+          <app-field-row #priorityRow label="Prioridad" [required]="true">
+            <p-select
+              formControlName="priority"
+              [inputId]="priorityRow.controlId"
+              [options]="priorityOptions"
+              optionLabel="label"
+              optionValue="value"
+              class="full"
+            />
+          </app-field-row>
+        </div>
+      </app-section>
+    </aside>
+  </div>
+
+  <div class="actions">
+    <p-button
+      label="Cancelar"
+      severity="secondary"
+      [outlined]="true"
+      class="touch-target"
+      (onClick)="cancelled.emit()"
+    />
+    <p-button
+      label="Crear incidencia"
+      type="submit"
+      class="touch-target"
+      [loading]="isSubmitting()"
+    />
+  </div>
+</form>

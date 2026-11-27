@@ -1,0 +1,68 @@
+<app-data-table
+  tableKey="issues"
+  rowKey="id"
+  [fill]="fill()"
+  [columns]="columns()"
+  [data]="tickets()"
+  [loading]="loading()"
+  [error]="error()"
+  [emptyState]="emptyState()"
+  [pagination]="pagination()"
+  [rowOpenable]="true"
+  [rowActions]="rowActions()"
+  [mobileRender]="mobileTpl"
+  (rowOpen)="open.emit($event)"
+  (retry)="retry.emit()"
+  (pageChange)="pageChange.emit($event)"
+>
+  <ng-template appDataTableCell="key" let-row>
+    <app-issue-key
+      [issueKey]="keyOf(row)"
+      [href]="pathOf(row)"
+      [summary]="row.title"
+      [type]="row.issueType"
+      [resolved]="isResolved(row)"
+    />
+  </ng-template>
+
+  <ng-template appDataTableCell="summary" let-row>
+    <span class="summary" [title]="row.title">{{ row.title }}</span>
+  </ng-template>
+
+  <ng-template appDataTableCell="status" let-row>
+    <app-lozenge [category]="statusCategory(row)">{{ statusLabel(row) }}</app-lozenge>
+  </ng-template>
+
+  <ng-template appDataTableCell="priority" let-row>
+    <app-priority-tag [priority]="row.priority" />
+  </ng-template>
+
+  <ng-template appDataTableCell="assignee" let-row>
+    <ng-container *ngTemplateOutlet="assigneeTpl; context: { $implicit: row }" />
+  </ng-template>
+
+  <ng-template appDataTableCell="updated" let-row>
+    <time [attr.datetime]="row.updatedAt" [attr.title]="row.updatedAt | date: 'dd/MM/yyyy HH:mm'">{{
+      row.updatedAt | date: 'dd/MM/yyyy HH:mm'
+    }}</time>
+  </ng-template>
+</app-data-table>
+
+<ng-template #assigneeTpl let-row>
+  @if (row.assigneeId && row.assigneeName) {
+    <app-user-chip [user]="{ id: row.assigneeId, name: row.assigneeName }" />
+  } @else {
+    <span class="muted">Sin asignar</span>
+  }
+</ng-template>
+
+<ng-template #mobileTpl let-row>
+  <div class="card">
+    <span class="card-title">{{ row.title }}</span>
+    <div class="card-meta">
+      <app-lozenge [category]="statusCategory(row)">{{ statusLabel(row) }}</app-lozenge>
+      <app-priority-tag [priority]="row.priority" />
+      <ng-container *ngTemplateOutlet="assigneeTpl; context: { $implicit: row }" />
+    </div>
+  </div>
+</ng-template>

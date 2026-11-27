@@ -1,0 +1,17 @@
+<p-select
+  class="picker"
+  [options]="options()"
+  optionLabel="label"
+  optionValue="value"
+  [ngModel]="value() || null"
+  (ngModelChange)="onPick($event)"
+  [filter]="true"
+  filterBy="label"
+  (onFilter)="search($event.filter)"
+  [showClear]="true"
+  [loading]="loading()"
+  placeholder="Buscar incidencia por título"
+  ariaLabel="Incidencia a vincular"
+  emptyMessage="Sin resultados"
+  emptyFilterMessage="Sin resultados"
+/>

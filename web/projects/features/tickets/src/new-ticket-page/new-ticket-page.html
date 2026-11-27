@@ -1,0 +1,13 @@
+<app-page-container variant="reading" pageName="issue-new" [ready]="true" [fill]="true">
+  <app-page-header title="Nueva incidencia" subtitle="Registra un nuevo incidente." />
+
+  <app-section [fill]="true">
+    <app-ticket-form
+      [form]="form"
+      [isSubmitting]="isSubmitting()"
+      [searchUsers]="searchUsers"
+      (submitted)="submit()"
+      (cancelled)="cancel()"
+    />
+  </app-section>
+</app-page-container>

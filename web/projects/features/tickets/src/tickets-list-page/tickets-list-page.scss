@@ -1,0 +1,50 @@
+:host {
+  display: block;
+  min-width: 0;
+}
+
+/* The filter bar takes the full toolbar row so the search and selectors can wrap freely. */
+.filters {
+  min-width: 0;
+  width: 100%;
+}
+
+.saved-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--cl-space-2);
+  margin-bottom: var(--cl-space-4);
+}
+
+.filter-select {
+  width: 200px;
+  max-width: 100%;
+}
+
+.name-input {
+  width: 100%;
+}
+
+.alert {
+  margin-bottom: var(--cl-space-4);
+}
+
+@media (max-width: 767px) {
+  .saved-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .filter-select {
+    width: 100%;
+  }
+
+  .saved-row :is(p-button, p-datepicker) {
+    width: 100%;
+  }
+
+  .saved-row :is(button, input) {
+    min-height: 44px;
+  }
+}
