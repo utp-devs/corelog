@@ -26,10 +26,11 @@ func (Policy) CanEditProject(a Access) bool {
 	return hasAny(EffectiveRole(a), ProjectRoleLead)
 }
 
-// CanDeleteProject: only organization owners and admins. Lead rights and platform admin support
-// access are not enough.
+// CanDeleteProject: the project lead or an organization owner/admin (both are lead through
+// EffectiveRole). Platform admin support access is not enough. Callers must still confirm the
+// project name.
 func (Policy) CanDeleteProject(a Access) bool {
-	return a.OrgRole == OrgRoleOwner || a.OrgRole == OrgRoleAdmin
+	return a.OrgRole == OrgRoleOwner || a.OrgRole == OrgRoleAdmin || hasAny(EffectiveRole(a), ProjectRoleLead)
 }
 
 func (Policy) CanManageProjectMembers(a Access) bool {

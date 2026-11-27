@@ -29,12 +29,19 @@ var (
 )
 
 // accessQuery devuelve una fila por proyecto (cero filas si no existe). La membresia de organizacion
-// solo cuenta si la organizacion no esta eliminada. El rol de proyecto solo cuenta si el usuario es
-// miembro vivo de la organizacion del proyecto: un miembro retirado no conserva acceso.
+// solo cuenta si la organizacion no esta eliminada. El rol de proyecto directo y el mejor rol de
+// equipo solo cuentan si el usuario es miembro vivo de la organizacion del proyecto: un miembro
+// retirado no conserva acceso. El mejor rol de equipo ordena lead, contributor, viewer.
 const accessQuery = `
 SELECT p.visibility,
        om.role,
-       CASE WHEN om.user_id IS NULL THEN NULL ELSE pm.role END
+       CASE WHEN om.user_id IS NULL THEN NULL ELSE pm.role END,
+       CASE WHEN om.user_id IS NULL THEN NULL ELSE (
+           SELECT ptr.role FROM project_team_roles ptr
+           JOIN team_members tm ON tm.team_id = ptr.team_id
+           WHERE ptr.project_id = p.id AND tm.user_id = $2
+           ORDER BY CASE ptr.role WHEN 'lead' THEN 0 WHEN 'contributor' THEN 1 ELSE 2 END
+           LIMIT 1) END
 FROM projects p
 LEFT JOIN organizations o ON o.id = p.organization_id AND o.deleted_at IS NULL
 LEFT JOIN organization_members om ON om.organization_id = o.id AND om.user_id = $2
@@ -48,8 +55,9 @@ func (r *RoleLookup) FindAccess(ctx context.Context, projectID, userID uuid.UUID
 		visibility sql.NullString
 		orgRole    sql.NullString
 		projRole   sql.NullString
+		teamRole   sql.NullString
 	)
-	err := r.db.QueryRowContext(ctx, accessQuery, projectID, userID).Scan(&visibility, &orgRole, &projRole)
+	err := r.db.QueryRowContext(ctx, accessQuery, projectID, userID).Scan(&visibility, &orgRole, &projRole, &teamRole)
 	if errors.Is(err, sql.ErrNoRows) {
 		return domain.Access{}, nil
 	}
@@ -66,6 +74,10 @@ func (r *RoleLookup) FindAccess(ctx context.Context, projectID, userID uuid.UUID
 	if projRole.Valid {
 		role := domain.ProjectRole(projRole.String)
 		access.ProjectRole = &role
+	}
+	if teamRole.Valid {
+		role := domain.ProjectRole(teamRole.String)
+		access.TeamRole = &role
 	}
 	return access, nil
 }

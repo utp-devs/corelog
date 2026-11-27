@@ -49,6 +49,7 @@ func openFavoriteTestSchema(t *testing.T) *sqlx.DB {
 		`CREATE TABLE project_team_roles (project_id UUID NOT NULL, team_id UUID NOT NULL, role TEXT NOT NULL,
 			PRIMARY KEY (project_id, team_id))`,
 		`CREATE TABLE team_members (team_id UUID NOT NULL, user_id UUID NOT NULL, PRIMARY KEY (team_id, user_id))`,
+		`CREATE TABLE users (id UUID PRIMARY KEY, role TEXT NOT NULL)`,
 		`CREATE TABLE favorites (
 			user_id UUID NOT NULL, entity_type TEXT NOT NULL, entity_id UUID NOT NULL,
 			created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -212,6 +213,13 @@ func TestProjectVisibilityRules(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	platformAdmin, platformUser := uuid.New(), uuid.New()
+	for user, role := range map[uuid.UUID]string{platformAdmin: "admin", platformUser: "user"} {
+		if _, err := db.Exec(`INSERT INTO users (id, role) VALUES ($1, $2)`, user, role); err != nil {
+			t.Fatal(err)
+		}
+	}
+
 	cases := []struct {
 		name    string
 		user    uuid.UUID
@@ -226,6 +234,8 @@ func TestProjectVisibilityRules(t *testing.T) {
 		{"guest does not see open", guest, openProject, false},
 		{"team member sees granted project", teamMember, teamProject, true},
 		{"outsider sees nothing", outsider, openProject, false},
+		{"platform admin sees private project without organization role", platformAdmin, privateProject, true},
+		{"platform user sees nothing outside organization", platformUser, privateProject, false},
 	}
 	for _, tc := range cases {
 		got, err := visibility.CanView(ctx, tc.user, tc.project)

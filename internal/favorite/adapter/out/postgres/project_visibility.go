@@ -16,10 +16,10 @@ import (
 //   - owner or admin of the organization;
 //   - member of the organization and the project is open;
 //   - explicit project member;
-//   - member of a team granted on the project.
+//   - member of a team granted on the project;
+//   - platform administrator (support access, as in the project rules).
 //
-// Deleted projects are never visible. Platform administrators without an organization role are not
-// covered by this query.
+// Deleted projects are never visible.
 type ProjectVisibility struct {
 	db *sqlx.DB
 }
@@ -38,7 +38,8 @@ func (v *ProjectVisibility) CanView(ctx context.Context, userID, projectID uuid.
 		    WHERE p.id = $2
 		      AND p.deleted_at IS NULL
 		      AND (
-		          EXISTS (SELECT 1 FROM organization_members om
+		          EXISTS (SELECT 1 FROM users u WHERE u.id = $1 AND u.role = 'admin')
+		       OR EXISTS (SELECT 1 FROM organization_members om
 		                  WHERE om.organization_id = p.organization_id AND om.user_id = $1
 		                    AND om.role IN ('owner', 'admin'))
 		       OR (p.visibility = 'open' AND EXISTS (

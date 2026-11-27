@@ -18,7 +18,8 @@ var ProjectPermissions = []string{
 // permissions and each value lists the actors (StandardActors names) that are allowed. Anyone not
 // listed is denied. Rules:
 //   - platform admin: view and watch only (support access), no manage rights.
-//   - org owner/admin: lead everywhere, private projects included; delete_project is owner/admin only.
+//   - org owner/admin: lead everywhere, private projects included.
+//   - delete_project: the project lead and org owner/admin (the use case also checks the typed name).
 //   - org member: viewer on open projects only; guests get nothing without an explicit role.
 //   - explicit project roles: lead, contributor, viewer.
 //   - outsider and anonymous: nothing.
@@ -26,7 +27,7 @@ var ProjectMatrix = map[string]map[string][]string{
 	VisibilityOpen: {
 		"view_project":    {"platform-admin", "org-owner", "org-admin", "org-member", "lead", "contributor", "viewer"},
 		"edit_project":    {"org-owner", "org-admin", "lead"},
-		"delete_project":  {"org-owner", "org-admin"},
+		"delete_project":  {"org-owner", "org-admin", "lead"},
 		"manage_members":  {"org-owner", "org-admin", "lead"},
 		"create_issue":    {"org-owner", "org-admin", "lead", "contributor"},
 		"edit_issue":      {"org-owner", "org-admin", "lead", "contributor"},
@@ -40,7 +41,7 @@ var ProjectMatrix = map[string]map[string][]string{
 	VisibilityPrivate: {
 		"view_project":    {"platform-admin", "org-owner", "org-admin", "lead", "contributor", "viewer"},
 		"edit_project":    {"org-owner", "org-admin", "lead"},
-		"delete_project":  {"org-owner", "org-admin"},
+		"delete_project":  {"org-owner", "org-admin", "lead"},
 		"manage_members":  {"org-owner", "org-admin", "lead"},
 		"create_issue":    {"org-owner", "org-admin", "lead", "contributor"},
 		"edit_issue":      {"org-owner", "org-admin", "lead", "contributor"},

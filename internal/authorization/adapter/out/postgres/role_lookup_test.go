@@ -56,6 +56,17 @@ func openAccessSchema(t *testing.T) *sqlx.DB {
 			role VARCHAR(20) NOT NULL CHECK (role IN ('lead', 'contributor', 'viewer')),
 			PRIMARY KEY (project_id, user_id)
 		)`,
+		`CREATE TABLE team_members (
+			team_id UUID NOT NULL,
+			user_id UUID NOT NULL,
+			PRIMARY KEY (team_id, user_id)
+		)`,
+		`CREATE TABLE project_team_roles (
+			project_id UUID NOT NULL,
+			team_id UUID NOT NULL,
+			role VARCHAR(20) NOT NULL CHECK (role IN ('lead', 'contributor', 'viewer')),
+			PRIMARY KEY (project_id, team_id)
+		)`,
 	} {
 		if _, err := db.Exec(ddl); err != nil {
 			t.Fatal(err)
@@ -86,12 +97,19 @@ func TestRoleLookupFindAccessPostgres(t *testing.T) {
 	exec(`INSERT INTO organization_members (organization_id, user_id, role) VALUES
 		($1, $2, 'owner'), ($1, $3, 'member'), ($1, $4, 'guest'), ($1, $5, 'member'), ($6, $7, 'member')`,
 		org, owner, member, guest, lead, deletedOrg, member)
+	teamProject := uuid.New()
 	exec(`INSERT INTO projects (id, organization_id, visibility) VALUES
-		($1, $2, 'open'), ($3, $2, 'private'), ($4, $2, 'team'), ($5, $6, 'open'), ($7, $2, 'open')`,
-		openProject, org, privateProject, legacyProject, deletedOrgProject, deletedOrg, strayProject)
+		($1, $2, 'open'), ($3, $2, 'private'), ($4, $2, 'team'), ($5, $6, 'open'), ($7, $2, 'open'), ($8, $2, 'private')`,
+		openProject, org, privateProject, legacyProject, deletedOrgProject, deletedOrg, strayProject, teamProject)
 	exec(`INSERT INTO project_members (project_id, user_id, role) VALUES
 		($1, $2, 'lead'), ($3, $4, 'viewer'), ($5, $6, 'contributor'), ($7, $8, 'lead')`,
 		openProject, lead, privateProject, guest, deletedOrgProject, member, strayProject, stranger)
+	// teamA: member and stranger (stranger is not an organization member). teamB: member.
+	teamA, teamB := uuid.New(), uuid.New()
+	exec(`INSERT INTO team_members (team_id, user_id) VALUES ($1, $2), ($1, $3), ($4, $2)`, teamA, member, stranger, teamB)
+	exec(`INSERT INTO project_team_roles (project_id, team_id, role) VALUES
+		($1, $2, 'viewer'), ($1, $3, 'contributor'), ($4, $2, 'lead')`,
+		privateProject, teamA, teamB, teamProject)
 
 	lookup := NewRoleLookup(db)
 	cases := []struct {
@@ -116,6 +134,12 @@ func TestRoleLookupFindAccessPostgres(t *testing.T) {
 			domain.Access{OrgRole: domain.OrgRoleNone, Visibility: domain.VisibilityOpen}},
 		{"outsider on private project", privateProject, stranger,
 			domain.Access{OrgRole: domain.OrgRoleNone, Visibility: domain.VisibilityPrivate}},
+		{"best team grant wins over other team grants", privateProject, member,
+			domain.Access{OrgRole: domain.OrgRoleMember, TeamRole: roleOf(domain.ProjectRoleContributor), Visibility: domain.VisibilityPrivate}},
+		{"team lead grant on private project", teamProject, member,
+			domain.Access{OrgRole: domain.OrgRoleMember, TeamRole: roleOf(domain.ProjectRoleLead), Visibility: domain.VisibilityPrivate}},
+		{"team grant ignored for a user outside the organization", privateProject, stranger,
+			domain.Access{OrgRole: domain.OrgRoleNone, Visibility: domain.VisibilityPrivate}},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -123,7 +147,8 @@ func TestRoleLookupFindAccessPostgres(t *testing.T) {
 			if err != nil {
 				t.Fatalf("FindAccess: %v", err)
 			}
-			if got.OrgRole != tc.want.OrgRole || got.Visibility != tc.want.Visibility || !sameRole(got.ProjectRole, tc.want.ProjectRole) {
+			if got.OrgRole != tc.want.OrgRole || got.Visibility != tc.want.Visibility ||
+				!sameRole(got.ProjectRole, tc.want.ProjectRole) || !sameRole(got.TeamRole, tc.want.TeamRole) {
 				t.Errorf("FindAccess = %+v, want %+v", got, tc.want)
 			}
 		})

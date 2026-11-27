@@ -22,8 +22,8 @@ type Scheme struct {
 }
 
 // defaultGrants is the scheme used by projects without custom rows. Each entry follows the default
-// scheme of the authorization model. The delete_project grant is org_admin only: the lead role is
-// not a holder, which keeps the behavior of the original policy.
+// scheme of the authorization model. delete_project is granted to the lead and to org owners and
+// admins (org_admin); deleting still requires typing the project name.
 var defaultGrants = map[Permission][]Holder{
 	PermissionBrowseProject:       {HolderLead, HolderContributor, HolderViewer},
 	PermissionCreateIssue:         {HolderLead, HolderContributor},
@@ -52,7 +52,7 @@ var defaultGrants = map[Permission][]Holder{
 	PermissionManageWorkflow:      {HolderLead},
 	PermissionManageMembers:       {HolderLead},
 	PermissionEditProject:         {HolderLead},
-	PermissionDeleteProject:       {HolderOrgAdmin},
+	PermissionDeleteProject:       {HolderLead, HolderOrgAdmin},
 	PermissionViewReports:         {HolderLead, HolderContributor, HolderViewer},
 	PermissionManageAutomation:    {HolderLead},
 	PermissionBulkChange:          {HolderLead, HolderContributor},

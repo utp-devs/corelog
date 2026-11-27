@@ -172,8 +172,8 @@ func TestEffectivePermissionsPerRole(t *testing.T) {
 			name:   "lead",
 			access: domain.Access{OrgRole: domain.OrgRoleMember, ProjectRole: roleOfValue(domain.ProjectRoleLead), Visibility: domain.VisibilityOpen},
 			role:   "lead",
-			has:    []domain.Permission{domain.PermissionEditProject, domain.PermissionManageMembers, domain.PermissionDeleteIssue},
-			lacks:  []domain.Permission{domain.PermissionDeleteProject},
+			// The lead may delete the project under the default scheme.
+			has: []domain.Permission{domain.PermissionEditProject, domain.PermissionManageMembers, domain.PermissionDeleteIssue, domain.PermissionDeleteProject},
 		},
 		{
 			name:   "org owner is lead with delete",

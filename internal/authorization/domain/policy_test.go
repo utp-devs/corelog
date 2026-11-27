@@ -46,13 +46,23 @@ func TestPlatformAdminCannotManage(t *testing.T) {
 	}
 }
 
-func TestOnlyOrgOwnerAndAdminDeleteProject(t *testing.T) {
+// TestLeadOrOrgManagerDeletesProject: the project lead may delete the project (with the typed name
+// checked by the use case), and so may an organization owner or admin. Contributors, viewers and
+// platform admins may not.
+func TestLeadOrOrgManagerDeletesProject(t *testing.T) {
 	policy := Policy{}
 	lead := roleOf(ProjectRoleLead)
-	if policy.CanDeleteProject(Access{OrgRole: OrgRoleMember, ProjectRole: lead}) {
-		t.Fatal("project lead must not delete the project")
+	contributor := roleOf(ProjectRoleContributor)
+	if !policy.CanDeleteProject(Access{OrgRole: OrgRoleMember, ProjectRole: lead}) {
+		t.Fatal("project lead should be able to delete the project")
 	}
 	if !policy.CanDeleteProject(Access{OrgRole: OrgRoleAdmin, Visibility: VisibilityPrivate}) {
 		t.Fatal("org admin should delete the project")
+	}
+	if policy.CanDeleteProject(Access{OrgRole: OrgRoleMember, ProjectRole: contributor}) {
+		t.Fatal("contributor must not delete the project")
+	}
+	if policy.CanDeleteProject(Access{PlatformRole: PlatformRoleAdmin, OrgRole: OrgRoleMember, Visibility: VisibilityOpen}) {
+		t.Fatal("platform admin support access must not delete the project")
 	}
 }

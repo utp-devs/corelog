@@ -41,13 +41,43 @@ type Access struct {
 	OrgRole      OrgRole
 	// ProjectRole is the explicit project membership, nil when the caller has none.
 	ProjectRole *ProjectRole
-	Visibility  Visibility
+	// TeamRole is the best grant of a project team the caller belongs to, nil when there is none.
+	TeamRole   *ProjectRole
+	Visibility Visibility
+}
+
+// rank orders project roles: lead is the strongest. Unknown values rank last.
+func rank(r ProjectRole) int {
+	switch r {
+	case ProjectRoleLead:
+		return 0
+	case ProjectRoleContributor:
+		return 1
+	case ProjectRoleViewer:
+		return 2
+	default:
+		return 3
+	}
+}
+
+// BestRole returns the stronger of two optional project roles. A nil role means no role.
+func BestRole(a, b *ProjectRole) *ProjectRole {
+	switch {
+	case a == nil:
+		return b
+	case b == nil:
+		return a
+	case rank(*b) < rank(*a):
+		return b
+	default:
+		return a
+	}
 }
 
 // EffectiveRole resolves the project role used by every permission check.
 // The first rule that applies wins:
 //  1. org owner/admin: lead on every project of the organization, private ones included.
-//  2. explicit project membership.
+//  2. the best of the explicit project membership and every team grant the caller belongs to.
 //  3. org member (not guest) on an open project: viewer.
 //  4. platform admin: viewer (support access). It never grants manage rights. Support access is
 //     audited in a later change.
@@ -58,8 +88,8 @@ func EffectiveRole(a Access) *ProjectRole {
 	case OrgRoleOwner, OrgRoleAdmin:
 		return roleOf(ProjectRoleLead)
 	}
-	if a.ProjectRole != nil {
-		return a.ProjectRole
+	if direct := BestRole(a.ProjectRole, a.TeamRole); direct != nil {
+		return direct
 	}
 	if a.OrgRole == OrgRoleMember && a.Visibility == VisibilityOpen {
 		return roleOf(ProjectRoleViewer)
