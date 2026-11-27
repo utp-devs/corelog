@@ -36,7 +36,8 @@ export const routes: Routes = [
       {
         path: '403',
         title: 'Acceso denegado',
-        loadComponent: () => import('@corelog/ui/forbidden').then((m) => m.Forbidden),
+        data: { variant: 403 },
+        loadComponent: () => import('@corelog/ui/error-page').then((m) => m.ErrorPage),
       },
       {
         path: '**',
