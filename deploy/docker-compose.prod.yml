@@ -38,6 +38,7 @@ services:
         condition: service_completed_successfully
     environment:
       APP_ENV: production
+      TWO_FACTOR_ENCRYPTION_KEY: ${TWO_FACTOR_ENCRYPTION_KEY:?define TWO_FACTOR_ENCRYPTION_KEY (32 random bytes, base64)}
       SERVER_PORT: 8080
       CORS_ALLOWED_ORIGIN: ${CORS_ALLOWED_ORIGIN}
       DB_HOST: db

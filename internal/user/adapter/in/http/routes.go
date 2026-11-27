@@ -10,10 +10,16 @@ func (h *Handler) RegisterRoutes(r chi.Router) {
 	r.Route("/auth", func(r chi.Router) {
 		r.Post("/register", h.Register)
 		r.Post("/login", h.Login)
+		r.Post("/login/2fa", h.LoginSecondFactor)
 
 		r.Group(func(r chi.Router) {
 			r.Use(appmw.Authenticate(h.jwtSecret))
 			r.Post("/logout", h.Logout)
+			r.Get("/2fa", h.TwoFactorStatus)
+			r.Post("/2fa/enroll", h.TwoFactorEnroll)
+			r.Post("/2fa/confirm", h.TwoFactorConfirm)
+			r.Post("/2fa/disable", h.TwoFactorDisable)
+			r.Post("/2fa/recovery-codes", h.TwoFactorRegenerateRecoveryCodes)
 		})
 	})
 

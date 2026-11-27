@@ -45,6 +45,9 @@ func (d DatabaseConfig) DSN() string {
 type AuthConfig struct {
 	JWTSecret     string        `env:"JWT_SECRET" envDefault:"change-me-in-production"`
 	JWTExpiration time.Duration `env:"JWT_EXPIRATION" envDefault:"24h"`
+	// TwoFactorEncryptionKey is a base64 encoded 32 byte key for the stored TOTP secrets. When empty, a key is
+	// derived from JWTSecret in development; outside development the server refuses to start without it.
+	TwoFactorEncryptionKey string `env:"TWO_FACTOR_ENCRYPTION_KEY"`
 }
 
 func Load() (*Config, error) {

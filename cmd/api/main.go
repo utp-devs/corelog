@@ -31,6 +31,10 @@ func run() error {
 		return err
 	}
 
+	if err := requireTwoFactorKey(cfg); err != nil {
+		return err
+	}
+
 	log := logger.New(cfg.Server.Env)
 
 	var db *sqlx.DB

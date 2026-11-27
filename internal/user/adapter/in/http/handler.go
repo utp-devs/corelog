@@ -21,6 +21,8 @@ type Handler struct {
 	service       port.Service
 	jwtSecret     string
 	jwtExpiration time.Duration
+	// twoFactor is nil when the second factor is not wired; logins then never ask for it.
+	twoFactor port.TwoFactorService
 }
 
 func NewHandler(service port.Service, jwtSecret string, jwtExpiration time.Duration) *Handler {
@@ -69,6 +71,29 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		httpresponse.Error(w, err)
 		return
+	}
+
+	// With the second factor enabled the password only starts a challenge; the session opens after the code.
+	if h.twoFactor != nil {
+		enabled, err := h.twoFactor.IsEnabled(r.Context(), user.ID)
+		if err != nil {
+			httpresponse.Error(w, err)
+			return
+		}
+		if enabled {
+			challengeID, expiresAt, err := h.twoFactor.StartChallenge(r.Context(), user.ID)
+			if err != nil {
+				httpresponse.Error(w, err)
+				return
+			}
+			token, err := signChallengeToken(h.jwtSecret, user.ID, challengeID, expiresAt)
+			if err != nil {
+				httpresponse.Error(w, apperror.Wrap(apperror.KindInternal, "failed to issue challenge", err))
+				return
+			}
+			httpresponse.JSON(w, http.StatusOK, twoFactorChallengeResponse{TwoFactorRequired: true, ChallengeToken: token})
+			return
+		}
 	}
 
 	sessionID, err := h.service.OpenSession(r.Context(), user.ID, r.UserAgent(), time.Now().Add(h.jwtExpiration))
