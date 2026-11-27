@@ -68,7 +68,7 @@ test.describe('navegacion superior y cuenta', () => {
       /CoreLog/,
     );
     await page.getByRole('button', { name: /^Organización actual/ }).click();
-    await page.getByRole('menuitem', { name: /Acme/ }).click();
+    await page.getByRole('menuitemradio', { name: /Acme/ }).click();
     await expect(page.getByRole('button', { name: /^Organización actual/ })).toHaveAccessibleName(
       /Acme/,
     );
@@ -95,34 +95,34 @@ test.describe('navegacion superior y cuenta', () => {
     await loginViaUi(page, user.email, user.password);
     await page.goto(appPath('/issues'));
     const menu = page.getByRole('button', { name: /^Menú de / });
-    const themeLabel = async () => {
+    const darkSelected = async () => {
       await menu.click();
-      const text = await page
-        .getByRole('menuitem', { name: /Usar tema (oscuro|claro)/ })
-        .textContent();
+      const checked = await page
+        .getByRole('menuitemradio', { name: 'Oscuro' })
+        .getAttribute('aria-checked');
       await page.keyboard.press('Escape');
-      return text ?? '';
+      return checked;
     };
-    const densityLabel = async () => {
+    const compactSelected = async () => {
       await menu.click();
-      const text = await page
-        .getByRole('menuitem', { name: /Densidad (cómoda|compacta)/ })
-        .textContent();
+      const checked = await page
+        .getByRole('menuitemcheckbox', { name: /Densidad compacta/ })
+        .getAttribute('aria-checked');
       await page.keyboard.press('Escape');
-      return text ?? '';
+      return checked;
     };
 
-    const themeBefore = await themeLabel();
-    const densityBefore = await densityLabel();
+    expect(await darkSelected()).toBe('false');
+    expect(await compactSelected()).toBe('false');
     try {
       await menu.click();
-      await page.getByRole('menuitem', { name: /Usar tema/ }).click();
-      await menu.click();
-      await page.getByRole('menuitem', { name: /Densidad/ }).click();
+      await page.getByRole('menuitemradio', { name: 'Oscuro' }).click();
+      await page.getByRole('menuitemcheckbox', { name: /Densidad compacta/ }).click();
+      await page.keyboard.press('Escape');
 
       await page.reload();
-      expect(await themeLabel()).not.toBe(themeBefore);
-      expect(await densityLabel()).not.toBe(densityBefore);
+      expect(await darkSelected()).toBe('true');
+      expect(await compactSelected()).toBe('true');
     } finally {
       await context.close();
       await fetch(`${readE2eEnv().apiURL}/organizations/${orgId}`, {
