@@ -1,6 +1,6 @@
 import { bootstrapApplication } from '@angular/platform-browser';
 
-import { AppRoot } from '@corelog/ui/app-root';
 import { appConfig } from './app/app.config';
+import { AppHost } from './app/app-host';
 
-bootstrapApplication(AppRoot, appConfig).catch((error: unknown) => console.error(error));
+bootstrapApplication(AppHost, appConfig).catch((error: unknown) => console.error(error));
