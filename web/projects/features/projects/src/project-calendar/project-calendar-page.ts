@@ -139,7 +139,7 @@ export class ProjectCalendarPage implements OnInit {
   }
 
   protected shortKey(issueId: string): string {
-    return shortIssueKeyOf(issueId);
+    return shortIssueKeyOf({ id: issueId });
   }
 
   protected isToday(cell: Date): boolean {

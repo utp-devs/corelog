@@ -80,7 +80,7 @@
                       <div class="project-backlog__main">
                         <a
                           class="project-backlog__summary"
-                          [routerLink]="['/issues', issue.id]"
+                          [routerLink]="['/browse', issue.id]"
                           [title]="issue.title"
                           >{{ issue.title }}</a
                         >
@@ -142,7 +142,7 @@
                 <div class="project-backlog__main">
                   <a
                     class="project-backlog__summary"
-                    [routerLink]="['/issues', row.id]"
+                    [routerLink]="['/browse', row.id]"
                     [title]="row.summary"
                     >{{ row.summary }}</a
                   >
@@ -186,7 +186,7 @@
               <div class="project-backlog__card">
                 <a
                   class="project-backlog__summary"
-                  [routerLink]="['/issues', row.id]"
+                  [routerLink]="['/browse', row.id]"
                   [title]="row.summary"
                   >{{ row.summary }}</a
                 >

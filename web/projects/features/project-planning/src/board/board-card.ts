@@ -37,8 +37,8 @@ export class BoardCardView {
   /** Emits the id of the column picked in the "Mover a" menu. */
   readonly moved = output<string>();
 
-  protected readonly fullKey = computed(() => issueKeyOf(this.card().id));
-  protected readonly shortKey = computed(() => shortIssueKeyOf(this.card().id));
+  protected readonly fullKey = computed(() => issueKeyOf(this.card()));
+  protected readonly shortKey = computed(() => shortIssueKeyOf(this.card()));
   protected readonly href = computed(() => issuePath(this.card().id));
   protected readonly issueType = computed<IssueType | undefined>(() =>
     ISSUE_TYPES.find((type) => type === this.card().type),

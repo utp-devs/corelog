@@ -276,7 +276,7 @@ describe('ProjectBacklogPage', () => {
     const hrefs = Array.from(
       document.querySelectorAll<HTMLAnchorElement>('a.project-backlog__summary'),
     ).map((link) => link.getAttribute('href'));
-    expect(hrefs).toContain('/workspace/issues/issue-1');
+    expect(hrefs).toContain('/workspace/browse/issue-1');
     expect(hrefs.some((href) => href?.includes('/workspace/workspace/'))).toBe(false);
     harness.fixture.destroy();
   });

@@ -51,6 +51,7 @@ describe('workspace routes', () => {
     expect(paths).toEqual([
       '',
       'issues',
+      'browse',
       'profile',
       'people',
       'projects',
@@ -75,12 +76,18 @@ describe('workspace routes', () => {
     expect(router.url).toBe('/issues');
   });
 
+  it('sends the old issue detail address to the browse path', async () => {
+    const { router } = setup();
+    await router.navigateByUrl('/issues/ABC-1');
+    expect(router.url).toBe('/browse/ABC-1');
+  });
+
   it('keeps the issue, profile, people, dashboard and team pages at their paths', async () => {
     // A fresh router per address: the unsaved-changes guard needs a rendered page to leave.
     for (const url of [
       '/issues',
       '/issues/new',
-      '/issues/ABC-1',
+      '/browse/CORE-1',
       '/profile',
       '/profile/security',
       '/people',

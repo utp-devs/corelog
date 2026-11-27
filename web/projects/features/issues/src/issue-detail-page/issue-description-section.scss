@@ -1,0 +1,38 @@
+@use '../../../../ui/styles/mixins' as m;
+
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.issue-description-section {
+  &__form {
+    @include m.flex-column(4);
+    min-width: 0;
+  }
+
+  &__fields {
+    @include m.grid-auto(14rem, 4);
+  }
+
+  &__control {
+    width: 100%;
+    min-width: 0;
+  }
+
+  &__actions {
+    @include m.cluster(2, center, flex-end);
+    margin-top: var(--cl-space-2);
+
+    @include m.respond-down(768px) {
+      > * {
+        flex: 1 1 100%;
+      }
+    }
+  }
+
+  &__empty {
+    margin: 0;
+    color: var(--cl-text-subtle);
+  }
+}

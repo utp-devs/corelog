@@ -206,13 +206,13 @@ describe('MyDashboardPage', () => {
           id: 'i-9',
           title: 'Incidencia vista',
           subtitle: 'CORE-9',
-          link: '/issues/i-9',
+          link: '/browse/i-9',
         },
       ]),
     );
     const fixture = create();
 
-    expect(linkNamed(fixture, 'Incidencia vista')?.getAttribute('href')).toBe('/issues/i-9');
+    expect(linkNamed(fixture, 'Incidencia vista')?.getAttribute('href')).toBe('/browse/i-9');
     expect(textOf(fixture)).toContain('Incidencia');
     expectNoConsoleOutput();
   });
@@ -226,7 +226,7 @@ describe('MyDashboardPage', () => {
           id: 'i-9',
           title: 'Incidencia vista',
           subtitle: 'CORE-9',
-          link: '/issues/i-9',
+          link: '/browse/i-9',
         },
         {
           kind: 'issue',
@@ -250,10 +250,10 @@ describe('MyDashboardPage', () => {
     const fixture = create();
 
     expect(linkNamed(fixture, 'Incidencia vista')?.getAttribute('href')).toBe(
-      '/workspace/issues/i-9',
+      '/workspace/browse/i-9',
     );
     expect(linkNamed(fixture, 'Incidencia antigua')?.getAttribute('href')).toBe(
-      '/workspace/issues/i-10',
+      '/workspace/browse/i-10',
     );
   });
 

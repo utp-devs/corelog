@@ -1,0 +1,118 @@
+<form
+  class="issue-form"
+  aria-label="Nueva incidencia"
+  novalidate
+  [formGroup]="form()"
+  (ngSubmit)="submit()"
+>
+  <div class="issue-form__layout">
+    <div class="issue-form__main">
+      <app-section title="Datos principales" [fill]="true">
+        <div class="issue-form__stack">
+          <app-field-row
+            label="Resumen"
+            [required]="true"
+            [helper]="summaryHelper"
+            [control]="form().controls.summary"
+            [messages]="summaryMessages"
+            [submitted]="attempted()"
+          >
+            <input
+              pInputText
+              appFieldControl
+              type="text"
+              formControlName="summary"
+              autocomplete="off"
+              class="issue-form__control"
+              [maxlength]="summaryMaxLength"
+            />
+          </app-field-row>
+
+          <app-field-row
+            label="Descripción"
+            [required]="true"
+            [control]="form().controls.description"
+            [messages]="descriptionMessages"
+            [submitted]="attempted()"
+          >
+            <app-rich-text-editor
+              ariaLabel="Descripción"
+              formControlName="description"
+              placeholder="Describe el problema, los pasos para reproducirlo y el resultado esperado. Usa @ para mencionar."
+              [minRows]="8"
+              [searchUsers]="searchUsers()"
+              [submittable]="true"
+              (submitted)="submit()"
+            />
+          </app-field-row>
+        </div>
+      </app-section>
+    </div>
+
+    <aside class="issue-form__side" aria-label="Clasificación">
+      <app-section title="Clasificación">
+        <div class="issue-form__stack">
+          <app-field-row
+            #projectRow
+            label="Proyecto"
+            [required]="true"
+            [control]="form().controls.projectId"
+            [messages]="projectMessages"
+            [submitted]="attempted()"
+          >
+            <app-select-field
+              formControlName="projectId"
+              placeholder="Elige un proyecto"
+              [inputId]="projectRow.controlId"
+              [ariaLabelledBy]="projectRow.labelId"
+              [options]="projectOptions()"
+              [loading]="projectsLoading()"
+              [invalid]="projectRow.invalid()"
+            />
+          </app-field-row>
+          <app-field-row #typeRow label="Tipo" [required]="true">
+            <app-select-field
+              formControlName="issueType"
+              [inputId]="typeRow.controlId"
+              [ariaLabelledBy]="typeRow.labelId"
+              [options]="typeOptions"
+            />
+          </app-field-row>
+          <app-field-row #priorityRow label="Prioridad" [required]="true">
+            <app-select-field
+              formControlName="priority"
+              [inputId]="priorityRow.controlId"
+              [ariaLabelledBy]="priorityRow.labelId"
+              [options]="priorityOptions"
+            />
+          </app-field-row>
+          <app-field-row label="Asignar a" [optional]="true">
+            <app-user-picker
+              ariaLabel="Asignar a"
+              placeholder="Sin asignar"
+              [users]="assigneeUsers()"
+              [value]="form().controls.assigneeId.value"
+              (valueChange)="setAssignee($event)"
+            />
+          </app-field-row>
+        </div>
+      </app-section>
+    </aside>
+  </div>
+
+  <div class="issue-form__actions" data-overlay>
+    <p-button
+      label="Cancelar"
+      severity="secondary"
+      [outlined]="true"
+      class="touch-target"
+      (onClick)="cancelled.emit()"
+    />
+    <p-button
+      label="Crear incidencia"
+      type="submit"
+      class="touch-target"
+      [loading]="isSubmitting()"
+    />
+  </div>
+</form>

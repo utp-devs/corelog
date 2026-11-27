@@ -182,7 +182,7 @@ export class ProjectBacklogPage {
   }
 
   protected shortKey(item: { readonly id: string }): string {
-    return shortIssueKeyOf(item.id);
+    return shortIssueKeyOf(item);
   }
 
   protected statusCategory(status: WorkItemStatus): LozengeCategory {

@@ -1,0 +1,144 @@
+<app-page-container variant="wide" pageName="issues" [ready]="!loading()" [fill]="true">
+  <app-page-header
+    title="Incidencias"
+    subtitle="Consulta y administra las incidencias registradas."
+  />
+
+  <app-toolbar>
+    <div appToolbarLeft class="issues-list-page__filters">
+      <app-filter-bar
+        searchPlaceholder="Buscar incidencias"
+        [searchValue]="search()"
+        (searchValueChange)="onSearch($event)"
+        [filters]="filterDefinitions()"
+        (clear)="clearFilters()"
+      />
+    </div>
+
+    <div appToolbarRight>
+      <p-button label="Nueva incidencia" icon="pi pi-plus" (onClick)="openNew()" />
+    </div>
+
+    <div appToolbarSecondary>
+      <p-button
+        label="Filtros avanzados"
+        [icon]="advancedVisible() ? 'pi pi-chevron-up' : 'pi pi-chevron-down'"
+        iconPos="right"
+        severity="secondary"
+        [outlined]="true"
+        [attr.aria-expanded]="advancedVisible()"
+        (onClick)="toggleAdvanced()"
+      />
+    </div>
+  </app-toolbar>
+
+  @if (advancedVisible()) {
+    <div class="issues-list-page__saved-row">
+      <p-select
+        class="issues-list-page__filter-select"
+        [options]="savedFilterOptions()"
+        optionLabel="label"
+        optionValue="value"
+        placeholder="Cargar filtro guardado"
+        ariaLabel="Cargar filtro guardado"
+        [showClear]="true"
+        [ngModel]="selectedSavedFilter() ?? null"
+        (ngModelChange)="applySavedFilter($event)"
+      />
+      <p-button
+        label="Guardar filtro actual"
+        severity="secondary"
+        [outlined]="true"
+        (onClick)="openSaveDialog()"
+      />
+      <p-button
+        label="Eliminar filtro"
+        severity="danger"
+        [outlined]="true"
+        [disabled]="!selectedSavedFilter()"
+        (onClick)="deleteSelectedFilter()"
+      />
+      <p-datepicker
+        placeholder="Fecha desde"
+        ariaLabel="Fecha desde"
+        dateFormat="dd/mm/yy"
+        [showIcon]="true"
+        [ngModel]="dueFromDate()"
+        (ngModelChange)="onDueFrom($event)"
+      />
+      <p-datepicker
+        placeholder="Fecha hasta"
+        ariaLabel="Fecha hasta"
+        dateFormat="dd/mm/yy"
+        [showIcon]="true"
+        [ngModel]="dueToDate()"
+        (ngModelChange)="onDueTo($event)"
+      />
+    </div>
+  }
+
+  @if (savedFilterError(); as message) {
+    <div role="alert" class="issues-list-page__alert">
+      <p-message severity="error" [closable]="true" (onClose)="dismissSavedFilterError()">{{
+        message
+      }}</p-message>
+    </div>
+  }
+
+  <app-section flush [fill]="true" ariaLabel="Lista de incidencias">
+    <app-issue-list
+      [fill]="true"
+      [issues]="issues()"
+      [loading]="loading()"
+      [error]="error()"
+      [pagination]="pagination()"
+      [emptyState]="emptyTpl"
+      [rowActions]="rowActions"
+      (open)="openIssue($event)"
+      (retry)="retry()"
+      (pageChange)="changePage($event)"
+    />
+  </app-section>
+
+  <app-dialog
+    size="sm"
+    heading="Guardar filtro"
+    subtitle="Ponle un nombre para volver a usarlo cuando quieras."
+    [open]="saveDialogOpen()"
+    (closeRequested)="closeSaveDialog()"
+  >
+    <input
+      pInputText
+      class="issues-list-page__name-input"
+      data-autofocus
+      maxlength="80"
+      aria-label="Nombre del filtro"
+      placeholder="Nombre del filtro"
+      [ngModel]="savedFilterName()"
+      (ngModelChange)="onSavedFilterName($event)"
+      (keydown.enter)="saveCurrentFilter()"
+    />
+    <p-button dialogFooter label="Cancelar" severity="secondary" (onClick)="closeSaveDialog()" />
+    <p-button
+      dialogFooter
+      label="Guardar"
+      [disabled]="!canSaveName()"
+      (onClick)="saveCurrentFilter()"
+    />
+  </app-dialog>
+</app-page-container>
+
+<ng-template #emptyTpl>
+  @if (hasActiveFilters()) {
+    <app-empty-state
+      title="Ninguna incidencia coincide con los filtros"
+      description="Cambia o limpia los filtros para ver más resultados."
+    >
+      <p-button action label="Limpiar filtros" severity="secondary" (onClick)="clearFilters()" />
+    </app-empty-state>
+  } @else {
+    <app-empty-state title="Aún no hay incidencias" description="Crea la primera para empezar.">
+      <p-button action label="Nueva incidencia" icon="pi pi-plus" (onClick)="openNew()" />
+    </app-empty-state>
+  }
+</ng-template>

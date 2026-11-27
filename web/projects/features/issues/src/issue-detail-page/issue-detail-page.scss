@@ -1,0 +1,215 @@
+@use '../../../../ui/styles/mixins' as m;
+
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.issue-detail {
+  &__header {
+    @include m.flex-column(3);
+    min-width: 0;
+  }
+
+  &__bar {
+    @include m.cluster(3, center, space-between);
+  }
+
+  &__actions {
+    @include m.cluster(2, center, flex-end);
+  }
+
+  &__watch-error {
+    color: var(--cl-danger-text);
+    font-size: var(--cl-font-small);
+  }
+
+  /* The editable title keeps the text on the page gutter: the pull-back equals the trigger padding plus its border. */
+  &__title {
+    width: calc(100% + var(--cl-space-2) + 1px);
+    min-width: 0;
+    margin: 0 0 0 calc(-1 * (var(--cl-space-2) + 1px));
+    overflow-wrap: anywhere;
+    font-size: var(--cl-font-h2);
+    font-weight: var(--cl-weight-semibold);
+    line-height: var(--cl-lh-tight);
+  }
+
+  &__title-edit {
+    display: block;
+  }
+
+  &__back-row {
+    margin-top: var(--cl-space-3);
+  }
+
+  // Side cards (and the collapsible block on small screens) are separated by one spacing step.
+  &__stack {
+    @include m.flex-column(4);
+    min-width: 0;
+  }
+
+  &__collapsible {
+    @include m.flex-column(3);
+    min-width: 0;
+  }
+
+  &__toggle {
+    @include m.flex-row(2, center, space-between);
+    min-height: var(--cl-control-h-lg);
+    padding: 0 var(--cl-space-4);
+    border: 1px solid var(--cl-border);
+    border-radius: var(--cl-radius-lg);
+    background: var(--cl-bg-surface);
+    color: var(--cl-text);
+    font: inherit;
+    font-weight: var(--cl-weight-medium);
+    cursor: pointer;
+
+    &:hover {
+      background: var(--cl-bg-hover);
+    }
+
+    &:focus-visible {
+      outline: none;
+      box-shadow: var(--cl-shadow-focus);
+    }
+  }
+
+  &__toggle-icon {
+    color: var(--cl-text-subtle);
+    font-size: var(--cl-font-small);
+  }
+
+  &__fields {
+    @include m.flex-column(4);
+    min-width: 0;
+  }
+
+  &__priority {
+    @include m.flex-row(2);
+    min-width: 0;
+
+    &[data-priority='critical'] {
+      --issue-detail-priority: var(--cl-prio-highest);
+    }
+
+    &[data-priority='high'] {
+      --issue-detail-priority: var(--cl-prio-high);
+    }
+
+    &[data-priority='medium'] {
+      --issue-detail-priority: var(--cl-prio-medium);
+    }
+
+    &[data-priority='low'] {
+      --issue-detail-priority: var(--cl-prio-low);
+    }
+  }
+
+  &__priority-icon {
+    flex: none;
+    color: var(--issue-detail-priority, var(--cl-prio-lowest));
+  }
+
+  &__inline-actions {
+    @include m.cluster(1);
+    margin-top: var(--cl-space-1);
+  }
+
+  &__facts {
+    display: grid;
+    grid-template-columns: minmax(0, max-content) minmax(0, 1fr);
+    gap: var(--cl-space-3) var(--cl-space-4);
+    margin: 0;
+
+    dt {
+      color: var(--cl-text-subtle);
+    }
+
+    dd {
+      min-width: 0;
+      margin: 0;
+      overflow-wrap: anywhere;
+    }
+  }
+
+  &__person {
+    @include m.flex-row(2);
+  }
+
+  &__link {
+    color: var(--cl-brand);
+  }
+
+  &__link-form {
+    @include m.cluster(2, flex-start);
+    margin-bottom: var(--cl-space-3);
+    min-width: 0;
+  }
+
+  &__link-picker {
+    flex: 2 1 14rem;
+    min-width: 0;
+  }
+
+  &__link-kind {
+    flex: 1 1 10rem;
+    min-width: 0;
+  }
+
+  &__list {
+    @include m.flex-column(2);
+    margin: var(--cl-space-3) 0 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  &__list-item {
+    @include m.cluster(2, center, space-between);
+    min-width: 0;
+  }
+
+  &__link-text {
+    @include m.cluster(2);
+    min-width: 0;
+  }
+
+  &__file {
+    @include m.visually-hidden;
+  }
+
+  &__file-info {
+    @include m.flex-column(0);
+    min-width: 0;
+  }
+
+  &__file-name {
+    overflow-wrap: anywhere;
+    font-weight: var(--cl-weight-semibold);
+  }
+
+  &__muted {
+    color: var(--cl-text-subtle);
+  }
+
+  &__empty {
+    margin: var(--cl-space-3) 0 0;
+    color: var(--cl-text-subtle);
+  }
+
+  &__sr {
+    @include m.visually-hidden;
+  }
+
+  @include m.respond-down(768px) {
+    &__actions {
+      width: 100%;
+      justify-content: flex-start;
+    }
+
+    &__link-form > * {
+      flex: 1 1 100%;
+    }
+  }
+}

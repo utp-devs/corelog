@@ -7,7 +7,7 @@ import { PROFILE_ROUTES } from '@corelog/features/profile';
 import { PROJECT_PLANNING_ROUTES } from '@corelog/features/project-planning';
 import { PROJECTS_ROUTES, PROJECT_DETAIL_CHILDREN } from '@corelog/features/projects';
 import { TEAMS_ROUTES } from '@corelog/features/teams';
-import { TICKETS_ROUTES } from '@corelog/features/tickets';
+import { ISSUE_BROWSE_ROUTES, ISSUES_ROUTES } from '@corelog/features/issues';
 
 const [projectList, projectNew, projectDetail] = PROJECTS_ROUTES;
 
@@ -43,7 +43,8 @@ export const routes: Routes = [
     loadComponent: () => import('./shell/workspace-shell').then((m) => m.WorkspaceShell),
     children: [
       { path: '', pathMatch: 'full', redirectTo: 'issues' },
-      { path: 'issues', children: TICKETS_ROUTES },
+      { path: 'issues', children: ISSUES_ROUTES },
+      { path: 'browse', children: ISSUE_BROWSE_ROUTES },
       { path: 'profile', children: PROFILE_ROUTES },
       { path: 'people', children: PEOPLE_ROUTES },
       { path: 'projects', children: PROJECT_ROUTES },

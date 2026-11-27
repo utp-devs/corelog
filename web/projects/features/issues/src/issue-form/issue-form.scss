@@ -1,0 +1,73 @@
+@use '../../../../ui/styles/mixins' as m;
+
+:host {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.issue-form {
+  @include m.flex-column(4);
+  flex: 1 1 auto;
+  width: 100%;
+  min-width: 0;
+
+  // One column below 992 px; from 992 px the main fields and the classification sit side by side,
+  // and the main card grows to the bottom of the page.
+  &__layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--cl-space-4);
+    align-items: start;
+    min-width: 0;
+
+    @include m.respond-up(992px) {
+      flex: 1 1 auto;
+      align-items: stretch;
+      grid-template-columns: minmax(0, 1fr) minmax(16rem, 20rem);
+    }
+  }
+
+  &__side {
+    align-self: start;
+  }
+
+  &__main,
+  &__side {
+    @include m.flex-column(4);
+    min-width: 0;
+  }
+
+  &__stack {
+    @include m.flex-column(4);
+    min-width: 0;
+  }
+
+  &__control {
+    width: 100%;
+    min-width: 0;
+  }
+
+  &__actions {
+    @include m.cluster(2, center, flex-end);
+
+    // On phones the actions stay in reach while the long form scrolls: a bar layered over the form
+    // (the layout audit skips overlays when it looks for overlapping siblings).
+    @include m.respond-down(768px) {
+      position: sticky;
+      bottom: 0;
+      z-index: var(--cl-z-header);
+      flex-direction: column-reverse;
+      align-items: stretch;
+      margin-inline: calc(-1 * var(--cl-space-4));
+      padding: var(--cl-space-3) var(--cl-space-4);
+      border-top: 1px solid var(--cl-border);
+      background: var(--cl-bg-surface);
+
+      > * {
+        width: 100%;
+      }
+    }
+  }
+}

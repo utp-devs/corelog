@@ -46,14 +46,14 @@ describe('BoardCardView links under the workspace base href', () => {
   it('links the key to the issue with the base prefixed once', () => {
     const el = render();
     const keyLink = el.querySelector('app-issue-key a');
-    expect(keyLink?.getAttribute('href')).toBe(`/workspace/issues/${ISSUE_ID}`);
+    expect(keyLink?.getAttribute('href')).toBe(`/workspace/browse/${ISSUE_ID}`);
   });
 
   it('links the summary to the issue with the base prefixed once', () => {
     const el = render();
     const summary = el.querySelector<HTMLAnchorElement>('a.board-card__summary');
     expect(summary?.textContent?.trim()).toBe('Exportar el tablero');
-    expect(summary?.getAttribute('href')).toBe(`/workspace/issues/${ISSUE_ID}`);
+    expect(summary?.getAttribute('href')).toBe(`/workspace/browse/${ISSUE_ID}`);
   });
 
   it('offers the move menu only to editors and emits the chosen column', () => {

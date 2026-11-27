@@ -1,0 +1,383 @@
+@if (showSkeleton()) {
+  <app-page-container variant="wide" pageName="issue-detail" [ready]="false">
+    <app-loading-skeleton variant="detail" />
+  </app-page-container>
+} @else if (showError()) {
+  <app-page-container variant="wide" pageName="issue-detail" [ready]="true" [fill]="true">
+    <app-section ariaLabel="Error de la incidencia" [fill]="true">
+      <app-error-state [status]="errorStatus()" [canRetry]="canRetryLoad()" (retry)="retry()" />
+    </app-section>
+    <div class="issue-detail__back-row">
+      <p-button
+        label="Volver a incidencias"
+        severity="secondary"
+        [outlined]="true"
+        class="touch-target"
+        (onClick)="back()"
+      />
+    </div>
+  </app-page-container>
+} @else {
+  @for (selected of detailItems(); track selected.id) {
+    <ng-template #detailsCards>
+      <app-section title="Detalles">
+        <div class="issue-detail__fields">
+          <app-field-row label="Estado">
+            <app-inline-edit
+              label="Estado"
+              type="select"
+              appearance="lozenge"
+              [tone]="statusTone(selected.status)"
+              [value]="selected.status"
+              [options]="statusOptions()"
+              [locked]="archived()"
+              [disabledReason]="archivedReason"
+              [onSave]="saveStatus"
+            />
+          </app-field-row>
+
+          <app-field-row label="Prioridad">
+            <div class="issue-detail__priority" [attr.data-priority]="selected.priority">
+              <i
+                class="issue-detail__priority-icon"
+                [class]="priorityIcon(selected.priority)"
+                aria-hidden="true"
+              ></i>
+              <app-inline-edit
+                label="Prioridad"
+                type="select"
+                appearance="field"
+                [value]="selected.priority"
+                [options]="priorityOptions"
+                [locked]="archived()"
+                [disabledReason]="archivedReason"
+                [onSave]="savePriority"
+              />
+            </div>
+          </app-field-row>
+
+          <app-field-row
+            label="Responsable"
+            [disabledReason]="
+              canChangeAssignee() ? undefined : archived() ? archivedReason : noAssignPermission
+            "
+          >
+            <app-user-picker
+              ariaLabel="Responsable"
+              [users]="assigneeUsers()"
+              [value]="selected.assigneeId ?? undefined"
+              [allowClear]="false"
+              [loading]="teammates.loading() || names.isLoading() || assigning()"
+              [disabled]="assigning() || !canChangeAssignee()"
+              [disabledReason]="archived() ? archivedReason : noAssignPermission"
+              placeholder="Sin asignar"
+              (valueChange)="assign($event)"
+              (search)="teammates.search($event)"
+            />
+            @if (canAssignToMe() || (canChangeAssignee() && selected.assigneeId)) {
+              <div class="issue-detail__inline-actions">
+                @if (canAssignToMe()) {
+                  <p-button
+                    label="Asignarme a mí"
+                    icon="pi pi-user"
+                    severity="secondary"
+                    size="small"
+                    [text]="true"
+                    class="touch-target"
+                    [disabled]="assigning()"
+                    (onClick)="assignToMe()"
+                  />
+                }
+                @if (canChangeAssignee() && selected.assigneeId) {
+                  <p-button
+                    label="Quitar responsable"
+                    icon="pi pi-times"
+                    severity="secondary"
+                    size="small"
+                    [text]="true"
+                    class="touch-target"
+                    [disabled]="assigning()"
+                    (onClick)="unassign()"
+                  />
+                }
+              </div>
+            }
+            <p role="status" aria-live="polite" class="issue-detail__sr">
+              {{ assignAnnouncement() }}
+            </p>
+          </app-field-row>
+        </div>
+      </app-section>
+
+      <app-section title="Más información">
+        <dl class="issue-detail__facts">
+          <dt>Reportado por</dt>
+          <dd class="issue-detail__person">
+            <app-user-avatar
+              [id]="selected.reporterId"
+              [name]="selected.reporterName"
+              [size]="24"
+            />
+            {{ selected.reporterName }}
+          </dd>
+          <dt>Proyecto</dt>
+          <dd>
+            <a class="issue-detail__link" [routerLink]="projectPath()">{{
+              project()?.name ?? 'Ver el proyecto'
+            }}</a>
+          </dd>
+          <dt>Tipo</dt>
+          <dd>{{ issueTypeLabels[selected.issueType] }}</dd>
+          <dt>Fecha límite</dt>
+          <dd>
+            {{ selected.dueDate ? (selected.dueDate | date: 'dd/MM/yyyy') : 'Sin fecha límite' }}
+          </dd>
+          <dt>Puntos de historia</dt>
+          <dd>{{ selected.storyPoints ?? 'Sin estimar' }}</dd>
+          <dt>Incidencia padre</dt>
+          <dd>
+            {{ selected.parentId ? shortKeyOf({ id: selected.parentId }) : 'Sin incidencia padre' }}
+          </dd>
+          <dt>Seguimiento</dt>
+          <dd>
+            {{ watcherCount() }}
+            {{ watcherCount() === 1 ? 'persona sigue' : 'personas siguen' }} esta incidencia
+          </dd>
+          <dt>Creado</dt>
+          <dd [appTooltip]="exact(selected.createdAt)">{{ ago(selected.createdAt) }}</dd>
+          <dt>Actualizado</dt>
+          <dd [appTooltip]="exact(selected.updatedAt)">{{ ago(selected.updatedAt) }}</dd>
+        </dl>
+      </app-section>
+    </ng-template>
+
+    <app-page-container variant="wide" pageName="issue-detail" [ready]="true">
+      @if (collaborationError(); as message) {
+        <p-message severity="error" [closable]="false">{{ message }}</p-message>
+      }
+
+      <app-archived-notice
+        [archived]="archived()"
+        [projectId]="projectId() ?? null"
+        [canRestore]="canRestoreProject()"
+        (restored)="archived.set(false)"
+      />
+
+      <header class="issue-detail__header">
+        <app-breadcrumbs [items]="breadcrumbs()" />
+        <div class="issue-detail__bar">
+          <app-issue-key
+            [issueKey]="issueKeyOf(selected)"
+            [displayKey]="shortKeyOf(selected)"
+            [href]="pathOf(selected)"
+            [summary]="selected.summary"
+            [type]="selected.issueType"
+            [resolved]="isResolved(selected)"
+          />
+          <div class="issue-detail__actions">
+            @if (watcherError(); as message) {
+              <span class="issue-detail__watch-error" role="alert">{{ message }}</span>
+            }
+            <p-button
+              [label]="watcherState()?.isWatching ? 'Dejar de seguir' : 'Seguir incidencia'"
+              [icon]="watcherState()?.isWatching ? 'pi pi-eye-slash' : 'pi pi-eye'"
+              severity="secondary"
+              [outlined]="true"
+              class="touch-target"
+              [loading]="watcherLoading() || watcherBusy()"
+              [disabled]="watcherLoading() || !watcherState()"
+              (onClick)="toggleWatch()"
+            />
+            <p-button
+              icon="pi pi-link"
+              severity="secondary"
+              [text]="true"
+              class="touch-target"
+              ariaLabel="Copiar enlace"
+              appTooltip="Copiar enlace"
+              (onClick)="copyLink()"
+            />
+            <p-button
+              icon="pi pi-ellipsis-h"
+              severity="secondary"
+              [text]="true"
+              class="touch-target"
+              ariaLabel="Más acciones"
+              appTooltip="Más acciones"
+              (onClick)="actionsMenu.toggle($event)"
+            />
+            <p-menu #actionsMenu [model]="menuItems()" [popup]="true" appendTo="body" />
+          </div>
+        </div>
+        <h1 class="issue-detail__title">
+          <app-inline-edit
+            class="issue-detail__title-edit"
+            label="Resumen"
+            type="text"
+            [value]="selected.summary"
+            [locked]="archived()"
+            [disabledReason]="archivedReason"
+            [onSave]="saveSummary"
+          />
+        </h1>
+      </header>
+
+      @if (compact()) {
+        <div class="issue-detail__collapsible">
+          <button
+            type="button"
+            class="issue-detail__toggle"
+            aria-controls="issue-detail-details"
+            [attr.aria-expanded]="detailsOpen() ? 'true' : 'false'"
+            (click)="toggleDetails()"
+          >
+            <span>{{ detailsOpen() ? 'Ocultar detalles' : 'Mostrar detalles' }}</span>
+            <i
+              class="pi issue-detail__toggle-icon"
+              [class.pi-chevron-up]="detailsOpen()"
+              [class.pi-chevron-down]="!detailsOpen()"
+              aria-hidden="true"
+            ></i>
+          </button>
+          @if (detailsOpen()) {
+            <div id="issue-detail-details" class="issue-detail__stack">
+              <ng-container [ngTemplateOutlet]="detailsCards" />
+            </div>
+          }
+        </div>
+      }
+
+      <app-issue-description-section
+        [issue]="selected"
+        [saveDetails]="saveDetails"
+        [searchUsers]="mentionSearch"
+        [readOnly]="archived()"
+      />
+
+      <app-section title="Adjuntos">
+        @if (attachmentError(); as message) {
+          <div role="alert">
+            <p-message severity="error" [closable]="false">{{ message }}</p-message>
+          </div>
+        }
+
+        <input
+          #fileInput
+          type="file"
+          class="issue-detail__file"
+          tabindex="-1"
+          aria-hidden="true"
+          (change)="onFileSelected($event)"
+        />
+        <p-button
+          label="Cargar archivo (máximo 10 MB)"
+          icon="pi pi-paperclip"
+          severity="secondary"
+          [outlined]="true"
+          class="touch-target"
+          [disabled]="attachmentsLoading() || archived()"
+          (onClick)="fileInput.click()"
+        />
+
+        @if (attachmentsLoading()) {
+          <app-loading-skeleton variant="card" />
+        } @else if (visibleAttachments().length === 0 && !attachmentError()) {
+          <p class="issue-detail__empty">Aún no hay archivos</p>
+        } @else {
+          <ul class="issue-detail__list">
+            @for (attachment of visibleAttachments(); track attachment.id) {
+              <li class="issue-detail__list-item">
+                <span class="issue-detail__file-info">
+                  <span class="issue-detail__file-name">{{ attachment.fileName }}</span>
+                  <span class="issue-detail__muted">
+                    {{ attachment.contentType }} · {{ sizeInKb(attachment.sizeBytes) }} KB · Subido
+                    por {{ names.nameOf(attachment.uploaderId) }}
+                  </span>
+                </span>
+                <p-button
+                  label="Descargar"
+                  icon="pi pi-download"
+                  severity="secondary"
+                  [outlined]="true"
+                  class="touch-target"
+                  (onClick)="downloadAttachment(attachment)"
+                />
+              </li>
+            }
+          </ul>
+        }
+      </app-section>
+
+      <app-section title="Vínculos">
+        @if (!archived()) {
+          <div class="issue-detail__link-form">
+            <app-issue-picker
+              class="issue-detail__link-picker"
+              [excludeId]="selected.id"
+              [(value)]="linkTarget"
+            />
+            <app-select-field
+              ariaLabel="Tipo de vínculo"
+              class="issue-detail__link-kind"
+              [options]="linkKindOptions"
+              [ngModel]="linkKind()"
+              (ngModelChange)="onLinkKind($event)"
+            />
+            <p-button
+              label="Vincular"
+              class="touch-target"
+              [disabled]="collaborationLoading() || !linkTarget()"
+              (onClick)="createLink()"
+            />
+          </div>
+        }
+
+        @if (collaborationLoading()) {
+          <app-loading-skeleton variant="card" />
+        } @else if (visibleLinks().length === 0 && !collaborationError()) {
+          <p class="issue-detail__empty">Aún no hay vínculos</p>
+        } @else {
+          <ul class="issue-detail__list">
+            @for (link of visibleLinks(); track link.id) {
+              <li class="issue-detail__list-item">
+                <span class="issue-detail__link-text">
+                  <span class="issue-detail__muted">{{ linkKindLabel(link) }}</span>
+                  <a class="issue-detail__link" [routerLink]="linkPath(link)">{{
+                    linkKey(link)
+                  }}</a>
+                </span>
+                @if (!archived()) {
+                  <p-button
+                    label="Eliminar"
+                    severity="danger"
+                    [text]="true"
+                    class="touch-target"
+                    (onClick)="removeLink(link.id)"
+                  />
+                }
+              </li>
+            }
+          </ul>
+        }
+      </app-section>
+
+      <app-issue-activity
+        [comments]="visibleComments()"
+        [activities]="visibleActivities()"
+        [loading]="collaborationLoading()"
+        [currentUser]="archived() ? null : currentUser()"
+        [nameOf]="nameOf"
+        [searchUsers]="mentionSearch"
+        [onCreate]="createComment"
+        [onUpdate]="updateComment"
+        [onDelete]="deleteComment"
+      />
+
+      @if (!compact()) {
+        <div appPageSidebar class="issue-detail__stack">
+          <ng-container [ngTemplateOutlet]="detailsCards" />
+        </div>
+      }
+    </app-page-container>
+  }
+}
