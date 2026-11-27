@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { signal } from '@angular/core';
 import { ActivatedRoute, Router, convertToParamMap, provideRouter } from '@angular/router';
 import {
   ApiError,
@@ -7,6 +8,7 @@ import {
   InvitationPreview,
   LOCATION_ASSIGN,
   NotificationService,
+  OrgLogoService,
   OrganizationMembership,
   OrganizationStore,
   User,
@@ -60,6 +62,7 @@ interface Fakes {
   success: ReturnType<typeof vi.fn>;
   assign: ReturnType<typeof vi.fn>;
   logout: ReturnType<typeof vi.fn>;
+  watchLogo: ReturnType<typeof vi.fn>;
 }
 
 function setup(options: { user?: User | null; previewResult?: unknown } = {}): {
@@ -85,6 +88,10 @@ function setup(options: { user?: User | null; previewResult?: unknown } = {}): {
     success: vi.fn(),
     assign: vi.fn(),
     logout: vi.fn(),
+    watchLogo: vi.fn((_orgId: string, hasLogo: boolean) => ({
+      url: signal<string | null>(hasLogo ? 'blob:logo' : null).asReadonly(),
+      release: vi.fn(),
+    })),
   };
   const user = options.user === undefined ? USER : options.user;
 
@@ -110,6 +117,7 @@ function setup(options: { user?: User | null; previewResult?: unknown } = {}): {
           setCurrentOrg: fakes.setCurrentOrg,
         },
       },
+      { provide: OrgLogoService, useValue: { watch: fakes.watchLogo } },
       { provide: NotificationService, useValue: { success: fakes.success } },
       { provide: LOCATION_ASSIGN, useValue: fakes.assign },
       { provide: HOME_URL, useValue: '/workspace/' },
@@ -154,6 +162,37 @@ describe('InviteAcceptPage', () => {
     expect(details?.textContent).toContain('Miembro');
     expect(details?.textContent).toContain('ana@example.com');
     expect(button(el, 'Aceptar invitación')?.disabled).toBe(false);
+  });
+
+  it('names the inviter in the invitation sentence when the invitation has one', async () => {
+    const { fixture, el } = setup({
+      previewResult: of(preview({ invitedBy: 'Lucía Gómez' })),
+    });
+    await settle(fixture);
+    expect(el.textContent).toContain('Lucía Gómez te invita a unirte a Acme como Miembro.');
+  });
+
+  it('omits the inviter from the sentence when the invitation has none', async () => {
+    const { fixture, el } = setup();
+    await settle(fixture);
+    expect(el.textContent).toContain('Se te invita a unirte a Acme como Miembro.');
+    expect(el.textContent).not.toMatch(/null|undefined/);
+  });
+
+  it('shows the organization logo when the organization has one', async () => {
+    const { fixture, el, fakes } = setup({ previewResult: of(preview({ hasLogo: true })) });
+    await settle(fixture);
+    expect(fakes.watchLogo).toHaveBeenCalledWith('org-1', true, 0);
+    expect(el.querySelector('[data-testid="org-logo"]')).not.toBeNull();
+    expect(el.querySelector('[data-testid="org-logo-fallback"]')).toBeNull();
+  });
+
+  it('shows the initials tile when the organization has no logo', async () => {
+    const { fixture, el, fakes } = setup();
+    await settle(fixture);
+    expect(fakes.watchLogo).toHaveBeenCalledWith('org-1', false, 0);
+    expect(el.querySelector('[data-testid="org-logo"]')).toBeNull();
+    expect(el.querySelector('[data-testid="org-logo-fallback"]')).not.toBeNull();
   });
 
   it('accepts, refreshes the organizations, selects the new one and opens the workspace', async () => {

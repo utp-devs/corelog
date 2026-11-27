@@ -29,6 +29,14 @@ const UNUSABLE_MESSAGES: Readonly<Record<string, string>> = {
   expired: 'La invitación ha caducado. Pide a un administrador un enlace nuevo.',
 };
 
+/** Sentence shown under the heading for a pending invitation; the inviter is omitted when unknown. */
+function invitationSentence(preview: InvitationPreview): string {
+  const target = `a unirte a ${preview.organizationName} como ${ROLE_LABELS[preview.role]}`;
+  return preview.invitedBy
+    ? `${preview.invitedBy} te invita ${target}.`
+    : `Se te invita ${target}.`;
+}
+
 type PreviewState =
   | { readonly kind: 'loading' }
   | { readonly kind: 'invalid' }
@@ -86,7 +94,7 @@ export class InviteAcceptPage {
     const preview = this.ready();
     if (preview) {
       return preview.status === 'pending'
-        ? `Te invitan a unirte como ${ROLE_LABELS[preview.role]}.`
+        ? invitationSentence(preview)
         : 'Esta invitación ya no se puede aceptar.';
     }
     return this.state().kind === 'loading'

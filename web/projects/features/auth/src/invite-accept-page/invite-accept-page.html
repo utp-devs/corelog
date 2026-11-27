@@ -8,8 +8,9 @@
       <dl class="invite-accept-page__card">
         <div class="invite-accept-page__org">
           <app-org-logo
-            [orgId]="preview.organizationName"
+            [orgId]="preview.organizationId"
             [name]="preview.organizationName"
+            [hasLogo]="preview.hasLogo"
             [size]="32"
           />
           <span class="invite-accept-page__org-name">{{ preview.organizationName }}</span>
