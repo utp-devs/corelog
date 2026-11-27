@@ -23,7 +23,7 @@ const PROJECT_NAV: readonly ProjectNavDefinition[] = [
   { key: 'backlog', label: 'Backlog', permission: 'browse_project', scrumOnly: true },
   { key: 'sprints', label: 'Sprints', permission: 'browse_project', scrumOnly: true },
   { key: 'calendar', label: 'Calendario', permission: 'browse_project' },
-  { key: 'permisos', label: 'Permisos', permission: 'browse_project' },
+  { key: 'settings', label: 'Configuración', permission: 'edit_project' },
 ];
 
 /** Whether the project has sprints: the scrum template, or the legacy scrum type when no template is set. */

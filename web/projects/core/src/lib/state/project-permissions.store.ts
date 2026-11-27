@@ -60,7 +60,7 @@ export class ProjectPermissionsStore {
     teamId: string,
     role: ProjectMemberRole,
   ): Observable<ProjectTeamRole> {
-    return this.api.putTeamRole(projectId, teamId, role).pipe(
+    return this.api.putTeamRole(projectId, teamId, role, { silent: true }).pipe(
       tap((teamRole) =>
         this.teamRolesRead.update((items) => [
           ...(items ?? []).filter((item) => item.teamId !== teamRole.teamId),
@@ -72,7 +72,7 @@ export class ProjectPermissionsStore {
   }
 
   removeTeamRole(projectId: string, teamId: string): Observable<void> {
-    return this.api.deleteTeamRole(projectId, teamId).pipe(
+    return this.api.deleteTeamRole(projectId, teamId, { silent: true }).pipe(
       tap(() =>
         this.teamRolesRead.update((items) => items?.filter((item) => item.teamId !== teamId)),
       ),

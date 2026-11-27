@@ -12,6 +12,8 @@ import {
 import { OrganizationApiService } from '../services/api/organization-api.service';
 import { StorageService } from '../services/storage.service';
 import { setOrgIdProvider } from '../utils/org-context';
+import { createProjectRights } from '../utils/org-permissions';
+import { AuthStore } from './auth.store';
 import { AsyncState } from './async-state';
 import { resetOnLogout } from './session-scoped';
 
@@ -26,6 +28,7 @@ export const CURRENT_ORG_STORAGE_KEY = 'corelog.currentOrg';
 export class OrganizationStore {
   private readonly api = inject(OrganizationApiService);
   private readonly storage = inject(StorageService);
+  private readonly auth = inject(AuthStore);
 
   private readonly orgsState = new AsyncState<Organization[]>();
   private readonly currentIdState = signal<string | null>(this.readPersistedId());
@@ -46,6 +49,18 @@ export class OrganizationStore {
   });
   /** Role of the caller in the active organization. */
   readonly currentRole = computed(() => this.currentOrg()?.role ?? null);
+  /**
+   * Whether the caller may create projects in the active organization: global admins, organization
+   * owners and admins, and members when the organization policy opens creation to them.
+   */
+  readonly canCreateProject = computed(
+    () =>
+      createProjectRights(
+        this.auth.user()?.role,
+        this.currentRole(),
+        this.currentOrg()?.settings.whoCanCreateProjects,
+      ).allowed,
+  );
   /** Per organization counter, bumped on every logo change. Used as the logo URL version. */
   readonly logoRevision = this.logoRevisionState.asReadonly();
 

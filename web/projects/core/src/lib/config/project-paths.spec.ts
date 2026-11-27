@@ -49,14 +49,14 @@ describe('buildProjectNav', () => {
       'backlog',
       'sprints',
       'calendar',
-      'permisos',
+      'settings',
     ]);
     expect(items.map((item) => item.path)).toEqual([
       '/projects/CORE/board',
       '/projects/CORE/backlog',
       '/projects/CORE/sprints',
       '/projects/CORE/calendar',
-      '/projects/CORE/permisos',
+      '/projects/CORE/settings',
     ]);
     expect(items[0].label).toBe('Tablero');
   });
@@ -65,7 +65,7 @@ describe('buildProjectNav', () => {
     expect(buildProjectNav(kanban, everything).map((item) => item.key)).toEqual([
       'board',
       'calendar',
-      'permisos',
+      'settings',
     ]);
   });
 
@@ -73,12 +73,12 @@ describe('buildProjectNav', () => {
     expect(buildProjectNav(scrum, () => false)).toEqual([]);
   });
 
-  it('asks for browse_project', () => {
+  it('asks for browse_project and edit_project (settings)', () => {
     const asked: string[] = [];
     buildProjectNav(kanban, (permission) => {
       asked.push(permission);
       return true;
     });
-    expect(new Set(asked)).toEqual(new Set(['browse_project']));
+    expect(new Set(asked)).toEqual(new Set(['browse_project', 'edit_project']));
   });
 });

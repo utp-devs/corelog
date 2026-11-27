@@ -12,6 +12,7 @@ import {
   UpdateTeamInput,
 } from '../../models';
 import { ORGANIZATION_ID_PROVIDER, noCurrentOrganizationError } from '../../utils/org-id-provider';
+import { silentRequest } from '../../utils/silent-request';
 
 interface TeamDto {
   id: string;
@@ -130,23 +131,45 @@ export class TeamApiService {
   }
 
   /** The role is omitted from the body when not given, so the server default applies. */
-  addMember(teamId: string, userId: string, role?: TeamRole): Observable<TeamMember> {
+  addMember(
+    teamId: string,
+    userId: string,
+    role?: TeamRole,
+    options: { readonly silent?: boolean } = {},
+  ): Observable<TeamMember> {
     const body: Record<string, unknown> = { user_id: userId };
     if (role !== undefined) body['role'] = role;
     return this.http
-      .post<{ data: TeamMemberDto }>(`${this.baseUrl}/teams/${teamId}/members`, body)
+      .post<{ data: TeamMemberDto }>(`${this.baseUrl}/teams/${teamId}/members`, body, {
+        context: options.silent ? silentRequest() : undefined,
+      })
       .pipe(map((response) => toTeamMember(response.data)));
   }
 
-  updateMemberRole(teamId: string, userId: string, role: TeamRole): Observable<TeamMember> {
+  updateMemberRole(
+    teamId: string,
+    userId: string,
+    role: TeamRole,
+    options: { readonly silent?: boolean } = {},
+  ): Observable<TeamMember> {
     return this.http
-      .patch<{ data: TeamMemberDto }>(`${this.baseUrl}/teams/${teamId}/members/${userId}`, { role })
+      .patch<{ data: TeamMemberDto }>(
+        `${this.baseUrl}/teams/${teamId}/members/${userId}`,
+        { role },
+        { context: options.silent ? silentRequest() : undefined },
+      )
       .pipe(map((response) => toTeamMember(response.data)));
   }
 
-  removeMember(teamId: string, userId: string): Observable<void> {
+  removeMember(
+    teamId: string,
+    userId: string,
+    options: { readonly silent?: boolean } = {},
+  ): Observable<void> {
     return this.http
-      .delete(`${this.baseUrl}/teams/${teamId}/members/${userId}`)
+      .delete(`${this.baseUrl}/teams/${teamId}/members/${userId}`, {
+        context: options.silent ? silentRequest() : undefined,
+      })
       .pipe(map(() => undefined));
   }
 

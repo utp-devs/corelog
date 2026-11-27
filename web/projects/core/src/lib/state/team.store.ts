@@ -150,7 +150,7 @@ export class TeamStore {
   }
 
   addMember(teamId: string, userId: string, role?: TeamRole): Observable<void> {
-    return this.api.addMember(teamId, userId, role).pipe(
+    return this.api.addMember(teamId, userId, role, { silent: true }).pipe(
       catchError((error: unknown) => this.fail(error, 'No se pudo agregar el miembro')),
       // The list is refreshed after a successful add; a failed refresh only sets membersError.
       switchMap(() =>
@@ -161,7 +161,7 @@ export class TeamStore {
   }
 
   updateMemberRole(teamId: string, userId: string, role: TeamRole): Observable<void> {
-    return this.api.updateMemberRole(teamId, userId, role).pipe(
+    return this.api.updateMemberRole(teamId, userId, role, { silent: true }).pipe(
       tap((updated) => {
         this.membersRead.update((items) =>
           items?.map((member) =>
@@ -176,7 +176,7 @@ export class TeamStore {
   }
 
   removeMember(teamId: string, userId: string): Observable<void> {
-    return this.api.removeMember(teamId, userId).pipe(
+    return this.api.removeMember(teamId, userId, { silent: true }).pipe(
       tap(() => {
         this.membersRead.update((items) => items?.filter((member) => member.userId !== userId));
         this.error.set(null);

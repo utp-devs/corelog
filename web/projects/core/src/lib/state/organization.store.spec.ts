@@ -3,7 +3,7 @@ import { Observable, of, throwError } from 'rxjs';
 
 import { provideCorelogTesting } from '../../testing';
 import { ApiError } from '../models/api-error.model';
-import { Organization } from '../models/organization.model';
+import { OrgRole, OrgWhoCan, Organization } from '../models/organization.model';
 import { OrganizationApiService } from '../services/api/organization-api.service';
 import { SessionService } from '../services/session.service';
 import { getOrgId } from '../utils/org-context';
@@ -126,6 +126,35 @@ describe('OrganizationStore', () => {
     store.fetchOrgs();
     expect(store.currentOrg()?.id).toBe('a');
     expect(store.currentRole()).toBe('admin');
+  });
+
+  function orgWithPolicy(role: OrgRole, policy: OrgWhoCan): Organization {
+    const org = orgWith('a', role);
+    return { ...org, settings: { ...org.settings, whoCanCreateProjects: policy } };
+  }
+
+  it('canCreateProject: members create only when the policy opens creation to them', () => {
+    const closed = setup({ list: () => listing(orgWithPolicy('member', 'admins')) });
+    closed.fetchOrgs();
+    expect(closed.canCreateProject()).toBe(false);
+  });
+
+  it('canCreateProject: members create when the policy allows it', () => {
+    const open = setup({ list: () => listing(orgWithPolicy('member', 'members')) });
+    open.fetchOrgs();
+    expect(open.canCreateProject()).toBe(true);
+  });
+
+  it('canCreateProject: owners always create and guests never do', () => {
+    const owner = setup({ list: () => listing(orgWithPolicy('owner', 'admins')) });
+    owner.fetchOrgs();
+    expect(owner.canCreateProject()).toBe(true);
+  });
+
+  it('canCreateProject: guests never create, even when the policy is open', () => {
+    const guest = setup({ list: () => listing(orgWithPolicy('guest', 'members')) });
+    guest.fetchOrgs();
+    expect(guest.canCreateProject()).toBe(false);
   });
 
   it('setOrgLogo updates hasLogo and bumps the logo revision of that organization only', () => {

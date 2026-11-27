@@ -187,7 +187,7 @@ export class ProjectStore {
 
   /** Codes such as project.user_not_in_org and project.user_not_found reach the caller through error.code. */
   addMember(projectId: string, userId: string, role: ProjectMemberRole): Observable<void> {
-    return this.api.addMember(projectId, userId, role).pipe(
+    return this.api.addMember(projectId, userId, role, { silent: true }).pipe(
       tap((member) => {
         this.membersRead.update((items) => [
           ...(items ?? []).filter((item) => item.userId !== member.userId),
@@ -201,7 +201,7 @@ export class ProjectStore {
   }
 
   updateMember(projectId: string, userId: string, role: ProjectMemberRole): Observable<void> {
-    return this.api.updateMember(projectId, userId, role).pipe(
+    return this.api.updateMember(projectId, userId, role, { silent: true }).pipe(
       tap((member) => {
         this.membersRead.update((items) =>
           items?.map((item) => (item.userId === userId ? member : item)),
@@ -212,7 +212,7 @@ export class ProjectStore {
   }
 
   removeMember(projectId: string, userId: string): Observable<void> {
-    return this.api.removeMember(projectId, userId).pipe(
+    return this.api.removeMember(projectId, userId, { silent: true }).pipe(
       tap(() => {
         this.membersRead.update((items) => items?.filter((item) => item.userId !== userId));
       }),

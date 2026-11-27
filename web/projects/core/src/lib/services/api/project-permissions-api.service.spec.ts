@@ -39,6 +39,20 @@ describe('ProjectPermissionsApiService', () => {
     });
   });
 
+  it('also reads the answers wrapped in the data envelope the running API uses', async () => {
+    const scheme = firstValueFrom(api.getScheme('CORE'));
+    backend.expectOne(`${BASE}/permissions`).flush({ data: schemeDto });
+    expect((await scheme).grants).toEqual([
+      { permission: 'create_issue', holders: ['lead', 'contributor'] },
+    ]);
+
+    const me = firstValueFrom(api.me('CORE'));
+    backend
+      .expectOne(`${BASE}/permissions/me`)
+      .flush({ data: { role: 'lead', permissions: ['browse_project'] } });
+    expect(await me).toEqual({ role: 'lead', permissions: ['browse_project'] });
+  });
+
   it('replaces the whole scheme with the given grants', async () => {
     const result = firstValueFrom(
       api.putScheme('CORE', [{ permission: 'create_issue', holders: ['lead'] }]),

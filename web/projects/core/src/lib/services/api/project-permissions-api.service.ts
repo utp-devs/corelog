@@ -33,6 +33,16 @@ interface ProjectTeamRoleDto {
   created_at: string;
 }
 
+/**
+ * The running API wraps these answers in the usual data envelope; the contract document lists them
+ * bare. Both shapes are accepted so the client works with either.
+ */
+function unwrap<T>(body: T | { data: T }): T {
+  return typeof body === 'object' && body !== null && 'data' in body
+    ? (body as { data: T }).data
+    : (body as T);
+}
+
 function toScheme(dto: PermissionSchemeDto): PermissionScheme {
   return {
     projectId: dto.project_id,
@@ -71,24 +81,30 @@ export class ProjectPermissionsApiService {
   /** Full scheme: one grant per catalog permission. */
   getScheme(projectId: string): Observable<PermissionScheme> {
     return this.http
-      .get<PermissionSchemeDto>(this.url(projectId, '/permissions'))
-      .pipe(map(toScheme));
+      .get<PermissionSchemeDto | { data: PermissionSchemeDto }>(this.url(projectId, '/permissions'))
+      .pipe(map((body) => toScheme(unwrap(body))));
   }
 
   /** Replaces the whole scheme. Needs edit_project. Rule violations come back as authorization.invalid_scheme. */
   putScheme(projectId: string, grants: readonly PermissionGrant[]): Observable<PermissionScheme> {
     return this.http
-      .put<PermissionSchemeDto>(this.url(projectId, '/permissions'), {
-        grants: grants.map((grant) => ({ permission: grant.permission, holders: grant.holders })),
-      })
-      .pipe(map(toScheme));
+      .put<PermissionSchemeDto | { data: PermissionSchemeDto }>(
+        this.url(projectId, '/permissions'),
+        {
+          grants: grants.map((grant) => ({ permission: grant.permission, holders: grant.holders })),
+        },
+      )
+      .pipe(map((body) => toScheme(unwrap(body))));
   }
 
   /** Drops the rules of the project and goes back to the default scheme. */
   resetScheme(projectId: string): Observable<PermissionScheme> {
     return this.http
-      .post<PermissionSchemeDto>(this.url(projectId, '/permissions/reset'), null)
-      .pipe(map(toScheme));
+      .post<PermissionSchemeDto | { data: PermissionSchemeDto }>(
+        this.url(projectId, '/permissions/reset'),
+        null,
+      )
+      .pipe(map((body) => toScheme(unwrap(body))));
   }
 
   /** Role and permissions of the caller. With `silent`, a failure is left to the caller (no toast). */
@@ -97,10 +113,18 @@ export class ProjectPermissionsApiService {
     options: { readonly silent?: boolean } = {},
   ): Observable<EffectivePermissions> {
     return this.http
-      .get<EffectivePermissionsDto>(this.url(projectId, '/permissions/me'), {
-        context: options.silent ? silentRequest() : undefined,
-      })
-      .pipe(map((dto) => ({ role: dto.role, permissions: [...dto.permissions] })));
+      .get<EffectivePermissionsDto | { data: EffectivePermissionsDto }>(
+        this.url(projectId, '/permissions/me'),
+        {
+          context: options.silent ? silentRequest() : undefined,
+        },
+      )
+      .pipe(
+        map((body) => {
+          const dto = unwrap(body);
+          return { role: dto.role, permissions: [...dto.permissions] };
+        }),
+      );
   }
 
   listTeamRoles(projectId: string): Observable<ProjectTeamRole[]> {
@@ -114,18 +138,26 @@ export class ProjectPermissionsApiService {
     projectId: string,
     teamId: string,
     role: ProjectMemberRole,
+    options: { readonly silent?: boolean } = {},
   ): Observable<ProjectTeamRole> {
     return this.http
-      .put<{ data: ProjectTeamRoleDto }>(this.url(projectId, '/team-roles'), {
-        team_id: teamId,
-        role,
-      })
+      .put<{ data: ProjectTeamRoleDto }>(
+        this.url(projectId, '/team-roles'),
+        { team_id: teamId, role },
+        { context: options.silent ? silentRequest() : undefined },
+      )
       .pipe(map((response) => toTeamRole(response.data)));
   }
 
-  deleteTeamRole(projectId: string, teamId: string): Observable<void> {
+  deleteTeamRole(
+    projectId: string,
+    teamId: string,
+    options: { readonly silent?: boolean } = {},
+  ): Observable<void> {
     return this.http
-      .delete(this.url(projectId, `/team-roles/${encodeURIComponent(teamId)}`))
+      .delete(this.url(projectId, `/team-roles/${encodeURIComponent(teamId)}`), {
+        context: options.silent ? silentRequest() : undefined,
+      })
       .pipe(map(() => undefined));
   }
 }

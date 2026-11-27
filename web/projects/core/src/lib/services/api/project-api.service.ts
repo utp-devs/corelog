@@ -293,12 +293,19 @@ export class ProjectApiService {
       .pipe(map((response) => response.data.map(toProjectMember)));
   }
 
-  addMember(projectId: string, userId: string, role: ProjectMemberRole): Observable<ProjectMember> {
+  /** The member calls take `silent` too: the access page shows the failure inline instead of a toast. */
+  addMember(
+    projectId: string,
+    userId: string,
+    role: ProjectMemberRole,
+    options: { readonly silent?: boolean } = {},
+  ): Observable<ProjectMember> {
     return this.http
-      .post<{ data: ProjectMemberDto }>(`${this.baseUrl}/projects/${projectId}/members`, {
-        user_id: userId,
-        role,
-      })
+      .post<{ data: ProjectMemberDto }>(
+        `${this.baseUrl}/projects/${projectId}/members`,
+        { user_id: userId, role },
+        { context: options.silent ? silentRequest() : undefined },
+      )
       .pipe(map((response) => toProjectMember(response.data)));
   }
 
@@ -306,20 +313,26 @@ export class ProjectApiService {
     projectId: string,
     userId: string,
     role: ProjectMemberRole,
+    options: { readonly silent?: boolean } = {},
   ): Observable<ProjectMember> {
     return this.http
       .patch<{ data: ProjectMemberDto }>(
         `${this.baseUrl}/projects/${projectId}/members/${userId}`,
-        {
-          role,
-        },
+        { role },
+        { context: options.silent ? silentRequest() : undefined },
       )
       .pipe(map((response) => toProjectMember(response.data)));
   }
 
-  removeMember(projectId: string, userId: string): Observable<void> {
+  removeMember(
+    projectId: string,
+    userId: string,
+    options: { readonly silent?: boolean } = {},
+  ): Observable<void> {
     return this.http
-      .delete(`${this.baseUrl}/projects/${projectId}/members/${userId}`)
+      .delete(`${this.baseUrl}/projects/${projectId}/members/${userId}`, {
+        context: options.silent ? silentRequest() : undefined,
+      })
       .pipe(map(() => undefined));
   }
 
