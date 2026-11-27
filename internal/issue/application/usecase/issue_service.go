@@ -54,6 +54,9 @@ type IssueService struct {
 	activityBatch  port.ActivityBatchWriter
 	votes          port.VoteRepository
 	children       port.ChildReader
+	ops            *operationDeps
+	feed           port.ActivityFeedReader
+	labels         port.IssueLabelRepository
 }
 
 func NewIssueService(repo port.Repository, directory port.UserDirectory, repositories ...any) *IssueService {
@@ -185,6 +188,12 @@ func (s *IssueService) ResolveKey(ctx context.Context, actorID uuid.UUID, global
 	candidates, err := s.repo.FindKeyCandidates(ctx, projectKey, number, orgID, actorID, globalRole == "admin")
 	if err != nil {
 		return uuid.Nil, err
+	}
+	if len(candidates) == 0 {
+		candidates, err = s.aliasCandidates(ctx, projectKey, number, orgID)
+		if err != nil {
+			return uuid.Nil, err
+		}
 	}
 	var visible []*domain.Issue
 	for _, candidate := range candidates {

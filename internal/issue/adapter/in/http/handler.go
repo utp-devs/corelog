@@ -5,7 +5,6 @@ import (
 	"io"
 	"net/http"
 	"strconv"
-	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -24,6 +23,7 @@ type Handler struct {
 	attachments port.AttachmentRepository
 	files       port.FileStorage
 	fieldScope  port.CustomFieldScopeReader
+	ops         port.IssueOperations
 }
 
 // WithFieldScope fixes the reader that lists the custom fields of an issue in its responses.
@@ -163,52 +163,10 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	globalRole, _ := appmw.RoleFromContext(r.Context())
-	q := r.URL.Query()
-
-	filter := port.ListFilter{
-		Status:    domain.Status(q.Get("status")),
-		Priority:  domain.Priority(q.Get("priority")),
-		Query:     q.Get("q"),
-		IssueType: domain.IssueType(q.Get("issue_type")),
-		Page:      atoiOrDefault(q.Get("page"), 1),
-		PageSize:  atoiOrDefault(q.Get("page_size"), 20),
-	}
-
-	if labelID := q.Get("label_id"); labelID != "" {
-		id, err := uuid.Parse(labelID)
-		if err != nil {
-			httpresponse.Error(w, apperror.New(apperror.KindValidation, "invalid label id"))
-			return
-		}
-		filter.LabelID = id
-	}
-	switch assigneeID := q.Get("assignee_id"); assigneeID {
-	case "":
-	case unassignedFilterValue:
-		filter.Unassigned = true
-	default:
-		id, err := uuid.Parse(assigneeID)
-		if err != nil {
-			httpresponse.Error(w, apperror.New(apperror.KindValidation, "invalid assignee id"))
-			return
-		}
-		filter.AssigneeID = &id
-	}
-	if dueFrom := q.Get("due_from"); dueFrom != "" {
-		value, err := time.Parse(time.RFC3339, dueFrom)
-		if err != nil {
-			httpresponse.Error(w, apperror.New(apperror.KindValidation, "invalid due_from"))
-			return
-		}
-		filter.DueFrom = &value
-	}
-	if dueTo := q.Get("due_to"); dueTo != "" {
-		value, err := time.Parse(time.RFC3339, dueTo)
-		if err != nil {
-			httpresponse.Error(w, apperror.New(apperror.KindValidation, "invalid due_to"))
-			return
-		}
-		filter.DueTo = &value
+	filter, err := parseIssueFilter(r.URL.Query())
+	if err != nil {
+		httpresponse.Error(w, err)
+		return
 	}
 
 	result, err := h.service.List(r.Context(), actorID, globalRole, filter)

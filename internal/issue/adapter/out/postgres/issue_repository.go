@@ -255,7 +255,7 @@ func (r *IssueRepository) FindAll(ctx context.Context, filter port.ListFilter) (
 		SELECT ` + issueColumns + `
 		FROM issues` + where
 
-	query += " ORDER BY rank ASC, created_at DESC"
+	query += " ORDER BY rank ASC, created_at DESC, id ASC"
 
 	args = append(args, filter.PageSize)
 	query += fmt.Sprintf(" LIMIT $%d", len(args))

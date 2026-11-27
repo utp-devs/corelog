@@ -248,7 +248,7 @@ func patchTouches(in port.PatchInput) (editing, assigning bool) {
 	editing = in.Summary.Set || in.Description.Set || in.IssueTypeID.Set || in.IssueType.Set ||
 		in.PriorityID.Set || in.Priority.Set || in.ParentID.Set || in.StoryPoints.Set ||
 		in.OriginalEstimateSeconds.Set || in.RemainingEstimateSeconds.Set || in.StartDate.Set ||
-		in.DueDate.Set || in.Flagged.Set || len(in.Custom) > 0
+		in.DueDate.Set || in.Flagged.Set || in.Labels.Set || len(in.Custom) > 0
 	return editing, in.AssigneeID.Set
 }
 
@@ -343,6 +343,15 @@ func (s *IssueService) applyPatch(ctx context.Context, issue *domain.Issue, acto
 	}
 	if in.ParentID.Set || previousLevel != issue.HierarchyLevel() {
 		if err := s.checkHierarchy(ctx, issue, previousLevel != issue.HierarchyLevel(), in.ParentID.Set || previousParent != issue.ParentID); err != nil {
+			return nil, err
+		}
+	}
+	if in.Labels.Set {
+		var names []string
+		if in.Labels.Value != nil {
+			names = *in.Labels.Value
+		}
+		if err := s.applyLabels(ctx, issue, names, add); err != nil {
 			return nil, err
 		}
 	}

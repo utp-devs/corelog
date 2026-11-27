@@ -2430,6 +2430,266 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/NotFound'
+  /issues/bulk:
+    post:
+      tags: [issues]
+      summary: Aplicar una accion a hasta 200 incidencias
+      description: >-
+        Cada incidencia se procesa en su propia transaccion y con los mismos permisos que su endpoint individual.
+        Una incidencia que falla no detiene a las demas: la respuesta lista las que cambiaron en succeeded y las
+        que no en failed, cada una con su codigo. Acciones: assign (params.assignee_id, null desasigna), set_priority
+        (params.priority_id), set_labels (params.add y params.remove, listas de ids de etiquetas del proyecto de cada
+        incidencia), set_field (params.fields con los mismos campos que PATCH, incluido custom), transition
+        (params.status), move (params.project_id, params.issue_type_id, params.field_mapping), delete. Codigos de
+        fallo por incidencia: issue.not_found, issue.forbidden, issue.transition_not_allowed, issue.label_not_in_project,
+        issue.move_mapping_required, issue.hierarchy_* y los de validacion del campo. La peticion se rechaza (422) si
+        la accion no existe, faltan parametros, hay mas de 200 incidencias o ninguna.
+      operationId: bulkChangeIssues
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [issue_ids, action]
+              additionalProperties: false
+              properties:
+                issue_ids:
+                  type: array
+                  maxItems: 200
+                  items:
+                    type: string
+                    description: UUID o clave (CORE-12)
+                action:
+                  type: string
+                  enum: [assign, set_priority, set_labels, set_field, transition, move, delete]
+                params:
+                  type: object
+                  additionalProperties: false
+              example:
+                issue_ids: [CORE-12, CORE-13]
+                action: set_priority
+                params: {priority_id: 3f0c9b3e-6a53-4d0c-9a4e-2c1f5a7d8e90}
+      responses:
+        '200':
+          description: Resultado por incidencia (succeeded y failed; puede haber ambas listas no vacias)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      succeeded:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            issue:
+                              $ref: '#/components/schemas/Issue'
+                      failed:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            issue:
+                              type: string
+                              description: Referencia enviada (UUID o clave)
+                            code:
+                              type: string
+                            message:
+                              type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+  /issues/export:
+    get:
+      tags: [issues]
+      summary: Exportar incidencias visibles a CSV
+      description: >-
+        Mismos filtros que GET /issues (sin paginacion) y columns=key,summary,... (por defecto key, summary, type,
+        status, priority, assignee, reporter, created, updated, due_date). El CSV va en UTF-8 con BOM, cabecera en
+        espanol, y las celdas que empiezan por = + - @ llevan un apostrofo delante. Como maximo 10000 filas; si
+        hay mas, la cabecera X-Export-Truncated vale true. Solo incluye incidencias de proyectos que el usuario puede
+        ver. Columnas: key, project, summary, description, type, status, priority, resolution, assignee, reporter,
+        created, updated, due_date, start_date, story_points, labels, votes, flagged.
+      operationId: exportIssues
+      parameters:
+        - {name: status, in: query, schema: {type: string}}
+        - {name: priority, in: query, schema: {type: string}}
+        - {name: q, in: query, schema: {type: string}}
+        - {name: issue_type, in: query, schema: {type: string}}
+        - {name: label_id, in: query, schema: {type: string, format: uuid}}
+        - {name: assignee_id, in: query, description: UUID o "unassigned", schema: {type: string}}
+        - {name: due_from, in: query, schema: {type: string, format: date-time}}
+        - {name: due_to, in: query, schema: {type: string, format: date-time}}
+        - {name: columns, in: query, description: Columnas separadas por coma, en el orden de salida, schema: {type: string}}
+      responses:
+        '200':
+          description: Archivo CSV (text/csv) con Content-Disposition attachment y nombre incidencias-AAAA-MM-DD.csv
+          content:
+            text/csv:
+              schema:
+                type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+  /issues/{id}/clone:
+    parameters:
+      - $ref: '#/components/parameters/IssueRef'
+      - $ref: '#/components/parameters/IssueOrganizationId'
+    post:
+      tags: [issues]
+      summary: Clonar una incidencia
+      description: >-
+        Crea una incidencia nueva con su propia clave del proyecto destino, reportada por quien clona. Copia los
+        campos y los valores personalizados que el proyecto destino admite. Siempre deja un enlace clones hacia el
+        original. include admite attachments (copia los archivos), links (copia los demas enlaces), subtasks (copia
+        los hijos un nivel), watchers (copia los seguidores). Las etiquetas y componentes se copian cuando el destino
+        es el mismo proyecto. Requiere create_issue en el proyecto destino.
+      operationId: cloneIssue
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                summary: {type: string, maxLength: 255, description: Por defecto "Copia de <resumen original>"}
+                project_id: {type: string, format: uuid}
+                include:
+                  type: array
+                  items: {type: string, enum: [attachments, links, subtasks, watchers]}
+      responses:
+        '201':
+          description: La incidencia clonada
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Issue'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+  /issues/{id}/move:
+    parameters:
+      - $ref: '#/components/parameters/IssueRef'
+      - $ref: '#/components/parameters/IssueOrganizationId'
+    post:
+      tags: [issues]
+      summary: Mover una incidencia a otro proyecto
+      description: >-
+        Asigna una clave nueva del proyecto destino; la clave anterior sigue resolviendo a la incidencia. Los hijos se
+        mueven con ella. Tipo, prioridad y estado se mapean: si el proyecto destino no admite un valor, field_mapping
+        debe indicar su equivalente (field_mapping.issue_type y field_mapping.priority: id origen a id destino;
+        field_mapping.status: estado origen a estado destino); si falta, responde 422 issue.move_mapping_required con
+        un detalle por mapeo pendiente. Los campos personalizados que el destino no define se eliminan y se listan en
+        warnings. Las etiquetas y componentes del origen se quitan y se avisa. Requiere edit_issue en el origen y
+        create_issue en el destino.
+      operationId: moveIssue
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [project_id]
+              additionalProperties: false
+              properties:
+                project_id: {type: string, format: uuid}
+                issue_type_id: {type: string, format: uuid, description: Tipo de la incidencia movida en el destino}
+                field_mapping:
+                  type: object
+                  additionalProperties: false
+                  properties:
+                    issue_type: {type: object, additionalProperties: {type: string, format: uuid}}
+                    priority: {type: object, additionalProperties: {type: string, format: uuid}}
+                    status: {type: object, additionalProperties: {type: string}}
+      responses:
+        '200':
+          description: La incidencia movida con warnings y los cambios de clave (moved)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    allOf:
+                      - $ref: '#/components/schemas/Issue'
+                      - type: object
+                        properties:
+                          warnings: {type: array, items: {type: string}}
+                          moved:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                id: {type: string, format: uuid}
+                                from_key: {type: string}
+                                to_key: {type: string}
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+  /issues/{id}/convert:
+    parameters:
+      - $ref: '#/components/parameters/IssueRef'
+      - $ref: '#/components/parameters/IssueOrganizationId'
+    post:
+      tags: [issues]
+      summary: Convertir el tipo de una incidencia
+      description: >-
+        Cambia el tipo aplicando las reglas de jerarquia (epica, estandar, subtarea). Una subtarea que pasa a otro tipo
+        necesita un padre epica o ninguno: si su padre no es una epica, indica parent_id (null lo quita). Convertir a
+        subtarea exige parent_id. Respuesta igual que PATCH, con los cambios. Requiere edit_issue.
+      operationId: convertIssue
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [issue_type_id]
+              additionalProperties: false
+              properties:
+                issue_type_id: {type: string, format: uuid}
+                parent_id: {type: string, format: uuid, nullable: true}
+      responses:
+        '200':
+          description: La incidencia convertida con sus cambios
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Issue'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
   /issues/{id}:
     parameters:
       - $ref: '#/components/parameters/IssueRef'
@@ -2762,6 +3022,67 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+  /issues/{id}/activity:
+    parameters:
+      - $ref: '#/components/parameters/IssueRef'
+      - $ref: '#/components/parameters/IssueOrganizationId'
+    get:
+      tags: [issues]
+      summary: List issue activity feed
+      description: Comentarios e historial de la incidencia mezclados, del mas reciente al mas antiguo. Cada PATCH aparece como una sola entrada de historial con sus cambios. Los nombres de campos y de valores (usuarios, prioridades, tipos, etiquetas) se devuelven como texto legible en el momento de la consulta.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: filter
+          in: query
+          required: false
+          description: all (por defecto), comments o history.
+          schema:
+            type: string
+            enum: [all, comments, history]
+        - name: cursor
+          in: query
+          required: false
+          description: Cursor opaco devuelto en meta.next_cursor de la pagina anterior.
+          schema:
+            type: string
+        - name: limit
+          in: query
+          required: false
+          description: Entradas por pagina, entre 1 y 100 (por defecto 25).
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 25
+      responses:
+        '200':
+          description: Pagina de entradas de actividad
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/IssueActivityEntry'
+                  meta:
+                    type: object
+                    required: [limit, next_cursor]
+                    properties:
+                      limit:
+                        type: integer
+                      next_cursor:
+                        type: string
+                        nullable: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
   /issues/{id}/activities:
     parameters:
       - $ref: '#/components/parameters/IssueRef'
@@ -3513,6 +3834,44 @@ paths:
         '422':
           $ref: '#/components/responses/ValidationError'
   /projects/{id}/labels/{label_id}:
+    patch:
+      tags: [projects]
+      summary: Update project label
+      description: Renombra o cambia el color de una etiqueta. Requiere edit_project. Los campos ausentes conservan su valor.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: UUID o clave del proyecto (por ejemplo CORE).
+          schema:
+            type: string
+        - name: label_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProjectLabelRequest'
+      responses:
+        '200':
+          description: Label updated
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
     delete:
       tags: [projects]
       summary: Delete project label
@@ -6153,6 +6512,79 @@ components:
           type: string
           enum: [unassigned, lead]
           description: Si falta se conserva el valor actual.
+    IssueActivityEntry:
+      type: object
+      required: [id, type, created_at, actor]
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Id del comentario, o del lote de cambios (todos los cambios de un PATCH comparten id).
+        type:
+          type: string
+          enum: [comment, history]
+        created_at:
+          type: string
+          format: date-time
+        actor:
+          type: object
+          required: [id, name]
+          properties:
+            id:
+              type: string
+              format: uuid
+            name:
+              type: string
+              description: Nombre actual, o "Usuario eliminado".
+        comment:
+          type: object
+          description: Presente cuando type es comment.
+          properties:
+            id:
+              type: string
+              format: uuid
+            body:
+              type: string
+            updated_at:
+              type: string
+              format: date-time
+            edited:
+              type: boolean
+        changes:
+          type: array
+          description: Presente cuando type es history. Cambios del lote en orden.
+          items:
+            type: object
+            required: [action, field, label]
+            properties:
+              action:
+                type: string
+                enum: [field_changed, assignee_changed, link_added, link_removed]
+              field:
+                type: string
+                description: Nombre interno del campo.
+              label:
+                type: string
+                description: Nombre del campo en español.
+              from:
+                type: string
+                nullable: true
+                description: Valor anterior legible (nombres en lugar de ids).
+              to:
+                type: string
+                nullable: true
+                description: Valor nuevo legible (nombres en lugar de ids).
+    UpdateProjectLabelRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 40
+        color:
+          type: string
+          description: Clave de la paleta gray, red, orange, amber, green, teal, blue, indigo, purple o pink.
+          enum: [gray, red, orange, amber, green, teal, blue, indigo, purple, pink]
     CreateProjectLabelRequest:
       type: object
       required: [name]
@@ -6522,6 +6954,7 @@ components:
         start_date: {type: string, format: date, nullable: true}
         due_date: {type: string, format: date, nullable: true}
         flagged: {type: boolean}
+        labels: {type: array, nullable: true, maxItems: 20, items: {type: string, minLength: 1, maxLength: 40}}
         custom:
           type: object
           additionalProperties: true

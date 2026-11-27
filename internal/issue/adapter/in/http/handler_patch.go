@@ -25,7 +25,7 @@ var patchableFields = map[string]bool{
 	"summary": true, "description": true, "issue_type": true, "issue_type_id": true, "priority": true,
 	"priority_id": true, "parent_id": true, "assignee_id": true, "story_points": true,
 	"original_estimate_seconds": true, "remaining_estimate_seconds": true, "start_date": true,
-	"due_date": true, "flagged": true, "custom": true, "expected_updated_at": true,
+	"due_date": true, "flagged": true, "labels": true, "custom": true, "expected_updated_at": true,
 }
 
 // providedSystemFields maps the fields of a create body to the layout keys of the required-field check.
@@ -100,6 +100,7 @@ func parsePatch(raw []byte) (port.PatchInput, error) {
 		StartDate:                decodeDate(sent, "start_date", &problems),
 		DueDate:                  decodeDate(sent, "due_date", &problems),
 		Flagged:                  decodeField[bool](sent, "flagged", &problems),
+		Labels:                   decodeField[[]string](sent, "labels", &problems),
 	}
 	if expected := decodeField[time.Time](sent, "expected_updated_at", &problems); expected.Set && expected.Value != nil {
 		in.ExpectedUpdatedAt = expected.Value

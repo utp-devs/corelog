@@ -44,6 +44,8 @@ type PatchInput struct {
 	StartDate                Field[time.Time]
 	DueDate                  Field[time.Time]
 	Flagged                  Field[bool]
+	// Labels replaces the labels of the issue by name; unknown names are created. Nil Value clears them.
+	Labels Field[[]string]
 	// Custom is the raw "custom" object. Nil when absent.
 	Custom map[string]json.RawMessage
 }

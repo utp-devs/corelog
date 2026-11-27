@@ -123,6 +123,7 @@ func buildRouter(cfg *config.Config, db *sqlx.DB, log *slog.Logger) (chi.Router,
 	sprintModule := sprint.NewModule(sprintpostgres.NewSprintRepository(db), projectAuthorizer, cfg.Auth.JWTSecret)
 	boardModule := board.NewModule(boardpostgres.NewBoardRepository(db), projectModule.Service, projectAuthorizer, boardIssueMover{issues: issueModule.Service}, cfg.Auth.JWTSecret)
 	issueModule.WithCatalog(issueCatalogRepo)
+	issueModule.WithActivityFeed(issuepostgres.NewActivityFeedRepository(db)).WithIssueLabels(issuepostgres.NewIssueLabelRepository(db))
 	issueModule.WithPermissions(issuePermissionChecker{authorizer: authorizer}).
 		WithEvents(events.NewPostgresPublisher(func(ctx context.Context) sqlx.ExtContext { return database.Executor(ctx, db) })).
 		WithClock(clock.RealClock{})
@@ -131,6 +132,7 @@ func buildRouter(cfg *config.Config, db *sqlx.DB, log *slog.Logger) (chi.Router,
 	customFieldModule := issue.NewCustomFieldModule(issuepostgres.NewCustomFieldRepository(db), orgCatalogRoleChecker{svc: orgModule.Service}, projectAuthorizer, database.NewTxManager(db), clock.RealClock{}, cfg.Auth.JWTSecret)
 	issueModule.WithCustomFields(customFieldModule.Service, projectBrowseChecker{authorizer: projectAuthorizer})
 	issueModule.Handler.WithFieldScope(customFieldModule.Service)
+	issueModule.WithOperations(issuepostgres.NewOperationsRepository(db), attachmentRepo, fileStorage)
 
 	avatarStorage := filestorage.NewDiskStorage(dirFromEnv("AVATARS_DIR", filepath.Join("data", "avatars")))
 	logoStorage := filestorage.NewDiskStorage(dirFromEnv("LOGOS_DIR", filepath.Join("data", "logos")))

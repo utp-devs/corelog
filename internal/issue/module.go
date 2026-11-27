@@ -64,3 +64,15 @@ func (m *Module) WithTransitions(p port.TransitionProvider) *Module {
 	m.service.WithTransitions(p)
 	return m
 }
+
+// WithActivityFeed fixes the reader of the activity feed of issues.
+func (m *Module) WithActivityFeed(r port.ActivityFeedReader) *Module {
+	m.service.WithActivityFeed(r)
+	return m
+}
+
+// WithIssueLabels fixes the repository that stores the labels of issues (used by patches that set labels).
+func (m *Module) WithIssueLabels(r port.IssueLabelRepository) *Module {
+	m.service.WithIssueLabels(r)
+	return m
+}
