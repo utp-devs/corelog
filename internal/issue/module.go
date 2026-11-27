@@ -84,3 +84,9 @@ func (m *Module) WithWorkflowEngine(engine port.WorkflowEngine, repo port.Transi
 	m.Handler.WithTransitions(m.service)
 	return m
 }
+
+// WithVersionLinks connects the repository of the version and component links of issues.
+func (m *Module) WithVersionLinks(r port.VersionLinkRepository) *Module {
+	m.service.WithVersionLinks(r)
+	return m
+}

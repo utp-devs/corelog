@@ -136,6 +136,9 @@ func (s *IssueService) finishCreate(ctx context.Context, issue *domain.Issue, in
 		if err := s.repo.Save(ctx, issue); err != nil {
 			return err
 		}
+		if err := s.attachCreateComponents(ctx, issue, in.Components); err != nil {
+			return err
+		}
 		if s.watchers != nil {
 			if err := s.watchers.Add(ctx, issue.ID, issue.ReporterID); err != nil {
 				return err
@@ -167,6 +170,11 @@ func (s *IssueService) createAssignee(ctx context.Context, issue *domain.Issue, 
 			}
 		}
 		return in.AssigneeID, nil
+	}
+	if assignee, found, err := s.componentAssignee(ctx, issue.ProjectID, in.Components); err != nil {
+		return nil, err
+	} else if found {
+		return assignee, nil
 	}
 	if s.defaults == nil {
 		return nil, nil

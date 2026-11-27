@@ -65,9 +65,15 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		httpresponse.Error(w, validation.Failed(req, err))
 		return
 	}
+	components, err := parseComponentIDs(req.Components)
+	if err != nil {
+		httpresponse.Error(w, err)
+		return
+	}
 	globalRole, _ := appmw.RoleFromContext(r.Context())
 
 	issue, err := h.service.Create(r.Context(), port.CreateInput{
+		Components:  components,
 		Summary:     req.Summary,
 		Description: req.Description,
 		Priority:    domain.Priority(req.Priority),

@@ -34,8 +34,11 @@ type Service interface {
 	// UpdateLabel renames or recolors a label. Nil arguments keep the current value.
 	UpdateLabel(ctx context.Context, actorID uuid.UUID, globalRole string, projectID, labelID uuid.UUID, name, color *string) (*domain.Label, error)
 	ListComponents(ctx context.Context, actorID uuid.UUID, globalRole string, projectID uuid.UUID) ([]domain.Component, error)
-	CreateComponent(ctx context.Context, actorID uuid.UUID, globalRole string, projectID uuid.UUID, name, description string) (*domain.Component, error)
-	DeleteComponent(ctx context.Context, actorID uuid.UUID, globalRole string, projectID, componentID uuid.UUID) error
+	CreateComponent(ctx context.Context, actorID uuid.UUID, globalRole string, projectID uuid.UUID, in domain.ComponentInput) (*domain.Component, error)
+	// UpdateComponent changes the name, description, lead or default assignee policy of a component.
+	UpdateComponent(ctx context.Context, actorID uuid.UUID, globalRole string, projectID, componentID uuid.UUID, patch domain.ComponentPatch) (*domain.Component, error)
+	// DeleteComponent removes a component. moveTo, when set, takes over the issues of the component.
+	DeleteComponent(ctx context.Context, actorID uuid.UUID, globalRole string, projectID, componentID uuid.UUID, moveTo *uuid.UUID) error
 }
 
 // CreateInput is the input of a project created from a template.

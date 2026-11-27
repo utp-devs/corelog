@@ -32,6 +32,7 @@ func (h *Handler) RegisterRoutes(r chi.Router) {
 		r.Delete("/{id}/labels/{label_id}", h.DeleteLabel)
 		r.Get("/{id}/components", h.ListComponents)
 		r.Post("/{id}/components", h.CreateComponent)
+		r.Patch("/{id}/components/{component_id}", h.UpdateComponent)
 		r.Delete("/{id}/components/{component_id}", h.DeleteComponent)
 		r.Post("/{id}/archive", h.Archive)
 		r.Post("/{id}/restore", h.Restore)

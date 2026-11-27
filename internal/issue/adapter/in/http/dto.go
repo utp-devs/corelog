@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jhonsferg/corelog/internal/issue/domain"
+	"github.com/jhonsferg/corelog/internal/platform/apperror"
 )
 
 type createSavedFilterRequest struct {
@@ -43,6 +44,7 @@ type createIssueRequest struct {
 	OriginalEstimateSeconds  *int64                     `json:"original_estimate_seconds"`
 	RemainingEstimateSeconds *int64                     `json:"remaining_estimate_seconds"`
 	Custom                   map[string]json.RawMessage `json:"custom"`
+	Components               []string                   `json:"components"`
 }
 
 type updateMetadataRequest struct {
@@ -167,6 +169,9 @@ type issueResponse struct {
 	CreatedAt                time.Time                  `json:"created_at"`
 	Custom                   map[string]any             `json:"custom"`
 	CustomFields             []issueCustomFieldResponse `json:"custom_fields"`
+	FixVersions              []linkedRefResponse        `json:"fix_versions"`
+	AffectsVersions          []linkedRefResponse        `json:"affects_versions"`
+	Components               []linkedRefResponse        `json:"components"`
 	UpdatedAt                time.Time                  `json:"updated_at"`
 }
 
@@ -210,6 +215,9 @@ func toIssueResponse(t *domain.Issue, names map[uuid.UUID]string) issueResponse 
 		id := t.ParentID.String()
 		resp.ParentID = &id
 	}
+	resp.FixVersions = toLinkedRefResponses(t.FixVersions)
+	resp.AffectsVersions = toLinkedRefResponses(t.AffectsVersions)
+	resp.Components = toLinkedRefResponses(t.Components)
 	return resp
 }
 
@@ -354,4 +362,31 @@ func dateString(t *time.Time) *string {
 	}
 	s := domain.FormatDate(t)
 	return &s
+}
+
+// linkedRefResponse is a version or component linked to an issue.
+type linkedRefResponse struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+}
+
+func toLinkedRefResponses(refs []domain.LinkedRef) []linkedRefResponse {
+	out := make([]linkedRefResponse, 0, len(refs))
+	for _, ref := range refs {
+		out = append(out, linkedRefResponse{ID: ref.ID.String(), Name: ref.Name})
+	}
+	return out
+}
+
+// parseComponentIDs reads the component ids of a create body. Any value that is not a UUID is a validation error.
+func parseComponentIDs(raw []string) ([]uuid.UUID, error) {
+	out := make([]uuid.UUID, 0, len(raw))
+	for _, value := range raw {
+		id, err := uuid.Parse(value)
+		if err != nil {
+			return nil, apperror.WithCode(apperror.KindValidation, "issue.component_invalid", "El identificador de componente no es valido")
+		}
+		out = append(out, id)
+	}
+	return out, nil
 }

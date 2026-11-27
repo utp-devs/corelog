@@ -239,6 +239,14 @@ func listWhere(filter port.ListFilter) (string, []any) {
 		args = append(args, filter.LabelID)
 		query += fmt.Sprintf(" AND EXISTS (SELECT 1 FROM issue_labels il WHERE il.issue_id = issues.id AND il.label_id = $%d)", len(args))
 	}
+	if filter.FixVersionID != uuid.Nil {
+		args = append(args, filter.FixVersionID)
+		query += fmt.Sprintf(" AND EXISTS (SELECT 1 FROM issue_versions iv WHERE iv.issue_id = issues.id AND iv.version_id = $%d AND iv.kind = 'fix')", len(args))
+	}
+	if filter.ComponentID != uuid.Nil {
+		args = append(args, filter.ComponentID)
+		query += fmt.Sprintf(" AND EXISTS (SELECT 1 FROM issue_components ic WHERE ic.issue_id = issues.id AND ic.component_id = $%d)", len(args))
+	}
 	if filter.AssigneeID != nil {
 		args = append(args, *filter.AssigneeID)
 		query += fmt.Sprintf(" AND assignee_id = $%d", len(args))

@@ -33,6 +33,8 @@ type CreateInput struct {
 	Provided map[string]bool
 	// Custom is the raw "custom" object of the request (field id to value). Nil when absent.
 	Custom map[string]json.RawMessage
+	// Components are linked when the issue is created; the default assignee of the first one applies.
+	Components []uuid.UUID
 }
 
 type UpdateMetadataInput struct {
@@ -74,10 +76,13 @@ type ListFilter struct {
 	AssigneeID *uuid.UUID
 	// Unassigned restricts the list to issues without an assignee. It is exclusive with AssigneeID.
 	Unassigned bool
-	DueFrom    *time.Time
-	DueTo      *time.Time
-	Page       int
-	PageSize   int
+	// FixVersionID and ComponentID restrict the list to issues linked to the version (as fix) or the component.
+	FixVersionID uuid.UUID
+	ComponentID  uuid.UUID
+	DueFrom      *time.Time
+	DueTo        *time.Time
+	Page         int
+	PageSize     int
 }
 
 // ListResult es una pagina de issues y el total de coincidencias sin paginar.

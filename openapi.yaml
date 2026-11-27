@@ -7,6 +7,8 @@ servers:
   - url: http://localhost:8080/api/v1
     description: Local development server
 tags:
+  - name: releases
+    description: Versiones de proyecto, publicacion y notas de version
   - name: auth
     description: Registration and authentication
   - name: users
@@ -3075,7 +3077,7 @@ paths:
       tags: [issues]
       operationId: globalSearch
       summary: Busqueda global de proyectos e incidencias
-      description: Busca por texto en nombre y clave de proyecto, y en titulo y descripcion de incidencia. Solo devuelve lo visible para el usuario (admin global, o miembro del proyecto). Los comodines se buscan literalmente.
+      description: Busca por texto en nombre y clave de proyecto, y en titulo y descripcion de incidencia con indice de texto completo (clave exacta primero, luego relevancia, luego coincidencia por prefijo). Solo devuelve lo visible para el usuario. Los comodines se buscan literalmente. Cada resultado incluye key, highlight (titulo escapado con marcas mark) y snippet (extracto escapado). types selecciona tipos (all, o una lista de project, issue, person, team, filter y note; por defecto project e issue). meta.counts da los resultados por tipo.
       security:
         - bearerAuth: []
       parameters:
@@ -3094,13 +3096,444 @@ paths:
             minimum: 1
             maximum: 25
             default: 10
+        - name: types
+          in: query
+          required: false
+          schema:
+            type: string
       responses:
         '200':
-          description: Proyectos primero, luego incidencias
+          description: Resultados por tipo (proyectos, incidencias, personas, equipos, filtros, notas)
         '401':
           $ref: '#/components/responses/Unauthorized'
         '422':
           $ref: '#/components/responses/ValidationError'
+  /issues/search:
+    get:
+      tags: [issues]
+      operationId: searchIssuesGet
+      summary: Buscar incidencias con CoreQL
+      description: >-
+        Ejecuta una consulta CoreQL (jql) con orden opcional (order, lista de campos con ASC o DESC que reemplaza al
+        ORDER BY de la consulta), pagina por page y page_size (maximo 100, hasta 10000 resultados navegables) y
+        devuelve las incidencias con la misma forma que GET /issues mas vote_count y labels. meta incluye total
+        (omitelo con with_total=false), la consulta normalizada y warnings. fields limita las claves devueltas
+        (id y key siempre). Las consultas se ejecutan como SQL parametrizado y siempre se limitan a los proyectos que el usuario puede ver (los eliminados y sus incidencias quedan fuera). Errores: search.syntax_error (con details: position, length, message, suggestions), search.unknown_field, search.field_unavailable, search.operator_unavailable (WAS y CHANGED aun no existen), search.query_too_long, search.query_too_complex, search.page_out_of_range y search.query_timeout.
+      security:
+        - bearerAuth: []
+      parameters:
+        - {name: jql, in: query, required: false, schema: {type: string, maxLength: 4000}}
+        - {name: order, in: query, required: false, schema: {type: string, maxLength: 200}}
+        - {name: page, in: query, required: false, schema: {type: integer, minimum: 1, default: 1}}
+        - {name: page_size, in: query, required: false, schema: {type: integer, minimum: 1, maximum: 100, default: 50}}
+        - {name: total, in: query, required: false, schema: {type: boolean, default: true}}
+        - {name: project_id, in: query, required: false, schema: {type: string, format: uuid}}
+        - {name: fields, in: query, required: false, schema: {type: string}}
+      responses:
+        '200':
+          description: Pagina de incidencias con meta (page, page_size, total, query, warnings)
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+    post:
+      tags: [issues]
+      operationId: searchIssuesPost
+      summary: Buscar incidencias con CoreQL (cuerpo JSON)
+      description: >-
+        Ejecuta una consulta CoreQL (jql) con orden opcional (order, lista de campos con ASC o DESC que reemplaza al
+        ORDER BY de la consulta), pagina por page y page_size (maximo 100, hasta 10000 resultados navegables) y
+        devuelve las incidencias con la misma forma que GET /issues mas vote_count y labels. meta incluye total
+        (omitelo con with_total=false), la consulta normalizada y warnings. fields limita las claves devueltas
+        (id y key siempre). Las consultas se ejecutan como SQL parametrizado y siempre se limitan a los proyectos que el usuario puede ver (los eliminados y sus incidencias quedan fuera). Errores: search.syntax_error (con details: position, length, message, suggestions), search.unknown_field, search.field_unavailable, search.operator_unavailable (WAS y CHANGED aun no existen), search.query_too_long, search.query_too_complex, search.page_out_of_range y search.query_timeout.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                jql: {type: string, maxLength: 4000}
+                order: {type: string, maxLength: 200}
+                page: {type: integer, minimum: 1}
+                page_size: {type: integer, minimum: 1, maximum: 100}
+                with_total: {type: boolean}
+                project_id: {type: string, format: uuid}
+                fields: {type: array, items: {type: string}}
+      responses:
+        '200':
+          description: Pagina de incidencias con meta (page, page_size, total, query, warnings)
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+  /search/issues:
+    get:
+      tags: [issues]
+      operationId: searchIssuesAliasGet
+      summary: Buscar incidencias con CoreQL
+      description: >-
+        Ejecuta una consulta CoreQL (jql) con orden opcional (order, lista de campos con ASC o DESC que reemplaza al
+        ORDER BY de la consulta), pagina por page y page_size (maximo 100, hasta 10000 resultados navegables) y
+        devuelve las incidencias con la misma forma que GET /issues mas vote_count y labels. meta incluye total
+        (omitelo con with_total=false), la consulta normalizada y warnings. fields limita las claves devueltas
+        (id y key siempre). Las consultas se ejecutan como SQL parametrizado y siempre se limitan a los proyectos que el usuario puede ver (los eliminados y sus incidencias quedan fuera). Errores: search.syntax_error (con details: position, length, message, suggestions), search.unknown_field, search.field_unavailable, search.operator_unavailable (WAS y CHANGED aun no existen), search.query_too_long, search.query_too_complex, search.page_out_of_range y search.query_timeout.
+      security:
+        - bearerAuth: []
+      parameters:
+        - {name: jql, in: query, required: false, schema: {type: string, maxLength: 4000}}
+        - {name: order, in: query, required: false, schema: {type: string, maxLength: 200}}
+        - {name: page, in: query, required: false, schema: {type: integer, minimum: 1, default: 1}}
+        - {name: page_size, in: query, required: false, schema: {type: integer, minimum: 1, maximum: 100, default: 50}}
+        - {name: total, in: query, required: false, schema: {type: boolean, default: true}}
+        - {name: project_id, in: query, required: false, schema: {type: string, format: uuid}}
+        - {name: fields, in: query, required: false, schema: {type: string}}
+      responses:
+        '200':
+          description: Pagina de incidencias con meta (page, page_size, total, query, warnings)
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+    post:
+      tags: [issues]
+      operationId: searchIssuesAliasPost
+      summary: Buscar incidencias con CoreQL (cuerpo JSON)
+      description: >-
+        Ejecuta una consulta CoreQL (jql) con orden opcional (order, lista de campos con ASC o DESC que reemplaza al
+        ORDER BY de la consulta), pagina por page y page_size (maximo 100, hasta 10000 resultados navegables) y
+        devuelve las incidencias con la misma forma que GET /issues mas vote_count y labels. meta incluye total
+        (omitelo con with_total=false), la consulta normalizada y warnings. fields limita las claves devueltas
+        (id y key siempre). Las consultas se ejecutan como SQL parametrizado y siempre se limitan a los proyectos que el usuario puede ver (los eliminados y sus incidencias quedan fuera). Errores: search.syntax_error (con details: position, length, message, suggestions), search.unknown_field, search.field_unavailable, search.operator_unavailable (WAS y CHANGED aun no existen), search.query_too_long, search.query_too_complex, search.page_out_of_range y search.query_timeout.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                jql: {type: string, maxLength: 4000}
+                order: {type: string, maxLength: 200}
+                page: {type: integer, minimum: 1}
+                page_size: {type: integer, minimum: 1, maximum: 100}
+                with_total: {type: boolean}
+                project_id: {type: string, format: uuid}
+                fields: {type: array, items: {type: string}}
+      responses:
+        '200':
+          description: Pagina de incidencias con meta (page, page_size, total, query, warnings)
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+  /search/validate:
+    post:
+      tags: [issues]
+      operationId: validateSearchQuery
+      summary: Validar una consulta CoreQL
+      description: >-
+        Devuelve valid, la consulta normalizada y errors con position y length (en caracteres), code, message,
+        suggestions (nombres cercanos) y expected. No ejecuta la consulta. Los errores de sintaxis y de campos o
+        valores no soportados se informan aqui con 200; un texto mayor de 4000 caracteres responde 422.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                jql: {type: string, maxLength: 4000}
+                project_id: {type: string, format: uuid}
+      responses:
+        '200':
+          description: Resultado de la validacion
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+  /search/suggest:
+    get:
+      tags: [issues]
+      operationId: suggestSearch
+      summary: Autocompletado de CoreQL
+      description: >-
+        Con field devuelve valores candidatos del campo que empiezan por q (usuarios, estados, prioridades, tipos,
+        etiquetas, componentes, sprints, proyectos, claves de incidencia, versiones), siempre limitados a lo que el
+        usuario puede ver. Sin field devuelve completados de la consulta jql en la posicion cursor (campos, operadores,
+        palabras clave y funciones).
+      security:
+        - bearerAuth: []
+      parameters:
+        - {name: field, in: query, required: false, schema: {type: string}}
+        - {name: q, in: query, required: false, schema: {type: string}}
+        - {name: jql, in: query, required: false, schema: {type: string, maxLength: 4000}}
+        - {name: cursor, in: query, required: false, schema: {type: integer, minimum: 0}}
+        - {name: limit, in: query, required: false, schema: {type: integer, minimum: 1, maximum: 25, default: 10}}
+      responses:
+        '200':
+          description: Objeto con completions (label, kind, detail) y values (value, label, detail)
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+  /filters:
+    get:
+      tags: [issues]
+      operationId: listFilters
+      summary: Listar filtros guardados
+      description: >-
+        Filtros que el usuario puede ver: propios, compartidos con el (usuario, equipo, proyecto u organizacion) y
+        favoritos. scope = all, mine, shared o favorite; q filtra por nombre. Cada filtro incluye access (owner, edit
+        o view), is_favorite e is_subscribed.
+      security:
+        - bearerAuth: []
+      parameters:
+        - {name: scope, in: query, required: false, schema: {type: string, enum: [all, mine, shared, favorite], default: all}}
+        - {name: q, in: query, required: false, schema: {type: string}}
+        - {name: page, in: query, required: false, schema: {type: integer, minimum: 1, default: 1}}
+        - {name: page_size, in: query, required: false, schema: {type: integer, minimum: 1, maximum: 100, default: 50}}
+      responses:
+        '200':
+          description: Pagina de filtros con meta (page, page_size, total)
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+    post:
+      tags: [issues]
+      operationId: createFilter
+      summary: Guardar un filtro CoreQL
+      description: >-
+        Valida la consulta (sintaxis, campos, valores y orden) antes de guardar. El filtro pertenece a la organizacion
+        indicada (organization_id) o a la primera del usuario. El nombre es unico por propietario sin distinguir
+        mayusculas (filter.name_taken).
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                name: {type: string, maxLength: 120}
+                description: {type: string, maxLength: 500}
+                query: {type: string, maxLength: 4000}
+                columns: {type: array, items: {type: string}, maxItems: 30}
+                sort: {type: string, maxLength: 200}
+                organization_id: {type: string, format: uuid}
+      responses:
+        '201':
+          description: Filtro creado
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+  /filters/{id}:
+    parameters:
+      - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+    get:
+      tags: [issues]
+      operationId: getFilter
+      summary: Obtener un filtro
+      description: Un filtro que el usuario no puede ver responde 404. Solo el propietario recibe shares.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Filtro
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      tags: [issues]
+      operationId: updateFilter
+      summary: Modificar un filtro
+      description: Pueden modificarlo el propietario y quienes lo tienen compartido con permiso edit (403 para quien solo lo ve).
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                name: {type: string, maxLength: 120}
+                description: {type: string, maxLength: 500}
+                query: {type: string, maxLength: 4000}
+                columns: {type: array, items: {type: string}, maxItems: 30}
+                sort: {type: string, maxLength: 200}
+      responses:
+        '200':
+          description: Filtro modificado
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+    delete:
+      tags: [issues]
+      operationId: deleteFilter
+      summary: Eliminar un filtro
+      description: Solo el propietario. Se eliminan sus comparticiones, suscripciones y favoritos.
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: Filtro eliminado
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /filters/{id}/shares:
+    parameters:
+      - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+    put:
+      tags: [issues]
+      operationId: setFilterShares
+      summary: Reemplazar las comparticiones de un filtro
+      description: >-
+        Solo el propietario. Cada destino (user, team, project u organization) debe pertenecer a la organizacion del
+        filtro (filter.share_invalid). permission = view o edit. La lista vacia deja de compartir.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                shares:
+                  type: array
+                  maxItems: 100
+                  items:
+                    type: object
+                    additionalProperties: false
+                    properties:
+                      type: {type: string, enum: [user, team, project, organization]}
+                      target_id: {type: string, format: uuid}
+                      permission: {type: string, enum: [view, edit], default: view}
+      responses:
+        '200':
+          description: Comparticiones resultantes con el nombre de cada destino
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+  /filters/{id}/issues:
+    parameters:
+      - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+    get:
+      tags: [issues]
+      operationId: runFilter
+      summary: Ejecutar un filtro
+      description: >-
+        Ejecuta la consulta guardada con su orden para quien la pide: el resultado se intersecta con lo que esa persona
+        puede ver, diga lo que diga el filtro. Acepta page, page_size, total y fields como la busqueda.
+      security:
+        - bearerAuth: []
+      parameters:
+        - {name: page, in: query, required: false, schema: {type: integer, minimum: 1, default: 1}}
+        - {name: page_size, in: query, required: false, schema: {type: integer, minimum: 1, maximum: 100, default: 50}}
+        - {name: total, in: query, required: false, schema: {type: boolean, default: true}}
+        - {name: fields, in: query, required: false, schema: {type: string}}
+      responses:
+        '200':
+          description: Pagina de incidencias con meta
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+  /filters/{id}/subscription:
+    parameters:
+      - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+    get:
+      tags: [issues]
+      operationId: getFilterSubscription
+      summary: Obtener la suscripcion propia a un filtro
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Suscripcion
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags: [issues]
+      operationId: subscribeFilter
+      summary: Suscribirse a un filtro
+      description: >-
+        Crea o reemplaza la suscripcion del usuario a un filtro que puede ver. frequency (daily o weekly), hour (0-23),
+        weekday (0 domingo a 6 sabado, solo weekly) y timezone (IANA; por defecto la del usuario). Por ahora solo se
+        guarda: el envio lo hara el planificador.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                frequency: {type: string, enum: [daily, weekly]}
+                hour: {type: integer, minimum: 0, maximum: 23}
+                weekday: {type: integer, minimum: 0, maximum: 6}
+                timezone: {type: string}
+      responses:
+        '200':
+          description: Suscripcion guardada
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+    delete:
+      tags: [issues]
+      operationId: unsubscribeFilter
+      summary: Cancelar la suscripcion a un filtro
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: Suscripcion cancelada
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /dashboard/me:
     get:
       tags: [issues]
@@ -4743,27 +5176,306 @@ paths:
         '422':
           $ref: '#/components/responses/ValidationError'
   /projects/{id}/components/{component_id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: UUID o clave del proyecto (por ejemplo CORE).
+        schema:
+          type: string
+      - name: component_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    patch:
+      tags: [projects]
+      summary: Editar un componente
+      description: Requiere manage_components. Cambia nombre, descripcion, responsable (lead_id; null lo quita) y la politica por defecto de asignacion. El responsable debe ser miembro del proyecto (422 component.lead_invalid). La politica component_lead exige responsable (422 component.lead_required).
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProjectComponentRequest'
+      responses:
+        '200':
+          description: Componente actualizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectComponent'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
     delete:
       tags: [projects]
-      summary: Delete project component
+      summary: Borrar un componente
+      description: Requiere manage_components. Con move_to, las incidencias del componente pasan al componente de destino (mismo proyecto, distinto del borrado; 422 component.move_target_invalid).
       security:
         - bearerAuth: []
       parameters:
-        - name: id
-          in: path
-          required: true
-          description: UUID o clave del proyecto (por ejemplo CORE).
-          schema:
-            type: string
-        - name: component_id
-          in: path
-          required: true
+        - name: move_to
+          in: query
+          required: false
+          description: Componente que recibe las incidencias del borrado.
           schema:
             type: string
             format: uuid
       responses:
         '204':
-          description: Component deleted
+          description: Componente borrado
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+  /projects/{id}/versions:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: UUID o clave del proyecto (por ejemplo CORE).
+        schema:
+          type: string
+    get:
+      tags: [releases]
+      summary: Listar versiones del proyecto con su progreso
+      description: Devuelve las versiones con el progreso de sus incidencias de correccion (total, hechas y por categoria de estado) y sus puntos. Requiere ver el proyecto; un usuario sin acceso recibe 404.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          required: false
+          description: Filtra por estado.
+          schema:
+            type: string
+            enum: [unreleased, released, archived]
+      responses:
+        '200':
+          description: Versiones del proyecto
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Version'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+    post:
+      tags: [releases]
+      summary: Crear una version
+      description: Requiere manage_versions. El nombre es unico en el proyecto sin distinguir mayusculas (409 version.name_taken). Un proyecto archivado responde 409 project.archived.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateVersionRequest'
+      responses:
+        '201':
+          description: Version creada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Version'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+  /versions/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      tags: [releases]
+      summary: Leer una version
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Version con su progreso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Version'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      tags: [releases]
+      summary: Editar una version
+      description: Requiere manage_versions. Enviar status unreleased reabre una version publicada (limpia la fecha de publicacion). Las versiones archivadas no admiten cambios (409 version.archived).
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateVersionRequest'
+      responses:
+        '200':
+          description: Version actualizada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Version'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+    delete:
+      tags: [releases]
+      summary: Borrar una version
+      description: Requiere manage_versions. Con move_to, las incidencias vinculadas pasan a esa version (debe ser del mismo proyecto y seguir sin publicar); si no, se quitan los vinculos.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: move_to
+          in: query
+          required: false
+          description: Version que recibe las incidencias de la version borrada.
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Version borrada
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+  /versions/{id}/release:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      tags: [releases]
+      summary: Publicar una version
+      description: Requiere manage_versions. Pasa la version de unreleased a released. move_unresolved_to decide el destino de las incidencias de correccion no terminadas - "new" crea la siguiente version, un UUID mueve a una version sin publicar del mismo proyecto, null las deja. Emite version.released.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReleaseVersionRequest'
+      responses:
+        '200':
+          description: Version publicada con el resumen del movimiento
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReleaseVersionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+  /versions/{id}/archive:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      tags: [releases]
+      summary: Archivar una version
+      description: Requiere manage_versions. Estado terminal; una version archivada ya no admite cambios ni incidencias de correccion. Responde 409 version.invalid_transition si ya estaba archivada.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Version archivada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Version'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /versions/{id}/notes:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      tags: [releases]
+      summary: Notas de la version
+      description: Incidencias que corrigen la version agrupadas por tipo de incidencia, en markdown (titulos en espanol) y en JSON. Requiere ver el proyecto.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Notas de la version
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReleaseNotes'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/NotFound'
   /organizations:
@@ -8011,6 +8723,132 @@ components:
         description:
           type: string
           maxLength: 5000
+        lead_id: {type: string, format: uuid, nullable: true}
+        default_assignee_policy: {type: string, enum: [none, component_lead, project_lead]}
+    Version:
+      type: object
+      required: [id, project_id, name, status]
+      properties:
+        id: {type: string, format: uuid}
+        project_id: {type: string, format: uuid}
+        name: {type: string}
+        description: {type: string}
+        start_date: {type: string, format: date, nullable: true}
+        release_date: {type: string, format: date, nullable: true}
+        status: {type: string, enum: [unreleased, released, archived]}
+        released_at: {type: string, format: date-time, nullable: true}
+        archived_at: {type: string, format: date-time, nullable: true}
+        issues_total: {type: integer, description: Incidencias de correccion vivas de la version (hoja de ruta)}
+        issues_done: {type: integer, description: Incidencias de correccion en categoria done}
+        progress:
+          type: object
+          properties:
+            issues:
+              type: object
+              properties:
+                total: {type: integer}
+                done: {type: integer}
+                by_category:
+                  type: object
+                  properties:
+                    todo: {type: integer}
+                    in_progress: {type: integer}
+                    done: {type: integer}
+            points:
+              type: object
+              properties:
+                total: {type: number}
+                done: {type: number}
+        created_at: {type: string, format: date-time}
+        updated_at: {type: string, format: date-time}
+    CreateVersionRequest:
+      type: object
+      required: [name]
+      additionalProperties: false
+      properties:
+        name: {type: string, minLength: 1, maxLength: 80}
+        description: {type: string, maxLength: 4000}
+        start_date: {type: string, format: date, nullable: true}
+        release_date: {type: string, format: date, nullable: true}
+    UpdateVersionRequest:
+      type: object
+      description: Todos los campos son opcionales. Los campos no listados se rechazan con 422.
+      additionalProperties: false
+      properties:
+        name: {type: string, minLength: 1, maxLength: 80}
+        description: {type: string, maxLength: 4000}
+        start_date: {type: string, format: date, nullable: true}
+        release_date: {type: string, format: date, nullable: true}
+        status: {type: string, enum: [unreleased]}
+    ReleaseVersionRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        release_date: {type: string, format: date, nullable: true, description: Por defecto, hoy (UTC)}
+        move_unresolved_to:
+          nullable: true
+          description: Null deja las incidencias en la version; "new" crea la siguiente version; un UUID elige una version sin publicar del proyecto.
+          oneOf:
+            - type: string
+              enum: [new]
+            - type: string
+              format: uuid
+    ReleaseVersionResponse:
+      type: object
+      properties:
+        version: {$ref: '#/components/schemas/Version'}
+        moved_issues: {type: integer}
+        unresolved_issues: {type: integer, description: Incidencias no terminadas que siguen en la version}
+        next_version:
+          nullable: true
+          allOf:
+            - $ref: '#/components/schemas/Version'
+    ReleaseNotes:
+      type: object
+      properties:
+        version_id: {type: string, format: uuid}
+        version_name: {type: string}
+        status: {type: string, enum: [unreleased, released, archived]}
+        release_date: {type: string, format: date, nullable: true}
+        issue_count: {type: integer}
+        markdown: {type: string}
+        groups:
+          type: array
+          items:
+            type: object
+            properties:
+              title: {type: string, description: Tipo de incidencia (Sin tipo si no tiene)}
+              issues:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id: {type: string, format: uuid}
+                    key: {type: string}
+                    summary: {type: string}
+                    done: {type: boolean}
+    ProjectComponent:
+      type: object
+      properties:
+        id: {type: string, format: uuid}
+        project_id: {type: string, format: uuid}
+        name: {type: string}
+        description: {type: string}
+        lead_id: {type: string, format: uuid, nullable: true}
+        lead_name: {type: string, nullable: true}
+        default_assignee_policy: {type: string, enum: [none, component_lead, project_lead]}
+        issues_count: {type: integer}
+        created_at: {type: string, format: date-time}
+        updated_at: {type: string, format: date-time}
+    UpdateProjectComponentRequest:
+      type: object
+      description: Todos los campos son opcionales. lead_id ausente conserva el responsable; null lo quita.
+      additionalProperties: false
+      properties:
+        name: {type: string, minLength: 1, maxLength: 80}
+        description: {type: string, maxLength: 5000}
+        lead_id: {type: string, format: uuid, nullable: true}
+        default_assignee_policy: {type: string, enum: [none, component_lead, project_lead]}
     FavoriteItem:
       type: object
       description: Elemento marcado con estrella. Para proyectos incluye nombre, clave y color.
@@ -8211,6 +9049,7 @@ components:
       type: object
       required: [summary, description]
       properties:
+        components: {type: array, items: {type: string, format: uuid}, description: Componentes del proyecto. Si no se indica responsable, el componente con politica component_lead o project_lead decide el asignado por defecto.}
         custom:
           type: object
           additionalProperties: true
@@ -8372,6 +9211,10 @@ components:
       type: object
       description: Todos los campos son opcionales; solo cambian los presentes. Los campos no listados se rechazan con 422.
       properties:
+        fix_versions: {type: array, nullable: true, items: {type: string, format: uuid}, description: Reemplaza las versiones de correccion. Solo versiones del proyecto; una publicada o archivada responde 409 issue.version_closed salvo override_closed_versions de un administrador.}
+        affects_versions: {type: array, nullable: true, items: {type: string, format: uuid}, description: Reemplaza las versiones afectadas. Una archivada responde 409 issue.version_closed salvo override.}
+        components: {type: array, nullable: true, items: {type: string, format: uuid}, description: Reemplaza los componentes del proyecto.}
+        override_closed_versions: {type: boolean, description: Solo administradores de la plataforma.}
         summary: {type: string, maxLength: 255}
         description: {type: string, nullable: true, maxLength: 100000}
         issue_type_id: {type: string, format: uuid}

@@ -37,7 +37,11 @@ type Issue struct {
 	IssueTypeRef  *CatalogRef
 	PriorityRef   *CatalogRef
 	ResolutionRef *CatalogRef
-	ReporterID    uuid.UUID
+	// FixVersions, AffectsVersions and Components are the links of the issue. They are filled when the issue is read.
+	FixVersions     []LinkedRef
+	AffectsVersions []LinkedRef
+	Components      []LinkedRef
+	ReporterID      uuid.UUID
 	// Custom holds the values of custom fields keyed by field id. Values are normalized by NormalizeFieldValue.
 	Custom map[string]any
 	// KeyNumber is the per-project issue number; ProjectKey is read from the project and not stored on the issue.

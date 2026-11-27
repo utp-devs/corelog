@@ -179,6 +179,7 @@ func (s *IssueService) Patch(ctx context.Context, id, actorID uuid.UUID, globalR
 }
 
 func (s *IssueService) patch(ctx context.Context, id, actorID uuid.UUID, globalRole string, in port.PatchInput) (*port.PatchResult, *uuid.UUID, error) {
+	in.GlobalRole = globalRole
 	if s.lifecycle != nil {
 		if err := s.lifecycle.LockForUpdate(ctx, id); err != nil {
 			return nil, nil, err
@@ -215,6 +216,9 @@ func (s *IssueService) patch(ctx context.Context, id, actorID uuid.UUID, globalR
 	if err != nil {
 		return nil, nil, err
 	}
+	if err := s.attachLinks(ctx, issue); err != nil {
+		return nil, nil, err
+	}
 	result := &port.PatchResult{Issue: issue, Changes: changes}
 	if len(changes) == 0 {
 		return result, nil, nil
@@ -248,7 +252,8 @@ func patchTouches(in port.PatchInput) (editing, assigning bool) {
 	editing = in.Summary.Set || in.Description.Set || in.IssueTypeID.Set || in.IssueType.Set ||
 		in.PriorityID.Set || in.Priority.Set || in.ParentID.Set || in.StoryPoints.Set ||
 		in.OriginalEstimateSeconds.Set || in.RemainingEstimateSeconds.Set || in.StartDate.Set ||
-		in.DueDate.Set || in.Flagged.Set || in.Labels.Set || len(in.Custom) > 0
+		in.DueDate.Set || in.Flagged.Set || in.Labels.Set || len(in.Custom) > 0 ||
+		in.FixVersions.Set || in.AffectsVersions.Set || in.Components.Set
 	return editing, in.AssigneeID.Set
 }
 
@@ -354,6 +359,9 @@ func (s *IssueService) applyPatch(ctx context.Context, issue *domain.Issue, acto
 		if err := s.applyLabels(ctx, issue, names, add); err != nil {
 			return nil, err
 		}
+	}
+	if err := s.applyLinkFields(ctx, issue, in, add); err != nil {
+		return nil, err
 	}
 	if in.Custom != nil || previousType != issue.IssueTypeID {
 		before := make(map[string]any, len(issue.Custom))

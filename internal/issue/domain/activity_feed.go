@@ -38,6 +38,9 @@ var (
 
 // fieldLabels maps the internal field names of changes to the Spanish names shown in the feed.
 var fieldLabels = map[string]string{
+	"fix_versions":               "Versiones de corrección",
+	"affects_versions":           "Versiones afectadas",
+	"components":                 "Componentes",
 	"summary":                    "Resumen",
 	"description":                "Descripción",
 	"status":                     "Estado",

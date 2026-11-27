@@ -40,6 +40,8 @@ import (
 	"github.com/jhonsferg/corelog/internal/project"
 	projectpostgres "github.com/jhonsferg/corelog/internal/project/adapter/out/postgres"
 	projectport "github.com/jhonsferg/corelog/internal/project/application/port"
+	"github.com/jhonsferg/corelog/internal/release"
+	releasepostgres "github.com/jhonsferg/corelog/internal/release/adapter/out/postgres"
 	"github.com/jhonsferg/corelog/internal/search"
 	searchpostgres "github.com/jhonsferg/corelog/internal/search/adapter/out/postgres"
 	"github.com/jhonsferg/corelog/internal/sprint"
@@ -100,6 +102,7 @@ func buildRouter(cfg *config.Config, db *sqlx.DB, log *slog.Logger) (chi.Router,
 		WithTransactions(database.NewTxManager(db)).
 		WithTeamGrants(projectpostgres.NewTeamGrantRepository(db))
 	projectModule.Handler.WithPermissions(authusecase.NewPermissionService(authorizer, authpostgres.NewSchemeRepository(db)))
+	projectModule.WithClock(clock.RealClock{})
 
 	issueRepo := issueDBRepo
 	userDirectory := issuedirectory.NewUserDirectory(db)
@@ -128,8 +131,18 @@ func buildRouter(cfg *config.Config, db *sqlx.DB, log *slog.Logger) (chi.Router,
 	favoriteModule := favorite.NewModule(favoritepostgres.NewRepository(db), favoritepostgres.NewProjectVisibility(db), cfg.Auth.JWTSecret)
 	projectModule.WithRecents(favoriteModule.RecentRecorder)
 	noteModule := note.NewModule(notepostgres.NewRepository(db), notepostgres.NewLinkAccess(db), cfg.Auth.JWTSecret)
+	wireSearch(searchModule, db, noteModule.Search)
 	calendarModule := calendar.NewModule(calendarpostgres.NewCalendarRepository(db), projectAuthorizer, cfg.Auth.JWTSecret)
 	sprintModule := sprint.NewModule(sprintpostgres.NewSprintRepository(db), projectAuthorizer, database.NewTxManager(db), clock.RealClock{}, cfg.Auth.JWTSecret)
+	releaseModule := release.NewModule(release.Dependencies{
+		Repository: releasepostgres.NewRepository(db),
+		Authorizer: projectAuthorizer,
+		Projects:   projectKeyResolver{projects: projectModule.Service.(projectport.ProjectManager)},
+		Tx:         database.NewTxManager(db),
+		Events:     events.NewPostgresPublisher(func(ctx context.Context) sqlx.ExtContext { return database.Executor(ctx, db) }),
+		Clock:      clock.RealClock{},
+		JWTSecret:  cfg.Auth.JWTSecret,
+	})
 	boardRepo := boardpostgres.NewBoardRepository(db)
 	boardModule := board.NewModule(board.Deps{
 		Repository: boardRepo, Boards: boardRepo, Projects: projectModule.Service, Authorizer: projectAuthorizer,
@@ -141,6 +154,7 @@ func buildRouter(cfg *config.Config, db *sqlx.DB, log *slog.Logger) (chi.Router,
 	issueModule.WithCatalog(issueCatalogRepo)
 	issueModule.WithWorkflowEngine(workflowEngineAdapter{workflows: workflowModule.Service}, issuepostgres.NewTransitionRepository(db))
 	issueModule.WithActivityFeed(issuepostgres.NewActivityFeedRepository(db)).WithIssueLabels(issuepostgres.NewIssueLabelRepository(db))
+	issueModule.WithVersionLinks(issuepostgres.NewVersionLinkRepository(db))
 	issueModule.WithPermissions(issuePermissionChecker{authorizer: authorizer}).
 		WithEvents(events.NewPostgresPublisher(func(ctx context.Context) sqlx.ExtContext { return database.Executor(ctx, db) })).
 		WithClock(clock.RealClock{})
@@ -162,7 +176,7 @@ func buildRouter(cfg *config.Config, db *sqlx.DB, log *slog.Logger) (chi.Router,
 		logo.RegisterRoutes(r)
 		catalogModule.Handler.RegisterCatalogRoutes(r)
 		customFieldModule.Handler.RegisterCustomFieldRoutes(r)
-		httpserver.Mount(r, userModule.Handler, teamModule.Handler, projectModule.Handler, boardModule.Handler, issueModule.Handler, sprintModule.Handler, notificationModule.Handler, calendarModule.Handler, searchModule.Handler, dashboardModule.Handler, favoriteModule.Handler, noteModule.Handler, orgModule.Handler, workflowAdmin.Handler)
+		httpserver.Mount(r, userModule.Handler, teamModule.Handler, projectModule.Handler, boardModule.Handler, issueModule.Handler, sprintModule.Handler, notificationModule.Handler, calendarModule.Handler, searchModule.Handler, dashboardModule.Handler, favoriteModule.Handler, noteModule.Handler, orgModule.Handler, workflowAdmin.Handler, releaseModule.Handler)
 	})
 	return router, nil
 }

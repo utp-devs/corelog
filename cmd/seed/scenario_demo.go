@@ -167,6 +167,7 @@ func buildDemo(passwordHash string) *dataset {
 	addDemoLinks(ds, rng, recs, org.users[0])
 	addDemoVotes(ds, rng, recs, org.users)
 	addDemoFilters(ds)
+	addDemoSearchFilters(ds, org.orgID)
 	addDemoNotifications(ds, recs)
 	return ds
 }

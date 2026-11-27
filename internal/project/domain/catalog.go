@@ -67,8 +67,15 @@ type Component struct {
 	ProjectID   uuid.UUID
 	Name        string
 	Description string
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
+	// LeadID is the project member responsible for the component; nil when none is set.
+	LeadID *uuid.UUID
+	// LeadName and IssueCount are filled by the list query.
+	LeadName string
+	// DefaultAssigneePolicy is one of the component assignee policies (see component_assignee.go).
+	DefaultAssigneePolicy string
+	IssueCount            int
+	CreatedAt             time.Time
+	UpdatedAt             time.Time
 }
 
 func NewComponent(projectID uuid.UUID, name, description string) (*Component, error) {
@@ -78,7 +85,7 @@ func NewComponent(projectID uuid.UUID, name, description string) (*Component, er
 	}
 	now := time.Now().UTC()
 	return &Component{
-		ProjectID: projectID, Name: name,
+		ProjectID: projectID, Name: name, DefaultAssigneePolicy: AssigneeNone,
 		Description: strings.TrimSpace(description), CreatedAt: now, UpdatedAt: now,
 	}, nil
 }

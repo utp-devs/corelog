@@ -57,6 +57,7 @@ type IssueService struct {
 	feed           port.ActivityFeedReader
 	labels         port.IssueLabelRepository
 	engine         port.WorkflowEngine
+	versionLinks   port.VersionLinkRepository
 	transitionRepo port.TransitionRepository
 }
 
@@ -221,6 +222,9 @@ func (s *IssueService) Get(ctx context.Context, id, actorID uuid.UUID, globalRol
 	if err := s.requireIssueView(ctx, issue.ProjectID, actorID, globalRole); err != nil {
 		return nil, err
 	}
+	if err := s.attachLinks(ctx, issue); err != nil {
+		return nil, err
+	}
 	return issue, nil
 }
 
@@ -331,6 +335,9 @@ func (s *IssueService) List(ctx context.Context, actorID uuid.UUID, globalRole s
 	}
 	items, err := s.repo.FindAll(ctx, filter)
 	if err != nil {
+		return port.ListResult{}, err
+	}
+	if err := s.attachLinks(ctx, items...); err != nil {
 		return port.ListResult{}, err
 	}
 	total, err := s.repo.Count(ctx, filter)

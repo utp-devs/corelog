@@ -159,17 +159,23 @@ type CatalogRepository interface {
 	ListComponents(ctx context.Context, projectID uuid.UUID) ([]domain.Component, error)
 	CreateComponent(ctx context.Context, component *domain.Component) error
 	DeleteComponent(ctx context.Context, projectID, componentID uuid.UUID) error
+	// FindComponent reads one component of the project; ErrComponentNotFound when it does not exist.
+	FindComponent(ctx context.Context, projectID, componentID uuid.UUID) (*domain.Component, error)
+	UpdateComponent(ctx context.Context, component *domain.Component) error
+	// MoveComponentIssues links every issue of from to to, skipping issues already linked to to.
+	MoveComponentIssues(ctx context.Context, from, to uuid.UUID) error
 }
 
 // Acciones de proyecto que el modulo delega al autorizador. Usan los nombres de la matriz de permisos.
 const (
-	ActionViewProject    = "view_project"
-	ActionEditProject    = "edit_project"
-	ActionDeleteProject  = "delete_project"
-	ActionManageMembers  = "manage_members"
-	ActionEditIssue      = "edit_issue"
-	ActionArchiveProject = "archive_project"
-	ActionRestoreProject = "restore_project"
+	ActionViewProject      = "view_project"
+	ActionEditProject      = "edit_project"
+	ActionDeleteProject    = "delete_project"
+	ActionManageMembers    = "manage_members"
+	ActionEditIssue        = "edit_issue"
+	ActionManageComponents = "manage_components"
+	ActionArchiveProject   = "archive_project"
+	ActionRestoreProject   = "restore_project"
 )
 
 // RecentRecorder records that a user viewed an entity. Errors are logged by the caller and never

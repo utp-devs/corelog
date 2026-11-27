@@ -283,6 +283,7 @@ func buildE2E(passwordHash string) *dataset {
 	emitIssues(ds, recs)
 	syncIssueCounters(ds, recs)
 	addE2EFilterAndNotifications(ds, org, recs)
+	addE2ESearchFilters(ds, org.orgID, org.users[e2eAdmin])
 	addE2EFavoritesAndRecents(ds, users, org.projects)
 	return ds
 }

@@ -26,6 +26,7 @@ var patchableFields = map[string]bool{
 	"priority_id": true, "parent_id": true, "assignee_id": true, "story_points": true,
 	"original_estimate_seconds": true, "remaining_estimate_seconds": true, "start_date": true,
 	"due_date": true, "flagged": true, "labels": true, "custom": true, "expected_updated_at": true,
+	"fix_versions": true, "affects_versions": true, "components": true, "override_closed_versions": true,
 }
 
 // providedSystemFields maps the fields of a create body to the layout keys of the required-field check.
@@ -101,6 +102,12 @@ func parsePatch(raw []byte) (port.PatchInput, error) {
 		DueDate:                  decodeDate(sent, "due_date", &problems),
 		Flagged:                  decodeField[bool](sent, "flagged", &problems),
 		Labels:                   decodeField[[]string](sent, "labels", &problems),
+		FixVersions:              decodeField[[]uuid.UUID](sent, "fix_versions", &problems),
+		AffectsVersions:          decodeField[[]uuid.UUID](sent, "affects_versions", &problems),
+		Components:               decodeField[[]uuid.UUID](sent, "components", &problems),
+	}
+	if override := decodeField[bool](sent, "override_closed_versions", &problems); override.Set && override.Value != nil {
+		in.OverrideClosedVersions = *override.Value
 	}
 	if expected := decodeField[time.Time](sent, "expected_updated_at", &problems); expected.Set && expected.Value != nil {
 		in.ExpectedUpdatedAt = expected.Value

@@ -38,6 +38,20 @@ func parseIssueFilter(q url.Values) (port.ListFilter, error) {
 		}
 		filter.LabelID = id
 	}
+	if raw := q.Get("fix_version"); raw != "" {
+		id, err := uuid.Parse(raw)
+		if err != nil {
+			return filter, apperror.New(apperror.KindValidation, "invalid fix version id")
+		}
+		filter.FixVersionID = id
+	}
+	if raw := q.Get("component"); raw != "" {
+		id, err := uuid.Parse(raw)
+		if err != nil {
+			return filter, apperror.New(apperror.KindValidation, "invalid component id")
+		}
+		filter.ComponentID = id
+	}
 	switch assigneeID := q.Get("assignee_id"); assigneeID {
 	case "":
 	case unassignedFilterValue:

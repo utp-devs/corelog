@@ -46,6 +46,14 @@ type PatchInput struct {
 	Flagged                  Field[bool]
 	// Labels replaces the labels of the issue by name; unknown names are created. Nil Value clears them.
 	Labels Field[[]string]
+	// FixVersions, AffectsVersions and Components replace the links of the issue by id. Nil Value clears them.
+	FixVersions     Field[[]uuid.UUID]
+	AffectsVersions Field[[]uuid.UUID]
+	Components      Field[[]uuid.UUID]
+	// OverrideClosedVersions lets an administrator link issues to released or archived versions.
+	OverrideClosedVersions bool
+	// GlobalRole is the platform role of the caller. Patch sets it before the changes are applied.
+	GlobalRole string
 	// Custom is the raw "custom" object. Nil when absent.
 	Custom map[string]json.RawMessage
 }

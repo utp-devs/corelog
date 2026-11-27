@@ -9,6 +9,7 @@ import (
 
 	authorization "github.com/jhonsferg/corelog/internal/authorization/domain"
 	"github.com/jhonsferg/corelog/internal/platform/apperror"
+	"github.com/jhonsferg/corelog/internal/platform/clock"
 	"github.com/jhonsferg/corelog/internal/project/application/port"
 	"github.com/jhonsferg/corelog/internal/project/domain"
 )
@@ -25,6 +26,7 @@ type ProjectService struct {
 	tx          txRunner
 	teamGrants  port.TeamGrantRepository
 	recents     port.RecentRecorder
+	clock       clock.Clock
 }
 
 // txRunner runs fn inside a transaction. It matches database.TxManager without importing it here.
@@ -311,41 +313,6 @@ func (s *ProjectService) ListComponents(ctx context.Context, actorID uuid.UUID, 
 	return s.catalogRepo.ListComponents(ctx, projectID)
 }
 
-func (s *ProjectService) CreateComponent(ctx context.Context, actorID uuid.UUID, globalRole string, projectID uuid.UUID, name, description string) (*domain.Component, error) {
-	project, orgRole, err := s.loadVisible(ctx, actorID, globalRole, projectID)
-	if err != nil {
-		return nil, err
-	}
-	if err := s.requireManage(ctx, port.ActionEditIssue, project, actorID, globalRole, orgRole); err != nil {
-		return nil, err
-	}
-	if s.catalogRepo == nil {
-		return nil, domain.ErrInvalidProject
-	}
-	component, err := domain.NewComponent(projectID, name, description)
-	if err != nil {
-		return nil, err
-	}
-	if err := s.catalogRepo.CreateComponent(ctx, component); err != nil {
-		return nil, err
-	}
-	return component, nil
-}
-
-func (s *ProjectService) DeleteComponent(ctx context.Context, actorID uuid.UUID, globalRole string, projectID, componentID uuid.UUID) error {
-	project, orgRole, err := s.loadVisible(ctx, actorID, globalRole, projectID)
-	if err != nil {
-		return err
-	}
-	if err := s.requireManage(ctx, port.ActionEditIssue, project, actorID, globalRole, orgRole); err != nil {
-		return err
-	}
-	if s.catalogRepo == nil {
-		return domain.ErrInvalidProject
-	}
-	return s.catalogRepo.DeleteComponent(ctx, projectID, componentID)
-}
-
 // scopeFor builds the listing scope of an actor: platform admins and org owners/admins see every
 // project; org members also see open projects; everyone else sees explicit memberships only.
 func (s *ProjectService) scopeFor(actorID uuid.UUID, globalRole, orgRole string) port.VisibilityScope {
@@ -458,4 +425,10 @@ func (s *ProjectService) allowed(ctx context.Context, action string, projectID, 
 		return false, nil
 	}
 	return false, err
+}
+
+// WithClock fixes the time source of the component writes. Without it the system clock is used.
+func (s *ProjectService) WithClock(c clock.Clock) *ProjectService {
+	s.clock = c
+	return s
 }

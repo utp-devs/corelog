@@ -3,6 +3,8 @@ package project
 import (
 	"context"
 
+	"github.com/jhonsferg/corelog/internal/platform/clock"
+
 	httpadapter "github.com/jhonsferg/corelog/internal/project/adapter/in/http"
 	"github.com/jhonsferg/corelog/internal/project/application/port"
 	"github.com/jhonsferg/corelog/internal/project/application/usecase"
@@ -18,6 +20,12 @@ func NewModule(repo port.Repository, memberRepo port.MemberRepository, catalogRe
 	service := usecase.NewProjectService(repo, memberRepo, orgs, catalogRepo).WithAuthorizer(authorizer)
 	handler := httpadapter.NewHandler(service, service, jwtSecret)
 	return &Module{Service: service, Handler: handler, service: service}
+}
+
+// WithClock fixes the time source of the component writes.
+func (m *Module) WithClock(c clock.Clock) *Module {
+	m.service.WithClock(c)
+	return m
 }
 
 // WithEvents connects the publisher of project lifecycle events.

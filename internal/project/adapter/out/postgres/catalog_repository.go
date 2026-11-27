@@ -25,15 +25,6 @@ type labelRow struct {
 	UpdatedAt time.Time `db:"updated_at"`
 }
 
-type componentRow struct {
-	ID          uuid.UUID `db:"id"`
-	ProjectID   uuid.UUID `db:"project_id"`
-	Name        string    `db:"name"`
-	Description string    `db:"description"`
-	CreatedAt   time.Time `db:"created_at"`
-	UpdatedAt   time.Time `db:"updated_at"`
-}
-
 type CatalogRepository struct {
 	db *sqlx.DB
 }
@@ -141,57 +132,6 @@ func (r *CatalogRepository) DeleteLabel(ctx context.Context, projectID, labelID 
 	}
 	if affected == 0 {
 		return apperror.New(apperror.KindNotFound, "label not found")
-	}
-	return nil
-}
-
-func (r *CatalogRepository) ListComponents(ctx context.Context, projectID uuid.UUID) ([]domain.Component, error) {
-	var rows []componentRow
-	if err := r.db.SelectContext(ctx, &rows, `
-		SELECT id, project_id, name, description, created_at, updated_at
-		FROM components WHERE project_id = $1 ORDER BY name ASC`, projectID); err != nil {
-		return nil, apperror.Wrap(apperror.KindInternal, "failed to list components", err)
-	}
-	components := make([]domain.Component, 0, len(rows))
-	for _, row := range rows {
-		components = append(components, domain.Component{
-			ID: row.ID, ProjectID: row.ProjectID, Name: row.Name, Description: row.Description,
-			CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt,
-		})
-	}
-	return components, nil
-}
-
-func (r *CatalogRepository) CreateComponent(ctx context.Context, component *domain.Component) error {
-	id, err := database.InsertReturningID(ctx, r.db, `
-		INSERT INTO components (project_id, name, description, created_at, updated_at)
-		VALUES (:project_id, :name, :description, :created_at, :updated_at)
-		ON CONFLICT (project_id, name) DO NOTHING
-		RETURNING id`, map[string]interface{}{
-		"project_id": component.ProjectID, "name": component.Name, "description": component.Description,
-		"created_at": component.CreatedAt, "updated_at": component.UpdatedAt,
-	})
-	if errors.Is(err, sql.ErrNoRows) {
-		return apperror.New(apperror.KindConflict, "a component with this name already exists")
-	}
-	if err != nil {
-		return apperror.Wrap(apperror.KindInternal, "failed to create component", err)
-	}
-	component.ID = id
-	return nil
-}
-
-func (r *CatalogRepository) DeleteComponent(ctx context.Context, projectID, componentID uuid.UUID) error {
-	result, err := r.db.ExecContext(ctx, `DELETE FROM components WHERE project_id = $1 AND id = $2`, projectID, componentID)
-	if err != nil {
-		return apperror.Wrap(apperror.KindInternal, "failed to delete component", err)
-	}
-	affected, err := result.RowsAffected()
-	if err != nil {
-		return apperror.Wrap(apperror.KindInternal, "failed to delete component", err)
-	}
-	if affected == 0 {
-		return apperror.New(apperror.KindNotFound, "component not found")
 	}
 	return nil
 }
