@@ -9,6 +9,7 @@ import { ProjectApiService } from './project-api.service';
 
 const ORG_ID = '00000000-0000-4000-8000-0000000000aa';
 const BASE = '/api/v1';
+const PROJECT_UUID = '0f0e0d0c-0b0a-4908-8706-050403020100';
 
 const projectDto = {
   id: 'project-1',
@@ -46,7 +47,9 @@ describe('ProjectApiService', () => {
 
   it('lists projects with organization_id and maps organizationId, lead and open visibility', async () => {
     const result = firstValueFrom(api.list());
-    backend.expectOne(`${BASE}/projects?organization_id=${ORG_ID}`).flush({ data: [projectDto] });
+    backend
+      .expectOne(`${BASE}/projects?organization_id=${ORG_ID}&page_size=100`)
+      .flush({ data: [projectDto] });
 
     const [project] = await result;
     expect(project).toEqual({
@@ -58,6 +61,10 @@ describe('ProjectApiService', () => {
       type: 'kanban',
       leadId: 'user-1',
       visibility: 'open',
+      template: 'kanban',
+      color: '',
+      icon: '',
+      defaultAssigneePolicy: 'unassigned',
       archivedAt: null,
       createdAt: '2026-11-01T10:00:00Z',
       updatedAt: '2026-11-01T10:00:00Z',
@@ -73,8 +80,8 @@ describe('ProjectApiService', () => {
   });
 
   it('gets one project by id', async () => {
-    const result = firstValueFrom(api.get('project-1'));
-    backend.expectOne(`${BASE}/projects/project-1`).flush({ data: projectDto });
+    const result = firstValueFrom(api.get(PROJECT_UUID));
+    backend.expectOne(`${BASE}/projects/${PROJECT_UUID}`).flush({ data: projectDto });
 
     expect((await result).key).toBe('CORE');
   });
@@ -125,7 +132,7 @@ describe('ProjectApiService', () => {
 
   it('sends the lead and visibility on update', async () => {
     const result = firstValueFrom(
-      api.update('project-1', {
+      api.update(PROJECT_UUID, {
         name: 'CoreLog',
         description: '',
         type: 'scrum',
@@ -133,7 +140,7 @@ describe('ProjectApiService', () => {
         visibility: 'private',
       }),
     );
-    const request = backend.expectOne(`${BASE}/projects/project-1`);
+    const request = backend.expectOne(`${BASE}/projects/${PROJECT_UUID}`);
     expect(request.request.method).toBe('PATCH');
     expect(request.request.body).toEqual({
       name: 'CoreLog',
@@ -148,8 +155,8 @@ describe('ProjectApiService', () => {
   });
 
   it('deletes a project', async () => {
-    const result = firstValueFrom(api.remove('project-1'));
-    const request = backend.expectOne(`${BASE}/projects/project-1`);
+    const result = firstValueFrom(api.remove(PROJECT_UUID, 'CoreLog'));
+    const request = backend.expectOne(`${BASE}/projects/${PROJECT_UUID}`);
     expect(request.request.method).toBe('DELETE');
     request.flush(null);
 

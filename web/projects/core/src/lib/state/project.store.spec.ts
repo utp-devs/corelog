@@ -128,7 +128,7 @@ describe('ProjectStore', () => {
   it('keeps the error code when listing fails', () => {
     store.fetchProjects();
     backend
-      .expectOne(`${BASE}/projects?organization_id=${ORG_ID}`)
+      .expectOne(`${BASE}/projects?organization_id=${ORG_ID}&page_size=100`)
       .error(new ProgressEvent('error'), { status: 0, statusText: 'Unknown Error' });
 
     expect(store.status()).toBe('error');
@@ -174,7 +174,7 @@ describe('ProjectStore', () => {
   it('updates a project in the list', async () => {
     store.fetchProjects();
     backend
-      .expectOne(`${BASE}/projects?organization_id=${ORG_ID}`)
+      .expectOne(`${BASE}/projects?organization_id=${ORG_ID}&page_size=100`)
       .flush({ data: [projectDto('p1', 'Alfa')] });
     expect(store.status()).toBe('idle');
 
@@ -187,7 +187,9 @@ describe('ProjectStore', () => {
         visibility: 'private',
       }),
     );
-    backend.expectOne(`${BASE}/projects/p1`).flush({ data: projectDto('p1', 'Alfa 2') });
+    backend
+      .expectOne(`${BASE}/projects/p1?organization_id=${ORG_ID}`)
+      .flush({ data: projectDto('p1', 'Alfa 2') });
     await updated;
 
     expect(store.projects()[0].name).toBe('Alfa 2');
@@ -284,7 +286,7 @@ describe('ProjectStore', () => {
   it('resets every project state on reset', () => {
     store.fetchProjects();
     backend
-      .expectOne(`${BASE}/projects?organization_id=${ORG_ID}`)
+      .expectOne(`${BASE}/projects?organization_id=${ORG_ID}&page_size=100`)
       .flush({ data: [projectDto('p1', 'Alfa')] });
     store.reset();
 

@@ -5,11 +5,16 @@ import { Observable, map, throwError } from 'rxjs';
 import { API_URL } from '../../config/api.config';
 import {
   CreateProjectInput,
+  DefaultAssigneePolicy,
   Project,
   ProjectComponent,
+  ProjectKeyAvailability,
   ProjectLabel,
+  ProjectListFilters,
   ProjectMember,
   ProjectMemberRole,
+  ProjectPage,
+  ProjectTemplate,
   ProjectType,
   ProjectVisibility,
   UpdateProjectInput,
@@ -26,6 +31,10 @@ interface ProjectDto {
   type: ProjectType;
   lead_id: string;
   visibility: ProjectVisibility;
+  template?: ProjectTemplate;
+  color?: string;
+  icon?: string;
+  default_assignee_policy?: DefaultAssigneePolicy;
   archived_at: string | null;
   created_at: string;
   updated_at: string;
@@ -35,7 +44,16 @@ interface ProjectMemberDto {
   project_id: string;
   user_id: string;
   role: ProjectMemberRole;
-  created_at: string;
+  effective_role?: ProjectMemberRole;
+  via_team?: boolean;
+  team_id?: string;
+  team_name?: string;
+  created_at?: string;
+}
+
+interface ProjectListDto {
+  data: ProjectDto[];
+  meta?: { total: number; page: number; page_size: number };
 }
 
 interface LabelDto {
@@ -66,6 +84,10 @@ function toProject(dto: ProjectDto): Project {
     type: dto.type,
     leadId: dto.lead_id,
     visibility: dto.visibility,
+    template: dto.template ?? dto.type,
+    color: dto.color ?? '',
+    icon: dto.icon ?? '',
+    defaultAssigneePolicy: dto.default_assignee_policy ?? 'unassigned',
     archivedAt: dto.archived_at,
     createdAt: dto.created_at,
     updatedAt: dto.updated_at,
@@ -73,12 +95,25 @@ function toProject(dto: ProjectDto): Project {
 }
 
 function toProjectMember(dto: ProjectMemberDto): ProjectMember {
-  return {
+  const member: ProjectMember = {
     projectId: dto.project_id,
     userId: dto.user_id,
     role: dto.role,
-    createdAt: dto.created_at,
+    createdAt: dto.created_at ?? '',
   };
+  if (dto.effective_role !== undefined) member.effectiveRole = dto.effective_role;
+  if (dto.via_team !== undefined) member.viaTeam = dto.via_team;
+  if (dto.team_id !== undefined) member.teamId = dto.team_id;
+  if (dto.team_name !== undefined) member.teamName = dto.team_name;
+  return member;
+}
+
+const PROJECT_KEY_PATTERN = /^[A-Za-z][A-Za-z0-9]{1,9}$/;
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** Whether the identifier is a UUID (otherwise it is a project key such as CORE). */
+export function isProjectUuid(identifier: string): boolean {
+  return UUID_PATTERN.test(identifier);
 }
 
 function toProjectLabel(dto: LabelDto): ProjectLabel {
@@ -109,23 +144,91 @@ export class ProjectApiService {
   private readonly baseUrl = inject(API_URL);
   private readonly organizationId = inject(ORGANIZATION_ID_PROVIDER);
 
-  /** Projects of the active organization. Fails with org.no_current when no organization is active. */
-  list(): Observable<Project[]> {
+  /** Query scope for a key: the active organization disambiguates keys shared across organizations. */
+  private keyScope(identifier: string): HttpParams {
     const organizationId = this.organizationId();
-    if (!organizationId) return throwError(() => noCurrentOrganizationError());
-    const params = new HttpParams().set('organization_id', organizationId);
-    return this.http
-      .get<{ data: ProjectDto[] }>(`${this.baseUrl}/projects`, { params })
-      .pipe(map((response) => response.data.map(toProject)));
+    return PROJECT_KEY_PATTERN.test(identifier) && organizationId
+      ? new HttpParams().set('organization_id', organizationId)
+      : new HttpParams();
   }
 
-  get(id: string): Observable<Project> {
+  /**
+   * Projects of the active organization (first 100, active only). Fails with org.no_current when no
+   * organization is active. Use listPage for filters and pagination.
+   */
+  list(): Observable<Project[]> {
+    return this.listPage({ pageSize: 100 }).pipe(map((page) => page.items));
+  }
+
+  /** One page of the projects of the active organization with filters and sorting. */
+  listPage(filters: ProjectListFilters = {}): Observable<ProjectPage> {
+    const organizationId = this.organizationId();
+    if (!organizationId) return throwError(() => noCurrentOrganizationError());
+    let params = new HttpParams().set('organization_id', organizationId);
+    const text = filters.q?.trim();
+    if (text) params = params.set('q', text);
+    if (filters.template) params = params.set('template', filters.template);
+    if (filters.type) params = params.set('type', filters.type);
+    if (filters.leadId) params = params.set('lead_id', filters.leadId);
+    if (filters.starred !== undefined) params = params.set('starred', String(filters.starred));
+    if (filters.archived) params = params.set('archived', filters.archived);
+    if (filters.sort) params = params.set('sort', filters.sort);
+    if (filters.desc !== undefined) params = params.set('desc', String(filters.desc));
+    if (filters.page !== undefined) params = params.set('page', String(filters.page));
+    if (filters.pageSize !== undefined) params = params.set('page_size', String(filters.pageSize));
+    return this.http.get<ProjectListDto>(`${this.baseUrl}/projects`, { params }).pipe(
+      map((response) => ({
+        items: response.data.map(toProject),
+        meta: {
+          total: response.meta?.total ?? response.data.length,
+          page: response.meta?.page ?? filters.page ?? 1,
+          pageSize: response.meta?.page_size ?? filters.pageSize ?? response.data.length,
+        },
+      })),
+    );
+  }
+
+  /**
+   * One project by UUID or key. A key is sent with the active organization so that a key used in
+   * several organizations of the caller resolves to the right one.
+   */
+  get(identifier: string, options: { readonly silent?: boolean } = {}): Observable<Project> {
     return this.http
-      .get<{ data: ProjectDto }>(`${this.baseUrl}/projects/${id}`)
+      .get<{ data: ProjectDto }>(`${this.baseUrl}/projects/${encodeURIComponent(identifier)}`, {
+        params: this.keyScope(identifier),
+        context: options.silent ? silentRequest() : undefined,
+      })
       .pipe(map((response) => toProject(response.data)));
   }
 
-  /** The lead is never sent: the creator becomes the lead. Visibility is omitted when not given. */
+  /** Whether a key is valid and free among the active projects of the active organization. */
+  keyAvailable(key: string): Observable<ProjectKeyAvailability> {
+    const organizationId = this.organizationId();
+    if (!organizationId) return throwError(() => noCurrentOrganizationError());
+    const params = new HttpParams().set('organization_id', organizationId).set('key', key);
+    return this.http
+      .get<{ data: ProjectKeyAvailability }>(`${this.baseUrl}/projects/key-available`, { params })
+      .pipe(map((response) => ({ available: response.data.available, key: response.data.key })));
+  }
+
+  /** The project becomes read-only. */
+  archive(id: string): Observable<Project> {
+    return this.http
+      .post<{ data: ProjectDto }>(`${this.baseUrl}/projects/${id}/archive`, null, {
+        params: this.keyScope(id),
+      })
+      .pipe(map((response) => toProject(response.data)));
+  }
+
+  restore(id: string): Observable<Project> {
+    return this.http
+      .post<{ data: ProjectDto }>(`${this.baseUrl}/projects/${id}/restore`, null, {
+        params: this.keyScope(id),
+      })
+      .pipe(map((response) => toProject(response.data)));
+  }
+
+  /** The lead is never sent: the creator becomes the lead. Optional fields are omitted when not given. */
   create(input: CreateProjectInput): Observable<Project> {
     const body: Record<string, unknown> = {
       organization_id: input.organizationId,
@@ -135,25 +238,47 @@ export class ProjectApiService {
       type: input.type,
     };
     if (input.visibility !== undefined) body['visibility'] = input.visibility;
+    if (input.template !== undefined) body['template'] = input.template;
+    if (input.color !== undefined) body['color'] = input.color;
+    if (input.icon !== undefined) body['icon'] = input.icon;
+    if (input.defaultAssigneePolicy !== undefined) {
+      body['default_assignee_policy'] = input.defaultAssigneePolicy;
+    }
+    if (input.memberIds !== undefined) body['member_ids'] = input.memberIds;
+    if (input.teamIds !== undefined) body['team_ids'] = input.teamIds;
     return this.http
       .post<{ data: ProjectDto }>(`${this.baseUrl}/projects`, body)
       .pipe(map((response) => toProject(response.data)));
   }
 
   update(id: string, input: UpdateProjectInput): Observable<Project> {
+    const body: Record<string, unknown> = {
+      name: input.name,
+      description: input.description,
+      type: input.type,
+      lead_id: input.leadId,
+      visibility: input.visibility,
+    };
+    if (input.color !== undefined) body['color'] = input.color;
+    if (input.icon !== undefined) body['icon'] = input.icon;
+    if (input.defaultAssigneePolicy !== undefined) {
+      body['default_assignee_policy'] = input.defaultAssigneePolicy;
+    }
     return this.http
-      .patch<{ data: ProjectDto }>(`${this.baseUrl}/projects/${id}`, {
-        name: input.name,
-        description: input.description,
-        type: input.type,
-        lead_id: input.leadId,
-        visibility: input.visibility,
+      .patch<{ data: ProjectDto }>(`${this.baseUrl}/projects/${id}`, body, {
+        params: this.keyScope(id),
       })
       .pipe(map((response) => toProject(response.data)));
   }
 
-  remove(id: string): Observable<void> {
-    return this.http.delete(`${this.baseUrl}/projects/${id}`).pipe(map(() => undefined));
+  /** Soft delete. `confirmation` must repeat the exact project name (project.confirmation_mismatch otherwise). */
+  remove(id: string, confirmation: string): Observable<void> {
+    return this.http
+      .delete(`${this.baseUrl}/projects/${id}`, {
+        body: { confirmation },
+        params: this.keyScope(id),
+      })
+      .pipe(map(() => undefined));
   }
 
   /** With `silent`, a failure is left to the caller (a page that renders its own error state), not a toast. */

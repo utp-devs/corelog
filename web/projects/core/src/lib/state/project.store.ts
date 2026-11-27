@@ -6,9 +6,12 @@ import {
   CreateProjectInput,
   Project,
   ProjectComponent,
+  ProjectKeyAvailability,
   ProjectLabel,
+  ProjectListFilters,
   ProjectMember,
   ProjectMemberRole,
+  ProjectPage,
   UpdateProjectInput,
 } from '../models';
 import { ProjectApiService } from '../services/api/project-api.service';
@@ -41,10 +44,19 @@ export class ProjectStore {
   /** Last failure of a project list or member operation. Null after a successful call. */
   readonly error = signal<ApiError | null>(null);
 
+  private readonly pageRead = new AsyncState<ProjectPage>();
   private readonly projectRead = new AsyncState<Project>();
   private readonly projectIdRead = signal<string | null>(null);
 
   readonly projects = computed(() => this.projectsRead.value() ?? []);
+  /** Projects of the last `fetchPage` call (filters and pagination applied by the server). */
+  readonly pageItems = computed(() => this.pageRead.value()?.items ?? []);
+  /** Total, page and page size of the last `fetchPage` call. Null before the first read. */
+  readonly pageMeta = computed(() => this.pageRead.value()?.meta ?? null);
+  readonly pageLoading = this.pageRead.loading;
+  readonly pageError = this.pageRead.error;
+  readonly pageLoaded = this.pageRead.hasValue;
+
   readonly members = computed(() => this.membersRead.value() ?? []);
   readonly labels = computed(() => this.labelsRead.value() ?? []);
   readonly components = computed(() => this.componentsRead.value() ?? []);
@@ -75,6 +87,51 @@ export class ProjectStore {
         .pipe(
           catchError((error: unknown) => this.fail(error, 'No se pudieron cargar los proyectos')),
         ),
+    );
+  }
+
+  /** Reads one page of projects with filters, sorting and pagination. Keeps the last call only. */
+  fetchPage(filters: ProjectListFilters = {}): void {
+    this.pageRead.load(this.api.listPage(filters));
+  }
+
+  /** Whether a key is valid and free in the active organization. Failures reach the caller. */
+  keyAvailable(key: string): Observable<ProjectKeyAvailability> {
+    return this.api.keyAvailable(key);
+  }
+
+  /** Archives the project (read-only afterwards) and refreshes it in every cached read. */
+  archiveProject(id: string): Observable<Project> {
+    return this.api.archive(id).pipe(
+      tap((project) => this.replaceProject(project)),
+      catchError((error: unknown) => this.fail(error, 'No se pudo archivar el proyecto')),
+    );
+  }
+
+  restoreProject(id: string): Observable<Project> {
+    return this.api.restore(id).pipe(
+      tap((project) => this.replaceProject(project)),
+      catchError((error: unknown) => this.fail(error, 'No se pudo restaurar el proyecto')),
+    );
+  }
+
+  /** `confirmation` must repeat the exact project name. The project leaves every cached read. */
+  deleteProject(id: string, confirmation: string): Observable<void> {
+    return this.api.remove(id, confirmation).pipe(
+      tap(() => {
+        const gone = (item: Project): boolean => item.id === id || item.key === id;
+        this.projectsRead.update((items) => items?.filter((item) => !gone(item)));
+        this.pageRead.update((page) =>
+          page
+            ? {
+                items: page.items.filter((item) => !gone(item)),
+                meta: { ...page.meta, total: Math.max(0, page.meta.total - 1) },
+              }
+            : page,
+        );
+        this.error.set(null);
+      }),
+      catchError((error: unknown) => this.fail(error, 'No se pudo eliminar el proyecto')),
     );
   }
 
@@ -217,9 +274,18 @@ export class ProjectStore {
     this.projectRead.reset();
     this.projectIdRead.set(null);
     this.projectsRead.reset();
+    this.pageRead.reset();
     this.membersRead.reset();
     this.labelsRead.reset();
     this.componentsRead.reset();
+    this.error.set(null);
+  }
+
+  private replaceProject(project: Project): void {
+    const swap = (item: Project): Project => (item.id === project.id ? project : item);
+    this.projectsRead.update((items) => items?.map(swap));
+    this.pageRead.update((page) => (page ? { ...page, items: page.items.map(swap) } : page));
+    if (this.projectRead.value()?.id === project.id) this.projectRead.set(project);
     this.error.set(null);
   }
 
