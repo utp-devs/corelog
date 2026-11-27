@@ -1,55 +1,57 @@
 <aside
-  class="sidebar"
-  [class.collapsed]="collapsed()"
+  class="context-sidebar"
+  [class.context-sidebar--collapsed]="collapsed()"
   [attr.aria-label]="title()"
   [attr.data-collapsed]="collapsed() ? 'true' : 'false'"
 >
-  <div class="header">
+  <div class="context-sidebar__header">
     @if (project(); as current) {
-      <div class="project">
+      <div class="context-sidebar__project">
         <app-project-avatar [name]="current.name" [projectKey]="current.key" [size]="32" />
         @if (!collapsed()) {
-          <span class="project-text">
-            <span class="project-name">{{ current.name }}</span>
-            <span class="project-key">{{ current.key }}</span>
+          <span class="context-sidebar__project-text">
+            <span class="context-sidebar__project-name">{{ current.name }}</span>
+            <span class="context-sidebar__project-key">{{ current.key }}</span>
           </span>
         }
       </div>
     } @else if (!collapsed()) {
-      <span class="title">{{ title() }}</span>
+      <span class="context-sidebar__title">{{ title() }}</span>
     }
   </div>
 
-  <nav class="nav" [attr.aria-label]="'Navegación: ' + title()">
-    <ul class="list">
+  <nav class="context-sidebar__nav" [attr.aria-label]="'Navegación: ' + title()">
+    <ul class="context-sidebar__list">
       @for (item of items(); track item.key) {
         <li>
           @if (item.external) {
             <a
-              class="link"
-              [class.active]="isActive(item)"
+              class="context-sidebar__link"
+              [class.context-sidebar__link--active]="isActive(item)"
               [href]="item.path"
               [attr.aria-label]="item.label"
               [attr.aria-current]="isActive(item) ? 'page' : null"
-              [attr.title]="collapsed() ? item.label : null"
+              [appTooltip]="collapsed() ? item.label : ''"
+              appTooltipPosition="right"
             >
               <app-shell-icon [name]="item.icon" />
               @if (!collapsed()) {
-                <span class="label">{{ item.label }}</span>
+                <span class="context-sidebar__label">{{ item.label }}</span>
               }
             </a>
           } @else {
             <a
-              class="link"
-              [class.active]="isActive(item)"
+              class="context-sidebar__link"
+              [class.context-sidebar__link--active]="isActive(item)"
               [routerLink]="item.path"
               [attr.aria-label]="item.label"
               [attr.aria-current]="isActive(item) ? 'page' : null"
-              [attr.title]="collapsed() ? item.label : null"
+              [appTooltip]="collapsed() ? item.label : ''"
+              appTooltipPosition="right"
             >
               <app-shell-icon [name]="item.icon" />
               @if (!collapsed()) {
-                <span class="label">{{ item.label }}</span>
+                <span class="context-sidebar__label">{{ item.label }}</span>
               }
             </a>
           }
@@ -58,12 +60,14 @@
     </ul>
   </nav>
 
-  <div class="footer">
+  <div class="context-sidebar__footer">
     <button
       type="button"
-      class="toggle"
+      class="context-sidebar__toggle"
       [attr.aria-expanded]="!collapsed()"
       [attr.aria-label]="collapsed() ? 'Expandir menú lateral' : 'Contraer menú lateral'"
+      [appTooltip]="collapsed() ? 'Expandir menú lateral' : ''"
+      appTooltipPosition="right"
       (click)="toggle()"
     >
       <app-shell-icon [name]="collapsed() ? 'unfold' : 'fold'" />

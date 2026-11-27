@@ -32,12 +32,12 @@ describe('PageHeader', () => {
   it('shows the title as the page heading', () => {
     const el = create({ title: 'Mis proyectos' });
     expect(el.querySelector('h1')?.textContent).toBe('Mis proyectos');
-    expect(el.querySelector('.page-subtitle')).toBeNull();
+    expect(el.querySelector('.page-header__subtitle')).toBeNull();
   });
 
   it('shows the subtitle when one is given', () => {
     const el = create({ title: 'Equipos', subtitle: 'Grupos de trabajo' });
-    expect(el.querySelector('.page-subtitle')?.textContent).toContain('Grupos de trabajo');
+    expect(el.querySelector('.page-header__subtitle')?.textContent).toContain('Grupos de trabajo');
   });
 
   it('projects actions into the actions area when provided', () => {
@@ -46,7 +46,9 @@ describe('PageHeader', () => {
     fixture.componentInstance.withActions = true;
     fixture.detectChanges();
     const el = fixture.nativeElement as HTMLElement;
-    expect(el.querySelector('.page-actions button')?.textContent?.trim()).toBe('Crear equipo');
+    expect(el.querySelector('.page-header__actions button')?.textContent?.trim()).toBe(
+      'Crear equipo',
+    );
   });
 
   it('renders no actions area when no actions are projected', () => {
@@ -54,7 +56,7 @@ describe('PageHeader', () => {
     const fixture = TestBed.createComponent(HostWithActions);
     fixture.detectChanges();
     const el = fixture.nativeElement as HTMLElement;
-    expect(el.querySelector('.page-actions')).toBeNull();
+    expect(el.querySelector('.page-header__actions')).toBeNull();
     expect(el.querySelector('h1')?.textContent).toBe('Equipos');
   });
 });

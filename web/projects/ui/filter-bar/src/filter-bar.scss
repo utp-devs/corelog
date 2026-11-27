@@ -1,47 +1,103 @@
+@use '../../styles/mixins' as m;
+@use '../../field-row/src/control' as c;
+
 :host {
   display: block;
   min-width: 0;
   margin-bottom: var(--cl-space-4);
 }
 
-.bar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--cl-space-3);
-}
+.filter-bar {
+  @include m.cluster(3, center, space-between);
 
-.controls {
-  display: flex;
-  flex: 1 1 auto;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--cl-space-2);
-  min-width: 0;
-}
-
-.search {
-  min-width: 240px;
-  flex: 1 1 240px;
-}
-
-.select {
-  min-width: 160px;
-}
-
-.actions {
-  display: flex;
-  gap: var(--cl-space-2);
-}
-
-@media (max-width: 767.98px) {
-  .search {
+  &__controls {
+    @include m.cluster(2);
+    flex: 1 1 auto;
     min-width: 0;
-    flex-basis: 100%;
   }
 
-  .select {
-    flex: 1 1 160px;
+  &__search {
+    flex: 1 1 16rem;
+    min-width: min(100%, 14rem);
+    max-width: 24rem;
+  }
+
+  &__select {
+    flex: 0 1 14rem;
+    min-width: 12rem;
+  }
+
+  &__clear {
+    @include m.flex-row(1);
+    min-height: var(--cl-control-h-md);
+    padding: 0 var(--cl-space-3);
+    border: 0;
+    border-radius: var(--cl-radius-md);
+    background: transparent;
+    color: var(--cl-brand);
+    font: inherit;
+    font-weight: var(--cl-btn-weight);
+    cursor: pointer;
+
+    &:hover {
+      background: var(--cl-bg-hover);
+    }
+
+    &:focus-visible {
+      @include c.focus-ring;
+    }
+  }
+
+  &__actions {
+    @include m.cluster(2);
+  }
+
+  &__chips {
+    @include m.cluster(2);
+    margin: var(--cl-space-3) 0 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  &__chip {
+    @include m.flex-row(1);
+    max-width: 100%;
+    min-height: var(--cl-control-h-sm);
+    padding: 0 0 0 var(--cl-space-3);
+    border-radius: var(--cl-radius-full);
+    background: var(--cl-brand-subtle);
+    color: var(--cl-text);
+    font-size: var(--cl-font-small);
+  }
+
+  &__chip-text {
+    @include m.truncate;
+  }
+
+  &__chip-remove {
+    @include c.icon-button;
+    border-radius: var(--cl-radius-full);
+    color: var(--cl-text);
+    font-size: var(--cl-font-caption);
+
+    &:hover:not(:disabled) {
+      background: var(--cl-bg-hover);
+    }
+  }
+
+  @include m.respond-down(768px) {
+    &__search {
+      flex-basis: 100%;
+      max-width: none;
+    }
+
+    &__select {
+      flex: 1 1 100%;
+      min-width: 0;
+    }
+
+    &__actions {
+      width: 100%;
+    }
   }
 }

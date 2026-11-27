@@ -1,61 +1,34 @@
 <div
-  class="root"
+  class="rich-text-editor__root"
+  [class.rich-text-editor__root--disabled]="isDisabled()"
   [attr.data-dragging]="dragging() ? 'true' : null"
   (dragover)="onDragOver($event)"
   (dragleave)="onDragLeave()"
   (drop)="onDrop($event)"
 >
-  <div class="header">
+  <div class="rich-text-editor__header">
     @if (mode() === 'write') {
-      <div class="toolbar" role="toolbar" aria-label="Formato del texto">
-        @for (btn of formatButtons; track btn.action) {
-          <button
-            type="button"
-            class="tool-button"
-            [attr.aria-label]="btn.label"
-            [title]="btn.label"
-            [disabled]="isDisabled()"
-            (click)="runToolbar(btn.action)"
-          >
-            <i [class]="btn.icon" aria-hidden="true"></i>
-          </button>
-        }
-        <button
-          type="button"
-          class="tool-button"
-          aria-label="Mencionar persona"
-          title="Mencionar persona"
-          [disabled]="isDisabled()"
-          (click)="insertMentionTrigger()"
-        >
-          <i class="pi pi-at" aria-hidden="true"></i>
-        </button>
-        <button
-          type="button"
-          class="tool-button"
-          aria-label="Enlazar incidencia"
-          title="Enlazar incidencia"
-          [disabled]="isDisabled()"
-          (click)="insertIssueTrigger()"
-        >
-          <i class="pi pi-hashtag" aria-hidden="true"></i>
-        </button>
-        @if (uploadImage()) {
-          <button
-            type="button"
-            class="tool-button"
-            aria-label="Subir imagen"
-            title="Subir imagen"
-            [disabled]="isDisabled() || uploading()"
-            (click)="openFilePicker()"
-          >
-            <i class="pi pi-image" aria-hidden="true"></i>
-          </button>
+      <div class="rich-text-editor__toolbar" role="toolbar" aria-label="Formato del texto">
+        @for (group of toolGroups(); track group.name) {
+          <div class="rich-text-editor__group" role="group" [attr.aria-label]="group.name">
+            @for (btn of group.buttons; track btn.action) {
+              <button
+                type="button"
+                class="rich-text-editor__tool"
+                [attr.aria-label]="btn.label"
+                [appTooltip]="btn.label"
+                [disabled]="toolDisabled(btn.action)"
+                (click)="runTool(btn.action)"
+              >
+                <i [class]="btn.icon + ' rich-text-editor__tool-icon'" aria-hidden="true"></i>
+              </button>
+            }
+          </div>
         }
         <input
           #fileInput
           type="file"
-          class="visually-hidden"
+          class="rich-text-editor__file"
           [accept]="acceptedTypes"
           aria-label="Seleccionar imagen"
           tabindex="-1"
@@ -63,34 +36,34 @@
         />
       </div>
     }
-    <div class="modes">
+    <div class="rich-text-editor__modes">
       <button
         type="button"
-        class="mode-button"
+        class="rich-text-editor__mode"
         [attr.aria-pressed]="mode() === 'write'"
         (click)="setMode('write')"
       >
-        <i class="pi pi-pencil" aria-hidden="true"></i>
+        <i class="pi pi-pencil rich-text-editor__mode-icon" aria-hidden="true"></i>
         Escribir
       </button>
       <button
         type="button"
-        class="mode-button"
+        class="rich-text-editor__mode"
         [attr.aria-pressed]="mode() === 'preview'"
         (click)="setMode('preview')"
       >
-        <i class="pi pi-eye" aria-hidden="true"></i>
+        <i class="pi pi-eye rich-text-editor__mode-icon" aria-hidden="true"></i>
         Vista previa
       </button>
     </div>
   </div>
 
   @if (mode() === 'write') {
-    <div class="editor-area">
+    <div class="rich-text-editor__area">
       <textarea
         #textarea
         [id]="id"
-        class="textarea"
+        class="rich-text-editor__textarea"
         [attr.rows]="minRows()"
         [value]="value()"
         [placeholder]="placeholder()"
@@ -105,51 +78,84 @@
         (input)="onInput($event)"
         (keydown)="onKeyDown($event)"
         (paste)="onPaste($event)"
+        (mouseup)="onResizeEnd($event)"
         (blur)="onBlur()"
       ></textarea>
       @if (showListbox()) {
-        <ul [id]="listboxId" class="listbox" role="listbox" [attr.aria-label]="pickerLabel()">
+        <ul
+          [id]="listboxId"
+          class="rich-text-editor__listbox"
+          role="listbox"
+          [attr.aria-label]="pickerLabel()"
+        >
           @if (pickerLoading()) {
-            <li class="option-detail">Buscando…</li>
+            <li class="rich-text-editor__loading">Buscando…</li>
           }
           @for (item of currentItems(); track item.id; let i = $index) {
             <li
               [id]="optionId(i)"
-              class="option"
+              class="rich-text-editor__option"
+              [class.rich-text-editor__option--active]="i === activeIndex()"
               role="option"
               [attr.aria-selected]="i === activeIndex()"
               (mousedown)="$event.preventDefault(); pickItem(item)"
             >
-              <span>{{ item.label }}</span>
-              @if (item.detail) {
-                <span class="option-detail">{{ item.detail }}</span>
+              @if (item.userId) {
+                <span class="rich-text-editor__option-visual" aria-hidden="true">
+                  <app-avatar
+                    [id]="item.userId"
+                    [name]="item.label"
+                    [src]="item.avatarUrl"
+                    [size]="24"
+                  />
+                </span>
               }
+              <span class="rich-text-editor__option-text">
+                <span
+                  class="rich-text-editor__option-label"
+                  [class.rich-text-editor__option-label--key]="!item.userId"
+                  >{{ item.label }}</span
+                >
+                @if (item.detail) {
+                  <span class="rich-text-editor__option-detail">{{ item.detail }}</span>
+                }
+              </span>
             </li>
           }
         </ul>
       }
     </div>
   } @else {
-    <div class="preview" role="region" aria-label="Vista previa">
+    <div class="rich-text-editor__preview" role="region" aria-label="Vista previa">
       @if (value().trim()) {
         <app-rich-text-view [value]="value()" />
       } @else {
-        <span class="option-detail">Nada que previsualizar.</span>
+        <span class="rich-text-editor__empty">Nada que previsualizar.</span>
       }
     </div>
   }
 
-  <div class="footer">
-    <span>
-      @if (uploading()) {
-        <span role="status">Subiendo imagen…</span>
+  @if (uploading() || uploadError() || submittable()) {
+    <div class="rich-text-editor__footer">
+      <span class="rich-text-editor__feedback">
+        @if (uploading()) {
+          <span role="status">Subiendo imagen…</span>
+        }
+        @if (uploadError(); as error) {
+          <span role="alert" class="rich-text-editor__error">
+            <i class="pi pi-exclamation-circle" aria-hidden="true"></i>
+            {{ error }}
+          </span>
+        }
+      </span>
+      @if (submittable()) {
+        <span class="rich-text-editor__hint">
+          <kbd class="rich-text-editor__key">Ctrl</kbd>+<kbd class="rich-text-editor__key"
+            >Enter</kbd
+          >
+          para enviar
+        </span>
       }
-      @if (uploadError(); as error) {
-        <span role="alert" class="error">{{ error }}</span>
-      }
-    </span>
-    @if (submittable()) {
-      <span>Ctrl+Enter para enviar</span>
-    }
-  </div>
+    </div>
+  }
 </div>

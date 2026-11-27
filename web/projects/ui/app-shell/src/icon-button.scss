@@ -1,0 +1,33 @@
+@use '../../styles/mixins' as m;
+
+// Square icon-only button of the shell: 36 px with a 20 px icon (44 px on touch screens).
+
+@mixin icon-button {
+  @include m.flex-row(0, center, center);
+  flex: none;
+  box-sizing: border-box;
+  width: var(--cl-control-h-md);
+  height: var(--cl-control-h-md);
+  padding: 0;
+  border: 0;
+  border-radius: var(--cl-radius-md);
+  background: transparent;
+  color: var(--cl-text);
+  font: inherit;
+  cursor: pointer;
+
+  &:hover,
+  &[aria-expanded='true'] {
+    background: var(--cl-bg-hover);
+  }
+
+  &:focus-visible {
+    outline: none;
+    box-shadow: var(--cl-shadow-focus);
+  }
+
+  @media (pointer: coarse), (max-width: 767.98px) {
+    width: var(--cl-control-h-lg);
+    height: var(--cl-control-h-lg);
+  }
+}

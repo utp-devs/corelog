@@ -70,4 +70,34 @@ describe('FilterBar', () => {
     fixture.detectChanges();
     expect(buttonByText(fixture.nativeElement as HTMLElement, 'Guardar filtro')).toBeDefined();
   });
+
+  it('shows one removable chip per active filter and for the search text', () => {
+    const fixture = create();
+    const onChange = vi.fn();
+    fixture.componentInstance.filters.set([{ ...statusFilter, value: 'open', onChange }]);
+    fixture.componentInstance.search.set('login');
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+
+    const chips = Array.from(el.querySelectorAll('.filter-bar__chip-text')).map(
+      (c) => c.textContent,
+    );
+    expect(chips).toEqual(['Búsqueda: login', 'Estado: Abierto']);
+
+    (
+      el.querySelector('button[aria-label="Quitar filtro Estado: Abierto"]') as HTMLButtonElement
+    ).click();
+    expect(onChange).toHaveBeenCalledWith(undefined);
+
+    (
+      el.querySelector('button[aria-label="Quitar filtro Búsqueda: login"]') as HTMLButtonElement
+    ).click();
+    fixture.detectChanges();
+    expect(fixture.componentInstance.search()).toBe('');
+  });
+
+  it('shows no chips when nothing is active', () => {
+    const fixture = create();
+    expect((fixture.nativeElement as HTMLElement).querySelector('.filter-bar__chips')).toBeNull();
+  });
 });

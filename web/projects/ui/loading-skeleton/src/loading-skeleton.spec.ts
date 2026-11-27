@@ -20,12 +20,12 @@ describe('LoadingSkeleton', () => {
   });
 
   it('renders every variant without errors', () => {
-    expect(render('table', 3).querySelectorAll('.line')).toHaveLength(3);
+    expect(render('table', 3).querySelectorAll('.loading-skeleton__bone--line')).toHaveLength(3);
     TestBed.resetTestingModule();
-    expect(render('card').querySelector('.title')).not.toBeNull();
+    expect(render('card').querySelector('.loading-skeleton__bone--title')).not.toBeNull();
     TestBed.resetTestingModule();
     const detail = render('detail');
-    expect(detail.querySelectorAll('.title')).toHaveLength(2);
+    expect(detail.querySelectorAll('.loading-skeleton__bone--title')).toHaveLength(2);
     expect(detail.querySelector('[role="status"]')).not.toBeNull();
   });
 });

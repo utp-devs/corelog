@@ -1,152 +1,72 @@
-.backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: var(--cl-z-modal);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: var(--cl-space-4);
-  background: var(--cl-overlay);
-}
+@use '../../styles/mixins' as m;
 
-.dialog {
-  display: flex;
-  flex-direction: column;
-  box-sizing: border-box;
-  width: 520px;
-  max-width: 100%;
-  max-height: 80vh;
-  overflow-y: auto;
-  padding: var(--cl-space-6);
-  border: 1px solid var(--cl-border);
-  border-radius: var(--cl-radius-lg);
-  background: var(--cl-bg-surface);
-  box-shadow: var(--cl-shadow-3);
-  color: var(--cl-text);
-}
+.shortcuts-dialog {
+  &__empty {
+    margin: 0;
+    color: var(--cl-text-subtle);
+  }
 
-.dialog:focus {
-  outline: none;
-}
+  &__group + &__group {
+    margin-top: var(--cl-space-5);
+  }
 
-.header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--cl-space-3);
-  margin-bottom: var(--cl-space-4);
-}
+  &__group-title {
+    margin: 0 0 var(--cl-space-2);
+    color: var(--cl-text-subtle);
+    font-size: var(--cl-font-small);
+    font-weight: var(--cl-weight-semibold);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
 
-.title {
-  margin: 0;
-  font-size: var(--cl-font-h3);
-  font-weight: 600;
-  color: var(--cl-text);
-}
+  &__list {
+    display: grid;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
 
-.close {
-  display: inline-flex;
-  flex: none;
-  align-items: center;
-  justify-content: center;
-  width: 44px;
-  height: 44px;
-  margin-right: calc(var(--cl-space-2) * -1);
-  border: none;
-  border-radius: var(--cl-radius-md);
-  background: transparent;
-  color: var(--cl-text-subtle);
-  cursor: pointer;
-}
+  &__item {
+    @include m.cluster(3, center, space-between);
+    min-height: var(--cl-control-h-md);
+    border-bottom: 1px solid var(--cl-divider);
 
-.close:hover {
-  background: var(--cl-bg-sunken);
-}
+    &:last-child {
+      border-bottom: none;
+    }
+  }
 
-.close:focus-visible {
-  box-shadow: var(--cl-shadow-focus);
-}
+  &__description {
+    min-width: 0;
+    overflow-wrap: anywhere;
+    color: var(--cl-text);
+  }
 
-.close svg {
-  width: 18px;
-  height: 18px;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 2;
-  stroke-linecap: round;
-}
+  &__keys {
+    @include m.cluster(1);
+    flex: none;
+  }
 
-.empty {
-  margin: 0;
-  color: var(--cl-text-subtle);
-}
+  &__then {
+    color: var(--cl-text-subtle);
+    font-size: var(--cl-font-caption);
+  }
 
-.group + .group {
-  margin-top: var(--cl-space-4);
-}
+  &__kbd {
+    min-width: var(--cl-space-6);
+    padding: 0 var(--cl-space-2);
+    border: 1px solid var(--cl-border-strong);
+    border-radius: var(--cl-radius-sm);
+    background: var(--cl-bg-sunken);
+    color: var(--cl-text);
+    font-family: inherit;
+    font-size: var(--cl-font-small);
+    text-align: center;
+  }
 
-.group-title {
-  margin: 0 0 var(--cl-space-2);
-  color: var(--cl-text-subtle);
-  font-size: var(--cl-font-body);
-  font-weight: 600;
-}
-
-.list {
-  display: grid;
-  gap: var(--cl-space-1);
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: var(--cl-space-3);
-  min-height: 44px;
-}
-
-.description {
-  min-width: 0;
-  overflow-wrap: anywhere;
-  color: var(--cl-text);
-}
-
-.keys {
-  display: inline-flex;
-  flex: none;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--cl-space-1);
-}
-
-.then {
-  color: var(--cl-text-subtle);
-  font-size: var(--cl-font-caption);
-}
-
-.kbd {
-  min-width: var(--cl-space-6);
-  padding: 0 var(--cl-space-2);
-  border: 1px solid var(--cl-border-strong);
-  border-radius: var(--cl-radius-sm);
-  background: var(--cl-bg-sunken);
-  color: var(--cl-text);
-  font-family: inherit;
-  text-align: center;
-}
-
-.soon {
-  flex: none;
-  color: var(--cl-text-subtle);
-  font-size: var(--cl-font-caption);
-}
-
-@media (max-width: 480px) {
-  .dialog {
-    padding: var(--cl-space-4);
+  &__soon {
+    flex: none;
+    color: var(--cl-text-subtle);
+    font-size: var(--cl-font-caption);
   }
 }

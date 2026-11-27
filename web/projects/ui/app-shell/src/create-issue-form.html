@@ -1,0 +1,196 @@
+<app-dialog
+  size="md"
+  [heading]="heading()"
+  [subtitle]="created() ? undefined : 'Registra un problema o una tarea para tu equipo.'"
+  [open]="true"
+  (closeRequested)="requestClose()"
+>
+  @switch (view()) {
+    @case ('done') {
+      <div class="create-issue-form__done" role="status">
+        <i class="pi pi-check-circle create-issue-form__done-icon" aria-hidden="true"></i>
+        <p class="create-issue-form__done-key">{{ createdKey() }}</p>
+        <p class="create-issue-form__done-title">{{ created()?.title }}</p>
+      </div>
+    }
+    @case ('loading') {
+      <p class="create-issue-form__note" role="status">Cargando proyectos…</p>
+    }
+    @case ('failed') {
+      <p class="create-issue-form__note create-issue-form__note--error" role="alert">
+        No se pudieron cargar tus proyectos. Revisa tu conexión e inténtalo de nuevo.
+      </p>
+    }
+    @case ('empty') {
+      <div class="create-issue-form__empty">
+        <i class="pi pi-folder-open create-issue-form__empty-icon" aria-hidden="true"></i>
+        <p class="create-issue-form__empty-title">Aún no hay proyectos</p>
+        @if (canCreateProject()) {
+          <p class="create-issue-form__note">
+            Las incidencias viven dentro de un proyecto. Crea el primero para empezar.
+          </p>
+        } @else {
+          <p class="create-issue-form__note">
+            Las incidencias viven dentro de un proyecto y todavía no hay ninguno al que puedas
+            agregar incidencias. Pide a quien administra la organización que cree uno o que te
+            agregue a uno existente.
+          </p>
+        }
+      </div>
+    }
+    @default {
+      <form
+        class="create-issue-form__form"
+        aria-label="Crear incidencia"
+        novalidate
+        [formGroup]="form"
+        (ngSubmit)="submit()"
+      >
+        @if (serverError(); as message) {
+          <p class="create-issue-form__alert" role="alert">{{ message }}</p>
+        }
+
+        <div class="create-issue-form__row">
+          <app-field-row
+            #projectRow
+            label="Proyecto"
+            [required]="true"
+            [control]="form.controls.projectId"
+            [messages]="projectMessages"
+            [submitted]="submitted()"
+          >
+            <p-select
+              formControlName="projectId"
+              appendTo="body"
+              [inputId]="projectRow.controlId"
+              [ariaLabelledBy]="projectRow.labelId"
+              [options]="projectOptions()"
+              [filter]="filterProjects()"
+              filterBy="label"
+              optionLabel="label"
+              optionValue="value"
+              placeholder="Elige un proyecto"
+              class="create-issue-form__control"
+            />
+          </app-field-row>
+
+          <app-field-row #typeRow label="Tipo" [required]="true">
+            <p-select
+              formControlName="issueType"
+              appendTo="body"
+              [inputId]="typeRow.controlId"
+              [ariaLabelledBy]="typeRow.labelId"
+              [options]="typeOptions"
+              optionLabel="label"
+              optionValue="value"
+              class="create-issue-form__control"
+            />
+          </app-field-row>
+        </div>
+
+        <app-field-row
+          #titleRow
+          label="Resumen"
+          [required]="true"
+          helper="Describe el problema o la tarea en una frase."
+          [control]="form.controls.title"
+          [messages]="titleMessages"
+          [submitted]="submitted()"
+        >
+          <input
+            #titleField
+            pInputText
+            appFieldControl
+            data-autofocus
+            type="text"
+            formControlName="title"
+            autocomplete="off"
+            class="create-issue-form__control"
+            [maxlength]="titleMaxLength"
+          />
+        </app-field-row>
+
+        <app-field-row
+          #descriptionRow
+          label="Descripción"
+          [required]="true"
+          [control]="form.controls.description"
+          [messages]="descriptionMessages"
+          [submitted]="submitted()"
+        >
+          <app-rich-text-editor
+            ariaLabel="Descripción"
+            formControlName="description"
+            placeholder="Qué pasa, cómo reproducirlo y qué esperabas. Usa @ para mencionar."
+            [minRows]="5"
+            [maxRows]="10"
+            [searchUsers]="searchUsers"
+          />
+        </app-field-row>
+
+        <div class="create-issue-form__row">
+          <app-field-row #priorityRow label="Prioridad" [required]="true">
+            <p-select
+              formControlName="priority"
+              appendTo="body"
+              [inputId]="priorityRow.controlId"
+              [ariaLabelledBy]="priorityRow.labelId"
+              [options]="priorityOptions"
+              optionLabel="label"
+              optionValue="value"
+              class="create-issue-form__control"
+            />
+          </app-field-row>
+
+          <app-field-row #assigneeRow label="Asignar a" [optional]="true">
+            <app-user-picker
+              ariaLabel="Asignar a"
+              placeholder="Sin asignar"
+              [users]="assigneeCandidates()"
+              [value]="form.controls.assigneeId.value"
+              (valueChange)="form.controls.assigneeId.setValue($event)"
+            />
+          </app-field-row>
+        </div>
+      </form>
+    }
+  }
+
+  @if (view() === 'done') {
+    <p-button dialogFooter label="Crear otra" severity="secondary" (onClick)="createAnother()" />
+  }
+  @if (view() === 'done') {
+    <p-button dialogFooter label="Ver incidencia" (onClick)="openCreated()" />
+  }
+  @if (view() === 'empty' && !canCreateProject()) {
+    <p-button dialogFooter label="Entendido" severity="secondary" (onClick)="requestClose()" />
+  }
+  @if (showCancel()) {
+    <p-button dialogFooter label="Cancelar" severity="secondary" (onClick)="requestClose()" />
+  }
+  @if (view() === 'failed') {
+    <p-button dialogFooter label="Reintentar" (onClick)="reloadProjects()" />
+  }
+  @if (view() === 'empty' && canCreateProject()) {
+    <p-button dialogFooter label="Crear un proyecto" (onClick)="goToProjects()" />
+  }
+  @if (view() === 'form') {
+    <p-button
+      dialogFooter
+      label="Crear incidencia"
+      icon="pi pi-plus"
+      [loading]="submitting()"
+      (onClick)="submit()"
+    />
+  }
+</app-dialog>
+
+<app-confirm-modal
+  [open]="discardOpen()"
+  [title]="unsavedTitle"
+  [description]="unsavedDescription"
+  [confirmText]="unsavedConfirm"
+  [cancelText]="unsavedCancel"
+  (confirmed)="discard()"
+  (cancelled)="discardOpen.set(false)"
+/>

@@ -10,8 +10,8 @@ describe('ToneTag', () => {
     fixture.componentRef.setInput('label', 'Alta');
     fixture.componentRef.setInput('tone', 'orange');
     fixture.detectChanges();
-    const tag = (fixture.nativeElement as HTMLElement).querySelector('.tag');
+    const tag = (fixture.nativeElement as HTMLElement).querySelector('.tone-tag');
     expect(tag?.textContent?.trim()).toBe('Alta');
-    expect(tag?.classList.contains('orange')).toBe(true);
+    expect(tag?.classList.contains('tone-tag--orange')).toBe(true);
   });
 });

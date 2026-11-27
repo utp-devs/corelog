@@ -3,52 +3,51 @@
   max-width: 100%;
 }
 
-.tag {
+/* Same palette and metrics as the lozenge: 24px high, 12px semibold, never wraps. */
+.tone-tag {
   display: inline-flex;
   align-items: center;
+  box-sizing: border-box;
   max-width: 100%;
-  padding: 2px 10px;
-  border: 1px solid transparent;
+  min-height: 24px;
+  padding: 0 var(--cl-space-2);
   border-radius: var(--cl-radius-sm);
   font-size: var(--cl-font-small);
-  font-weight: 600;
-  line-height: 20px;
-  white-space: normal;
-  overflow-wrap: anywhere;
-}
+  font-weight: var(--cl-weight-semibold);
+  line-height: var(--cl-lh-tight);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  word-break: keep-all;
 
-.neutral {
-  background: var(--cl-bg-sunken);
-  color: var(--cl-text-subtle);
-  border-color: var(--cl-border);
-}
+  &--neutral {
+    background: var(--cl-cat-todo-bg);
+    color: var(--cl-cat-todo-text);
+  }
 
-.blue {
-  background: var(--cl-brand-subtle);
-  color: var(--cl-brand);
-  border-color: var(--cl-brand);
-}
+  &--blue {
+    background: var(--cl-cat-progress-bg);
+    color: var(--cl-cat-progress-text);
+  }
 
-.gold {
-  background: var(--cl-warning-bg);
-  color: var(--cl-warning-text);
-  border-color: var(--cl-warning);
-}
+  &--gold,
+  &--orange {
+    background: var(--cl-warning-bg);
+    color: var(--cl-warning-text);
+  }
 
-.green {
-  background: var(--cl-success-bg);
-  color: var(--cl-success-text);
-  border-color: var(--cl-success);
-}
+  &--green {
+    background: var(--cl-success-bg);
+    color: var(--cl-success-text);
+  }
 
-.orange {
-  background: var(--cl-warning-bg);
-  color: var(--cl-warning-text);
-  border-color: var(--cl-warning);
-}
+  &--red {
+    background: var(--cl-danger-bg);
+    color: var(--cl-danger-text);
+  }
 
-.red {
-  background: var(--cl-danger-bg);
-  color: var(--cl-danger-text);
-  border-color: var(--cl-danger);
+  &--purple {
+    background: var(--cl-type-epic-bg);
+    color: var(--cl-type-epic-text);
+  }
 }

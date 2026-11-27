@@ -2,41 +2,59 @@
   display: block;
 }
 
-.container {
+/* Empty, error and forbidden states share one look: icon tile, title, helper text, primary action. */
+.empty-state {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: var(--cl-space-2);
+  box-sizing: border-box;
+  max-width: 28rem;
+  margin-inline: auto;
   padding: var(--cl-space-8) var(--cl-space-4);
   text-align: center;
-}
 
-.icon {
-  font-size: var(--cl-font-h1);
-  color: var(--cl-text-disabled);
+  &__icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--cl-space-12);
+    height: var(--cl-space-12);
+    margin-bottom: var(--cl-space-1);
+    border-radius: var(--cl-radius-full);
+    background: var(--cl-bg-sunken);
+    font-size: var(--cl-font-h3);
+    color: var(--cl-text-subtle);
 
-  // Nothing projected into the slot: keep the empty box out of the layout.
-  &:empty {
-    display: none;
+    /* Nothing projected into the slot: keep the empty tile out of the layout. */
+    &:empty {
+      display: none;
+    }
+
+    i {
+      font-size: inherit;
+    }
   }
-}
 
-.title {
-  margin: 0;
-  font-size: var(--cl-font-body-strong);
-  font-weight: 600;
-  color: var(--cl-text);
-}
+  &__title {
+    margin: 0;
+    font-size: var(--cl-font-body-strong);
+    font-weight: var(--cl-weight-semibold);
+    line-height: var(--cl-lh-tight);
+    color: var(--cl-text);
+  }
 
-.description {
-  margin: 0;
-  color: var(--cl-text-subtle);
-}
+  &__description {
+    margin: 0;
+    font-size: var(--cl-font-body);
+    color: var(--cl-text-subtle);
+  }
 
-.action {
-  margin-top: var(--cl-space-2);
+  &__action {
+    margin-top: var(--cl-space-2);
 
-  &:empty {
-    display: none;
+    &:empty {
+      display: none;
+    }
   }
 }

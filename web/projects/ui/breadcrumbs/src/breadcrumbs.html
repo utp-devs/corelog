@@ -1,14 +1,18 @@
 @if (items().length > 0) {
-  <nav class="nav" aria-label="Ruta de navegación">
-    <ol class="list">
+  <nav class="breadcrumbs" aria-label="Ruta de navegación">
+    <ol class="breadcrumbs__list">
       @for (item of items(); track $index; let last = $last) {
-        <li class="item" [class.middle]="isMiddle($index)">
+        <li class="breadcrumbs__item" [class.breadcrumbs__item--middle]="isMiddle($index)">
           @if (last) {
-            <span class="current" aria-current="page">{{ item.label }}</span>
+            <span class="breadcrumbs__current" aria-current="page" [attr.title]="item.label">{{
+              item.label
+            }}</span>
           } @else if (item.to !== undefined) {
-            <a class="link" [routerLink]="item.to">{{ item.label }}</a>
+            <a class="breadcrumbs__link" [routerLink]="item.to" [attr.title]="item.label">{{
+              item.label
+            }}</a>
           } @else {
-            <span class="plain">{{ item.label }}</span>
+            <span class="breadcrumbs__plain">{{ item.label }}</span>
           }
         </li>
       }

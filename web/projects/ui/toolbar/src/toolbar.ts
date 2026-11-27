@@ -57,6 +57,8 @@ export class ToolbarSecondary {}
 export class Toolbar {
   /** Sticks under the top bar (offset by the top bar height) while the page scrolls. */
   readonly sticky = input(false, { transform: booleanAttribute });
+  /** Accessible name of the toolbar. */
+  readonly label = input('Barra de acciones');
 
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly breakpoints = inject(BreakpointObserver);

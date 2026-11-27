@@ -1,14 +1,12 @@
-<div class="bar">
-  <div class="controls">
-    <div class="search">
+<div class="filter-bar">
+  <div class="filter-bar__controls">
+    <div class="filter-bar__search">
       <app-search-input [(value)]="searchValue" [placeholder]="searchPlaceholder()" />
     </div>
     @for (filter of filters(); track filter.key) {
-      <p-select
-        class="select"
+      <app-select-field
+        class="filter-bar__select"
         [options]="filter.options"
-        optionLabel="label"
-        optionValue="value"
         [placeholder]="filter.label"
         [ariaLabel]="filter.label"
         [showClear]="true"
@@ -17,12 +15,33 @@
       />
     }
     @if (hasActive()) {
-      <p-button [link]="true" label="Limpiar filtros" (onClick)="clear.emit()" />
+      <button type="button" class="filter-bar__clear" (click)="clear.emit()">
+        <i class="pi pi-filter-slash" aria-hidden="true"></i>
+        Limpiar filtros
+      </button>
     }
   </div>
   @if (actions(); as template) {
-    <div class="actions">
+    <div class="filter-bar__actions">
       <ng-container *ngTemplateOutlet="template" />
     </div>
   }
 </div>
+@if (chips().length > 0) {
+  <ul class="filter-bar__chips" aria-label="Filtros activos">
+    @for (chip of chips(); track chip.key) {
+      <li class="filter-bar__chip">
+        <span class="filter-bar__chip-text">{{ chip.text }}</span>
+        <button
+          type="button"
+          class="filter-bar__chip-remove"
+          [attr.aria-label]="'Quitar filtro ' + chip.text"
+          [attr.title]="'Quitar filtro ' + chip.text"
+          (click)="removeChip(chip)"
+        >
+          <i class="pi pi-times" aria-hidden="true"></i>
+        </button>
+      </li>
+    }
+  </ul>
+}

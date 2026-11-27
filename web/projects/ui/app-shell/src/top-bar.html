@@ -1,9 +1,10 @@
-<header class="bar">
+<header class="top-bar">
   @if (showMenuButton()) {
     <button
       type="button"
-      class="menu-button"
+      class="top-bar__menu-button"
       aria-label="Abrir menú de navegación"
+      [appTooltip]="isMobile() ? 'Menú' : ''"
       (click)="openMenu.emit()"
     >
       <app-shell-icon name="menu" />
@@ -14,18 +15,28 @@
   }
 
   @if (brand().external) {
-    <a class="brand" [href]="brand().homePath" [attr.aria-label]="brand().ariaLabel">
+    <a
+      class="top-bar__brand"
+      [class.top-bar__brand--on-dark]="isDark()"
+      [href]="brand().homePath"
+      [attr.aria-label]="brand().ariaLabel"
+    >
       <ng-container *ngTemplateOutlet="brandContent" />
     </a>
   } @else {
-    <a class="brand" [routerLink]="brand().homePath" [attr.aria-label]="brand().ariaLabel">
+    <a
+      class="top-bar__brand"
+      [class.top-bar__brand--on-dark]="isDark()"
+      [routerLink]="brand().homePath"
+      [attr.aria-label]="brand().ariaLabel"
+    >
       <ng-container *ngTemplateOutlet="brandContent" />
     </a>
   }
   <ng-template #brandContent>
     @if (isMobile()) {
       <img
-        class="brand-icon"
+        class="top-bar__brand-icon"
         [src]="brand().iconSrc"
         [attr.srcset]="brand().iconSrcset"
         sizes="32px"
@@ -35,7 +46,7 @@
       />
     } @else {
       <img
-        class="brand-banner"
+        class="top-bar__brand-banner"
         [src]="brand().bannerSrc"
         [attr.srcset]="brand().bannerSrcset"
         sizes="128px"
@@ -46,18 +57,9 @@
   </ng-template>
 
   @if (!collapsedNav()) {
-    <nav aria-label="Principal" class="nav">
+    <nav aria-label="Principal" class="top-bar__nav">
       @for (menu of menus(); track menu.key) {
-        <button
-          type="button"
-          class="nav-button"
-          aria-haspopup="menu"
-          (click)="dropdown.toggle($event)"
-        >
-          <span>{{ menu.label }}</span>
-          <app-shell-icon name="caret" class="caret" />
-        </button>
-        <p-menu #dropdown [model]="itemsOf(menu)" [popup]="true" appendTo="body" />
+        <app-nav-menu [menu]="menu" [currentPath]="currentPath()" />
       }
     </nav>
   }
@@ -68,41 +70,44 @@
     } @else if (isMobile()) {
       <button
         type="button"
-        class="create create-icon"
+        class="top-bar__create top-bar__create--icon"
         aria-label="Crear"
+        appTooltip="Crear"
         (click)="createOpen.set(true)"
       >
         <app-shell-icon name="plus" />
       </button>
     } @else {
-      <button type="button" class="create" (click)="createOpen.set(true)">
+      <button type="button" class="top-bar__create" (click)="createOpen.set(true)">
         <app-shell-icon name="plus" />
         <span>Crear</span>
       </button>
     }
   }
 
-  <div class="spacer"></div>
+  <div class="top-bar__spacer"></div>
 
   @if (!isMobile()) {
     @if (orgSwitcher(); as switcher) {
-      <div class="org">
+      <div class="top-bar__org">
         <ng-container *ngTemplateOutlet="switcher" />
       </div>
     } @else if (orgName(); as name) {
-      <div class="org">
-        <span class="org-name">{{ name }}</span>
+      <div class="top-bar__org">
+        <span class="top-bar__org-name">{{ name }}</span>
       </div>
     }
   }
 
   <app-global-search [compact]="iconSearch()" />
   <app-notifications-bell />
-  @if (!isMobile()) {
-    <app-notes-button />
-  }
-  <app-help-menu [docsUrl]="docsUrl()" (openShortcuts)="openShortcuts.emit()" />
-  <app-user-menu />
+  <app-help-menu
+    [docsUrl]="docsUrl()"
+    [whatsNewUrl]="whatsNewUrl()"
+    [supportUrl]="supportUrl()"
+    (openShortcuts)="openShortcuts.emit()"
+  />
+  <app-user-menu (openShortcuts)="openShortcuts.emit()" />
 
   <app-create-issue-dialog [(open)]="createOpen" />
 </header>

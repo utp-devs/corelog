@@ -1,43 +1,26 @@
-import {
-  ChangeDetectionStrategy,
-  Component,
-  computed,
-  input,
-  output,
-  viewChild,
-} from '@angular/core';
-import type { MenuItem } from 'primeng/api';
-import { Menu } from 'primeng/menu';
+import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
+import { AppTooltip } from '@corelog/ui/tooltip';
 
+import { DropdownMenu } from './dropdown-menu';
 import { ShellIcon } from './shell-icon';
 
-/** Help dropdown: keyboard shortcuts and, when a documentation address is configured, the documentation link. */
+/**
+ * Help dropdown: keyboard shortcuts plus the documentation, news and support links. A link is
+ * listed only when its address is configured.
+ */
 @Component({
   selector: 'app-help-menu',
-  imports: [Menu, ShellIcon],
+  imports: [AppTooltip, DropdownMenu, ShellIcon],
   templateUrl: './help-menu.html',
   styleUrl: './help-menu.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class HelpMenu {
-  /** Documentation address. The entry is hidden when it is not set. */
+  /** Documentation address. */
   readonly docsUrl = input<string | null>(null);
+  /** Release notes address. */
+  readonly whatsNewUrl = input<string | null>(null);
+  /** Support address (a page or a `mailto:` link). */
+  readonly supportUrl = input<string | null>(null);
   readonly openShortcuts = output<void>();
-
-  private readonly menu = viewChild.required<Menu>('menu');
-
-  protected readonly items = computed<MenuItem[]>(() => {
-    const docs = this.docsUrl();
-    const entries: MenuItem[] = [
-      { label: 'Atajos de teclado', command: () => this.openShortcuts.emit() },
-    ];
-    if (docs) {
-      entries.push({ label: 'Documentación', url: docs, target: '_blank' });
-    }
-    return entries;
-  });
-
-  protected toggle(event: Event): void {
-    this.menu().toggle(event);
-  }
 }

@@ -21,8 +21,8 @@ describe('StatTile', () => {
     const fixture = TestBed.createComponent(Host);
     fixture.detectChanges();
     const el = fixture.nativeElement as HTMLElement;
-    expect(el.querySelector('.label')?.textContent).toBe('Abiertas');
-    expect(el.querySelector('.value')?.textContent).toBe('12');
+    expect(el.querySelector('.stat-tile__label')?.textContent).toBe('Abiertas');
+    expect(el.querySelector('.stat-tile__value')?.textContent).toBe('12');
   });
 
   it('renders the hint only when provided', () => {
@@ -31,7 +31,7 @@ describe('StatTile', () => {
     fixture.componentInstance.hint.set('+1 esta semana');
     fixture.detectChanges();
     const el = fixture.nativeElement as HTMLElement;
-    expect(el.querySelector('.hint')?.textContent).toBe('+1 esta semana');
+    expect(el.querySelector('.stat-tile__hint')?.textContent).toBe('+1 esta semana');
 
     fixture.componentInstance.hint.set(undefined);
     fixture.detectChanges();

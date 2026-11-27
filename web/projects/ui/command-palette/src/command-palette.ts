@@ -24,7 +24,7 @@ import {
 } from '@corelog/core';
 
 import { CommandRegistry, type Command, type CommandGroup } from './command-registry';
-import { groupHits, matchesQuery, type HitGroup } from './groups';
+import { groupHits, highlightSegments, matchesQuery, type HitGroup } from './groups';
 
 /** Remote search for projects and issues. A rejection shows the error state. */
 export type PaletteSearch = (query: string) => Promise<SearchHit[]>;
@@ -35,6 +35,7 @@ export interface PaletteOption {
   readonly key: string;
   readonly section: PaletteSection;
   readonly title: string;
+  /** Issue or project key shown as a chip (the hit subtitle). */
   readonly subtitle?: string;
   /** Runs after the palette has closed. */
   readonly run: () => void;
@@ -97,6 +98,7 @@ export class CommandPalette {
 
   protected readonly listId = `command-palette-list-${nextPaletteId++}`;
   protected readonly sectionIcon = SECTION_ICON;
+  protected readonly minChars = SEARCH_MIN_CHARS;
 
   protected readonly query = signal('');
   protected readonly active = signal(0);
@@ -145,6 +147,8 @@ export class CommandPalette {
   });
 
   protected readonly hasOptions = computed(() => this.options().length > 0);
+  /** Typed text shown in the empty state. */
+  protected readonly typedTerm = this.term;
   protected readonly showEmpty = computed(
     () => this.searchable() && !this.loading() && !this.hasError() && this.options().length === 0,
   );
@@ -158,10 +162,16 @@ export class CommandPalette {
   protected readonly sections = computed(() => {
     const options = this.options();
     const safeActive = this.safeActive();
+    const term = this.term();
     return SECTION_ORDER.map((name) => ({
       name,
       items: options
-        .map((option, index) => ({ option, index, selected: index === safeActive }))
+        .map((option, index) => ({
+          option,
+          index,
+          selected: index === safeActive,
+          segments: highlightSegments(option.title, term),
+        }))
         .filter(({ option }) => option.section === name),
     })).filter((section) => section.items.length > 0);
   });

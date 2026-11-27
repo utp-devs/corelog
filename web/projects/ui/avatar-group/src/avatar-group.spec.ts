@@ -22,7 +22,9 @@ function create(value: AvatarUser[], max?: number): HTMLElement {
 }
 
 function avatarTexts(root: HTMLElement): string[] {
-  return Array.from(root.querySelectorAll('.avatar')).map((node) => node.textContent?.trim() ?? '');
+  return Array.from(root.querySelectorAll('.avatar, .avatar-group__more')).map(
+    (node) => node.textContent?.trim() ?? '',
+  );
 }
 
 describe('initialsOf', () => {

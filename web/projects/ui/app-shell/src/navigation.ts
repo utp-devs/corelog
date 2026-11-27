@@ -25,6 +25,8 @@ export interface NavItem {
   readonly path: string;
   readonly icon: ShellIconName;
   readonly permission?: Permission;
+  /** Active only on the exact path, for an entry whose path is the prefix of its siblings. */
+  readonly exact?: boolean;
   /** Another application of the origin: opened with a full-page navigation. */
   readonly external?: boolean;
 }
@@ -45,6 +47,8 @@ export interface NavMenu {
   readonly path: string;
   /** Another application of the origin: "Ver todos" opens it with a full-page navigation. */
   readonly external?: boolean;
+  /** Prefix of the router paths stored in recent items, for a menu that lives in another application. */
+  readonly linkBase?: string;
   readonly extras?: readonly NavLink[];
 }
 
@@ -122,7 +126,18 @@ export const DEFAULT_SHELL_NAV_CONFIG: ShellNavConfig = {
         permission: 'org.admin',
       },
     ],
-    profile: [{ key: 'profile', label: 'General', path: '/profile', icon: 'profile' }],
+    profile: [
+      { key: 'profile', label: 'General', path: '/profile', icon: 'profile', exact: true },
+      { key: 'security', label: 'Seguridad', path: '/profile/security', icon: 'security' },
+      {
+        key: 'notifications',
+        label: 'Notificaciones',
+        path: '/profile/notifications',
+        icon: 'bell',
+      },
+      { key: 'tokens', label: 'Tokens', path: '/profile/tokens', icon: 'tokens' },
+      { key: 'appearance', label: 'Apariencia', path: '/profile/appearance', icon: 'appearance' },
+    ],
   },
   sidebarTitles: {
     project: 'Proyecto',
@@ -174,7 +189,11 @@ export function sidebarTitleOf(
 }
 
 /** True when the pathname belongs to the item (exact or nested). */
-export function isSidebarItemActive(item: Pick<NavItem, 'path'>, pathname: string): boolean {
+export function isSidebarItemActive(
+  item: Pick<NavItem, 'path' | 'exact'>,
+  pathname: string,
+): boolean {
+  if (item.exact) return pathname === item.path;
   return pathname === item.path || pathname.startsWith(`${item.path}/`);
 }
 

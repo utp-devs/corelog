@@ -1,31 +1,62 @@
-import { ChangeDetectionStrategy, Component, inject, model } from '@angular/core';
-import { Router } from '@angular/router';
-import { PrimeTemplate } from 'primeng/api';
-import { Dialog } from 'primeng/dialog';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  Injectable,
+  effect,
+  inject,
+  model,
+  signal,
+  untracked,
+} from '@angular/core';
+
+import { CreateIssueForm } from './create-issue-form';
 
 /**
- * Placeholder for the quick create-issue dialog. It points to the full issue form until the quick
- * flow exists.
+ * Lets any part of the shell ask for the create-issue dialog (for example the 'c' shortcut) without
+ * knowing where the dialog is mounted. Each call to `open` opens it once.
+ */
+@Injectable({ providedIn: 'root' })
+export class CreateIssueLauncher {
+  private readonly count = signal(0);
+
+  /** Number of requests so far; the dialog opens whenever it grows. */
+  readonly requests = this.count.asReadonly();
+
+  open(): void {
+    this.count.update((value) => value + 1);
+  }
+}
+
+/**
+ * Quick create-issue dialog of the top bar. The form (and the stores it needs) exists only while the
+ * dialog is open.
  */
 @Component({
   selector: 'app-create-issue-dialog',
-  imports: [Dialog, PrimeTemplate],
+  imports: [CreateIssueForm],
   templateUrl: './create-issue-dialog.html',
-  styleUrl: './create-issue-dialog.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class CreateIssueDialog {
-  private readonly router = inject(Router);
+  private readonly launcher = inject(CreateIssueLauncher);
+  private seen = this.launcher.requests();
 
   /** Whether the dialog is shown. The dialog sets it to false when it closes itself. */
   readonly open = model(false);
 
-  protected close(): void {
-    this.open.set(false);
+  constructor() {
+    effect(() => {
+      const requests = this.launcher.requests();
+      untracked(() => {
+        if (requests !== this.seen) {
+          this.seen = requests;
+          this.open.set(true);
+        }
+      });
+    });
   }
 
-  protected goToForm(): void {
-    this.close();
-    void this.router.navigateByUrl('/issues/new');
+  protected close(): void {
+    this.open.set(false);
   }
 }

@@ -124,6 +124,31 @@ afterEach(() => {
   window.localStorage.clear();
 });
 
+describe('RichTextEditor toolbar groups', () => {
+  it('groups the tools and names every icon-only button', () => {
+    const { el } = setup({ initial: '' });
+    const groups = Array.from(el.querySelectorAll('[role="group"]')).map((g) =>
+      g.getAttribute('aria-label'),
+    );
+    expect(groups).toEqual(['Encabezados', 'Texto', 'Listas', 'Bloques', 'Insertar']);
+    const tools = Array.from(el.querySelectorAll<HTMLButtonElement>('.rich-text-editor__tool'));
+    expect(tools.length).toBeGreaterThan(10);
+    expect(tools.every((tool) => !!tool.getAttribute('aria-label'))).toBe(true);
+  });
+
+  it('offers the image button only when uploads are enabled', () => {
+    const without = setup({ initial: '' });
+    expect(without.el.querySelector('button[aria-label="Subir imagen"]')).toBeNull();
+  });
+
+  it('shows the submit hint only when submittable', () => {
+    const plain = setup({ initial: '' });
+    expect(plain.el.querySelector('.rich-text-editor__hint')).toBeNull();
+    const submittable = setup({ initial: '', submittable: true });
+    expect(submittable.el.querySelector('.rich-text-editor__hint')?.textContent).toContain('Enter');
+  });
+});
+
 describe('RichTextEditor toolbar', () => {
   it('wraps the selection with bold markers', () => {
     const { fixture, el } = setup({ initial: 'hola mundo' });

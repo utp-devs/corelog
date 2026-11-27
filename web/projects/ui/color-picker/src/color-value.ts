@@ -40,3 +40,24 @@ export function nextPaletteIndex(key: string, current: number): number | null {
       return null;
   }
 }
+
+/** Spanish names of the palette colors, in palette order. They are the accessible names of the swatches. */
+export const PALETTE_NAMES: readonly string[] = [
+  'Rojo',
+  'Naranja',
+  'Amarillo',
+  'Verde lima',
+  'Menta',
+  'Celeste',
+  'Azul',
+  'Violeta',
+  'Lavanda',
+  'Rosa',
+  'Gris',
+  'Gris azulado',
+];
+
+/** Name of palette color 1..12. */
+export function paletteName(index: number): string {
+  return PALETTE_NAMES[index - 1] ?? `Color ${index}`;
+}

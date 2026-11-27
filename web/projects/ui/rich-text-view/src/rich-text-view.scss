@@ -1,93 +1,170 @@
-// Markup is inserted as DOM nodes by the component, so these rules are global
-// and scoped under the host class instead of component-emulated attributes.
+@use '../../styles/mixins' as m;
+@use '../../field-row/src/control' as c;
+
+// The Markdown is inserted as DOM nodes by the component (no Angular attributes on them), and the component
+// uses ViewEncapsulation.None, so the rules for the generated elements live under the host class.
+// Block spacing: one rhythm unit between blocks, a larger one before headings.
+
+$mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 
 .rich-text-view {
   display: block;
   min-width: 0;
   overflow-wrap: anywhere;
+  font-family: inherit;
   font-size: var(--cl-font-body);
-  line-height: 1.5;
+  line-height: var(--cl-lh-body);
   color: var(--cl-text);
 
-  p,
-  ul,
-  ol,
-  blockquote,
-  pre,
-  table {
-    margin: 0 0 var(--cl-space-2);
-  }
+  &__body {
+    min-width: 0;
 
-  h1,
-  h2,
-  h3,
-  h4,
-  h5,
-  h6 {
-    margin: var(--cl-space-3) 0 var(--cl-space-2);
-    font-size: var(--cl-font-body-strong);
-    font-weight: 600;
-  }
+    > :first-child {
+      margin-top: 0;
+    }
 
-  ul,
-  ol {
-    padding-left: var(--cl-space-6);
-  }
+    > :last-child {
+      margin-bottom: 0;
+    }
 
-  blockquote {
-    padding-left: var(--cl-space-3);
-    border-left: 3px solid var(--cl-border-strong);
-    color: var(--cl-text-subtle);
-  }
+    p,
+    ul,
+    ol,
+    blockquote,
+    pre,
+    table,
+    hr {
+      margin: 0 0 var(--cl-space-3);
+    }
 
-  // GFM task lists: the checkbox replaces the bullet.
-  li:has(> input[type='checkbox']) {
-    list-style: none;
-    margin-left: calc(var(--cl-space-4) * -1);
-  }
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6 {
+      margin: var(--cl-space-5) 0 var(--cl-space-2);
+      font-weight: var(--cl-weight-semibold);
+      line-height: var(--cl-lh-tight);
+      color: var(--cl-text);
+    }
 
-  code {
-    padding: 0 var(--cl-space-1);
-    border-radius: var(--cl-radius-sm);
-    background: var(--cl-bg-sunken);
-    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-    font-size: var(--cl-font-small);
-  }
+    h1 {
+      font-size: var(--cl-font-h3);
+    }
 
-  pre {
-    overflow-x: auto;
-    padding: var(--cl-space-3);
-    border-radius: var(--cl-radius-md);
-    background: var(--cl-bg-sunken);
+    h2 {
+      font-size: var(--cl-font-body-strong);
+    }
+
+    h3,
+    h4,
+    h5,
+    h6 {
+      font-size: var(--cl-font-body);
+    }
+
+    h5,
+    h6 {
+      color: var(--cl-text-subtle);
+    }
+
+    ul,
+    ol {
+      padding-left: var(--cl-space-6);
+    }
+
+    li + li {
+      margin-top: var(--cl-space-1);
+    }
+
+    li > ul,
+    li > ol {
+      margin: var(--cl-space-1) 0 0;
+    }
+
+    hr {
+      border: 0;
+      border-top: 1px solid var(--cl-divider);
+    }
+
+    blockquote {
+      padding: var(--cl-space-1) var(--cl-space-4);
+      border-left: var(--cl-space-1) solid var(--cl-border);
+      color: var(--cl-text-subtle);
+
+      > :last-child {
+        margin-bottom: 0;
+      }
+    }
+
+    // GFM task lists: the checkbox replaces the bullet.
+    li:has(> input[type='checkbox']) {
+      margin-left: calc(var(--cl-space-6) * -1);
+      list-style: none;
+
+      > input[type='checkbox'] {
+        margin: 0 var(--cl-space-2) 0 0;
+        vertical-align: middle;
+        accent-color: var(--cl-brand);
+      }
+    }
 
     code {
-      padding: 0;
-      background: none;
+      padding: 0 var(--cl-space-1);
+      border-radius: var(--cl-radius-sm);
+      background: var(--cl-bg-sunken);
+      font-family: $mono;
+      font-size: 0.9em;
     }
-  }
 
-  table {
-    display: block;
-    max-width: 100%;
-    overflow-x: auto;
-    border-collapse: collapse;
-  }
+    pre {
+      overflow-x: auto;
+      padding: var(--cl-space-3) var(--cl-space-4);
+      border: 1px solid var(--cl-divider);
+      border-radius: var(--cl-radius-md);
+      background: var(--cl-bg-sunken);
+      line-height: var(--cl-lh-body);
 
-  th,
-  td {
-    padding: var(--cl-space-1) var(--cl-space-2);
-    border: 1px solid var(--cl-border);
-    text-align: left;
-  }
+      code {
+        padding: 0;
+        background: none;
+        font-size: var(--cl-font-small);
+      }
+    }
 
-  th {
-    background: var(--cl-bg-sunken);
-    font-weight: 600;
+    table {
+      display: block;
+      max-width: 100%;
+      overflow-x: auto;
+      border-collapse: collapse;
+    }
+
+    th,
+    td {
+      padding: var(--cl-space-2) var(--cl-space-3);
+      border: 1px solid var(--cl-divider);
+      text-align: left;
+    }
+
+    th {
+      background: var(--cl-bg-sunken);
+      font-weight: var(--cl-weight-semibold);
+    }
+
+    tbody tr:nth-child(even) td {
+      background: var(--cl-bg-page);
+    }
   }
 
   .cl-rt-link {
     color: var(--cl-brand);
     text-decoration: underline;
+    text-underline-offset: 0.15em;
+
+    &:hover {
+      color: var(--cl-brand-hover);
+    }
   }
 
   .cl-rt-unsafe-link {
@@ -99,15 +176,18 @@
   .cl-rt-mention--button:focus-visible,
   .cl-rt-image-button:focus-visible,
   .cl-rt-issue:focus-visible {
-    outline: none;
+    @include c.focus-ring;
     border-radius: var(--cl-radius-sm);
-    box-shadow: var(--cl-shadow-focus);
   }
 
   .cl-rt-issue {
     color: var(--cl-brand);
-    font-weight: 600;
+    font-weight: var(--cl-weight-semibold);
     text-decoration: none;
+
+    &:hover {
+      text-decoration: underline;
+    }
   }
 
   .cl-rt-issue--resolved {
@@ -125,25 +205,30 @@
     border: none;
     border-radius: var(--cl-radius-full);
     background: var(--cl-brand-subtle);
-    color: var(--cl-brand-pressed);
+    color: var(--cl-cat-progress-text);
     font: inherit;
   }
 
   .cl-rt-mention--button {
     cursor: pointer;
+
+    @include m.respond-down(768px) {
+      min-height: var(--cl-control-h-md);
+      padding: 0 var(--cl-space-3);
+    }
   }
 
   .cl-rt-avatar {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 20px;
-    height: 20px;
+    width: var(--cl-space-5);
+    height: var(--cl-space-5);
     border-radius: var(--cl-radius-full);
-    background: var(--cl-brand);
+    background: var(--cl-avatar-1);
     color: var(--cl-avatar-1-text);
     font-size: var(--cl-font-caption);
-    font-weight: 600;
+    font-weight: var(--cl-weight-semibold);
   }
 
   .cl-rt-image-button {
@@ -156,73 +241,48 @@
   .cl-rt-image {
     display: block;
     max-width: 100%;
-    max-height: 320px;
+    max-height: calc(var(--cl-space-16) * 5);
+    border: 1px solid var(--cl-divider);
     border-radius: var(--cl-radius-md);
   }
-}
 
-@media (max-width: 767.98px) {
-  .rich-text-view .cl-rt-mention--button {
-    min-height: 44px;
-    padding: 0 var(--cl-space-3);
-  }
-}
-
-.rich-text-lightbox-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: var(--cl-z-modal);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: var(--cl-space-4);
-  background: var(--cl-overlay);
-}
-
-.rich-text-lightbox {
-  display: flex;
-  flex-direction: column;
-  gap: var(--cl-space-3);
-  width: min(960px, 100%);
-  max-height: 90vh;
-  padding: var(--cl-space-4);
-  overflow: auto;
-  border-radius: var(--cl-radius-lg);
-  background: var(--cl-bg-surface);
-  box-shadow: var(--cl-shadow-3);
-
-  &__header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: var(--cl-space-2);
+  &__backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: var(--cl-z-modal);
+    @include m.flex-row(0, center, center);
+    padding: var(--cl-space-4);
+    background: var(--cl-overlay);
   }
 
-  &__title {
+  &__lightbox {
+    @include m.flex-column(3);
+    width: min(60rem, 100%);
+    max-height: 90vh;
+    padding: var(--cl-space-4);
+    overflow: auto;
+    border-radius: var(--cl-radius-lg);
+    background: var(--cl-bg-elevated);
+    box-shadow: var(--cl-elev-modal);
+  }
+
+  &__lightbox-header {
+    @include m.flex-row(2, center, space-between);
+  }
+
+  &__lightbox-title {
+    @include m.truncate;
     font-size: var(--cl-font-body-strong);
-    font-weight: 600;
+    font-weight: var(--cl-weight-semibold);
     color: var(--cl-text);
   }
 
-  &__close {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 44px;
-    min-height: 44px;
-    border: none;
-    border-radius: var(--cl-radius-md);
-    background: transparent;
+  &__lightbox-close {
+    @include c.icon-button(var(--cl-control-h-md));
     color: var(--cl-text);
-    cursor: pointer;
-
-    &:focus-visible {
-      outline: none;
-      box-shadow: var(--cl-shadow-focus);
-    }
   }
 
-  &__image {
+  &__lightbox-image {
     display: block;
     max-width: 100%;
     margin: 0 auto;

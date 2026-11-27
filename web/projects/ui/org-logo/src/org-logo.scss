@@ -1,88 +1,53 @@
+@use '../../styles/mixins' as m;
+
 :host {
   display: inline-flex;
   flex: none;
 }
 
-.tile {
-  display: inline-flex;
-  flex: none;
-  align-items: center;
-  justify-content: center;
-  border-radius: var(--cl-radius-md);
-  font-weight: 600;
-  line-height: 1;
-  user-select: none;
-}
+/* Sizes: sm is 24 px and md is 32 px. */
+.org-logo {
+  &__tile {
+    @include m.flex-row(0, center, center);
+    flex: none;
+    border-radius: var(--cl-radius-md);
+    font-weight: var(--cl-weight-semibold);
+    line-height: 1;
+    user-select: none;
 
-.image {
-  flex: none;
-  border-radius: var(--cl-radius-md);
-  object-fit: cover;
-}
+    &--sm {
+      width: var(--cl-space-6);
+      height: var(--cl-space-6);
+      font-size: var(--cl-font-caption);
+    }
 
-.size-24 {
-  width: 24px;
-  height: 24px;
-}
+    &--md {
+      width: var(--cl-space-8);
+      height: var(--cl-space-8);
+      font-size: var(--cl-font-small);
+    }
 
-.size-32 {
-  width: 32px;
-  height: 32px;
-}
+    @for $index from 1 through 12 {
+      &[data-palette='#{$index}'] {
+        background: var(--cl-palette-#{$index}-bg);
+        color: var(--cl-palette-#{$index}-text);
+      }
+    }
+  }
 
-.tile.size-24 {
-  font-size: var(--cl-font-caption);
-}
+  &__image {
+    flex: none;
+    border-radius: var(--cl-radius-md);
+    object-fit: cover;
 
-.tile.size-32 {
-  font-size: var(--cl-font-small);
-}
+    &--sm {
+      width: var(--cl-space-6);
+      height: var(--cl-space-6);
+    }
 
-.tile[data-palette='1'] {
-  background: var(--cl-palette-1-bg);
-  color: var(--cl-palette-1-text);
-}
-.tile[data-palette='2'] {
-  background: var(--cl-palette-2-bg);
-  color: var(--cl-palette-2-text);
-}
-.tile[data-palette='3'] {
-  background: var(--cl-palette-3-bg);
-  color: var(--cl-palette-3-text);
-}
-.tile[data-palette='4'] {
-  background: var(--cl-palette-4-bg);
-  color: var(--cl-palette-4-text);
-}
-.tile[data-palette='5'] {
-  background: var(--cl-palette-5-bg);
-  color: var(--cl-palette-5-text);
-}
-.tile[data-palette='6'] {
-  background: var(--cl-palette-6-bg);
-  color: var(--cl-palette-6-text);
-}
-.tile[data-palette='7'] {
-  background: var(--cl-palette-7-bg);
-  color: var(--cl-palette-7-text);
-}
-.tile[data-palette='8'] {
-  background: var(--cl-palette-8-bg);
-  color: var(--cl-palette-8-text);
-}
-.tile[data-palette='9'] {
-  background: var(--cl-palette-9-bg);
-  color: var(--cl-palette-9-text);
-}
-.tile[data-palette='10'] {
-  background: var(--cl-palette-10-bg);
-  color: var(--cl-palette-10-text);
-}
-.tile[data-palette='11'] {
-  background: var(--cl-palette-11-bg);
-  color: var(--cl-palette-11-text);
-}
-.tile[data-palette='12'] {
-  background: var(--cl-palette-12-bg);
-  color: var(--cl-palette-12-text);
+    &--md {
+      width: var(--cl-space-8);
+      height: var(--cl-space-8);
+    }
+  }
 }

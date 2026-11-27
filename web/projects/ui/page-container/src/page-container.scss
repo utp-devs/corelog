@@ -2,74 +2,79 @@
   display: contents;
 }
 
-.root {
+/* One page gutter, one vertical rhythm (24px) and the same max widths on every page. */
+.page-container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cl-space-6);
   box-sizing: border-box;
   width: 100%;
   margin-inline: auto;
   padding: var(--cl-gutter) var(--cl-gutter) var(--cl-space-10);
-  display: flex;
-  flex-direction: column;
-  gap: var(--cl-space-6);
-}
 
-.reading {
-  max-width: var(--cl-content-max);
-}
+  &--reading {
+    max-width: var(--cl-content-max);
+  }
 
-.wide {
-  max-width: var(--cl-content-wide);
-}
+  &--wide {
+    max-width: var(--cl-content-wide);
+  }
 
-.fluid {
-  max-width: none;
-  padding-inline: 0;
-}
+  &--fluid {
+    max-width: none;
+    padding-inline: 0;
+  }
 
-.content {
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: var(--cl-space-4);
-}
+  &__content {
+    display: flex;
+    flex-direction: column;
+    gap: var(--cl-space-6);
+    min-width: 0;
+  }
 
-/* fill: the content column stretches to the viewport height below the top bar. */
-.root[data-fill='true'] .content {
-  flex: 1 1 auto;
-  min-height: calc(100dvh - var(--cl-topbar-h) - 2 * var(--cl-gutter));
-}
+  /* fill: the content column stretches to the viewport height below the top bar. */
+  &[data-fill='true'] &__content {
+    flex: 1 1 auto;
+    min-height: calc(100dvh - var(--cl-topbar-h) - 2 * var(--cl-gutter));
+  }
 
-.root[data-fill='true'][data-has-sidebar='true'] {
-  align-items: stretch;
-}
+  &[data-fill='true'][data-has-sidebar='true'] {
+    align-items: stretch;
+  }
 
-.sidebar {
-  box-sizing: border-box;
-  width: 320px;
-  max-width: 100%;
-  min-width: 0;
-}
+  &__sidebar {
+    box-sizing: border-box;
+    width: var(--cl-popover-w);
+    max-width: 100%;
+    min-width: 0;
+  }
 
-/* Side panel beside the content from 992 px; stacked below it (data-stacked is set by the component). */
-.root[data-has-sidebar='true'] {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 320px;
-  align-items: start;
-  gap: var(--cl-space-6);
-}
+  /* Side panel beside the content from 992 px; stacked below it (data-stacked is set by the component). */
+  &[data-has-sidebar='true'] {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) var(--cl-popover-w);
+    align-items: start;
+    gap: var(--cl-space-6);
+  }
 
-.root[data-has-sidebar='true'] .sidebar {
-  position: sticky;
-  top: calc(var(--cl-topbar-h) + var(--cl-space-4));
-}
+  &[data-has-sidebar='true'] &__sidebar {
+    position: sticky;
+    top: calc(var(--cl-topbar-h) + var(--cl-space-4));
+  }
 
-.root[data-stacked='true'] {
-  display: flex;
-  flex-direction: column;
-  /* Stacked: the content takes the full width (the grid rule above aligns to start). */
-  align-items: stretch;
-}
+  /* Stacked: the content takes the full width. */
+  &[data-stacked='true'] {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+  }
 
-.root[data-stacked='true'] .sidebar {
-  position: static;
-  width: 100%;
+  &[data-stacked='true'] &__sidebar {
+    position: static;
+    width: 100%;
+  }
+
+  @media (max-width: 767.98px) {
+    padding: var(--cl-space-4) var(--cl-space-4) var(--cl-space-8);
+  }
 }

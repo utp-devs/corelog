@@ -299,4 +299,27 @@ describe('CommandPalette', () => {
     expect(document.activeElement).toBe(input);
     outside.remove();
   });
+
+  it('highlights the typed words and shows the key of a result as a chip', async () => {
+    vi.useFakeTimers();
+    const { fixture, el, input } = setup();
+    type(fixture, input, 'export');
+    await settle(fixture, PALETTE_DEBOUNCE_MS);
+
+    const marks = Array.from(el.querySelectorAll('.command-palette__mark')).map(
+      (mark) => mark.textContent,
+    );
+    expect(marks).toContain('Export');
+    expect(
+      findOption(el, /Exportar datos/).querySelector('.command-palette__option-key')?.textContent,
+    ).toContain('CORE-12');
+  });
+
+  it('lists the keyboard hints in a footer', () => {
+    const { el } = setup();
+    const footer = el.querySelector('.command-palette__footer');
+    expect(footer?.textContent).toContain('Navegar');
+    expect(footer?.textContent).toContain('Abrir');
+    expect(footer?.textContent).toContain('Cerrar');
+  });
 });

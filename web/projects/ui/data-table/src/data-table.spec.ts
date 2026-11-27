@@ -3,7 +3,13 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import type { BulkAction } from '@corelog/ui/bulk-bar';
 
-import { DataTable, DataTableColumn, DataTablePagination, RowMenuItem } from './data-table';
+import {
+  CARD_LAYOUT_QUERY,
+  DataTable,
+  DataTableColumn,
+  DataTablePagination,
+  RowMenuItem,
+} from './data-table';
 
 type Row = { id: string; title: string; createdAt: string };
 
@@ -32,6 +38,7 @@ const columns: DataTableColumn[] = [
       rowKey="id"
       [loading]="loading()"
       [error]="error()"
+      [pageSizes]="pageSizes()"
       [pagination]="pagination()"
       [selectable]="selectable()"
       [(selectedKeys)]="selected"
@@ -54,6 +61,7 @@ class DataTableHost {
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
   readonly pagination = signal<DataTablePagination | null>(null);
+  readonly pageSizes = signal<number[]>([20, 50, 100]);
   readonly selectable = signal(false);
   readonly selected = signal<string[]>([]);
   readonly bulkActions = signal<BulkAction[]>([]);
@@ -207,7 +215,7 @@ describe('DataTable', () => {
     host.pagination.set({ page: 1, pageSize: 20, total: 100 });
     fixture.detectChanges();
 
-    expect(el.textContent).toContain('100 elementos');
+    expect(el.textContent).toContain('1 a 20 de 100 elementos');
     (byAria(el, 'Página siguiente') as HTMLButtonElement).click();
     expect(host.onPage).toHaveBeenLastCalledWith({ page: 2, pageSize: 20 });
   });
@@ -269,9 +277,9 @@ describe('DataTable', () => {
     expect(window.localStorage.getItem('corelog.table.test-table.columns')).toBe('["createdAt"]');
   });
 
-  it('renders cards instead of the table below 768 px when mobileRender is set', () => {
+  it('renders cards instead of the table below 900 px when mobileRender is set', () => {
     window.matchMedia = vi.fn((query: string) => ({
-      matches: query === '(max-width: 767px)',
+      matches: query === CARD_LAYOUT_QUERY,
       media: query,
       onchange: null,
       addEventListener: () => {},
@@ -287,6 +295,92 @@ describe('DataTable', () => {
 
     expect(el.querySelector('table')).toBeNull();
     expect(el.textContent).toContain('Tarjeta Fila 2');
+  });
+
+  it('lists every column in the chooser and locks the ones that cannot be hidden', async () => {
+    const { el } = setup();
+    (
+      Array.from(el.querySelectorAll('button')).find((b) =>
+        b.textContent?.includes('Columnas'),
+      ) as HTMLButtonElement
+    ).click();
+    await wait(0);
+    const boxes = Array.from(
+      document.querySelectorAll<HTMLInputElement>(
+        '[role="group"][aria-label="Columnas visibles"] input',
+      ),
+    );
+    expect(boxes.map((box) => box.closest('label')?.textContent?.trim())).toEqual([
+      'Título',
+      'Creado',
+    ]);
+    expect(boxes[0].disabled).toBe(true);
+    expect(boxes[1].disabled).toBe(false);
+  });
+
+  it('switches to a card list with the visible columns when no card template is set', () => {
+    window.matchMedia = vi.fn((query: string) => ({
+      matches: query === CARD_LAYOUT_QUERY,
+      media: query,
+      onchange: null,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+      addListener: () => {},
+      removeListener: () => {},
+      dispatchEvent: () => false,
+    })) as unknown as typeof window.matchMedia;
+    const { el } = setup();
+    expect(el.querySelector('table')).toBeNull();
+    expect(el.querySelectorAll('.data-table__card')).toHaveLength(3);
+    expect(el.textContent).toContain('Fila 2');
+  });
+
+  it('keeps a single tab stop in the table body and marks selected rows', () => {
+    const { fixture, host, el } = setup();
+    host.rowOpenable.set(true);
+    host.selectable.set(true);
+    host.selected.set(['2']);
+    fixture.detectChanges();
+    const bodyRows = Array.from(el.querySelectorAll<HTMLElement>('tbody tr.data-table__row'));
+    expect(bodyRows.filter((row) => row.getAttribute('tabindex') === '0')).toHaveLength(1);
+    expect(bodyRows.filter((row) => row.getAttribute('tabindex') === '-1')).toHaveLength(2);
+    expect(bodyRows[1].getAttribute('aria-selected')).toBe('true');
+    expect(bodyRows[1].classList).toContain('data-table__row--selected');
+
+    bodyRows[2].focus();
+    fixture.detectChanges();
+    expect(bodyRows[2].getAttribute('tabindex')).toBe('0');
+    expect(bodyRows[0].getAttribute('tabindex')).toBe('-1');
+  });
+
+  it('shows the primary row action as a visible button and the rest in the menu', () => {
+    const onOpen = vi.fn();
+    const { fixture, host, el } = setup();
+    host.rowActions.set(() => [
+      { key: 'open', label: 'Abrir', primary: true, onClick: onOpen },
+      { key: 'delete', label: 'Eliminar', danger: true, onClick: vi.fn() },
+    ]);
+    fixture.detectChanges();
+    const primary = el.querySelectorAll<HTMLButtonElement>('.data-table__primary-action');
+    expect(primary).toHaveLength(3);
+    primary[0].click();
+    expect(onOpen).toHaveBeenCalledTimes(1);
+    expect(el.querySelectorAll('button[aria-label="Acciones de la fila"]')).toHaveLength(3);
+  });
+
+  it('offers the page sizes given by the caller', async () => {
+    const { fixture, host, el } = setup();
+    host.pageSizes.set([25, 50]);
+    host.pagination.set({ page: 1, pageSize: 25, total: 60 });
+    fixture.detectChanges();
+    const select = el.querySelector('p-select') as HTMLElement;
+    select.click();
+    fixture.detectChanges();
+    await wait(0);
+    const labels = Array.from(document.querySelectorAll<HTMLElement>('[role="option"]')).map((o) =>
+      o.textContent?.trim(),
+    );
+    expect(labels).toEqual(['25 / página', '50 / página']);
   });
 
   it('moves focus with arrow keys and opens a row with Enter', () => {
@@ -344,7 +438,7 @@ describe('DataTable', () => {
     host.rowActions.set(() => []);
     fixture.detectChanges();
     expect(el.querySelector('button[aria-label="Acciones de la fila"]')).toBeNull();
-    expect(el.querySelector('th.col-actions')).toBeNull();
+    expect(el.querySelector('th.data-table__col-actions')).toBeNull();
   });
 
   it('waits for the loading delay before the skeleton is removed when data arrives', async () => {
@@ -365,14 +459,14 @@ describe('DataTable', () => {
 
   it('is not filled by default and fills its card with fill', () => {
     const { fixture, host, el } = setup();
-    expect(el.querySelector('.root')?.getAttribute('data-fill')).toBe('false');
+    expect(el.querySelector('.data-table')?.getAttribute('data-fill')).toBe('false');
 
     host.fill.set(true);
     host.data.set([]);
     fixture.detectChanges();
-    expect(el.querySelector('.root')?.getAttribute('data-fill')).toBe('true');
-    expect(el.querySelector('.root')?.classList).toContain('fill');
-    expect(el.querySelector('.area')).not.toBeNull();
+    expect(el.querySelector('.data-table')?.getAttribute('data-fill')).toBe('true');
+    expect(el.querySelector('.data-table')?.classList).toContain('data-table--fill');
+    expect(el.querySelector('.data-table__area')).not.toBeNull();
   });
 
   it('keeps the empty state at the top of a filled table', () => {
@@ -380,17 +474,20 @@ describe('DataTable', () => {
     host.fill.set(true);
     host.data.set([]);
     fixture.detectChanges();
-    expect(el.querySelector('.area .empty')).not.toBeNull();
+    expect(el.querySelector('.data-table__area .data-table__empty')).not.toBeNull();
     expect(el.textContent).toContain('Sin resultados');
   });
 
-  it('gives truncated string cells a title with the full value', () => {
+  it('shows the full value of a truncated cell in a tooltip', async () => {
     const { fixture, host, el } = setup();
     const long = 'Un título muy largo que no cabe en la celda';
     host.columns.set([{ key: 'title', title: 'Título', field: 'title', ellipsis: true }]);
     host.data.set([{ id: '9', title: long, createdAt: '2026-11-09' }]);
     fixture.detectChanges();
-    expect(rowFor(el, long).querySelector('td')?.getAttribute('title')).toBe(long);
+    rowFor(el, long).querySelector('td')?.dispatchEvent(new Event('mouseenter'));
+    await vi.waitFor(() => {
+      expect(document.querySelector('[role="tooltip"]')?.textContent).toContain(long);
+    });
   });
 
   it('sorts the visible rows when a sortable column header is activated', () => {

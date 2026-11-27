@@ -20,7 +20,7 @@ function routerLinkOf(): RouterLink | null {
 
 function create(inputs: {
   issueKey: string;
-  href: string;
+  href?: string;
   summary?: string;
   type?: 'bug';
   resolved?: boolean;
@@ -32,7 +32,9 @@ function create(inputs: {
   const fixture = TestBed.createComponent(IssueKey);
   lastFixture = fixture;
   fixture.componentRef.setInput('issueKey', inputs.issueKey);
-  fixture.componentRef.setInput('href', inputs.href);
+  if (inputs.href !== undefined) {
+    fixture.componentRef.setInput('href', inputs.href);
+  }
   if (inputs.summary !== undefined) {
     fixture.componentRef.setInput('summary', inputs.summary);
   }
@@ -78,10 +80,46 @@ describe('IssueKey', () => {
     expect(routerLinkOf()).toBeNull();
   });
 
-  it('marks resolved issues with a struck-through key', () => {
+  it('mutes resolved issues without striking the key through', () => {
     const el = create({ issueKey: 'CL-7', href: '/x', resolved: true, testId: 'key' });
     expect(el.querySelector('[data-testid="key"]')?.getAttribute('data-resolved')).toBe('true');
     expect(el.querySelector('a')?.className).toMatch(/resolved/);
+  });
+
+  it('renders plain text, not a link, when no href is given', () => {
+    const el = create({ issueKey: 'INC-1234567890' });
+    expect(el.querySelector('a')).toBeNull();
+    expect(el.querySelector('.issue-key__text')?.textContent?.trim()).toBe('INC-1234567890');
+  });
+
+  it('shows the short form but copies the full key', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
+    TestBed.configureTestingModule({
+      providers: [provideRouter([]), { provide: NotificationService, useValue: notifications }],
+    });
+    const f = TestBed.createComponent(IssueKey);
+    f.componentRef.setInput('issueKey', 'INC-1234567890');
+    f.componentRef.setInput('displayKey', 'INC-123456');
+    f.detectChanges();
+    const el = f.nativeElement as HTMLElement;
+    expect(el.querySelector('.issue-key__text')?.textContent?.trim()).toBe('INC-123456');
+    el.querySelector<HTMLButtonElement>('button[aria-label="Copiar clave"]')?.click();
+    await vi.waitFor(() => expect(writeText).toHaveBeenCalledWith('INC-1234567890'));
+  });
+
+  it('removes the copy button and the link from the tab order when not focusable', () => {
+    TestBed.configureTestingModule({
+      providers: [provideRouter([]), { provide: NotificationService, useValue: notifications }],
+    });
+    const f = TestBed.createComponent(IssueKey);
+    f.componentRef.setInput('issueKey', 'CL-1');
+    f.componentRef.setInput('href', '/x');
+    f.componentRef.setInput('focusable', false);
+    f.detectChanges();
+    const el = f.nativeElement as HTMLElement;
+    expect(el.querySelector('a')?.getAttribute('tabindex')).toBe('-1');
+    expect(el.querySelector('button')?.getAttribute('tabindex')).toBe('-1');
   });
 
   it('copies the key with the copy button', async () => {

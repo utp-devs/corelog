@@ -3,53 +3,54 @@
   max-width: 100%;
 }
 
+/* One semantic palette: neutral, info, success, warning, danger and discovery. */
 .lozenge {
   display: inline-flex;
   align-items: center;
+  box-sizing: border-box;
   max-width: 100%;
-  min-height: 20px;
-  padding: 2px var(--cl-space-2);
+  min-height: 24px;
+  padding: 0 var(--cl-space-2);
   border-radius: var(--cl-radius-sm);
   font-size: var(--cl-font-small);
-  font-weight: 600;
-  line-height: 16px;
-  /* Labels wrap inside the chip rather than being cut off. */
-  white-space: normal;
-  overflow-wrap: anywhere;
-}
+  font-weight: var(--cl-weight-semibold);
+  line-height: var(--cl-lh-tight);
+  /* A label never wraps or breaks inside a word: it is cut with an ellipsis when the box is too narrow. */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  word-break: keep-all;
 
-.todo,
-.neutral {
-  background: var(--cl-cat-todo-bg);
-  color: var(--cl-cat-todo-text);
-}
+  &--todo,
+  &--neutral {
+    background: var(--cl-cat-todo-bg);
+    color: var(--cl-cat-todo-text);
+  }
 
-.progress {
-  background: var(--cl-cat-progress-bg);
-  color: var(--cl-cat-progress-text);
-}
+  &--progress,
+  &--info {
+    background: var(--cl-cat-progress-bg);
+    color: var(--cl-cat-progress-text);
+  }
 
-.done {
-  background: var(--cl-cat-done-bg);
-  color: var(--cl-cat-done-text);
-}
+  &--done,
+  &--success {
+    background: var(--cl-success-bg);
+    color: var(--cl-success-text);
+  }
 
-.info {
-  background: var(--cl-brand-subtle);
-  color: var(--cl-brand);
-}
+  &--warning {
+    background: var(--cl-warning-bg);
+    color: var(--cl-warning-text);
+  }
 
-.success {
-  background: var(--cl-success-bg);
-  color: var(--cl-success-text);
-}
+  &--danger {
+    background: var(--cl-danger-bg);
+    color: var(--cl-danger-text);
+  }
 
-.warning {
-  background: var(--cl-warning-bg);
-  color: var(--cl-warning-text);
-}
-
-.danger {
-  background: var(--cl-danger-bg);
-  color: var(--cl-danger-text);
+  &--discovery {
+    background: var(--cl-type-epic-bg);
+    color: var(--cl-type-epic-text);
+  }
 }

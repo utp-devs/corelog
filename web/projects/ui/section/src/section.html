@@ -7,39 +7,49 @@
   [attr.aria-label]="title() === undefined ? ariaLabel() : null"
 >
   @if (hasHeader()) {
-    <header class="header">
-      <div class="title-block">
+    <header class="section__header">
+      <div class="section__title-block">
         @if (title() !== undefined) {
           @switch (headingLevel()) {
             @case (3) {
-              <h3 [id]="titleId" class="title"><ng-container *ngTemplateOutlet="titleText" /></h3>
+              <h3 [id]="titleId" class="section__title">
+                <ng-container *ngTemplateOutlet="titleText" />
+              </h3>
             }
             @case (4) {
-              <h4 [id]="titleId" class="title"><ng-container *ngTemplateOutlet="titleText" /></h4>
+              <h4 [id]="titleId" class="section__title">
+                <ng-container *ngTemplateOutlet="titleText" />
+              </h4>
             }
             @default {
-              <h2 [id]="titleId" class="title"><ng-container *ngTemplateOutlet="titleText" /></h2>
+              <h2 [id]="titleId" class="section__title">
+                <ng-container *ngTemplateOutlet="titleText" />
+              </h2>
             }
           }
         }
         @if (description() !== undefined) {
-          <p class="description">{{ description() }}</p>
+          <p class="section__description">{{ description() }}</p>
         }
       </div>
       @if (hasActions()) {
-        <div class="actions">
+        <div class="section__actions">
           <ng-content select="[appSectionActions]" />
         </div>
       }
     </header>
   }
 
-  <div class="body" [class.body-flush]="!bodyPadded()" [class.grow]="fill()">
+  <div
+    class="section__body"
+    [class.section__body--flush]="!bodyPadded()"
+    [class.section__body--grow]="fill()"
+  >
     <ng-content />
   </div>
 
   @if (hasFooter()) {
-    <footer class="footer">
+    <footer class="section__footer">
       <ng-content select="[appSectionFooter]" />
     </footer>
   }

@@ -1,5 +1,10 @@
 @use '../../styles/mixins' as m;
 
+:host {
+  display: block;
+  min-width: 0;
+}
+
 :host(.fill-host) {
   display: flex;
   flex-direction: column;
@@ -7,36 +12,30 @@
   min-height: 0;
 }
 
-:host {
-  display: block;
-  min-width: 0;
-}
-
-.grid {
+.card-grid {
   @include m.grid-auto(var(--cl-card-min, 280px), 4);
   align-items: stretch;
   min-width: 0;
-}
 
-.grid > * {
-  @include m.flex-column;
-  min-width: 0;
-}
+  > * {
+    @include m.flex-column;
+    min-width: 0;
+  }
 
-/* fill: the panel stretches with the page column; the grid keeps its cards at the top. */
-.panel {
-  flex: 1 1 auto;
-  box-sizing: border-box;
-  display: flex;
-  flex-direction: column;
-  align-content: flex-start;
-  min-height: 0;
-  padding: var(--cl-space-4);
-  border: 1px solid var(--cl-border);
-  border-radius: var(--cl-radius-lg);
-  background: var(--cl-bg-surface);
-}
+  /* fill: the panel stretches with the page column; the grid keeps its cards at the top. */
+  &__panel {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    box-sizing: border-box;
+    min-height: 0;
+    padding: var(--cl-space-4);
+    border: 1px solid var(--cl-border);
+    border-radius: var(--cl-radius-lg);
+    background: var(--cl-bg-surface);
+  }
 
-.panel > .grid {
-  align-content: start;
+  &__panel > & {
+    align-content: start;
+  }
 }

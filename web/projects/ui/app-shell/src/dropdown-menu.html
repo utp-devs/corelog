@@ -1,0 +1,18 @@
+<span #slot class="dropdown-menu__trigger" (click)="onTriggerClick($event)">
+  <ng-content select="[appMenuTrigger]" />
+</span>
+@if (open()) {
+  <div
+    #panel
+    class="dropdown-menu__panel"
+    [class.dropdown-menu__panel--end]="align() === 'end'"
+    role="menu"
+    tabindex="-1"
+    [attr.id]="panelId"
+    [attr.aria-label]="label()"
+    (keydown)="onPanelKeydown($event)"
+    (click)="onPanelClick($event)"
+  >
+    <ng-content />
+  </div>
+}

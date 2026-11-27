@@ -163,7 +163,9 @@ describe('InlineEdit', () => {
 
     const status = setup.el.querySelector('[role="status"]') as HTMLElement;
     expect(status.textContent).toContain('Guardando');
-    expect((setup.el.querySelector('button.trigger') as HTMLButtonElement).disabled).toBe(true);
+    expect(
+      (setup.el.querySelector('button.inline-edit__trigger') as HTMLButtonElement).disabled,
+    ).toBe(true);
 
     reject(new Error(''));
     await settle(setup);
@@ -179,14 +181,71 @@ describe('InlineEdit', () => {
     expect(setup.el.textContent).toContain('<script>alert(1)</script>');
   });
 
-  it('edits a date with the native date input', () => {
+  it('shows an ISO date as dd/MM/yyyy and edits it with the date field', () => {
     const onSave = vi.fn();
     const setup = create({ label: 'Vence', type: 'date', value: '2026-12-01', onSave });
-    openEditor(setup, 'Vence', '2026-12-01');
-    const input = setup.el.querySelector('input[type="date"]') as HTMLInputElement;
-    type(setup, input, '2026-12-15');
-    keydown(setup, input, 'Enter');
+    openEditor(setup, 'Vence', '01/12/2026');
+    expect(setup.el.querySelector('app-date-field')).not.toBeNull();
+    expect(setup.el.querySelector('input[type="date"]')).toBeNull();
+
+    const field = setup.fixture.debugElement.query((el) => el.name === 'app-date-field');
+    field.triggerEventHandler('ngModelChange', '2026-12-15');
+    setup.fixture.detectChanges();
     expect(onSave).toHaveBeenCalledWith('2026-12-15');
+  });
+
+  it('ends a date edit without saving when the calendar closes with no change', () => {
+    const onSave = vi.fn();
+    const setup = create({ label: 'Vence', type: 'date', value: '2026-12-01', onSave });
+    openEditor(setup, 'Vence', '01/12/2026');
+    const field = setup.fixture.debugElement.query((el) => el.name === 'app-date-field');
+    field.triggerEventHandler('closed', undefined);
+    setup.fixture.detectChanges();
+    expect(onSave).not.toHaveBeenCalled();
+    expect(setup.el.querySelector('app-date-field')).toBeNull();
+  });
+
+  it('shows a pencil for plain text and a chevron for lists', () => {
+    const text = create({ label: 'Título', value: 'Hola' });
+    expect(text.el.querySelector('.inline-edit__icon--pencil')).not.toBeNull();
+
+    const list = create({
+      label: 'Estado',
+      type: 'select',
+      value: 'a',
+      options: [{ value: 'a', label: 'Abierto' }],
+    });
+    expect(list.el.querySelector('.pi-chevron-down')).not.toBeNull();
+    expect(list.el.querySelector('.inline-edit__icon--pencil')).toBeNull();
+  });
+
+  it('renders the field and lozenge appearances with their tone', () => {
+    const setup = create({
+      label: 'Estado',
+      type: 'select',
+      value: 'a',
+      options: [{ value: 'a', label: 'En curso' }],
+    });
+    setup.fixture.componentRef.setInput('appearance', 'lozenge');
+    setup.fixture.componentRef.setInput('tone', 'progress');
+    setup.fixture.detectChanges();
+    const trigger = setup.el.querySelector('.inline-edit__trigger') as HTMLElement;
+    expect(trigger.classList).toContain('inline-edit__trigger--lozenge');
+    expect(trigger.classList).toContain('inline-edit__trigger--progress');
+
+    setup.fixture.componentRef.setInput('appearance', 'field');
+    setup.fixture.detectChanges();
+    expect(trigger.classList).toContain('inline-edit__trigger--field');
+  });
+
+  it('explains why it cannot be edited when disabled', () => {
+    const setup = create({ label: 'Título', value: 'Hola' });
+    setup.fixture.componentRef.setInput('disabledReason', 'No tienes permiso para editar.');
+    setup.fixture.componentInstance.setDisabledState(true);
+    setup.fixture.detectChanges();
+    const trigger = setup.el.querySelector('.inline-edit__trigger') as HTMLButtonElement;
+    expect(trigger.disabled).toBe(true);
+    expect(trigger.getAttribute('title')).toBe('No tienes permiso para editar.');
   });
 
   it('shows the placeholder for an empty value and does not save on Escape in the select editor', () => {
@@ -204,7 +263,7 @@ describe('InlineEdit', () => {
       ) as HTMLButtonElement
     ).click();
     setup.fixture.detectChanges();
-    keydown(setup, setup.el.querySelector('.editor') as HTMLElement, 'Escape');
+    keydown(setup, setup.el.querySelector('.inline-edit__editor') as HTMLElement, 'Escape');
     expect(onSave).not.toHaveBeenCalled();
   });
 });

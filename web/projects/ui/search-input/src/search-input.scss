@@ -1,57 +1,46 @@
+@use '../../styles/mixins' as m;
+@use '../../field-row/src/control' as c;
+
 :host {
   display: block;
   min-width: 0;
 }
 
-.search {
+.search-input {
   position: relative;
-  display: flex;
-  align-items: center;
-  min-width: 0;
-}
+  @include m.flex-row;
+  // A search field never gets narrower than a readable placeholder.
+  min-width: min(100%, 14rem);
 
-.icon {
-  position: absolute;
-  left: var(--cl-space-3);
-  color: var(--cl-text-subtle);
-  pointer-events: none;
-}
+  &__icon {
+    position: absolute;
+    left: var(--cl-space-3);
+    @include c.control-icon;
+    color: var(--cl-text-subtle);
+    pointer-events: none;
+  }
 
-.field {
-  width: 100%;
-  padding-left: var(--cl-space-8);
-  padding-right: var(--cl-space-8);
-}
+  &__field {
+    width: 100%;
+    padding-left: calc(var(--cl-space-3) + 1.125rem + var(--cl-space-2));
+    padding-right: calc(var(--cl-control-h-sm) + var(--cl-space-1));
+    text-overflow: ellipsis;
+  }
 
-.clear {
-  position: absolute;
-  right: var(--cl-space-1);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  padding: 0;
-  border: 0;
-  border-radius: var(--cl-radius-sm);
-  background: transparent;
-  color: var(--cl-text-subtle);
-  cursor: pointer;
-}
+  &__clear {
+    @include c.icon-button;
+    position: absolute;
+    right: var(--cl-space-1);
+  }
 
-.clear:hover:not(:disabled) {
-  background: var(--cl-bg-sunken);
-  color: var(--cl-text);
-}
+  &--compact &__field {
+    min-height: var(--cl-control-h-sm);
+  }
 
-.clear:focus-visible {
-  outline: none;
-  box-shadow: var(--cl-shadow-focus);
-}
-
-@media (max-width: 767.98px) {
-  .clear {
-    width: 44px;
-    height: 44px;
+  &--compact &__clear {
+    width: calc(var(--cl-control-h-sm) - var(--cl-space-2));
+    min-width: 0;
+    height: calc(var(--cl-control-h-sm) - var(--cl-space-2));
+    min-height: 0;
   }
 }

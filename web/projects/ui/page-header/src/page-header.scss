@@ -1,55 +1,50 @@
 :host {
   display: block;
-  margin-bottom: var(--cl-space-5);
 }
 
 .page-header {
   display: flex;
   flex-wrap: wrap;
-  justify-content: space-between;
   align-items: flex-end;
+  justify-content: space-between;
   gap: var(--cl-space-3) var(--cl-space-4);
   padding-bottom: var(--cl-space-4);
-  border-bottom: 1px solid var(--cl-border);
-}
+  border-bottom: 1px solid var(--cl-divider);
 
-.heading {
-  min-width: 0;
-  flex: 1 1 320px;
-}
-
-.page-title {
-  margin: 0;
-  font-size: var(--cl-font-h2);
-  font-weight: 700;
-  line-height: 1.25;
-  letter-spacing: -0.01em;
-  color: var(--cl-text);
-}
-
-.page-subtitle {
-  margin: var(--cl-space-1) 0 0;
-  font-size: var(--cl-font-body);
-  color: var(--cl-text-subtle);
-}
-
-.page-actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--cl-space-2);
-}
-
-.page-actions > * {
-  max-width: 100%;
-}
-
-@media (max-width: 640px) {
-  .page-title {
-    font-size: var(--cl-font-h3);
+  &__heading {
+    flex: 1 1 20rem;
+    min-width: 0;
   }
 
-  .page-actions {
-    width: 100%;
+  /* The page title (24px bold) always outranks card titles (16px semibold). */
+  &__title {
+    margin: 0;
+    font-size: var(--cl-font-h2);
+    font-weight: 700;
+    line-height: var(--cl-lh-tight);
+    letter-spacing: -0.01em;
+    color: var(--cl-text);
+    overflow-wrap: anywhere;
+  }
+
+  &__subtitle {
+    margin: var(--cl-space-1) 0 0;
+    font-size: var(--cl-font-body);
+    color: var(--cl-text-subtle);
+  }
+
+  &__actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--cl-space-2);
+
+    > * {
+      max-width: 100%;
+    }
+
+    @media (max-width: 767.98px) {
+      width: 100%;
+    }
   }
 }

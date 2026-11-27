@@ -1,0 +1,88 @@
+@use '../../styles/mixins' as m;
+@use './menu' as menu;
+
+:host {
+  display: inline-flex;
+  flex: none;
+}
+
+.nav-menu {
+  &__trigger {
+    @include m.flex-row(2);
+    flex: none;
+    min-height: var(--cl-control-h-md);
+    padding: 0 var(--cl-space-3);
+    border: 0;
+    border-radius: var(--cl-radius-md);
+    background: transparent;
+    color: var(--cl-text);
+    font: inherit;
+    font-weight: var(--cl-weight-medium);
+    cursor: pointer;
+
+    &:hover {
+      background: var(--cl-bg-hover);
+    }
+
+    &:focus-visible {
+      outline: none;
+      box-shadow: var(--cl-shadow-focus);
+    }
+
+    &[aria-expanded='true'],
+    &--active {
+      background: var(--cl-bg-selected);
+      color: var(--cl-brand);
+    }
+  }
+
+  &__caret {
+    width: var(--cl-font-body);
+    height: var(--cl-font-body);
+    color: var(--cl-text-subtle);
+  }
+
+  &__section {
+    @include m.flex-column(0);
+  }
+
+  &__heading {
+    @include menu.menu-heading;
+  }
+
+  &__empty {
+    @include menu.menu-empty;
+  }
+
+  &__separator {
+    @include menu.menu-separator;
+  }
+
+  &__item {
+    @include menu.menu-item;
+  }
+
+  &__icon {
+    @include menu.menu-icon;
+  }
+
+  &__label {
+    @include m.truncate;
+  }
+
+  &__hint {
+    @include menu.menu-trail;
+  }
+
+  &__create {
+    @include menu.menu-item;
+    justify-content: center;
+    background: var(--cl-brand);
+    color: var(--cl-text-on-brand);
+    font-weight: var(--cl-btn-weight);
+
+    &:hover {
+      background: var(--cl-brand-hover);
+    }
+  }
+}

@@ -1,33 +1,20 @@
-import {
-  ChangeDetectionStrategy,
-  Component,
-  DOCUMENT,
-  effect,
-  inject,
-  input,
-  output,
-  untracked,
-} from '@angular/core';
-import { PrimeTemplate } from 'primeng/api';
+import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
+import { Dialog } from '@corelog/ui/dialog';
 import { Button } from 'primeng/button';
-import { Dialog } from 'primeng/dialog';
 
 /**
  * Confirmation of an action, with its consequence written in the body.
- * Closing with the X, Escape or the backdrop counts as cancel. Focus returns to the
- * element that was focused before the dialog opened.
+ * Closing with the X, Escape or the backdrop counts as cancel. Focus starts on the cancel button and
+ * returns to the element that was focused before the dialog opened.
  */
 @Component({
   selector: 'app-confirm-modal',
-  imports: [Button, Dialog, PrimeTemplate],
+  imports: [Button, Dialog],
   templateUrl: './confirm-modal.html',
   styleUrl: './confirm-modal.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ConfirmModal {
-  private readonly document = inject(DOCUMENT);
-  private opener: HTMLElement | null = null;
-
   readonly open = input(false);
   readonly title = input.required<string>();
   /** Consequence of the action, visible before confirming. */
@@ -40,13 +27,6 @@ export class ConfirmModal {
   readonly confirmed = output<void>();
   readonly cancelled = output<void>();
 
-  constructor() {
-    effect(() => {
-      const open = this.open();
-      untracked(() => this.trackFocus(open));
-    });
-  }
-
   onConfirm(): void {
     if (this.loading()) return;
     this.confirmed.emit();
@@ -54,20 +34,5 @@ export class ConfirmModal {
 
   onCancel(): void {
     this.cancelled.emit();
-  }
-
-  /** Dialog reports a user close (X, Escape, backdrop). Programmatic closes come from `open`. */
-  onVisibleChange(visible: boolean): void {
-    if (!visible) this.cancelled.emit();
-  }
-
-  private trackFocus(open: boolean): void {
-    if (open) {
-      const active = this.document.activeElement;
-      this.opener = active instanceof HTMLElement ? active : null;
-    } else if (this.opener) {
-      this.opener.focus();
-      this.opener = null;
-    }
   }
 }

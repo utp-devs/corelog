@@ -1,8 +1,8 @@
 @if (src(); as url) {
   <img
-    class="image"
-    [class.size-24]="size() === 24"
-    [class.size-32]="size() === 32"
+    class="org-logo__image"
+    [class.org-logo__image--sm]="size() === 24"
+    [class.org-logo__image--md]="size() === 32"
     [src]="url"
     alt=""
     data-testid="org-logo"
@@ -10,9 +10,9 @@
 } @else {
   <span
     aria-hidden="true"
-    class="tile"
-    [class.size-24]="size() === 24"
-    [class.size-32]="size() === 32"
+    class="org-logo__tile"
+    [class.org-logo__tile--sm]="size() === 24"
+    [class.org-logo__tile--md]="size() === 32"
     [attr.data-palette]="palette()"
     data-testid="org-logo-fallback"
     >{{ initials() }}</span

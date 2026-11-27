@@ -1,0 +1,145 @@
+@use '../../styles/mixins' as m;
+@use './icon-button' as ib;
+@use './menu' as menu;
+
+/* Mounted with the shell and hidden while closed, so its organization switcher stays in the DOM. */
+.nav-drawer {
+  position: fixed;
+  inset: 0;
+  z-index: var(--cl-z-modal);
+  visibility: hidden;
+
+  &--open {
+    visibility: visible;
+  }
+
+  &__mask {
+    position: absolute;
+    inset: 0;
+    padding: 0;
+    border: 0;
+    background: var(--cl-overlay);
+    cursor: pointer;
+  }
+
+  &__panel {
+    @include m.flex-column(3);
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    box-sizing: border-box;
+    width: calc(var(--cl-menu-w) + var(--cl-space-10));
+    max-width: 100vw;
+    padding: var(--cl-space-4);
+    padding-top: max(var(--cl-space-4), env(safe-area-inset-top));
+    padding-bottom: max(var(--cl-space-4), env(safe-area-inset-bottom));
+    padding-left: max(var(--cl-space-4), env(safe-area-inset-left));
+    overflow-y: auto;
+    background: var(--cl-bg-surface);
+    box-shadow: var(--cl-elev-modal);
+    transform: translateX(-100%);
+    transition: transform var(--cl-motion) var(--cl-ease);
+
+    @media (prefers-reduced-motion: reduce) {
+      transition: none;
+    }
+
+    .nav-drawer--open & {
+      transform: none;
+    }
+  }
+
+  &__head {
+    @include m.flex-row(2, center, space-between);
+  }
+
+  &__heading {
+    margin: 0;
+    color: var(--cl-text);
+    font-size: var(--cl-font-body-strong);
+    font-weight: var(--cl-weight-semibold);
+  }
+
+  &__close {
+    @include ib.icon-button;
+    width: var(--cl-control-h-lg);
+    height: var(--cl-control-h-lg);
+  }
+
+  &__nav {
+    @include m.flex-column(4);
+  }
+
+  &__group {
+    @include m.flex-column(1);
+    min-width: 0;
+  }
+
+  &__title {
+    @include menu.menu-heading;
+    padding-right: 0;
+    padding-left: var(--cl-space-3);
+  }
+
+  &__list {
+    @include menu.menu-list;
+    @include m.flex-column(1);
+  }
+
+  &__link {
+    @include menu.menu-item;
+    min-height: var(--cl-control-h-lg);
+
+    &--active {
+      background: var(--cl-bg-selected);
+      color: var(--cl-brand);
+      font-weight: var(--cl-weight-semibold);
+    }
+
+    &--sub {
+      padding-left: var(--cl-space-10);
+    }
+  }
+
+  &__icon {
+    @include menu.menu-icon;
+  }
+
+  &__label {
+    @include m.truncate;
+  }
+
+  &__chevron {
+    margin-left: auto;
+    color: var(--cl-text-subtle);
+    transition: transform var(--cl-motion-fast) var(--cl-ease);
+
+    &--open {
+      transform: rotate(180deg);
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      transition: none;
+    }
+  }
+
+  &__sub {
+    @include m.flex-column(1);
+    padding-bottom: var(--cl-space-2);
+  }
+
+  &__sub-title {
+    @include menu.menu-heading;
+    padding-left: var(--cl-space-10);
+  }
+
+  &__empty {
+    @include menu.menu-empty;
+    padding-left: var(--cl-space-10);
+  }
+
+  &__hint {
+    @include menu.menu-trail;
+  }
+}

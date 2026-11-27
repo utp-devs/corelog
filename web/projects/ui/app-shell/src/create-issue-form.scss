@@ -1,0 +1,74 @@
+@use '../../styles/mixins' as m;
+
+.create-issue-form {
+  &__form {
+    @include m.flex-column(4);
+    min-width: 0;
+  }
+
+  // Two fields side by side while there is room; one per line otherwise.
+  &__row {
+    @include m.grid-auto(12rem, 4);
+  }
+
+  &__control {
+    width: 100%;
+  }
+
+  &__alert {
+    margin: 0;
+    padding: var(--cl-space-3);
+    border: 1px solid var(--cl-danger);
+    border-radius: var(--cl-radius-md);
+    background: var(--cl-danger-bg);
+    color: var(--cl-danger-text);
+    font-size: var(--cl-font-small);
+    overflow-wrap: anywhere;
+  }
+
+  &__note {
+    margin: 0;
+    color: var(--cl-text-subtle);
+    line-height: var(--cl-lh-body);
+
+    &--error {
+      color: var(--cl-danger-text);
+    }
+  }
+
+  &__empty,
+  &__done {
+    @include m.flex-column(2, center);
+    padding: var(--cl-space-6) 0;
+    text-align: center;
+  }
+
+  &__empty-icon,
+  &__done-icon {
+    color: var(--cl-text-subtle);
+    font-size: var(--cl-font-display);
+  }
+
+  &__done-icon {
+    color: var(--cl-success);
+  }
+
+  &__empty-title {
+    margin: 0;
+    color: var(--cl-text);
+    font-size: var(--cl-font-body-strong);
+    font-weight: var(--cl-weight-semibold);
+  }
+
+  &__done-key {
+    margin: 0;
+    color: var(--cl-brand);
+    font-weight: var(--cl-weight-semibold);
+  }
+
+  &__done-title {
+    margin: 0;
+    color: var(--cl-text);
+    overflow-wrap: anywhere;
+  }
+}

@@ -29,8 +29,8 @@ export class Avatar {
     return !!source && source !== this.failedSrc();
   });
   protected readonly initials = computed(() => initialsOf(this.name()));
-  protected readonly sizeClass = computed(() => `size-${this.size()}`);
-  protected readonly toneClass = computed(() => `tone-${avatarColorIndex(this.id())}`);
+  protected readonly sizeClass = computed(() => `avatar--size-${this.size()}`);
+  protected readonly toneClass = computed(() => `avatar--tone-${avatarColorIndex(this.id())}`);
 
   protected onImageError(): void {
     this.failedSrc.set(this.src() ?? null);

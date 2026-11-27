@@ -1,4 +1,7 @@
-.overlay {
+@use '../../styles/mixins' as m;
+
+// Palette width: 40rem is 640 px at the default text size.
+.command-palette {
   position: fixed;
   inset: 0;
   z-index: var(--cl-z-palette);
@@ -7,160 +10,256 @@
   justify-content: center;
   padding: var(--cl-space-16) var(--cl-space-4) var(--cl-space-4);
   background: var(--cl-overlay);
-}
 
-.dialog {
-  display: flex;
-  flex-direction: column;
-  box-sizing: border-box;
-  width: 640px;
-  max-width: 100%;
-  max-height: 70vh;
-  overflow: hidden;
-  border: 1px solid var(--cl-border);
-  border-radius: var(--cl-radius-lg);
-  background: var(--cl-bg-surface);
-  box-shadow: var(--cl-shadow-3);
-  color: var(--cl-text);
-}
+  &__dialog {
+    @include m.flex-column;
+    box-sizing: border-box;
+    width: min(100%, 40rem);
+    max-height: min(70vh, 100%);
+    overflow: hidden;
+    border: 1px solid var(--cl-divider);
+    border-radius: var(--cl-radius-lg);
+    background: var(--cl-bg-elevated);
+    box-shadow: var(--cl-elev-modal);
+    color: var(--cl-text);
+  }
 
-.input-row {
-  display: flex;
-  align-items: center;
-  gap: var(--cl-space-3);
-  min-height: 44px;
-  padding: var(--cl-space-3) var(--cl-space-4);
-  border-bottom: 1px solid var(--cl-border);
-}
+  &__input-row {
+    @include m.flex-row(3);
+    flex: none;
+    min-height: var(--cl-control-h-lg);
+    padding: var(--cl-space-2) var(--cl-space-4);
+    border-bottom: 1px solid var(--cl-divider);
 
-.input-icon {
-  flex: none;
-  width: 18px;
-  height: 18px;
-  fill: none;
-  stroke: var(--cl-text-subtle);
-  stroke-width: 2;
-  stroke-linecap: round;
-}
+    // The row carries the single focus indicator, not the borderless input inside it.
+    &:focus-within {
+      box-shadow: inset 0 calc(var(--cl-space-1) / -2) 0 var(--cl-brand);
+    }
+  }
 
-.input {
-  flex: 1;
-  min-width: 0;
-  min-height: 44px;
-  border: none;
-  background: transparent;
-  color: var(--cl-text);
-  font: inherit;
-  font-size: var(--cl-font-body);
-  outline: none;
-}
+  &__input-icon {
+    flex: none;
+    width: var(--cl-space-5);
+    height: var(--cl-space-5);
+    fill: none;
+    stroke: var(--cl-text-subtle);
+    stroke-width: 2;
+    stroke-linecap: round;
+  }
 
-.input:focus-visible {
-  box-shadow: var(--cl-shadow-focus);
-  border-radius: var(--cl-radius-sm);
-}
+  &__input {
+    flex: 1;
+    min-width: 0;
+    min-height: var(--cl-control-h-lg);
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: var(--cl-text);
+    font: inherit;
+    font-size: var(--cl-font-body-strong);
+    outline: none;
 
-.status {
-  padding: 0 var(--cl-space-4);
-  color: var(--cl-text-subtle);
-  font-size: var(--cl-font-small);
-}
+    &::placeholder {
+      color: var(--cl-text-placeholder);
+    }
+  }
 
-.status:empty {
-  display: none;
-}
+  &__status {
+    padding: 0 var(--cl-space-4);
+    color: var(--cl-text-subtle);
+    font-size: var(--cl-font-small);
 
-.error {
-  color: var(--cl-danger-text);
-}
+    &:not(:empty) {
+      padding-top: var(--cl-space-3);
+      padding-bottom: var(--cl-space-3);
+    }
+  }
 
-.retry {
-  min-height: 44px;
-  padding: 0 var(--cl-space-2);
-  border: none;
-  background: transparent;
-  color: var(--cl-brand);
-  font: inherit;
-  font-size: var(--cl-font-small);
-  text-decoration: underline;
-  cursor: pointer;
-}
+  &__loading {
+    @include m.flex-row(2);
+  }
 
-.retry:focus-visible {
-  box-shadow: var(--cl-shadow-focus);
-  border-radius: var(--cl-radius-sm);
-}
+  &__spinner {
+    width: var(--cl-space-4);
+    height: var(--cl-space-4);
+    border: 2px solid var(--cl-border);
+    border-top-color: var(--cl-brand);
+    border-radius: var(--cl-radius-full);
+  }
 
-.list {
-  overflow-y: auto;
-  padding: var(--cl-space-2) 0;
-}
+  &__error {
+    color: var(--cl-danger-text);
+  }
 
-.group {
-  display: grid;
-  gap: var(--cl-space-1);
-}
+  &__retry {
+    @include m.touch-target;
+    padding: 0 var(--cl-space-2);
+    border: none;
+    border-radius: var(--cl-radius-sm);
+    background: transparent;
+    color: var(--cl-brand);
+    font: inherit;
+    text-decoration: underline;
+    cursor: pointer;
 
-.group-title {
-  padding: var(--cl-space-2) var(--cl-space-4) var(--cl-space-1);
-  color: var(--cl-text-subtle);
-  font-size: var(--cl-font-caption);
-  font-weight: 600;
-}
+    &:focus-visible {
+      outline: none;
+      box-shadow: var(--cl-shadow-focus);
+    }
+  }
 
-.option {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  align-items: center;
-  gap: var(--cl-space-3);
-  min-height: 44px;
-  margin: 0 var(--cl-space-2);
-  padding: var(--cl-space-2) var(--cl-space-3);
-  border-radius: var(--cl-radius-md);
-  cursor: pointer;
-}
+  &__empty {
+    @include m.flex-column(1, center);
+    padding: var(--cl-space-4) 0;
+    text-align: center;
+    font-size: var(--cl-font-body);
+  }
 
-.option-active {
-  background: var(--cl-brand-subtle);
-}
+  &__empty-title {
+    color: var(--cl-text);
+    font-size: var(--cl-font-body-strong);
+  }
 
-.option-icon {
-  flex: none;
-  width: 18px;
-  height: 18px;
-  fill: none;
-  stroke: var(--cl-text-subtle);
-  stroke-width: 2;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
+  &__list {
+    flex: 1 1 auto;
+    min-height: 0;
+    padding: var(--cl-space-2) 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
 
-.option-title {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
+  &__group {
+    display: grid;
+    gap: 0;
+  }
 
-.option-subtitle {
-  color: var(--cl-text-subtle);
-  font-size: var(--cl-font-small);
-  white-space: nowrap;
+  &__group-title {
+    padding: var(--cl-space-3) var(--cl-space-4) var(--cl-space-1);
+    color: var(--cl-text-subtle);
+    font-size: var(--cl-font-caption);
+    font-weight: var(--cl-weight-semibold);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  &__option {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: var(--cl-space-3);
+    min-height: var(--cl-control-h-lg);
+    margin: 0 var(--cl-space-2);
+    padding: var(--cl-space-2) var(--cl-space-3);
+    border-radius: var(--cl-radius-md);
+    cursor: pointer;
+
+    &--active {
+      background: var(--cl-bg-selected);
+    }
+  }
+
+  &__option-icon {
+    flex: none;
+    width: var(--cl-space-5);
+    height: var(--cl-space-5);
+    fill: none;
+    stroke: var(--cl-text-subtle);
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  &__option--active &__option-icon {
+    stroke: var(--cl-brand);
+  }
+
+  &__option-title {
+    @include m.truncate;
+  }
+
+  &__mark {
+    background: transparent;
+    color: var(--cl-brand);
+    font-weight: var(--cl-weight-semibold);
+  }
+
+  &__option-key {
+    padding: 0 var(--cl-space-2);
+    border-radius: var(--cl-radius-sm);
+    background: var(--cl-bg-sunken);
+    color: var(--cl-text-subtle);
+    font-size: var(--cl-font-small);
+    white-space: nowrap;
+  }
+
+  &__footer {
+    @include m.cluster(4, center);
+    flex: none;
+    padding: var(--cl-space-2) var(--cl-space-4);
+    border-top: 1px solid var(--cl-divider);
+    background: var(--cl-bg-sunken);
+    color: var(--cl-text-subtle);
+    font-size: var(--cl-font-small);
+  }
+
+  &__hint {
+    @include m.flex-row(1);
+  }
+
+  &__kbd {
+    min-width: var(--cl-space-5);
+    padding: 0 var(--cl-space-1);
+    border: 1px solid var(--cl-border-strong);
+    border-radius: var(--cl-radius-sm);
+    background: var(--cl-bg-surface);
+    color: var(--cl-text);
+    font-family: inherit;
+    font-size: var(--cl-font-caption);
+    text-align: center;
+
+    &--close {
+      flex: none;
+      color: var(--cl-text-subtle);
+    }
+  }
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  .option {
-    transition: background-color 120ms ease;
+  .command-palette {
+    &__option {
+      transition: background-color var(--cl-motion-fast) ease;
+    }
+
+    &__spinner {
+      animation: command-palette-spin 800ms linear infinite;
+    }
+  }
+
+  @keyframes command-palette-spin {
+    to {
+      transform: rotate(360deg);
+    }
   }
 }
 
-@media (max-width: 480px) {
-  .option {
-    grid-template-columns: auto minmax(0, 1fr);
+// Touch screens have no keyboard: the hints go away and the palette fills the screen as a sheet.
+@media (pointer: coarse) {
+  .command-palette__footer,
+  .command-palette__kbd--close {
+    display: none;
   }
+}
 
-  .option-subtitle {
-    grid-column: 2;
-    white-space: normal;
-    overflow-wrap: anywhere;
+@media (max-width: 639.98px) {
+  .command-palette {
+    padding: 0;
+
+    &__dialog {
+      width: 100%;
+      max-height: 100%;
+      height: 100%;
+      border: none;
+      border-radius: 0;
+    }
   }
 }

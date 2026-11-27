@@ -1,6 +1,6 @@
 import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-
+import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
 import { FieldControl, FieldRow } from './field-row';
 
 @Component({
@@ -98,5 +98,78 @@ describe('FieldRow', () => {
     fixture.componentInstance.variant.set('inline');
     fixture.detectChanges();
     expect(row()?.getAttribute('data-variant')).toBe('inline');
+  });
+});
+
+@Component({
+  imports: [FieldRow, FieldControl, ReactiveFormsModule],
+  template: `
+    <app-field-row
+      label="Título"
+      [control]="title"
+      [messages]="{ minlength: 'El título es demasiado corto' }"
+      [submitted]="submitted()"
+    >
+      <input appFieldControl type="text" [formControl]="title" />
+    </app-field-row>
+    <app-field-row label="Bloqueado" disabledReason="Solo un administrador puede cambiarlo">
+      <input appFieldControl type="text" disabled />
+    </app-field-row>
+    <app-field-row label="Notas" [optional]="true">
+      <input appFieldControl type="text" />
+    </app-field-row>
+  `,
+})
+class FieldRowControlHost {
+  readonly title = new FormControl('', [Validators.minLength(3)]);
+  readonly submitted = signal(false);
+}
+
+describe('FieldRow error timing', () => {
+  function setup() {
+    TestBed.configureTestingModule({ imports: [FieldRowControlHost] });
+    const fixture = TestBed.createComponent(FieldRowControlHost);
+    fixture.detectChanges();
+    return { fixture, el: fixture.nativeElement as HTMLElement };
+  }
+
+  it('shows no error on an empty untouched field', () => {
+    const { el } = setup();
+    expect(el.textContent).not.toContain('demasiado corto');
+    expect(inputFor(el, 'Título').hasAttribute('aria-invalid')).toBe(false);
+  });
+
+  it('shows the error with an icon once the field was edited and touched', () => {
+    const { fixture, el } = setup();
+    const host = fixture.componentInstance;
+    host.title.setValue('ab');
+    host.title.markAsDirty();
+    fixture.detectChanges();
+    expect(el.textContent).toContain('El título es demasiado corto');
+    expect(el.querySelector('.field-row__text--error .pi-exclamation-circle')).not.toBeNull();
+    expect(inputFor(el, 'Título').getAttribute('aria-invalid')).toBe('true');
+  });
+
+  it('shows the error of an untouched invalid field after submit', () => {
+    const { fixture, el } = setup();
+    fixture.componentInstance.title.setValue('ab');
+    fixture.detectChanges();
+    expect(el.textContent).not.toContain('demasiado corto');
+    fixture.componentInstance.submitted.set(true);
+    fixture.detectChanges();
+    expect(el.textContent).toContain('El título es demasiado corto');
+  });
+
+  it('explains why a control is disabled and links it through aria-describedby', () => {
+    const { el } = setup();
+    const input = inputFor(el, 'Bloqueado');
+    const described = document.getElementById(input.getAttribute('aria-describedby') ?? '');
+    expect(described?.textContent).toContain('Solo un administrador puede cambiarlo');
+    expect(described?.querySelector('.pi-lock')).not.toBeNull();
+  });
+
+  it('marks optional fields with a muted hint', () => {
+    const { el } = setup();
+    expect(el.querySelector('.field-row__optional')?.textContent).toContain('(opcional)');
   });
 });

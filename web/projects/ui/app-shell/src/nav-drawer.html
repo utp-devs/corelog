@@ -1,0 +1,141 @@
+<div
+  class="nav-drawer"
+  [class.nav-drawer--open]="open()"
+  [attr.inert]="open() ? null : ''"
+  [attr.aria-hidden]="open() ? null : 'true'"
+>
+  <button
+    type="button"
+    class="nav-drawer__mask"
+    tabindex="-1"
+    aria-hidden="true"
+    (click)="close()"
+  ></button>
+  <div class="nav-drawer__panel">
+    <div class="nav-drawer__head">
+      <p class="nav-drawer__heading">Navegación</p>
+      <button
+        #closeButton
+        type="button"
+        class="nav-drawer__close"
+        aria-label="Cerrar navegación"
+        (click)="close()"
+      >
+        <app-shell-icon name="close" />
+      </button>
+    </div>
+
+    <nav aria-label="Navegación móvil" class="nav-drawer__nav">
+      @if (showOrgSwitcher() && orgSwitcher(); as switcher) {
+        <section class="nav-drawer__group" aria-label="Organización">
+          <p class="nav-drawer__title">Organización</p>
+          <ng-container *ngTemplateOutlet="switcher" />
+        </section>
+      }
+
+      <section class="nav-drawer__group" aria-label="Explorar">
+        <p class="nav-drawer__title">Explorar</p>
+        <ul class="nav-drawer__list">
+          @for (menu of menus(); track menu.key) {
+            <li>
+              <button
+                type="button"
+                class="nav-drawer__link nav-drawer__link--toggle"
+                [attr.aria-expanded]="expanded() === menu.key"
+                [attr.aria-controls]="'drawer-sub-' + menu.key"
+                (click)="toggleMenu(menu)"
+              >
+                <app-shell-icon class="nav-drawer__icon" [name]="iconOf(menu)" />
+                <span class="nav-drawer__label">{{ menu.label }}</span>
+                <app-shell-icon
+                  class="nav-drawer__chevron"
+                  [class.nav-drawer__chevron--open]="expanded() === menu.key"
+                  name="caret"
+                />
+              </button>
+              @if (expanded() === menu.key && modelOf(menu); as model) {
+                <div class="nav-drawer__sub" [id]="'drawer-sub-' + menu.key">
+                  @for (section of model.sections; track section.key) {
+                    <p class="nav-drawer__sub-title">{{ section.title }}</p>
+                    <ul class="nav-drawer__list">
+                      @for (entry of section.entries; track entry.key) {
+                        <li>
+                          <ng-container
+                            *ngTemplateOutlet="entryLink; context: { $implicit: entry }"
+                          />
+                        </li>
+                      } @empty {
+                        <li class="nav-drawer__empty">{{ section.emptyText }}</li>
+                      }
+                    </ul>
+                  }
+                  <ul class="nav-drawer__list">
+                    @for (entry of model.footer; track entry.key) {
+                      <li>
+                        <ng-container
+                          *ngTemplateOutlet="entryLink; context: { $implicit: entry }"
+                        />
+                      </li>
+                    }
+                    @if (model.create; as create) {
+                      <li>
+                        <ng-container
+                          *ngTemplateOutlet="entryLink; context: { $implicit: create }"
+                        />
+                      </li>
+                    }
+                  </ul>
+                </div>
+              }
+            </li>
+          }
+        </ul>
+      </section>
+
+      @if (items().length > 0) {
+        <section class="nav-drawer__group" [attr.aria-label]="sidebarTitle()">
+          <p class="nav-drawer__title">{{ sidebarTitle() }}</p>
+          <ul class="nav-drawer__list">
+            @for (item of items(); track item.key) {
+              <li>
+                <a
+                  class="nav-drawer__link"
+                  [class.nav-drawer__link--active]="isItemActive(item)"
+                  [routerLink]="item.path"
+                  [attr.aria-current]="isItemActive(item) ? 'page' : null"
+                  (click)="close()"
+                >
+                  <app-shell-icon class="nav-drawer__icon" [name]="item.icon" />
+                  <span class="nav-drawer__label">{{ item.label }}</span>
+                </a>
+              </li>
+            }
+          </ul>
+        </section>
+      }
+    </nav>
+  </div>
+</div>
+
+<ng-template #entryLink let-entry>
+  @if (entry.external) {
+    <a class="nav-drawer__link nav-drawer__link--sub" [href]="entryHref(entry)">
+      <span class="nav-drawer__label">{{ entry.label }}</span>
+    </a>
+  } @else {
+    <a
+      class="nav-drawer__link nav-drawer__link--sub"
+      [routerLink]="entry.path"
+      [queryParams]="entry.queryParams"
+      routerLinkActive="nav-drawer__link--active"
+      [routerLinkActiveOptions]="{ exact: true }"
+      ariaCurrentWhenActive="page"
+      (click)="close()"
+    >
+      <span class="nav-drawer__label">{{ entry.label }}</span>
+      @if (entry.hint) {
+        <span class="nav-drawer__hint">{{ entry.hint }}</span>
+      }
+    </a>
+  }
+</ng-template>

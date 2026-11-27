@@ -1,19 +1,33 @@
-<div class="row" [attr.data-variant]="variant()">
-  <div class="label-column">
-    <label class="label" [attr.id]="labelId" [attr.for]="controlId">
-      {{ label() }}
+<div
+  class="field-row"
+  [class.field-row--inline]="variant() === 'inline'"
+  [attr.data-variant]="variant()"
+>
+  <div class="field-row__label-column">
+    <label class="field-row__label" [attr.id]="labelId" [attr.for]="controlId">
+      <span>{{ label() }}</span>
       @if (required()) {
-        <span class="required-mark" aria-hidden="true">*</span>
-        <span class="sr-only"> (obligatorio)</span>
+        <span class="field-row__required" aria-hidden="true">*</span>
+        <span class="field-row__sr"> (obligatorio)</span>
+      } @else if (optional()) {
+        <span class="field-row__optional">(opcional)</span>
       }
     </label>
   </div>
-  <div class="control-column">
+  <div class="field-row__control-column">
     <ng-content />
-    @if (error(); as message) {
-      <p [attr.id]="errorId" class="error">{{ message }}</p>
-    } @else if (helper() !== undefined) {
-      <p [attr.id]="helperId" class="helper">{{ helper() }}</p>
-    }
+    <div class="field-row__messages" aria-live="polite">
+      @if (message(); as text) {
+        <p [attr.id]="errorId" class="field-row__text field-row__text--error">
+          <i class="pi pi-exclamation-circle field-row__icon" aria-hidden="true"></i>
+          <span>{{ text }}</span>
+        </p>
+      } @else if (hint(); as text) {
+        <p [attr.id]="helperId" class="field-row__text">
+          <i [class]="hintIcon() + ' field-row__icon'" aria-hidden="true"></i>
+          <span>{{ text }}</span>
+        </p>
+      }
+    </div>
   </div>
 </div>

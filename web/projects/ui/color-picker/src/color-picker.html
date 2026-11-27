@@ -1,48 +1,64 @@
-<div class="wrapper">
-  <div role="radiogroup" class="swatches" [attr.aria-label]="label()">
+<div class="color-picker">
+  <div role="radiogroup" class="color-picker__swatches" [attr.aria-label]="label()">
     @for (n of paletteIndexes; track n) {
       <button
         #swatch
         type="button"
         role="radio"
-        class="swatch"
-        [class.checked]="selected() === n"
+        class="color-picker__swatch"
+        [class.color-picker__swatch--checked]="selected() === n"
         [attr.aria-checked]="selected() === n ? 'true' : 'false'"
-        [attr.aria-label]="'Color ' + n"
+        [attr.aria-label]="nameOf(n)"
+        [attr.title]="nameOf(n)"
         [attr.tabindex]="focusable() === n ? 0 : -1"
         [attr.data-palette]="n"
+        [style.--color-picker-bg]="'var(--cl-palette-' + n + '-bg)'"
+        [style.--color-picker-fg]="'var(--cl-palette-' + n + '-text)'"
         [disabled]="disabled()"
         (click)="select(n)"
         (keydown)="onSwatchKeyDown($event, n)"
         (blur)="onBlur()"
-      ></button>
+      >
+        @if (selected() === n) {
+          <i class="pi pi-check color-picker__check" aria-hidden="true"></i>
+        }
+      </button>
     }
   </div>
 
-  @if (customValue(); as custom) {
-    <span aria-hidden="true" class="preview" [style.--cl-custom-color]="custom"></span>
-  }
-
   @if (allowCustom()) {
-    <div class="custom">
-      <label class="custom-label" [attr.for]="inputId">Color personalizado (hex)</label>
-      <input
-        pInputText
-        type="text"
-        class="hex-input"
-        [attr.id]="inputId"
-        [class.invalid]="invalid()"
-        [value]="draft()"
-        placeholder="#RRGGBB"
-        maxlength="7"
-        [disabled]="disabled()"
-        [attr.aria-invalid]="invalid() ? 'true' : 'false'"
-        [attr.aria-describedby]="invalid() ? errorId : null"
-        (input)="onDraftInput($event)"
-        (blur)="onBlur()"
-      />
+    <div class="color-picker__custom">
+      <label class="color-picker__custom-label" [attr.for]="inputId">
+        Color personalizado (hex)
+      </label>
+      <div class="color-picker__custom-row">
+        @if (customValue(); as custom) {
+          <span
+            aria-hidden="true"
+            class="color-picker__preview"
+            [style.--color-picker-custom]="custom"
+          ></span>
+        }
+        <input
+          pInputText
+          type="text"
+          class="color-picker__hex"
+          [attr.id]="inputId"
+          [value]="draft()"
+          placeholder="#RRGGBB"
+          maxlength="7"
+          [disabled]="disabled()"
+          [attr.aria-invalid]="invalid() ? 'true' : 'false'"
+          [attr.aria-describedby]="invalid() ? errorId : null"
+          (input)="onDraftInput($event)"
+          (blur)="onBlur()"
+        />
+      </div>
       @if (invalid()) {
-        <span [attr.id]="errorId" role="alert" class="error">{{ helpError }}</span>
+        <span [attr.id]="errorId" role="alert" class="color-picker__error">
+          <i class="pi pi-exclamation-circle" aria-hidden="true"></i>
+          {{ helpError }}
+        </span>
       }
     </div>
   }

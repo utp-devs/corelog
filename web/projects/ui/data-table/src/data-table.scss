@@ -1,3 +1,5 @@
+@use '../../styles/mixins' as m;
+
 :host {
   display: flex;
   flex-direction: column;
@@ -9,370 +11,495 @@
   min-height: 0;
 }
 
-.root {
+.data-table {
   display: flex;
   flex-direction: column;
   gap: var(--cl-space-3);
   min-width: 0;
+
+  /* fill: the table area takes the remaining height of the card; its surface paints the unused part. */
+  &--fill {
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+
+  &__area {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-height: 0;
+    background: var(--cl-bg-surface);
+
+    > * {
+      min-width: 0;
+    }
+  }
+
+  /* ---- Toolbar: bulk bar on the left, column chooser and density on the right. ---- */
+  &__toolbar {
+    @include m.cluster(2, center, space-between);
+  }
+
+  &__tools {
+    @include m.cluster(2);
+    margin-inline-start: auto;
+  }
+
+  &__density {
+    display: inline-flex;
+    padding: 2px;
+    border-radius: var(--cl-radius-md);
+    background: var(--cl-bg-sunken);
+  }
+
+  &__segment {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--cl-control-h-sm);
+    padding: 0 var(--cl-space-3);
+    border-radius: var(--cl-radius-sm);
+    font-size: var(--cl-font-small);
+    color: var(--cl-text-subtle);
+    cursor: pointer;
+
+    input {
+      position: absolute;
+      inset: 0;
+      margin: 0;
+      opacity: 0;
+      cursor: pointer;
+    }
+
+    &:has(input:checked) {
+      background: var(--cl-bg-surface);
+      color: var(--cl-text);
+      font-weight: var(--cl-weight-medium);
+      box-shadow: var(--cl-shadow-1);
+    }
+
+    &:has(input:focus-visible) {
+      box-shadow: var(--cl-shadow-focus);
+    }
+  }
+
+  /* ---- Scroll viewport: edge shadows tell the user there is more to the side. ---- */
+  &__viewport {
+    position: relative;
+    flex: 1 1 auto;
+    min-width: 0;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+
+    &::before,
+    &::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      z-index: 2;
+      width: var(--cl-space-4);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity var(--cl-motion-fast) var(--cl-ease);
+    }
+
+    &::before {
+      left: 0;
+      background: linear-gradient(to right, var(--cl-overlay), transparent);
+    }
+
+    &::after {
+      right: 0;
+      background: linear-gradient(to left, var(--cl-overlay), transparent);
+    }
+
+    &--edge-start::before,
+    &--edge-end::after {
+      opacity: 0.35;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      &::before,
+      &::after {
+        transition: none;
+      }
+    }
+  }
+
+  /* Wide tables scroll inside their own box instead of pushing the page past the viewport. The
+     scroller is also the sticky-header container, so it is height bound. */
+  &__scroll {
+    flex: 1 1 auto;
+    min-width: 0;
+    max-width: 100%;
+    min-height: 0;
+    max-height: 70vh;
+    overflow: auto;
+    overscroll-behavior-x: contain;
+
+    th {
+      position: sticky;
+      top: 0;
+      z-index: 1;
+      white-space: nowrap;
+    }
+  }
+
+  &--fill &__scroll {
+    max-height: none;
+  }
+
+  /* ---- Rows: 48px comfortable, 36px compact, quiet hover, clear selected state. ---- */
+  &--comfortable &__row > td {
+    height: var(--cl-control-h-lg);
+    padding-block: 0;
+  }
+
+  &--compact &__row > td {
+    height: var(--cl-control-h-md);
+    padding-block: 0;
+  }
+
+  &__row {
+    &:hover > td {
+      background: var(--cl-bg-hover);
+    }
+
+    &--selected > td,
+    &--selected:hover > td {
+      background: var(--cl-bg-selected);
+    }
+
+    &--selected > td:first-child {
+      box-shadow: inset 3px 0 0 var(--cl-brand);
+    }
+
+    &:focus-visible {
+      outline: none;
+      box-shadow: inset 0 0 0 2px var(--cl-brand);
+    }
+  }
+
+  &--clickable &__row {
+    cursor: pointer;
+  }
+
+  &__align-right {
+    text-align: right;
+  }
+
+  &__align-center {
+    text-align: center;
+  }
+
+  /* Long values are cut with an ellipsis; the full value is the cell title. */
+  &__cell--ellipsis {
+    @include m.truncate;
+    /* The truncating column takes the free width; the others keep their content width. */
+    width: 100%;
+    max-width: 0;
+  }
+
+  &__col-select {
+    width: var(--cl-space-12);
+  }
+
+  &__col-actions {
+    width: 1%;
+    white-space: nowrap;
+    text-align: right;
+  }
+
+  &__row-actions {
+    @include m.flex-row(1, center, flex-end);
+  }
+
+  &__sr-only {
+    @include m.visually-hidden;
+  }
+
+  /* ---- Sortable headers: the arrows are always there, stronger once active. ---- */
+  &__sort {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--cl-space-1);
+    padding: 0;
+    border: 0;
+    border-radius: var(--cl-radius-sm);
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+
+    i {
+      font-size: var(--cl-font-caption);
+      opacity: 0.6;
+    }
+
+    &:hover {
+      color: var(--cl-text);
+    }
+
+    &--active {
+      color: var(--cl-text);
+
+      i {
+        color: var(--cl-brand);
+        opacity: 1;
+      }
+    }
+
+    &:focus-visible {
+      outline: none;
+      box-shadow: var(--cl-shadow-focus);
+    }
+  }
+
+  &__check {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--cl-space-2);
+    font-size: var(--cl-font-body);
+    color: var(--cl-text);
+    cursor: pointer;
+
+    input {
+      width: var(--cl-space-4);
+      height: var(--cl-space-4);
+      margin: 0;
+      accent-color: var(--cl-brand);
+
+      &:focus-visible {
+        outline: none;
+        box-shadow: var(--cl-shadow-focus);
+      }
+
+      &:disabled {
+        cursor: default;
+      }
+    }
+
+    &--touch {
+      justify-content: center;
+      min-width: var(--cl-control-h-md);
+      min-height: var(--cl-control-h-md);
+    }
+  }
+
+  &__chooser {
+    @include m.flex-column(2);
+    min-width: 12rem;
+    padding: var(--cl-space-1);
+  }
+
+  /* ---- Buttons inside rows and in the footer. ---- */
+  &__icon-button {
+    @include m.flex-row(0, center, center);
+    width: var(--cl-control-h-sm);
+    height: var(--cl-control-h-sm);
+    padding: 0;
+    border: 0;
+    border-radius: var(--cl-radius-sm);
+    background: transparent;
+    color: var(--cl-text-subtle);
+    cursor: pointer;
+
+    &:hover:not(:disabled) {
+      background: var(--cl-bg-hover);
+      color: var(--cl-text);
+    }
+
+    &:focus-visible {
+      outline: none;
+      box-shadow: var(--cl-shadow-focus);
+    }
+
+    &:disabled {
+      color: var(--cl-text-disabled);
+      cursor: default;
+    }
+  }
+
+  &__primary-action {
+    @include m.flex-row(1, center, center);
+    height: var(--cl-control-h-sm);
+    padding: 0 var(--cl-space-3);
+    border: 1px solid var(--cl-border-strong);
+    border-radius: var(--cl-radius-md);
+    background: transparent;
+    color: var(--cl-text);
+    font: inherit;
+    font-size: var(--cl-font-small);
+    font-weight: var(--cl-weight-medium);
+    white-space: nowrap;
+    cursor: pointer;
+
+    &:hover {
+      background: var(--cl-bg-hover);
+    }
+
+    &:focus-visible {
+      outline: none;
+      box-shadow: var(--cl-shadow-focus);
+    }
+
+    &--danger {
+      border-color: var(--cl-danger);
+      color: var(--cl-danger-text);
+    }
+  }
+
+  /* ---- States ---- */
+  &__empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    max-height: 280px;
+    overflow: hidden;
+  }
+
+  &__area &__empty {
+    align-items: flex-start;
+  }
+
+  &__error {
+    border: 1px solid var(--cl-divider);
+    border-radius: var(--cl-radius-md);
+    background: var(--cl-bg-surface);
+  }
+
+  &__skeleton {
+    display: block;
+    width: 70%;
+    height: var(--cl-font-body);
+    border-radius: var(--cl-radius-sm);
+    background: var(--cl-bg-sunken);
+    animation: data-table-pulse 1.2s ease-in-out infinite;
+
+    @media (prefers-reduced-motion: reduce) {
+      animation: none;
+    }
+  }
+
+  /* ---- Footer: range text, page size and paging buttons. ---- */
+  &__footer {
+    @include m.cluster(2, center, space-between);
+    font-size: var(--cl-font-small);
+  }
+
+  &__total {
+    font-size: var(--cl-font-body);
+    color: var(--cl-text-subtle);
+  }
+
+  &__pager {
+    @include m.cluster(2);
+    margin-inline-start: auto;
+  }
+
+  &__page-status {
+    font-size: var(--cl-font-body);
+    color: var(--cl-text);
+  }
+
+  /* ---- Card list below 900px ---- */
+  &__cards {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  &__card {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--cl-space-3);
+    padding: var(--cl-space-3) var(--cl-space-4);
+    border-bottom: 1px solid var(--cl-divider);
+    background: var(--cl-bg-surface);
+
+    &:last-child {
+      border-bottom: 0;
+    }
+
+    &.data-table__row--selected {
+      background: var(--cl-bg-selected);
+    }
+  }
+
+  &__card-body {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  &__card-actions {
+    @include m.flex-row(1, center, flex-end);
+    flex: none;
+  }
+
+  &__fields {
+    @include m.flex-column(1);
+    margin: 0;
+  }
+
+  &__field {
+    @include m.flex-row(3, baseline);
+  }
+
+  &__field-label {
+    flex: none;
+    width: 7rem;
+    font-size: var(--cl-font-small);
+    color: var(--cl-text-subtle);
+  }
+
+  &__field-value {
+    min-width: 0;
+    margin: 0;
+    overflow-wrap: anywhere;
+  }
+
+  /* Phones and tablets use cards: every control is a 44px touch target. */
+  @media (max-width: 899.98px) {
+    &__icon-button {
+      width: var(--cl-control-h-lg);
+      height: var(--cl-control-h-lg);
+    }
+
+    &__primary-action {
+      height: var(--cl-control-h-lg);
+    }
+
+    &__segment {
+      min-height: var(--cl-control-h-lg);
+    }
+
+    &__sort {
+      min-height: var(--cl-control-h-lg);
+    }
+
+    &__check--touch {
+      min-width: var(--cl-control-h-lg);
+      min-height: var(--cl-control-h-lg);
+
+      input {
+        width: var(--cl-space-6);
+        height: var(--cl-space-6);
+      }
+    }
+  }
 }
 
-/* fill: the table area takes the remaining height of the card; its surface paints the unused part. */
-.root.fill {
-  flex: 1 1 auto;
-  min-height: 0;
-}
-
-.area {
-  display: flex;
-  flex: 1 1 auto;
-  flex-direction: column;
-  min-height: 0;
-  background: var(--cl-bg-surface);
-}
-
-.area > * {
-  min-width: 0;
-}
-
-/* Wide tables scroll inside their own box instead of pushing the page past the viewport. */
-.table-scroll {
-  flex: 1 1 auto;
-  min-width: 0;
-  max-width: 100%;
-  min-height: 0;
-  overflow-x: auto;
-}
-
-/* The wrapper above is the only horizontal scroller; PrimeNG table containers do not scroll on their own. */
-.table-scroll ::ng-deep .p-datatable-table-container {
-  overflow: visible !important;
-}
-
-.area .empty {
-  align-items: flex-start;
-  padding-top: var(--cl-space-4);
-}
-
-.toolbar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--cl-space-2);
-}
-
-.tools {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--cl-space-2);
-  margin-left: auto;
-}
-
-.density {
-  display: inline-flex;
-  padding: 2px;
-  border-radius: var(--cl-radius-md);
-  background: var(--cl-bg-sunken);
-}
-
-.segment {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  min-height: 28px;
-  padding: 0 var(--cl-space-2);
-  border-radius: var(--cl-radius-sm);
-  font-size: var(--cl-font-small);
-  color: var(--cl-text-subtle);
-  cursor: pointer;
-}
-
-.segment input {
-  position: absolute;
-  inset: 0;
-  margin: 0;
-  opacity: 0;
-  cursor: pointer;
-}
-
-.segment:has(input:checked) {
-  background: var(--cl-bg-surface);
-  color: var(--cl-text);
-  box-shadow: var(--cl-shadow-1);
-}
-
-.segment:has(input:focus-visible) {
-  box-shadow: var(--cl-shadow-focus);
-}
-
-.comfortable tr.cl-data-row > td {
-  height: var(--cl-row-h);
-  padding-block: 0;
-}
-
-.compact tr.cl-data-row > td {
-  height: var(--cl-row-h-compact);
-  padding-block: 0;
-}
-
-tr.cl-data-row:hover > td {
-  background: var(--cl-brand-subtle);
-}
-
-.clickable .cl-data-row {
-  cursor: pointer;
-}
-
-.cl-data-row:focus-visible {
-  outline: none;
-  box-shadow: inset 0 0 0 2px var(--cl-brand);
-}
-
-.align-right {
-  text-align: right;
-}
-
-.align-center {
-  text-align: center;
-}
-
-.ellipsis {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  max-width: 0;
-}
-
-.col-select {
-  width: 48px;
-}
-
-.col-actions {
-  width: 56px;
-  text-align: right;
-}
-
-.sort-button {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--cl-space-1);
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: inherit;
-  font: inherit;
-  cursor: pointer;
-}
-
-.check {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--cl-space-2);
-  font-size: var(--cl-font-body);
-  color: var(--cl-text);
-  cursor: pointer;
-}
-
-.check input {
-  width: 16px;
-  height: 16px;
-  margin: 0;
-  accent-color: var(--cl-brand);
-}
-
-.check input:focus-visible {
-  outline: none;
-  box-shadow: var(--cl-shadow-focus);
-}
-
-.chooser {
-  display: flex;
-  flex-direction: column;
-  gap: var(--cl-space-2);
-  padding: var(--cl-space-3);
-  border-radius: var(--cl-radius-md);
-  background: var(--cl-bg-surface);
-  box-shadow: var(--cl-shadow-2);
-}
-
-.icon-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  padding: 0;
-  border: 0;
-  border-radius: var(--cl-radius-sm);
-  background: transparent;
-  color: var(--cl-text-subtle);
-  cursor: pointer;
-}
-
-.icon-button:hover:not(:disabled) {
-  background: var(--cl-bg-sunken);
-  color: var(--cl-text);
-}
-
-.icon-button:focus-visible {
-  outline: none;
-  box-shadow: var(--cl-shadow-focus);
-}
-
-.icon-button:disabled {
-  color: var(--cl-text-disabled);
-  cursor: default;
-}
-
-.empty {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  max-height: 280px;
-  overflow: hidden;
-}
-
-.default-empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--cl-space-1);
-  padding: var(--cl-space-6) 0;
-  text-align: center;
-}
-
-.empty-title {
-  margin: 0;
-  font-size: var(--cl-font-body-strong);
-  font-weight: 600;
-  color: var(--cl-text);
-}
-
-.empty-description {
-  margin: 0;
-  font-size: var(--cl-font-body);
-  color: var(--cl-text-subtle);
-}
-
-.error-state {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--cl-space-3);
-  padding: var(--cl-space-4);
-  border-radius: var(--cl-radius-md);
-  background: var(--cl-danger-bg);
-}
-
-.error-message {
-  margin: 0;
-  font-size: var(--cl-font-body);
-  color: var(--cl-danger-text);
-}
-
-.footer {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--cl-space-2);
-}
-
-.total {
-  font-size: var(--cl-font-small);
-  color: var(--cl-text-subtle);
-}
-
-.pager {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--cl-space-2);
-  margin-left: auto;
-}
-
-.page-status {
-  font-size: var(--cl-font-small);
-  color: var(--cl-text);
-}
-
-.skeleton-bar {
-  display: block;
-  width: 70%;
-  height: var(--cl-font-small);
-  border-radius: var(--cl-radius-sm);
-  background: var(--cl-bg-sunken);
-  animation: pulse 1.2s ease-in-out infinite;
-}
-
-@keyframes pulse {
+@keyframes data-table-pulse {
   0%,
   100% {
     opacity: 1;
   }
+
   50% {
     opacity: 0.5;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .skeleton-bar {
-    animation: none;
-  }
-}
-
-.cards {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: var(--cl-space-2);
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.card {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--cl-space-3);
-  padding: var(--cl-space-3);
-  border: 1px solid var(--cl-border);
-  border-radius: var(--cl-radius-md);
-  background: var(--cl-bg-surface);
-}
-
-.card-body {
-  flex: 1 1 auto;
-  min-width: 0;
-}
-
-.check-touch {
-  min-width: 44px;
-  min-height: 44px;
-  justify-content: center;
-}
-
-@media (max-width: 767.98px) {
-  .icon-button {
-    width: 44px;
-    height: 44px;
-  }
-
-  .segment {
-    min-height: 44px;
-  }
-
-  .sort-button {
-    min-height: 44px;
-  }
-}
-
-/* Phones: the row checkbox is the whole touch target of its label (the audit requires 32 px). */
-@media (max-width: 767.98px) {
-  .check-touch input[type='checkbox'] {
-    width: 32px;
-    height: 32px;
-    margin: 0;
   }
 }

@@ -35,6 +35,8 @@ export class SearchInput implements ControlValueAccessor {
   /** Committed value. Changes after the debounce delay or when cleared. */
   readonly value = model<string>('');
   readonly placeholder = input('Buscar');
+  /** 28 px high variant for dense toolbars. */
+  readonly compact = input(false);
   /** Time to wait after the last key before notifying the change. */
   readonly debounceMs = input(300);
   readonly ariaLabel = input('Buscar');
@@ -80,6 +82,15 @@ export class SearchInput implements ControlValueAccessor {
     this.draft.set('');
     this.cancelTimer();
     this.commit('');
+  }
+
+  /** Escape clears a non-empty field; an empty field lets the key bubble (for example to close a dialog). */
+  protected onEscape(event: Event): void {
+    if (this.draft() === '') {
+      return;
+    }
+    event.stopPropagation();
+    this.clear();
   }
 
   protected onBlur(): void {

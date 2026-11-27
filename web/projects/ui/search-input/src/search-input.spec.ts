@@ -62,3 +62,41 @@ describe('SearchInput', () => {
     expect(onChange).toHaveBeenLastCalledWith('inicial 2');
   });
 });
+
+describe('SearchInput keyboard', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('clears a non-empty field with Escape and keeps the key from bubbling', () => {
+    const { fixture, input } = create('login');
+    const event = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true });
+    const stop = vi.spyOn(event, 'stopPropagation');
+    input.dispatchEvent(event);
+    fixture.detectChanges();
+    expect(fixture.componentInstance.value()).toBe('');
+    expect(input.value).toBe('');
+    expect(stop).toHaveBeenCalled();
+  });
+
+  it('lets Escape bubble when the field is already empty', () => {
+    const { input } = create('');
+    const event = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true });
+    const stop = vi.spyOn(event, 'stopPropagation');
+    input.dispatchEvent(event);
+    expect(stop).not.toHaveBeenCalled();
+  });
+
+  it('gives the clear button a name and hides it while empty', () => {
+    const { fixture, el } = create('');
+    expect(el.querySelector('.search-input__clear')).toBeNull();
+    type(fixture, el.querySelector('input') as HTMLInputElement, 'x');
+    expect(el.querySelector('.search-input__clear')?.getAttribute('aria-label')).toBe(
+      'Limpiar búsqueda',
+    );
+  });
+});

@@ -23,7 +23,9 @@ import {
   type TextEdit,
   type ToolbarAction,
 } from '@corelog/core';
+import { Avatar } from '@corelog/ui/avatar';
 import { RichTextView } from '@corelog/ui/rich-text-view';
+import { AppTooltip } from '@corelog/ui/tooltip';
 
 import { clearDraft, readDraft, writeDraft } from './draft';
 import { detectTrigger, type Trigger, type TriggerKind } from './trigger';
@@ -33,6 +35,9 @@ export type { IssueLite, UserLite } from './types';
 
 interface PickerItem {
   readonly id: string;
+  /** User id and photo of a person suggestion; absent for issue suggestions. */
+  readonly userId?: string;
+  readonly avatarUrl?: string | null;
   readonly label: string;
   readonly detail?: string;
   readonly insert: string;
@@ -47,29 +52,64 @@ interface PickerResults {
   readonly items: PickerItem[];
 }
 
+/** Commands of the toolbar that are not text formatting. */
+type EditorCommand = 'mention' | 'issue' | 'image';
+
 interface FormatButton {
-  readonly action: ToolbarAction;
+  readonly action: ToolbarAction | EditorCommand;
   readonly label: string;
   readonly icon: string;
+}
+
+interface ToolGroup {
+  readonly name: string;
+  readonly buttons: readonly FormatButton[];
 }
 
 const ACCEPTED_IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/gif', 'image/webp'];
 const SEARCH_DEBOUNCE_MS = 150;
 const DRAFT_DEBOUNCE_MS = 400;
 
-const FORMAT_BUTTONS: readonly FormatButton[] = [
-  { action: 'bold', label: 'Negrita', icon: 'pi pi-bold' },
-  { action: 'italic', label: 'Cursiva', icon: 'pi pi-italic' },
-  { action: 'strikethrough', label: 'Tachado', icon: 'pi pi-minus' },
-  { action: 'code', label: 'Código en línea', icon: 'pi pi-code' },
-  { action: 'link', label: 'Enlace', icon: 'pi pi-link' },
-  { action: 'heading', label: 'Encabezado', icon: 'pi pi-align-left' },
-  { action: 'bulletList', label: 'Lista con viñetas', icon: 'pi pi-list' },
-  { action: 'numberedList', label: 'Lista numerada', icon: 'pi pi-list-ol' },
-  { action: 'taskList', label: 'Lista de tareas', icon: 'pi pi-list-check' },
-  { action: 'quote', label: 'Cita', icon: 'pi pi-comment' },
-  { action: 'codeBlock', label: 'Bloque de código', icon: 'pi pi-file' },
-  { action: 'table', label: 'Tabla', icon: 'pi pi-table' },
+/** Toolbar groups, separated by a divider: headings | text | lists | blocks | inserts. One icon set (PrimeIcons). */
+const TOOL_GROUPS: readonly ToolGroup[] = [
+  {
+    name: 'Encabezados',
+    buttons: [{ action: 'heading', label: 'Encabezado', icon: 'pi pi-heading' }],
+  },
+  {
+    name: 'Texto',
+    buttons: [
+      { action: 'bold', label: 'Negrita', icon: 'pi pi-bold' },
+      { action: 'italic', label: 'Cursiva', icon: 'pi pi-italic' },
+      { action: 'strikethrough', label: 'Tachado', icon: 'pi pi-strikethrough' },
+    ],
+  },
+  {
+    name: 'Listas',
+    buttons: [
+      { action: 'bulletList', label: 'Lista con viñetas', icon: 'pi pi-list' },
+      { action: 'numberedList', label: 'Lista numerada', icon: 'pi pi-list-ol' },
+      { action: 'taskList', label: 'Lista de tareas', icon: 'pi pi-list-check' },
+    ],
+  },
+  {
+    name: 'Bloques',
+    buttons: [
+      { action: 'quote', label: 'Cita', icon: 'pi pi-block-quote' },
+      { action: 'code', label: 'Código en línea', icon: 'pi pi-code' },
+      { action: 'codeBlock', label: 'Bloque de código', icon: 'pi pi-file' },
+      { action: 'link', label: 'Enlace', icon: 'pi pi-link' },
+      { action: 'table', label: 'Tabla', icon: 'pi pi-table' },
+    ],
+  },
+  {
+    name: 'Insertar',
+    buttons: [
+      { action: 'mention', label: 'Mencionar persona', icon: 'pi pi-at' },
+      { action: 'issue', label: 'Enlazar incidencia', icon: 'pi pi-hashtag' },
+      { action: 'image', label: 'Subir imagen', icon: 'pi pi-image' },
+    ],
+  },
 ];
 
 let nextEditorId = 0;
@@ -81,7 +121,7 @@ let nextEditorId = 0;
  */
 @Component({
   selector: 'app-rich-text-editor',
-  imports: [RichTextView],
+  imports: [RichTextView, Avatar, AppTooltip],
   templateUrl: './rich-text-editor.html',
   styleUrl: './rich-text-editor.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -114,7 +154,13 @@ export class RichTextEditor implements ControlValueAccessor, OnInit {
   private readonly textarea = viewChild<ElementRef<HTMLTextAreaElement>>('textarea');
   private readonly fileInput = viewChild<ElementRef<HTMLInputElement>>('fileInput');
 
-  protected readonly formatButtons = FORMAT_BUTTONS;
+  /** Toolbar groups; the image button only exists when uploads are enabled. */
+  protected readonly toolGroups = computed(() =>
+    TOOL_GROUPS.map((group) => ({
+      ...group,
+      buttons: group.buttons.filter((button) => button.action !== 'image' || !!this.uploadImage()),
+    })).filter((group) => group.buttons.length > 0),
+  );
   protected readonly acceptedTypes = ACCEPTED_IMAGE_TYPES.join(',');
   protected readonly id = `rich-text-editor-${nextEditorId++}`;
   protected readonly listboxId = `${this.id}-listbox`;
@@ -164,6 +210,9 @@ export class RichTextEditor implements ControlValueAccessor, OnInit {
   private restored = false;
   private awaitingDraftEcho = false;
   private draftTimer: ReturnType<typeof setTimeout> | undefined;
+  /** Height the user dragged the resize handle to; the autosize never goes below it. */
+  private manualHeight = 0;
+  private autoHeight = 0;
 
   constructor() {
     // Debounced search for the open picker, keyed by trigger kind and query.
@@ -233,23 +282,39 @@ export class RichTextEditor implements ControlValueAccessor, OnInit {
     this.openPickerFrom(el.value, el.selectionStart);
   }
 
+  /** After a drag on the resize handle the new height becomes the floor of the autosize. */
+  protected onResizeEnd(event: Event): void {
+    const el = event.target as HTMLTextAreaElement;
+    if (Math.abs(el.offsetHeight - this.autoHeight) > 2) {
+      this.manualHeight = el.offsetHeight;
+    }
+  }
+
   protected onBlur(): void {
     this.popup.set(null);
     this.onTouchedFn();
+  }
+
+  protected runTool(action: ToolbarAction | EditorCommand): void {
+    if (action === 'mention') {
+      this.insertTrigger('@');
+    } else if (action === 'issue') {
+      this.insertTrigger('#');
+    } else if (action === 'image') {
+      this.openFilePicker();
+    } else {
+      this.runToolbar(action);
+    }
+  }
+
+  protected toolDisabled(action: ToolbarAction | EditorCommand): boolean {
+    return this.isDisabled() || (action === 'image' && this.uploading());
   }
 
   protected runToolbar(action: ToolbarAction): void {
     const el = this.textarea()?.nativeElement;
     if (!el) return;
     this.applyEdit(applyToolbarAction(action, this.value(), el.selectionStart, el.selectionEnd));
-  }
-
-  protected insertMentionTrigger(): void {
-    this.insertTrigger('@');
-  }
-
-  protected insertIssueTrigger(): void {
-    this.insertTrigger('#');
   }
 
   protected pickItem(item: PickerItem): void {
@@ -409,6 +474,8 @@ export class RichTextEditor implements ControlValueAccessor, OnInit {
         const found = await users(query);
         items = found.map((u) => ({
           id: u.id,
+          userId: u.id,
+          avatarUrl: u.avatarUrl,
           label: u.name,
           detail: u.email,
           insert: mentionToken({ id: u.id, name: u.name }),
@@ -459,9 +526,10 @@ export class RichTextEditor implements ControlValueAccessor, OnInit {
     const lineHeight = parseFloat(computed.lineHeight) || 20;
     const padding =
       (parseFloat(computed.paddingTop) || 0) + (parseFloat(computed.paddingBottom) || 0);
-    const min = lineHeight * this.minRows() + padding;
-    const max = lineHeight * this.maxRows() + padding;
+    const min = Math.max(lineHeight * this.minRows() + padding, this.manualHeight);
+    const max = Math.max(lineHeight * this.maxRows() + padding, this.manualHeight);
     const next = Math.min(Math.max(el.scrollHeight, min), max);
+    this.autoHeight = next;
     el.style.height = `${next}px`;
     el.style.overflowY = el.scrollHeight > max ? 'auto' : 'hidden';
   }

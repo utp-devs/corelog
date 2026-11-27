@@ -9,10 +9,9 @@ import {
 } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Button } from 'primeng/button';
-import { Select } from 'primeng/select';
 
 import { SearchInput } from '@corelog/ui/search-input';
+import { SelectField } from '@corelog/ui/select-field';
 
 export interface FilterOption {
   readonly value: string;
@@ -28,10 +27,20 @@ export interface FilterDefinition {
   readonly onChange: (value?: string) => void;
 }
 
-/** Filter bar: debounced search, one selector per field and a clear action. */
+interface FilterChip {
+  readonly key: string;
+  readonly text: string;
+  /** Filter to reset; undefined for the search chip. */
+  readonly filter?: FilterDefinition;
+}
+
+/**
+ * Filter bar: debounced search, one selector per field, a "Limpiar filtros" action and one removable chip
+ * per active filter (so the user sees what is applied without reading every select).
+ */
 @Component({
   selector: 'app-filter-bar',
-  imports: [NgTemplateOutlet, FormsModule, Button, Select, SearchInput],
+  imports: [NgTemplateOutlet, FormsModule, SearchInput, SelectField],
   templateUrl: './filter-bar.html',
   styleUrl: './filter-bar.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -51,6 +60,30 @@ export class FilterBar {
       this.searchValue() !== '' ||
       this.filters().some((filter) => filter.value !== undefined && filter.value !== ''),
   );
+
+  protected readonly chips = computed<FilterChip[]>(() => {
+    const chips: FilterChip[] = [];
+    const search = this.searchValue().trim();
+    if (search !== '') {
+      chips.push({ key: 'search', text: `Búsqueda: ${search}` });
+    }
+    for (const filter of this.filters()) {
+      if (filter.value === undefined || filter.value === '') {
+        continue;
+      }
+      const label = filter.options.find((option) => option.value === filter.value)?.label;
+      chips.push({ key: filter.key, text: `${filter.label}: ${label ?? filter.value}`, filter });
+    }
+    return chips;
+  });
+
+  protected removeChip(chip: FilterChip): void {
+    if (chip.filter) {
+      chip.filter.onChange(undefined);
+    } else {
+      this.searchValue.set('');
+    }
+  }
 
   protected onFilterChange(filter: FilterDefinition, value: string | null): void {
     filter.onChange(value ?? undefined);

@@ -5,8 +5,8 @@ import {
   effect,
   inject,
   input,
+  output,
   signal,
-  viewChild,
 } from '@angular/core';
 import {
   AuthStore,
@@ -17,20 +17,35 @@ import {
   ThemeService,
   UiPreferencesService,
   type AppRole,
+  type ThemeMode,
 } from '@corelog/core';
 import { Avatar } from '@corelog/ui/avatar';
-import type { MenuItem } from 'primeng/api';
-import { Menu } from 'primeng/menu';
+import { AppTooltip } from '@corelog/ui/tooltip';
+
+import { DropdownMenu } from './dropdown-menu';
+import { ShellIcon, type ShellIconName } from './shell-icon';
 
 const ROLE_LABELS: Readonly<Record<AppRole, string>> = {
   admin: 'Administrador',
   user: 'Usuario',
 };
 
-/** Avatar menu: profile, theme, density and sign out. */
+interface ThemeChoice {
+  readonly mode: ThemeMode;
+  readonly label: string;
+  readonly icon: ShellIconName;
+}
+
+const THEME_CHOICES: readonly ThemeChoice[] = [
+  { mode: 'light', label: 'Claro', icon: 'sun' },
+  { mode: 'dark', label: 'Oscuro', icon: 'moon' },
+  { mode: 'system', label: 'Sistema', icon: 'monitor' },
+];
+
+/** Avatar menu: identity, profile, theme (light, dark, system), compact density, shortcuts and sign out. */
 @Component({
   selector: 'app-user-menu',
-  imports: [Avatar, Menu],
+  imports: [AppTooltip, Avatar, DropdownMenu, ShellIcon],
   templateUrl: './user-menu.html',
   styleUrl: './user-menu.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -43,47 +58,21 @@ export class UserMenu {
   private readonly preferences = inject(UiPreferencesService);
   private readonly avatars = inject(AvatarUrlService);
 
-  private readonly menu = viewChild.required<Menu>('menu');
   private readonly avatarWatch = signal<AvatarUrlWatch | null>(null);
 
   /** Profile lives in the workspace application: opened with a full-page navigation. */
   readonly profileUrl = input('/workspace/profile');
+  readonly openShortcuts = output<void>();
 
   protected readonly user = this.auth.user;
   protected readonly photo = computed(() => this.avatarWatch()?.url() ?? null);
-
-  protected readonly items = computed<MenuItem[]>(() => {
+  protected readonly roleLabel = computed(() => {
     const current = this.user();
-    if (!current) return [];
-    const compact = this.preferences.density() === 'compact';
-    return [
-      { label: current.name, disabled: true, styleClass: 'identity-name' },
-      {
-        label: `${current.email} · ${ROLE_LABELS[current.role]}`,
-        disabled: true,
-        styleClass: 'identity-meta',
-      },
-      { separator: true },
-      { label: 'Mi perfil', command: () => this.assign(this.profileUrl()) },
-      {
-        label: this.theme.isDark() ? 'Usar tema claro' : 'Usar tema oscuro',
-        command: () => this.theme.toggle(),
-      },
-      {
-        label: compact ? 'Densidad cómoda' : 'Densidad compacta',
-        command: () => this.preferences.setDensity(compact ? 'comfortable' : 'compact'),
-      },
-      { separator: true },
-      {
-        label: 'Cerrar sesión',
-        styleClass: 'danger',
-        command: () => {
-          this.auth.logout();
-          this.assign(this.loginUrl);
-        },
-      },
-    ];
+    return current ? ROLE_LABELS[current.role] : '';
   });
+  protected readonly themeChoices = THEME_CHOICES;
+  protected readonly themeMode = this.theme.mode;
+  protected readonly compact = computed(() => this.preferences.density() === 'compact');
 
   constructor() {
     // One avatar reader per signed-in user; the previous reader is released when the user changes.
@@ -97,7 +86,20 @@ export class UserMenu {
     });
   }
 
-  protected toggle(event: Event): void {
-    this.menu().toggle(event);
+  protected goToProfile(): void {
+    this.assign(this.profileUrl());
+  }
+
+  protected setTheme(mode: ThemeMode): void {
+    this.theme.setMode(mode);
+  }
+
+  protected toggleDensity(): void {
+    this.preferences.setDensity(this.compact() ? 'comfortable' : 'compact');
+  }
+
+  protected signOut(): void {
+    this.auth.logout();
+    this.assign(this.loginUrl);
   }
 }

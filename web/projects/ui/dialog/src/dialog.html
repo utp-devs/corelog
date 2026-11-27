@@ -1,0 +1,43 @@
+@if (open()) {
+  <div
+    class="dialog"
+    [class.dialog--stacked]="stacked()"
+    [class.dialog--sheet]="size() === 'sm'"
+    (mousedown)="onBackdropMouseDown($event)"
+  >
+    <div
+      #panel
+      class="dialog__panel"
+      [class.dialog__panel--sm]="size() === 'sm'"
+      [class.dialog__panel--md]="size() === 'md'"
+      [class.dialog__panel--lg]="size() === 'lg'"
+      role="dialog"
+      aria-modal="true"
+      tabindex="-1"
+      [attr.aria-labelledby]="titleId"
+      (keydown)="onKeydown($event)"
+    >
+      <header class="dialog__header">
+        <div class="dialog__heading">
+          <h2 class="dialog__title" [id]="titleId">{{ heading() }}</h2>
+          @if (subtitle(); as text) {
+            <p class="dialog__subtitle">{{ text }}</p>
+          }
+        </div>
+        <button type="button" class="dialog__close" aria-label="Cerrar" (click)="requestClose()">
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path d="M6 6l12 12M18 6 6 18" />
+          </svg>
+        </button>
+      </header>
+
+      <div class="dialog__body">
+        <ng-content />
+      </div>
+
+      <footer class="dialog__footer">
+        <ng-content select="[dialogFooter]" />
+      </footer>
+    </div>
+  </div>
+}

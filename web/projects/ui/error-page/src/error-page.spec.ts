@@ -48,19 +48,19 @@ describe('ErrorPage', () => {
   it('shows the Spanish 403 copy and the status code', () => {
     const root = el(create(403));
     expect(root.querySelector('h1')?.textContent).toBe('No tienes acceso a esta página');
-    expect(root.querySelector('.code')?.textContent).toBe('403');
+    expect(root.querySelector('.error-page__code')?.textContent).toBe('403');
   });
 
   it('shows the Spanish 404 copy', () => {
     const root = el(create(404));
     expect(root.querySelector('h1')?.textContent).toBe('No encontramos esta página');
-    expect(root.querySelector('.code')?.textContent).toBe('404');
+    expect(root.querySelector('.error-page__code')?.textContent).toBe('404');
   });
 
   it('shows the Spanish 500 copy', () => {
     const root = el(create(500));
     expect(root.querySelector('h1')?.textContent).toBe('Algo salió mal');
-    expect(root.querySelector('.code')?.textContent).toBe('500');
+    expect(root.querySelector('.error-page__code')?.textContent).toBe('500');
   });
 
   it('always offers "Volver al inicio" as a link to /', () => {
@@ -95,6 +95,8 @@ describe('ErrorPage', () => {
     fixture.detectChanges();
     const root = el(fixture);
     expect(root.querySelector('h1')?.textContent).toBe('Incidencia no encontrada');
-    expect(root.querySelector('.description')?.textContent).toBe('Puede que la hayan eliminado.');
+    expect(root.querySelector('.error-page__description')?.textContent).toBe(
+      'Puede que la hayan eliminado.',
+    );
   });
 });

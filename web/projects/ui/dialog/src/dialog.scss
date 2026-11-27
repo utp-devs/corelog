@@ -1,0 +1,185 @@
+@use '../../styles/mixins' as m;
+
+// Shared dialog shell: backdrop, elevated panel, header, scrollable body and sticky footer.
+// Below 640 px the panel becomes a full-screen sheet (small dialogs a bottom sheet).
+.dialog {
+  position: fixed;
+  inset: 0;
+  z-index: var(--cl-z-modal);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--cl-space-4);
+  background: var(--cl-overlay);
+
+  &--stacked {
+    z-index: var(--cl-z-overlay);
+  }
+
+  &__panel {
+    @include m.flex-column;
+    box-sizing: border-box;
+    width: var(--cl-dialog-w-md);
+    max-width: 100%;
+    max-height: 100%;
+    overflow: hidden;
+    border: 1px solid var(--cl-divider);
+    border-radius: var(--cl-radius-lg);
+    background: var(--cl-bg-elevated);
+    box-shadow: var(--cl-elev-modal);
+    color: var(--cl-text);
+
+    &:focus {
+      outline: none;
+    }
+
+    &--sm {
+      width: var(--cl-dialog-w-sm);
+    }
+
+    &--lg {
+      width: var(--cl-dialog-w-lg);
+    }
+  }
+
+  &__header {
+    @include m.flex-row(3, flex-start, space-between);
+    flex: none;
+    padding: var(--cl-space-5) var(--cl-space-6) var(--cl-space-3);
+  }
+
+  &__heading {
+    @include m.flex-column(1);
+    min-width: 0;
+  }
+
+  &__title {
+    margin: 0;
+    color: var(--cl-text);
+    font-size: var(--cl-font-h3);
+    font-weight: var(--cl-weight-semibold);
+    line-height: var(--cl-lh-tight);
+    overflow-wrap: anywhere;
+  }
+
+  &__subtitle {
+    margin: 0;
+    color: var(--cl-text-subtle);
+    font-size: var(--cl-font-body);
+    line-height: var(--cl-lh-body);
+  }
+
+  &__close {
+    @include m.touch-target;
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    margin: calc(var(--cl-space-2) * -1) calc(var(--cl-space-2) * -1) 0 0;
+    padding: 0;
+    border: none;
+    border-radius: var(--cl-radius-md);
+    background: transparent;
+    color: var(--cl-text-subtle);
+    cursor: pointer;
+
+    &:hover {
+      background: var(--cl-bg-hover);
+      color: var(--cl-text);
+    }
+
+    &:focus-visible {
+      outline: none;
+      box-shadow: var(--cl-shadow-focus);
+    }
+
+    svg {
+      width: var(--cl-space-4);
+      height: var(--cl-space-4);
+      fill: none;
+      stroke: currentcolor;
+      stroke-width: 2;
+      stroke-linecap: round;
+    }
+  }
+
+  &__body {
+    flex: 1 1 auto;
+    min-height: 0;
+    padding: 0 var(--cl-space-6) var(--cl-space-5);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  &__footer {
+    @include m.cluster(2, center, flex-end);
+    flex: none;
+    padding: var(--cl-space-3) var(--cl-space-6) var(--cl-space-5);
+    border-top: 1px solid var(--cl-divider);
+    background: var(--cl-bg-elevated);
+
+    &:empty {
+      display: none;
+    }
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .dialog {
+    animation: dialog-fade var(--cl-motion) ease-out;
+
+    &__panel {
+      animation: dialog-rise var(--cl-motion) ease-out;
+    }
+  }
+
+  @keyframes dialog-fade {
+    from {
+      opacity: 0;
+    }
+  }
+
+  @keyframes dialog-rise {
+    from {
+      transform: translateY(var(--cl-space-2));
+    }
+  }
+}
+
+@media (max-width: 639.98px) {
+  .dialog {
+    padding: 0;
+
+    &__panel {
+      width: 100%;
+      height: 100%;
+      border: none;
+      border-radius: 0;
+    }
+
+    &__header {
+      padding: var(--cl-space-4) var(--cl-space-4) var(--cl-space-2);
+    }
+
+    &__body {
+      padding: 0 var(--cl-space-4) var(--cl-space-4);
+    }
+
+    &__footer {
+      padding: var(--cl-space-3) var(--cl-space-4);
+      padding-bottom: calc(var(--cl-space-3) + env(safe-area-inset-bottom, 0px));
+    }
+
+    // Small dialogs (confirmations) are a bottom sheet that only takes the height it needs.
+    &--sheet {
+      align-items: flex-end;
+    }
+
+    &--sheet &__panel {
+      height: auto;
+      max-height: 100%;
+      border-top: 1px solid var(--cl-divider);
+      border-radius: var(--cl-radius-lg) var(--cl-radius-lg) 0 0;
+    }
+  }
+}

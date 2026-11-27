@@ -22,6 +22,6 @@ export class UserChip {
   readonly user = input.required<UserChipUser>();
   /** When present, the chip is a link to the profile. */
   readonly href = input<string>();
-  readonly size = input<24 | 32>(24);
+  readonly size = input<20 | 24 | 32 | 40>(24);
   readonly dataTestId = input<string | undefined>(undefined, { alias: 'data-testid' });
 }

@@ -1,12 +1,12 @@
 <span
-  class="tile"
+  class="project-avatar"
   role="img"
   [class]="sizeClass()"
   [attr.aria-label]="'Proyecto ' + name()"
   [attr.data-palette]="palette()"
   [attr.data-testid]="dataTestId()"
 >
-  <span aria-hidden="true" class="content">
+  <span aria-hidden="true" class="project-avatar__content">
     @if (icon(); as iconClass) {
       <i [class]="iconClass"></i>
     } @else {

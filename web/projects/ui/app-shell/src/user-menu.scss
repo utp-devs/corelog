@@ -1,27 +1,181 @@
+@use '../../styles/mixins' as m;
+@use './menu' as menu;
+
 :host {
   display: inline-flex;
   flex: none;
 }
 
-.trigger {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-  border: 0;
-  border-radius: var(--cl-radius-full);
-  background: transparent;
-  cursor: pointer;
-}
+.user-menu {
+  &__trigger {
+    @include m.flex-row(0, center, center);
+    box-sizing: border-box;
+    width: var(--cl-control-h-md);
+    height: var(--cl-control-h-md);
+    padding: 0;
+    border: 0;
+    border-radius: var(--cl-radius-full);
+    background: transparent;
+    cursor: pointer;
 
-.trigger:focus-visible {
-  outline: none;
-  box-shadow: var(--cl-shadow-focus);
-}
+    &:focus-visible {
+      outline: none;
+      box-shadow: var(--cl-shadow-focus);
+    }
 
-@media (max-width: 767.98px) {
-  .trigger {
-    width: 44px;
-    height: 44px;
+    @media (pointer: coarse), (max-width: 767.98px) {
+      width: var(--cl-control-h-lg);
+      height: var(--cl-control-h-lg);
+    }
+  }
+
+  &__identity {
+    @include m.flex-row(3);
+    padding: var(--cl-space-2) var(--cl-space-3);
+  }
+
+  &__identity-text {
+    @include m.flex-column(0);
+    min-width: 0;
+  }
+
+  &__name {
+    @include m.truncate;
+    color: var(--cl-text);
+    font-weight: var(--cl-weight-semibold);
+  }
+
+  &__email {
+    @include m.truncate;
+    color: var(--cl-text-subtle);
+    font-size: var(--cl-font-small);
+  }
+
+  &__role {
+    color: var(--cl-text-subtle);
+    font-size: var(--cl-font-small);
+  }
+
+  &__separator {
+    @include menu.menu-separator;
+  }
+
+  &__item {
+    @include menu.menu-item;
+
+    &--danger {
+      color: var(--cl-danger-text);
+
+      &:hover {
+        background: var(--cl-danger-bg);
+      }
+    }
+  }
+
+  &__icon {
+    @include menu.menu-icon;
+  }
+
+  &__label {
+    @include m.truncate;
+  }
+
+  &__trail {
+    @include menu.menu-trail;
+    font: inherit;
+    font-size: var(--cl-font-small);
+  }
+
+  &__row {
+    @include m.flex-column(1);
+    padding: var(--cl-space-1) var(--cl-space-3) var(--cl-space-2);
+  }
+
+  &__row-label {
+    color: var(--cl-text-subtle);
+    font-size: var(--cl-font-small);
+    font-weight: var(--cl-weight-semibold);
+  }
+
+  &__segments {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--cl-space-1);
+    padding: var(--cl-space-1);
+    border-radius: var(--cl-radius-md);
+    background: var(--cl-bg-sunken);
+  }
+
+  &__segment {
+    @include m.flex-column(1, center);
+    min-height: var(--cl-menu-item-h);
+    padding: var(--cl-space-1) var(--cl-space-2);
+    border: 0;
+    border-radius: var(--cl-radius-sm);
+    background: transparent;
+    color: var(--cl-text-subtle);
+    font: inherit;
+    font-size: var(--cl-font-small);
+    cursor: pointer;
+
+    &:hover {
+      color: var(--cl-text);
+    }
+
+    &:focus-visible {
+      outline: none;
+      box-shadow: var(--cl-shadow-focus);
+    }
+
+    &[aria-checked='true'] {
+      background: var(--cl-bg-elevated);
+      box-shadow: var(--cl-elev-raised);
+      color: var(--cl-brand);
+      font-weight: var(--cl-weight-semibold);
+
+      &:focus-visible {
+        box-shadow: var(--cl-shadow-focus);
+      }
+    }
+  }
+
+  /* Visual switch of the density row; the row itself carries the checkbox semantics. */
+  &__switch {
+    position: relative;
+    flex: none;
+    width: var(--cl-space-8);
+    height: var(--cl-space-5);
+    margin-left: auto;
+    border-radius: var(--cl-radius-full);
+    background: var(--cl-border-strong);
+    transition: background var(--cl-motion-fast) var(--cl-ease);
+
+    &::after {
+      content: '';
+      position: absolute;
+      top: var(--cl-space-1);
+      left: var(--cl-space-1);
+      width: var(--cl-space-3);
+      height: var(--cl-space-3);
+      border-radius: var(--cl-radius-full);
+      background: var(--cl-bg-surface);
+      transition: transform var(--cl-motion-fast) var(--cl-ease);
+    }
+
+    &--on {
+      background: var(--cl-brand);
+
+      &::after {
+        transform: translateX(var(--cl-space-3));
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      transition: none;
+
+      &::after {
+        transition: none;
+      }
+    }
   }
 }

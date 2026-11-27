@@ -1,11 +1,17 @@
 import { Component, signal } from '@angular/core';
 import { TestBed, type ComponentFixture } from '@angular/core/testing';
+import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideRouter } from '@angular/router';
+import { MessageService } from 'primeng/api';
 import {
+  API_URL,
   AuthStore,
   AvatarApiService,
   NotificationStore,
+  ProjectStore,
   SearchApiService,
+  TeamStore,
   type User,
 } from '@corelog/core';
 import { of } from 'rxjs';
@@ -79,7 +85,19 @@ describe('TopBar', () => {
       imports: [TopBarHost],
       providers: [
         provideRouter([]),
-        { provide: AuthStore, useValue: { user: signal<User | null>(user), logout: vi.fn() } },
+        {
+          provide: AuthStore,
+          useValue: {
+            user: signal<User | null>(user),
+            isAuthenticated: signal(true),
+            logout: vi.fn(),
+          },
+        },
+        {
+          provide: ProjectStore,
+          useValue: { projects: signal([]), status: signal('idle'), fetchProjects: vi.fn() },
+        },
+        { provide: TeamStore, useValue: { teams: signal([]), fetchTeams: vi.fn() } },
         {
           provide: NotificationStore,
           useValue: {
@@ -94,6 +112,11 @@ describe('TopBar', () => {
         },
         { provide: AvatarApiService, useValue: { getAvatar: () => of(null) } },
         { provide: SearchApiService, useValue: { search: () => of([]) } },
+        // The create dialog builds its stores when it opens: they need the HTTP stack and the toasts.
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        MessageService,
+        { provide: API_URL, useValue: '/api/v1' },
       ],
     });
     fixture = TestBed.createComponent(TopBarHost);
@@ -132,21 +155,45 @@ describe('TopBar', () => {
 
   it('hides the Crear button when the shell does not allow creating (no signed-in user)', () => {
     render({ canCreate: false });
-    expect(el.querySelector('button.create')).toBeNull();
+    expect(el.querySelector('button.top-bar__create')).toBeNull();
     expect(el.querySelector('nav[aria-label="Principal"]')?.textContent).toContain('Proyectos');
   });
 
-  it('opens the placeholder create dialog from the Crear button', () => {
+  it('opens the create dialog from the Crear button', () => {
     render();
-    el.querySelector<HTMLButtonElement>('button.create')?.click();
+    el.querySelector<HTMLButtonElement>('button.top-bar__create')?.click();
     fixture.detectChanges();
     const dialog = document.querySelector('[role="dialog"]');
     expect(dialog?.textContent).toContain('Crear incidencia');
   });
 
-  it('renders the notes button disabled', () => {
+  it('does not render the pending Notes button', () => {
     render();
-    expect(button('Notas (próximamente)')?.disabled).toBe(true);
+    expect(button('Notas (próximamente)')).toBeNull();
+    expect(el.querySelector('app-notes-button')).toBeNull();
+  });
+
+  it('gives every icon-only button of the bar an accessible name', () => {
+    render();
+    const buttons = Array.from(el.querySelectorAll<HTMLButtonElement>('header button'));
+    expect(buttons.length).toBeGreaterThanOrEqual(5);
+    for (const item of buttons) {
+      const name = (item.getAttribute('aria-label') ?? item.textContent ?? '').trim();
+      expect(name).not.toBe('');
+    }
+  });
+
+  it('shows the Ctrl K hint in the search field', () => {
+    render();
+    expect(el.querySelector('.global-search__hint')?.textContent).toMatch(/Ctrl K|⌘ K/);
+  });
+
+  it('lists the documentation entry in the help menu only when it is configured', () => {
+    render();
+    button('Ayuda')?.click();
+    fixture.detectChanges();
+    expect(el.textContent).toContain('Atajos de teclado');
+    expect(el.textContent).not.toContain('Documentación');
   });
 
   it('renders the real org switcher slot instead of the organization name', () => {
@@ -176,7 +223,19 @@ describe('TopBar responsive layout', () => {
       imports: [TopBarHost],
       providers: [
         provideRouter([]),
-        { provide: AuthStore, useValue: { user: signal<User | null>(user), logout: vi.fn() } },
+        {
+          provide: AuthStore,
+          useValue: {
+            user: signal<User | null>(user),
+            isAuthenticated: signal(true),
+            logout: vi.fn(),
+          },
+        },
+        {
+          provide: ProjectStore,
+          useValue: { projects: signal([]), status: signal('idle'), fetchProjects: vi.fn() },
+        },
+        { provide: TeamStore, useValue: { teams: signal([]), fetchTeams: vi.fn() } },
         {
           provide: NotificationStore,
           useValue: {
@@ -191,6 +250,11 @@ describe('TopBar responsive layout', () => {
         },
         { provide: AvatarApiService, useValue: { getAvatar: () => of(null) } },
         { provide: SearchApiService, useValue: { search: () => of([]) } },
+        // The create dialog builds its stores when it opens: they need the HTTP stack and the toasts.
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        MessageService,
+        { provide: API_URL, useValue: '/api/v1' },
       ],
     });
     fixture = TestBed.createComponent(TopBarHost);
@@ -212,12 +276,11 @@ describe('TopBar responsive layout', () => {
     delete (window as Partial<Window>).matchMedia;
   });
 
-  it('at 1280 px shows the full bar: menus, text Create, search field and notes', () => {
+  it('at 1280 px shows the full bar: menus, text Create and search field', () => {
     render({ showMenu: true, orgName: 'Acme', withSwitcher: true }, 1280);
     expect(el.querySelector('nav[aria-label="Principal"]')?.textContent).toContain('Equipos');
-    expect(el.querySelector('button.create')?.textContent).toContain('Crear');
+    expect(el.querySelector('button.top-bar__create')?.textContent).toContain('Crear');
     expect(el.querySelector('input[aria-label="Buscar proyectos e incidencias"]')).not.toBeNull();
-    expect(button('Notas (próximamente)')).not.toBeNull();
     expect(el.textContent).toContain('Switcher real');
     expect(button('Buscar')).toBeNull();
   });
@@ -233,13 +296,13 @@ describe('TopBar responsive layout', () => {
     render({ showMenu: true, orgName: 'Acme', withSwitcher: true }, 820);
     expect(el.querySelector('nav[aria-label="Principal"]')).toBeNull();
     expect(button('Abrir menú de navegación')?.textContent).toContain('Menú');
-    expect(el.querySelector('button.create')?.textContent).toContain('Crear');
+    expect(el.querySelector('button.top-bar__create')?.textContent).toContain('Crear');
     expect(el.textContent).toContain('Switcher real');
     expect(button('Buscar')).not.toBeNull();
     expect(button('Menú de Luis Ruiz')).not.toBeNull();
   });
 
-  it('at 390 px shows icon-only controls, the logo icon and no org switcher or notes in the bar', () => {
+  it('at 390 px shows icon-only controls, the logo icon and no org switcher in the bar', () => {
     render({ showMenu: true, orgName: 'Acme', withSwitcher: true }, 390);
     const create = button('Crear');
     expect(create?.textContent?.trim()).toBe('');
@@ -248,7 +311,6 @@ describe('TopBar responsive layout', () => {
     expect(button('Buscar')).not.toBeNull();
     expect(button('Menú de Luis Ruiz')).not.toBeNull();
     expect(el.textContent).not.toContain('Switcher real');
-    expect(button('Notas (próximamente)')).toBeNull();
     const brand = el.querySelector('a[aria-label="CoreLog, ir a incidencias"] img');
     expect(brand?.getAttribute('src')).toBe('/brand/corelog-icon-64.png');
   });

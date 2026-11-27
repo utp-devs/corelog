@@ -1,18 +1,19 @@
 @if (compact()) {
   <button
     type="button"
-    class="icon-search"
+    class="global-search__icon-button"
     aria-label="Buscar"
-    title="Buscar (Ctrl+K)"
+    appTooltip="Buscar ({{ shortcutHint }})"
     (click)="openPalette()"
   >
     <app-shell-icon name="search" />
   </button>
 } @else {
-  <div class="field-wrap">
+  <div class="global-search__field">
+    <app-shell-icon class="global-search__icon" name="search" />
     <input
       type="search"
-      class="field"
+      class="global-search__input"
       placeholder="Buscar…"
       aria-label="Buscar proyectos e incidencias"
       autocomplete="off"
@@ -20,22 +21,23 @@
       (input)="onInput($event)"
       (keydown)="onKeydown($event)"
     />
+    <kbd class="global-search__hint" aria-hidden="true">{{ shortcutHint }}</kbd>
 
     @if (panelOpen()) {
-      <div class="panel">
-        <div class="results" role="region" aria-label="Resultados de búsqueda">
+      <div class="global-search__panel">
+        <div class="global-search__results" role="region" aria-label="Resultados de búsqueda">
           @if (message(); as text) {
-            <p class="message" role="status">{{ text }}</p>
+            <p class="global-search__message" role="status">{{ text }}</p>
           }
           @for (section of sections(); track section.name) {
-            <div class="section" role="group" [attr.aria-label]="section.name">
-              <div class="section-title" aria-hidden="true">{{ section.name }}</div>
-              <ul class="list">
+            <div class="global-search__section" role="group" [attr.aria-label]="section.name">
+              <div class="global-search__section-title" aria-hidden="true">{{ section.name }}</div>
+              <ul class="global-search__list">
                 @for (hit of section.items; track hit.kind + hit.id) {
                   <li>
-                    <button type="button" class="result" (click)="choose(hit)">
-                      <span class="title">{{ hit.title }}</span>
-                      <span class="subtitle">{{ hit.subtitle }}</span>
+                    <button type="button" class="global-search__result" (click)="choose(hit)">
+                      <span class="global-search__result-title">{{ hit.title }}</span>
+                      <span class="global-search__result-subtitle">{{ hit.subtitle }}</span>
                     </button>
                   </li>
                 }
@@ -43,12 +45,12 @@
             </div>
           }
         </div>
-        <div class="footer">
-          <button type="button" class="palette-link" (click)="openFullPalette()">
+        <div class="global-search__footer">
+          <button type="button" class="global-search__palette-link" (click)="openFullPalette()">
             <app-shell-icon name="search" />
             <span>Abrir paleta de comandos</span>
           </button>
-          <span class="shortcut">Ctrl+K</span>
+          <span class="global-search__shortcut">{{ shortcutHint }}</span>
         </div>
       </div>
     }

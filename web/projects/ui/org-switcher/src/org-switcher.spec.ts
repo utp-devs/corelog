@@ -65,20 +65,22 @@ function setup(currentId: string): {
 }
 
 function openMenu(fixture: ComponentFixture<OrgSwitcher>): HTMLElement {
-  const trigger = fixture.nativeElement.querySelector('button.trigger') as HTMLButtonElement;
+  const trigger = fixture.nativeElement.querySelector(
+    'button.org-switcher__trigger',
+  ) as HTMLButtonElement;
   trigger.click();
   fixture.detectChanges();
   return document.querySelector('[role="menu"]') as HTMLElement;
 }
 
 function clickItem(item: HTMLElement): void {
-  (item.querySelector<HTMLElement>('.p-menu-item-content') ?? item).click();
+  item.click();
 }
 
 function menuItem(menu: HTMLElement, name: RegExp): HTMLElement {
-  const item = Array.from(menu.querySelectorAll<HTMLElement>('[role="menuitem"]')).find((el) =>
-    name.test(el.textContent ?? ''),
-  );
+  const item = Array.from(
+    menu.querySelectorAll<HTMLElement>('[role="menuitem"], [role="menuitemradio"]'),
+  ).find((el) => name.test(el.textContent ?? ''));
   if (!item) throw new Error(`menu item ${name} not found`);
   return item;
 }
@@ -90,7 +92,9 @@ describe('OrgSwitcher', () => {
 
   it('shows the current organization name on the trigger', () => {
     const { fixture } = setup('a');
-    const trigger = fixture.nativeElement.querySelector('button.trigger') as HTMLButtonElement;
+    const trigger = fixture.nativeElement.querySelector(
+      'button.org-switcher__trigger',
+    ) as HTMLButtonElement;
     expect(trigger.getAttribute('aria-label')).toBe('Organización actual: Acme');
     expect(trigger.textContent).toContain('Acme');
   });
@@ -98,10 +102,9 @@ describe('OrgSwitcher', () => {
   it('lists every organization and marks the current one', () => {
     const { fixture } = setup('a');
     const menu = openMenu(fixture);
-    expect(
-      menuItem(menu, /Acme/).querySelector('[aria-label="Organización actual"]'),
-    ).not.toBeNull();
-    expect(menuItem(menu, /Beta/).querySelector('[aria-label="Organización actual"]')).toBeNull();
+    expect(menuItem(menu, /Acme/).getAttribute('aria-checked')).toBe('true');
+    expect(menuItem(menu, /Beta/).getAttribute('aria-checked')).toBe('false');
+    expect(menu.textContent).toContain('Tus organizaciones');
   });
 
   it('switches the organization and goes to projects', () => {
@@ -125,6 +128,26 @@ describe('OrgSwitcher', () => {
     const menu = openMenu(fixture);
     clickItem(menuItem(menu, /Configuración de la organización/));
     expect(assign).toHaveBeenCalledWith('/admin/organization/settings');
+  });
+
+  it('works with a single organization: one checked row and the actions', () => {
+    orgs = [org('a', 'Acme', 'owner')];
+    const { fixture } = setup('a');
+    const menu = openMenu(fixture);
+    expect(menu.querySelectorAll('[role="menuitemradio"]')).toHaveLength(1);
+    expect(menuItem(menu, /Acme/).getAttribute('aria-checked')).toBe('true');
+    expect(menuItem(menu, /Crear organización/)).toBeTruthy();
+  });
+
+  it('closes on Escape and returns focus to the trigger', () => {
+    const { fixture } = setup('a');
+    const menu = openMenu(fixture);
+    menu.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    fixture.detectChanges();
+    expect(document.querySelector('[role="menu"]')).toBeNull();
+    expect(document.activeElement).toBe(
+      fixture.nativeElement.querySelector('button.org-switcher__trigger'),
+    );
   });
 
   it('hides organization settings from a member', () => {

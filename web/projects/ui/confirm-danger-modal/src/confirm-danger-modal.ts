@@ -1,18 +1,16 @@
 import {
   ChangeDetectionStrategy,
   Component,
-  DOCUMENT,
   computed,
   effect,
-  inject,
   input,
   output,
   signal,
   untracked,
 } from '@angular/core';
-import { PrimeTemplate } from 'primeng/api';
+import { Dialog } from '@corelog/ui/dialog';
 import { Button } from 'primeng/button';
-import { Dialog } from 'primeng/dialog';
+import { InputText } from 'primeng/inputtext';
 
 import { isConfirmationMatch } from './confirmation';
 
@@ -24,15 +22,12 @@ let nextInputId = 0;
  */
 @Component({
   selector: 'app-confirm-danger-modal',
-  imports: [Button, Dialog, PrimeTemplate],
+  imports: [Button, Dialog, InputText],
   templateUrl: './confirm-danger-modal.html',
   styleUrl: './confirm-danger-modal.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ConfirmDangerModal {
-  private readonly document = inject(DOCUMENT);
-  private opener: HTMLElement | null = null;
-
   readonly open = input(false);
   readonly title = input.required<string>();
   /** Consequence of the action, visible before confirming. */
@@ -51,9 +46,9 @@ export class ConfirmDangerModal {
   protected readonly fieldId = `cl-confirm-danger-${nextInputId++}`;
 
   constructor() {
+    // The typed text is discarded whenever the dialog closes.
     effect(() => {
-      const open = this.open();
-      untracked(() => this.trackFocus(open));
+      if (!this.open()) untracked(() => this.typed.set(''));
     });
   }
 
@@ -68,25 +63,5 @@ export class ConfirmDangerModal {
 
   protected onCancel(): void {
     this.cancelled.emit();
-  }
-
-  /** Dialog reports a user close (X, Escape, backdrop). */
-  protected onVisibleChange(visible: boolean): void {
-    if (!visible) this.cancelled.emit();
-  }
-
-  /** Runs after the dialog has left: the typed text is discarded. */
-  protected onDialogHidden(): void {
-    this.typed.set('');
-  }
-
-  private trackFocus(open: boolean): void {
-    if (open) {
-      const active = this.document.activeElement;
-      this.opener = active instanceof HTMLElement ? active : null;
-    } else if (this.opener) {
-      this.opener.focus();
-      this.opener = null;
-    }
   }
 }

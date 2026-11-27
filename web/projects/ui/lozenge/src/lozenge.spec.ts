@@ -58,6 +58,19 @@ describe('Lozenge', () => {
     expect(lozengeOf(el)?.getAttribute('data-variant')).toBe('neutral');
   });
 
+  it('never wraps or breaks its label inside the chip', () => {
+    const { el } = create({ text: 'Esperando respuesta del cliente', category: 'progress' });
+    const style = getComputedStyle(lozengeOf(el) as HTMLElement);
+    expect(style.whiteSpace).toBe('nowrap');
+    expect(style.wordBreak).not.toBe('break-all');
+    expect(style.overflowWrap).not.toBe('anywhere');
+  });
+
+  it('supports the discovery tone', () => {
+    const { el } = create({ text: 'Épica', tone: 'discovery' });
+    expect(lozengeOf(el)?.classList).toContain('lozenge--discovery');
+  });
+
   it('renders hostile text as text', () => {
     const { el } = create({ text: '<img src=x onerror=alert(1)>', tone: 'info' });
     expect(el.querySelector('img')).toBeNull();

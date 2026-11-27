@@ -19,6 +19,7 @@ import {
   type SearchHit,
 } from '@corelog/core';
 import { CommandPalette, CommandRegistry, type PaletteSearch } from '@corelog/ui/command-palette';
+import { AppTooltip } from '@corelog/ui/tooltip';
 import { firstValueFrom } from 'rxjs';
 
 import { ShellIcon } from './shell-icon';
@@ -47,7 +48,7 @@ function sectionsOf(hits: readonly SearchHit[]): HitSection[] {
  */
 @Component({
   selector: 'app-global-search',
-  imports: [CommandPalette, ShellIcon],
+  imports: [AppTooltip, CommandPalette, ShellIcon],
   templateUrl: './global-search.html',
   styleUrl: './global-search.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -64,6 +65,11 @@ export class GlobalSearch {
 
   /** Narrow layouts: the field becomes an icon button that opens the command palette. */
   readonly compact = input(false);
+
+  /** Shortcut that opens the palette, written for the platform of the user. */
+  protected readonly shortcutHint = /Mac|iPhone|iPad/i.test(globalThis.navigator?.platform ?? '')
+    ? '⌘ K'
+    : 'Ctrl K';
 
   protected readonly query = signal('');
   private readonly panelRequested = signal(false);

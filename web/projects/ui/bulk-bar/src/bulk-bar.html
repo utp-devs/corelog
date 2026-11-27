@@ -1,7 +1,7 @@
 @if (count() > 0) {
-  <div role="region" aria-label="Acciones masivas" class="bar">
-    <span class="count" aria-live="polite">{{ countText() }}</span>
-    <div class="actions">
+  <div role="region" aria-label="Acciones masivas" class="bulk-bar">
+    <span class="bulk-bar__count" aria-live="polite">{{ countText() }}</span>
+    <div class="bulk-bar__actions">
       @for (action of actions(); track action.key) {
         <p-button
           size="small"

@@ -4,85 +4,92 @@
   min-width: 0;
 }
 
-.wrapper {
+.issue-key {
   display: inline-flex;
   align-items: center;
   gap: var(--cl-space-1);
   max-width: 100%;
   min-width: 0;
-}
 
-.link {
-  color: var(--cl-brand);
-  font-weight: 600;
-  white-space: nowrap;
-  border-radius: var(--cl-radius-sm);
-}
+  &__text {
+    font-size: var(--cl-font-body);
+    font-weight: var(--cl-weight-semibold);
+    color: var(--cl-text);
+    white-space: nowrap;
+    border-radius: var(--cl-radius-sm);
 
-.link.resolved {
-  color: var(--cl-text-subtle);
-  font-weight: 400;
-  text-decoration: line-through;
-}
+    &--link {
+      color: var(--cl-brand);
+    }
 
-.link:focus-visible,
-.copy-button:focus-visible {
-  outline: none;
-  box-shadow: var(--cl-shadow-focus);
-}
+    /* Resolved issues are muted, not struck through. */
+    &--resolved {
+      color: var(--cl-text-subtle);
+      font-weight: var(--cl-weight-regular);
+    }
 
-.copy-wrap {
-  display: inline-flex;
-  opacity: 0;
-  transition: opacity 150ms ease-out;
-}
+    &:focus-visible {
+      outline: none;
+      box-shadow: var(--cl-shadow-focus);
+    }
 
-.wrapper:hover .copy-wrap,
-.wrapper:focus-within .copy-wrap {
-  opacity: 1;
-}
+    @media (max-width: 767.98px) {
+      display: inline-flex;
+      align-items: center;
+      min-height: var(--cl-control-h-lg);
+    }
+  }
 
-.copy-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 24px;
-  min-height: 24px;
-  padding: 0;
-  border: 0;
-  border-radius: var(--cl-radius-sm);
-  background: transparent;
-  color: var(--cl-text-subtle);
-  cursor: pointer;
-}
+  &__copy {
+    display: inline-flex;
+    opacity: 0;
+    transition: opacity var(--cl-motion-fast) var(--cl-ease);
+  }
 
-.copy-button:hover {
-  background: var(--cl-bg-sunken);
-  color: var(--cl-text);
-}
-
-@media (hover: none) {
-  .copy-wrap {
+  &:hover &__copy,
+  &:focus-within &__copy {
     opacity: 1;
   }
-}
 
-@media (prefers-reduced-motion: reduce) {
-  .copy-wrap {
-    transition: none;
-  }
-}
-
-/* Phones: the key and the copy button are 44 px tap targets. */
-@media (max-width: 767.98px) {
-  .link {
+  &__copy-button {
     display: inline-flex;
     align-items: center;
-    min-height: 44px;
+    justify-content: center;
+    min-width: var(--cl-space-6);
+    min-height: var(--cl-space-6);
+    padding: 0;
+    border: 0;
+    border-radius: var(--cl-radius-sm);
+    background: transparent;
+    color: var(--cl-text-subtle);
+    font-size: var(--cl-font-small);
+    cursor: pointer;
+
+    &:hover {
+      background: var(--cl-bg-hover);
+      color: var(--cl-text);
+    }
+
+    &:focus-visible {
+      outline: none;
+      box-shadow: var(--cl-shadow-focus);
+    }
+
+    @media (max-width: 767.98px) {
+      min-width: var(--cl-control-h-lg);
+      min-height: var(--cl-control-h-lg);
+    }
   }
 
-  .copy-button {
-    min-width: 44px;
-    min-height: 44px;
+  @media (hover: none) {
+    &__copy {
+      opacity: 1;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    &__copy {
+      transition: none;
+    }
   }
 }

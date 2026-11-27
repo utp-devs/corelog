@@ -1,5 +1,5 @@
-<span class="wrapper" [class]="type()" [attr.title]="label()">
-  <span aria-hidden="true" class="icon">
+<span class="issue-type-icon" [class]="'issue-type-icon--' + type()" [attr.title]="label()">
+  <span aria-hidden="true" class="issue-type-icon__glyph">
     @if (type() === 'bug') {
       <svg viewBox="0 0 16 16" width="14" height="14" focusable="false">
         <circle cx="8" cy="3.5" r="1.6" fill="currentColor" />
@@ -19,6 +19,6 @@
   @if (showLabel()) {
     <span>{{ label() }}</span>
   } @else {
-    <span class="sr-only">{{ label() }}</span>
+    <span class="issue-type-icon__hidden-label">{{ label() }}</span>
   }
 </span>

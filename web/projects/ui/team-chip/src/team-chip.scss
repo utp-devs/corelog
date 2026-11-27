@@ -4,7 +4,7 @@
   min-width: 0;
 }
 
-.chip {
+.team-chip {
   display: inline-flex;
   align-items: center;
   gap: var(--cl-space-2);
@@ -12,61 +12,62 @@
   max-width: 100%;
   color: var(--cl-text);
   text-decoration: none;
-}
 
-a.chip:hover .name {
-  text-decoration: underline;
-}
-
-a.chip:focus-visible {
-  outline: none;
-  border-radius: var(--cl-radius-sm);
-  box-shadow: var(--cl-shadow-focus);
-}
-
-@media (max-width: 767.98px) {
-  a.chip {
-    min-height: 44px;
+  &--link:hover &__name {
+    text-decoration: underline;
   }
-}
 
-.tile {
-  display: inline-flex;
-  flex: none;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  border-radius: var(--cl-radius-sm);
-  font-size: var(--cl-font-caption);
-  font-weight: 600;
-  user-select: none;
-}
-
-@for $i from 1 through 12 {
-  .tile[data-palette='#{$i}'] {
-    background: var(--cl-palette-#{$i}-bg);
-    color: var(--cl-palette-#{$i}-text);
+  &--link:focus-visible {
+    outline: none;
+    border-radius: var(--cl-radius-sm);
+    box-shadow: var(--cl-shadow-focus);
   }
-}
 
-.text {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
+  &--link {
+    @media (max-width: 767.98px) {
+      min-height: var(--cl-control-h-lg);
+    }
+  }
 
-.name {
-  overflow: hidden;
-  font-size: var(--cl-font-body);
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
+  &__tile {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    width: var(--cl-space-6);
+    height: var(--cl-space-6);
+    border-radius: var(--cl-radius-md);
+    font-size: var(--cl-font-caption);
+    font-weight: var(--cl-weight-semibold);
+    user-select: none;
 
-.meta {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: var(--cl-font-small);
-  color: var(--cl-text-subtle);
+    @for $i from 1 through 12 {
+      &[data-palette='#{$i}'] {
+        background: var(--cl-palette-#{$i}-bg);
+        color: var(--cl-palette-#{$i}-text);
+      }
+    }
+  }
+
+  &__text {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  &__name {
+    overflow: hidden;
+    font-size: var(--cl-font-body);
+    line-height: var(--cl-lh-tight);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__meta {
+    overflow: hidden;
+    font-size: var(--cl-font-small);
+    color: var(--cl-text-subtle);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
 }

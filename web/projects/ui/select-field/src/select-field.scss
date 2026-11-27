@@ -1,0 +1,15 @@
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.select-field {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+
+  // Compact variant for table cells: 32 px high (the compact row height token).
+  &--compact {
+    min-height: var(--cl-row-h-compact);
+  }
+}

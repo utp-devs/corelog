@@ -1,8 +1,12 @@
 @if (editing()) {
-  <div class="editor" (keydown)="onEditorKeyDown($event)" (focusout)="onEditorFocusOut($event)">
+  <div
+    class="inline-edit__editor"
+    (keydown)="onEditorKeyDown($event)"
+    (focusout)="onEditorFocusOut($event)"
+  >
     @if (isSelectType()) {
       <p-select
-        class="control"
+        class="inline-edit__control"
         [autofocus]="true"
         [options]="options()"
         optionLabel="label"
@@ -13,51 +17,72 @@
         (ngModelChange)="onSelectChange($event)"
       />
     } @else if (type() === 'date') {
-      <input
-        #editorInput
-        type="date"
-        class="control native"
-        [attr.aria-label]="label()"
-        [value]="draft()"
-        (input)="onDraftInput($event)"
+      <app-date-field
+        class="inline-edit__control"
+        [autofocus]="true"
+        [ariaLabel]="label()"
+        [ngModel]="draft() || null"
+        (ngModelChange)="onDateChange($event)"
+        (closed)="onDateClosed()"
       />
     } @else {
       <input
         #editorInput
         pInputText
         type="text"
-        class="control"
+        class="inline-edit__control"
         [attr.aria-label]="label()"
         [placeholder]="placeholder()"
         [value]="draft()"
         (input)="onDraftInput($event)"
       />
     }
+    <p class="inline-edit__hint">Enter para guardar, Esc para cancelar</p>
   </div>
 } @else {
-  <div class="root" [attr.aria-busy]="pending() ? 'true' : 'false'">
+  <div
+    class="inline-edit"
+    [class.inline-edit--pending]="pending()"
+    [class.inline-edit--error]="error() !== null"
+    [attr.aria-busy]="pending() ? 'true' : 'false'"
+  >
     <button
       type="button"
-      class="trigger"
+      class="inline-edit__trigger"
+      [class.inline-edit__trigger--field]="appearance() === 'field'"
+      [class.inline-edit__trigger--lozenge]="appearance() === 'lozenge'"
+      [class.inline-edit__trigger--progress]="tone() === 'progress'"
+      [class.inline-edit__trigger--done]="tone() === 'done'"
+      [class.inline-edit__trigger--danger]="tone() === 'danger'"
+      [class.inline-edit__trigger--warning]="tone() === 'warning'"
       [attr.aria-label]="'Editar ' + label() + ': ' + shownText()"
+      [attr.aria-haspopup]="isSelectType() ? 'listbox' : null"
+      [attr.title]="disabled() ? disabledReason() : null"
       [disabled]="pending() || disabled()"
       (click)="startEdit()"
     >
       <span
-        [class.empty]="isEmpty()"
-        [class.text]="!isEmpty()"
+        class="inline-edit__value"
+        [class.inline-edit__value--empty]="isEmpty()"
         [attr.title]="isEmpty() || shownText() === '' ? null : shownText()"
         >{{ shownText() }}</span
       >
+      @if (pending()) {
+        <span class="inline-edit__spinner" aria-hidden="true"></span>
+      } @else if (hasChevron()) {
+        <i class="pi pi-chevron-down inline-edit__icon" aria-hidden="true"></i>
+      } @else {
+        <i class="pi pi-pencil inline-edit__icon inline-edit__icon--pencil" aria-hidden="true"></i>
+      }
     </button>
     @if (pending()) {
-      <span role="status" class="saving">
-        <span class="spinner" aria-hidden="true"></span>
-        <span class="sr-only">Guardando</span>
-      </span>
+      <span role="status" class="inline-edit__sr">Guardando</span>
     }
     @if (error(); as message) {
-      <span role="alert" class="error">{{ message }}</span>
+      <span role="alert" class="inline-edit__error">
+        <i class="pi pi-exclamation-circle" aria-hidden="true"></i>
+        {{ message }}
+      </span>
     }
   </div>
 }

@@ -1,0 +1,81 @@
+<app-dropdown-menu [label]="menu().label" [(open)]="open" (opened)="onOpened()">
+  <button
+    appMenuTrigger
+    type="button"
+    class="nav-menu__trigger"
+    [class.nav-menu__trigger--active]="active()"
+    [attr.data-testid]="'nav-menu-' + menu().key"
+  >
+    <span>{{ menu().label }}</span>
+    <app-shell-icon class="nav-menu__caret" name="caret" />
+  </button>
+
+  @if (open()) {
+    @for (section of model().sections; track section.key) {
+      <div class="nav-menu__section" role="group" [attr.aria-label]="section.title">
+        <p class="nav-menu__heading" aria-hidden="true">{{ section.title }}</p>
+        @for (entry of section.entries; track entry.key) {
+          <ng-container *ngTemplateOutlet="row; context: { $implicit: entry }" />
+        } @empty {
+          <p class="nav-menu__empty">{{ section.emptyText }}</p>
+        }
+      </div>
+    }
+
+    <div class="nav-menu__separator" role="separator"></div>
+    <div class="nav-menu__section" role="group" aria-label="Más opciones">
+      @for (entry of model().footer; track entry.key) {
+        <ng-container *ngTemplateOutlet="row; context: { $implicit: entry }" />
+      }
+    </div>
+
+    @if (model().create; as create) {
+      <div class="nav-menu__separator" role="separator"></div>
+      @if (create.external) {
+        <a class="nav-menu__create" role="menuitem" [href]="hrefOf(create)">
+          <app-shell-icon name="plus" />
+          <span>{{ create.label }}</span>
+        </a>
+      } @else {
+        <a
+          class="nav-menu__create"
+          role="menuitem"
+          [routerLink]="create.path"
+          [queryParams]="create.queryParams"
+        >
+          <app-shell-icon name="plus" />
+          <span>{{ create.label }}</span>
+        </a>
+      }
+    }
+  }
+</app-dropdown-menu>
+
+<ng-template #row let-entry>
+  @if (entry.external) {
+    <a class="nav-menu__item" role="menuitem" [href]="hrefOf(entry)">
+      <ng-container *ngTemplateOutlet="rowContent; context: { $implicit: entry }" />
+    </a>
+  } @else {
+    <a
+      class="nav-menu__item"
+      role="menuitem"
+      [routerLink]="entry.path"
+      routerLinkActive
+      ariaCurrentWhenActive="page"
+      [routerLinkActiveOptions]="{ exact: true }"
+    >
+      <ng-container *ngTemplateOutlet="rowContent; context: { $implicit: entry }" />
+    </a>
+  }
+</ng-template>
+
+<ng-template #rowContent let-entry>
+  @if (entry.icon) {
+    <app-shell-icon class="nav-menu__icon" [name]="entry.icon" />
+  }
+  <span class="nav-menu__label">{{ entry.label }}</span>
+  @if (entry.hint) {
+    <span class="nav-menu__hint">{{ entry.hint }}</span>
+  }
+</ng-template>

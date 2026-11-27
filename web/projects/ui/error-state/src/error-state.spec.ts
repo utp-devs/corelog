@@ -8,6 +8,7 @@ import { ErrorState } from './error-state';
   template: `
     <app-error-state
       [message]="message()"
+      [status]="status()"
       [canRetry]="canRetry()"
       (retry)="retries = retries + 1"
     />
@@ -15,6 +16,7 @@ import { ErrorState } from './error-state';
 })
 class Host {
   readonly message = signal('Revisa tu conexión');
+  readonly status = signal<number | null>(null);
   readonly canRetry = signal(false);
   retries = 0;
 }
@@ -41,6 +43,26 @@ describe('ErrorState', () => {
     expect(el.querySelector('[role="alert"]')).not.toBeNull();
     expect(el.textContent).toContain('No se pudo cargar la información');
     expect(el.textContent).toContain('Revisa tu conexión');
+  });
+
+  it('replaces a raw English API message with friendly Spanish copy', () => {
+    const fixture = create();
+    fixture.componentInstance.message.set('Internal Server Error: request failed');
+    fixture.componentInstance.status.set(500);
+    fixture.detectChanges();
+    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
+    expect(text).not.toContain('Internal Server Error');
+    expect(text).toContain('Algo salió mal');
+  });
+
+  it('shows the forbidden copy for a 403 and the connection copy for status 0', () => {
+    const fixture = create();
+    fixture.componentInstance.status.set(403);
+    fixture.detectChanges();
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('No tienes acceso');
+    fixture.componentInstance.status.set(0);
+    fixture.detectChanges();
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('Sin conexión');
   });
 
   it('calls retry when the retry button is pressed', () => {

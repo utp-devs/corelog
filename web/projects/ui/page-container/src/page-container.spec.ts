@@ -81,13 +81,13 @@ describe('PageContainer', () => {
       const { fixture, host, el } = create();
       host.variant.set(variant);
       fixture.detectChanges();
-      expect(el.querySelector('.root')?.getAttribute('data-variant')).toBe(variant);
+      expect(el.querySelector('.page-container')?.getAttribute('data-variant')).toBe(variant);
     },
   );
 
   it('sets data-ready to "true" when ready is true and "false" otherwise', () => {
     const { fixture, host, el } = create();
-    const root = el.querySelector('.root');
+    const root = el.querySelector('.page-container');
     host.ready.set(true);
     fixture.detectChanges();
     expect(root?.getAttribute('data-ready')).toBe('true');
@@ -101,7 +101,7 @@ describe('PageContainer', () => {
     host.variant.set('fluid');
     host.pageName.set('board');
     fixture.detectChanges();
-    expect(el.querySelector('.root')?.getAttribute('data-page')).toBe('board');
+    expect(el.querySelector('.page-container')?.getAttribute('data-page')).toBe('board');
   });
 
   it('does not render an aside landmark without a sidebar', () => {
@@ -117,7 +117,7 @@ describe('PageContainer', () => {
     const aside = el.querySelector('aside');
     expect(aside?.getAttribute('aria-label')).toBe('Panel lateral');
     expect(aside?.textContent).toContain('Detalle');
-    const root = el.querySelector('.root');
+    const root = el.querySelector('.page-container');
     expect(root?.getAttribute('data-has-sidebar')).toBe('true');
     expect(root?.getAttribute('data-stacked')).toBe('false');
   });
@@ -130,12 +130,12 @@ describe('PageContainer', () => {
     const { fixture, host, el } = create();
     host.withSidebar.set(true);
     fixture.detectChanges();
-    expect(el.querySelector('.root')?.getAttribute('data-stacked')).toBe('true');
+    expect(el.querySelector('.page-container')?.getAttribute('data-stacked')).toBe('true');
   });
 
   it('is not filled by default', () => {
     const { el } = create();
-    expect(el.querySelector('.root')?.getAttribute('data-fill')).toBe('false');
+    expect(el.querySelector('.page-container')?.getAttribute('data-fill')).toBe('false');
   });
 
   it('marks the page as filled with fill, so the content column grows to the viewport', () => {
@@ -143,7 +143,7 @@ describe('PageContainer', () => {
     host.fill.set(true);
     host.fillChild.set(true);
     fixture.detectChanges();
-    expect(el.querySelector('.root')?.getAttribute('data-fill')).toBe('true');
+    expect(el.querySelector('.page-container')?.getAttribute('data-fill')).toBe('true');
     expect(el.querySelector('section')?.parentElement?.className).toContain('content');
   });
 });

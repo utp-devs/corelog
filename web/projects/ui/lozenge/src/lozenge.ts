@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 
 export type LozengeCategory = 'todo' | 'progress' | 'done';
-export type LozengeTone = 'info' | 'success' | 'warning' | 'danger' | 'neutral';
+export type LozengeTone = 'info' | 'success' | 'warning' | 'danger' | 'neutral' | 'discovery';
 
 /** Compact chip for a workflow state or a semantic tone. The projected text is always visible. */
 @Component({

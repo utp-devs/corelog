@@ -5,48 +5,38 @@
 <div
   class="toolbar"
   role="toolbar"
-  aria-label="Barra de acciones"
+  [class.toolbar--sticky]="sticky()"
+  [attr.aria-label]="label()"
   [attr.data-sticky]="sticky() ? 'true' : 'false'"
 >
   @if (hasLeft()) {
-    <div class="left">
+    <div class="toolbar__left">
       <ng-content select="[appToolbarLeft]" />
     </div>
   }
   @if (hasRight() || hasSecondary()) {
-    <div class="right">
+    <div class="toolbar__right">
       <ng-content select="[appToolbarRight]" />
       @if (hasSecondary() && !moveToMenu()) {
-        <div class="inline-secondary">
+        <div class="toolbar__secondary">
           <ng-container *ngTemplateOutlet="secondaryActions" />
         </div>
       }
       @if (moveToMenu()) {
-        <div class="more">
+        <div class="toolbar__more">
           <button
             #trigger
             type="button"
-            class="more-button"
+            class="toolbar__more-button"
             aria-haspopup="true"
             [attr.aria-expanded]="menuOpen()"
             (click)="toggleMenu()"
           >
-            <svg
-              class="more-icon"
-              viewBox="0 0 16 16"
-              width="14"
-              height="14"
-              aria-hidden="true"
-              focusable="false"
-            >
-              <circle cx="3" cy="8" r="1.5" fill="currentColor" />
-              <circle cx="8" cy="8" r="1.5" fill="currentColor" />
-              <circle cx="13" cy="8" r="1.5" fill="currentColor" />
-            </svg>
+            <i class="pi pi-ellipsis-h toolbar__more-icon" aria-hidden="true"></i>
             <span>Más</span>
           </button>
           @if (menuOpen()) {
-            <div class="menu">
+            <div class="toolbar__menu">
               <ng-container *ngTemplateOutlet="secondaryActions" />
             </div>
           }

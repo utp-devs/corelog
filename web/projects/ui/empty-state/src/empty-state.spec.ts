@@ -44,14 +44,16 @@ describe('EmptyState', () => {
     fixture.componentInstance.withAction.set(true);
     fixture.detectChanges();
     const el = fixture.nativeElement as HTMLElement;
-    expect(el.querySelector('[role="status"] .action button')?.textContent?.trim()).toBe('Crear');
+    expect(
+      el.querySelector('[role="status"] .empty-state__action button')?.textContent?.trim(),
+    ).toBe('Crear');
   });
 
   it('omits the description and action when not provided', () => {
     const fixture = create();
     const el = fixture.nativeElement as HTMLElement;
-    expect(el.querySelector('.title')?.textContent).toBe('Vacío');
-    expect(el.querySelector('.description')).toBeNull();
+    expect(el.querySelector('.empty-state__title')?.textContent).toBe('Vacío');
+    expect(el.querySelector('.empty-state__description')).toBeNull();
     expect(el.querySelector('button')).toBeNull();
   });
 });

@@ -1,1 +1,4 @@
-<app-tone-tag [label]="label()" [tone]="tone()" />
+<span class="priority-tag" [attr.data-priority]="priority()">
+  <i class="priority-tag__icon" [class]="icon()" aria-hidden="true"></i>
+  <span class="priority-tag__label">{{ label() }}</span>
+</span>

@@ -22,5 +22,5 @@ export class ProjectAvatar {
 
   protected readonly initials = computed(() => this.projectKey().trim().toUpperCase().slice(0, 2));
   protected readonly palette = computed(() => paletteIndex(this.projectKey()));
-  protected readonly sizeClass = computed(() => `size-${this.size()}`);
+  protected readonly sizeClass = computed(() => `project-avatar--size-${this.size()}`);
 }

@@ -1,22 +1,117 @@
-<p-autocomplete
-  styleClass="user-picker"
-  [ngModel]="selected()"
-  (ngModelChange)="onSelect($event)"
-  [suggestions]="suggestions()"
-  (completeMethod)="onComplete($event.query)"
-  optionLabel="label"
-  [dropdown]="true"
-  [forceSelection]="true"
-  [showClear]="allowClear()"
-  [disabled]="disabled()"
-  [placeholder]="placeholder()"
-  [ariaLabel]="placeholder()"
-  [emptyMessage]="emptyText()"
+<div
+  class="user-picker"
+  [class.user-picker--open]="open()"
+  [class.user-picker--disabled]="disabled()"
+  [attr.title]="disabled() ? disabledReason() : null"
 >
-  <ng-template let-option #item>
-    <span class="option">
-      <span class="avatar" aria-hidden="true">{{ option.initials }}</span>
-      <span>{{ option.label }}</span>
+  @if (selected(); as user) {
+    <span class="user-picker__selected-avatar" aria-hidden="true">
+      <app-avatar [id]="user.id" [name]="user.name" [src]="user.avatarUrl" [size]="24" />
     </span>
-  </ng-template>
-</p-autocomplete>
+  } @else {
+    <i class="pi pi-user user-picker__placeholder-icon" aria-hidden="true"></i>
+  }
+  <input
+    #field
+    type="text"
+    class="user-picker__input"
+    role="combobox"
+    autocomplete="off"
+    aria-autocomplete="list"
+    aria-haspopup="listbox"
+    [attr.aria-label]="accessibleName()"
+    [attr.aria-expanded]="open() ? 'true' : 'false'"
+    [attr.aria-controls]="open() ? listboxId : null"
+    [attr.aria-activedescendant]="activeOptionId()"
+    [attr.aria-busy]="loading() ? 'true' : null"
+    [placeholder]="placeholder()"
+    [value]="text()"
+    [disabled]="disabled()"
+    (input)="onInput($event)"
+    (focus)="onFocus()"
+    (click)="onClick()"
+    (keydown)="onKeyDown($event)"
+  />
+  @if (canClear()) {
+    <button
+      type="button"
+      class="user-picker__button"
+      aria-label="Quitar selección"
+      title="Quitar selección"
+      tabindex="-1"
+      (click)="clear()"
+    >
+      <i class="pi pi-times" aria-hidden="true"></i>
+    </button>
+  }
+  <button
+    type="button"
+    class="user-picker__button"
+    aria-label="Mostrar personas"
+    title="Mostrar personas"
+    tabindex="-1"
+    aria-haspopup="listbox"
+    [attr.aria-expanded]="open() ? 'true' : 'false'"
+    [disabled]="disabled()"
+    (click)="toggle()"
+  >
+    <i class="pi pi-chevron-down user-picker__chevron" aria-hidden="true"></i>
+  </button>
+
+  @if (open()) {
+    <div
+      class="user-picker__panel"
+      [style.--user-picker-left.px]="anchor()?.left"
+      [style.--user-picker-width.px]="anchor()?.width"
+      [style.--user-picker-top.px]="anchor()?.top"
+      [style.--user-picker-bottom.px]="anchor()?.bottom"
+    >
+      @if (loading()) {
+        <p class="user-picker__status" role="status">
+          <span class="user-picker__spinner" aria-hidden="true"></span>
+          Buscando personas…
+        </p>
+      }
+      @if (suggestions().length > 0) {
+        <ul
+          class="user-picker__list"
+          role="listbox"
+          [attr.id]="listboxId"
+          [attr.aria-label]="accessibleName()"
+        >
+          @for (user of suggestions(); track user.id; let i = $index) {
+            <li
+              class="user-picker__option"
+              role="option"
+              [class.user-picker__option--active]="i === active()"
+              [class.user-picker__option--selected]="user.id === value()"
+              [attr.id]="optionId(i)"
+              [attr.aria-selected]="user.id === value() ? 'true' : 'false'"
+              (mousedown)="$event.preventDefault()"
+              (click)="choose(user)"
+              (mousemove)="active.set(i)"
+            >
+              <span class="user-picker__option-avatar" aria-hidden="true">
+                <app-avatar [id]="user.id" [name]="user.name" [src]="user.avatarUrl" [size]="24" />
+              </span>
+              <span class="user-picker__option-text">
+                <span class="user-picker__option-name">{{ user.name }}</span>
+                @if (user.email) {
+                  <span class="user-picker__option-email">{{ user.email }}</span>
+                }
+              </span>
+              @if (user.id === value()) {
+                <i class="pi pi-check user-picker__check" aria-hidden="true"></i>
+              }
+            </li>
+          }
+        </ul>
+      } @else if (showEmpty()) {
+        <p class="user-picker__status" role="status">
+          <i class="pi pi-search" aria-hidden="true"></i>
+          Sin resultados
+        </p>
+      }
+    </div>
+  }
+</div>

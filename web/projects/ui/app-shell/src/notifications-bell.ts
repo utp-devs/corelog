@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, DestroyRef, computed, inject } from
 import { Router } from '@angular/router';
 import { type AppNotification, NotificationStore } from '@corelog/core';
 import { OverlayBadge } from 'primeng/overlaybadge';
+import { AppTooltip } from '@corelog/ui/tooltip';
 import { Popover } from 'primeng/popover';
 
 import { ShellIcon } from './shell-icon';
@@ -9,7 +10,7 @@ import { ShellIcon } from './shell-icon';
 /** Bell with the unread counter, the notification list and the mark-all action. */
 @Component({
   selector: 'app-notifications-bell',
-  imports: [OverlayBadge, Popover, ShellIcon],
+  imports: [AppTooltip, OverlayBadge, Popover, ShellIcon],
   templateUrl: './notifications-bell.html',
   styleUrl: './notifications-bell.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

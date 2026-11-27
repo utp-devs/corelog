@@ -34,7 +34,18 @@ describe('ColorPicker', () => {
     const group = el.querySelector('[role="radiogroup"]') as HTMLElement;
     expect(group.getAttribute('aria-label')).toBe('Color de la etiqueta');
     expect(el.querySelectorAll('[role="radio"]')).toHaveLength(12);
-    expect(el.querySelector('[aria-label="Color 3"]')?.getAttribute('aria-checked')).toBe('true');
+    expect(el.querySelector('[aria-label="Amarillo"]')?.getAttribute('aria-checked')).toBe('true');
+    expect(el.querySelectorAll('.pi-check')).toHaveLength(1);
+  });
+
+  it('names every swatch with its Spanish color name', () => {
+    const fixture = create({ label: 'Color', value: null });
+    const names = Array.from(
+      (fixture.nativeElement as HTMLElement).querySelectorAll('[role="radio"]'),
+    ).map((swatch) => swatch.getAttribute('aria-label'));
+    expect(names).toHaveLength(12);
+    expect(new Set(names).size).toBe(12);
+    expect(names.every((name) => !!name && !/^Color \d+$/.test(name))).toBe(true);
   });
 
   it('moves the selection with the arrow keys', () => {
@@ -63,7 +74,7 @@ describe('ColorPicker', () => {
     const fixture = create({ label: 'Color', value: null });
     fixture.componentInstance.registerOnChange(onChange);
     const input = (fixture.nativeElement as HTMLElement).querySelector(
-      'input.hex-input',
+      'input.color-picker__hex',
     ) as HTMLInputElement;
     input.value = '#1a2B3c';
     input.dispatchEvent(new Event('input'));
@@ -77,7 +88,7 @@ describe('ColorPicker', () => {
     const fixture = create({ label: 'Color', value: null });
     fixture.componentInstance.registerOnChange(onChange);
     const el = fixture.nativeElement as HTMLElement;
-    const input = el.querySelector('input.hex-input') as HTMLInputElement;
+    const input = el.querySelector('input.color-picker__hex') as HTMLInputElement;
     input.value = '#12';
     input.dispatchEvent(new Event('input'));
     fixture.detectChanges();
@@ -87,7 +98,9 @@ describe('ColorPicker', () => {
 
   it('hides the custom input when allowCustom is false', () => {
     const fixture = create({ label: 'Color', value: null, allowCustom: false });
-    expect((fixture.nativeElement as HTMLElement).querySelector('input.hex-input')).toBeNull();
+    expect(
+      (fixture.nativeElement as HTMLElement).querySelector('input.color-picker__hex'),
+    ).toBeNull();
   });
 });
 

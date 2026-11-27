@@ -1,10 +1,10 @@
-<div class="group">
+<div class="avatar-group">
   @for (item of items(); track item.id) {
-    <span class="avatar">
-      <span [attr.title]="item.name">{{ item.initials }}</span>
+    <span class="avatar-group__item" [attr.title]="item.name">
+      <app-avatar [id]="item.id" [name]="item.name" [size]="24" />
     </span>
   }
   @if (hidden() > 0) {
-    <span class="avatar">+{{ hidden() }}</span>
+    <span class="avatar-group__item avatar-group__more">+{{ hidden() }}</span>
   }
 </div>

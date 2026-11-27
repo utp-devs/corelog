@@ -1,10 +1,42 @@
-<button
-  type="button"
-  class="trigger"
-  aria-label="Ayuda"
-  aria-haspopup="menu"
-  (click)="toggle($event)"
->
-  <app-shell-icon name="help" />
-</button>
-<p-menu #menu [model]="items()" [popup]="true" appendTo="body" />
+<app-dropdown-menu label="Ayuda" align="end">
+  <button
+    appMenuTrigger
+    type="button"
+    class="help-menu__trigger"
+    aria-label="Ayuda"
+    appTooltip="Ayuda"
+  >
+    <app-shell-icon name="help" />
+  </button>
+
+  <button type="button" class="help-menu__item" role="menuitem" (click)="openShortcuts.emit()">
+    <app-shell-icon class="help-menu__icon" name="keyboard" />
+    <span class="help-menu__label">Atajos de teclado</span>
+    <kbd class="help-menu__trail">?</kbd>
+  </button>
+
+  @if (docsUrl() || whatsNewUrl() || supportUrl()) {
+    <div class="help-menu__separator" role="separator"></div>
+  }
+  @if (docsUrl(); as url) {
+    <a class="help-menu__item" role="menuitem" [href]="url" target="_blank" rel="noopener">
+      <app-shell-icon class="help-menu__icon" name="book" />
+      <span class="help-menu__label">Documentación</span>
+      <app-shell-icon class="help-menu__trail" name="external" />
+    </a>
+  }
+  @if (whatsNewUrl(); as url) {
+    <a class="help-menu__item" role="menuitem" [href]="url" target="_blank" rel="noopener">
+      <app-shell-icon class="help-menu__icon" name="megaphone" />
+      <span class="help-menu__label">Novedades</span>
+      <app-shell-icon class="help-menu__trail" name="external" />
+    </a>
+  }
+  @if (supportUrl(); as url) {
+    <a class="help-menu__item" role="menuitem" [href]="url" target="_blank" rel="noopener">
+      <app-shell-icon class="help-menu__icon" name="lifebuoy" />
+      <span class="help-menu__label">Soporte</span>
+      <app-shell-icon class="help-menu__trail" name="external" />
+    </a>
+  }
+</app-dropdown-menu>

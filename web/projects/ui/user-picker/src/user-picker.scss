@@ -1,38 +1,194 @@
+@use '../../styles/mixins' as m;
+@use '../../field-row/src/control' as c;
+
 :host {
-  display: inline-block;
+  display: block;
   max-width: 100%;
+  min-width: 0;
 }
 
 .user-picker {
-  min-width: 240px;
-  max-width: 100%;
-}
+  position: relative;
+  @include m.flex-row(1);
+  box-sizing: border-box;
+  min-width: min(100%, 15rem);
+  min-height: var(--cl-control-h-md);
+  padding: 0 var(--cl-space-1) 0 var(--cl-space-2);
+  border: 1px solid var(--cl-border-strong);
+  border-radius: var(--cl-radius-md);
+  background: var(--cl-bg-surface);
+  color: var(--cl-text);
+  transition: border-color var(--cl-motion-fast) var(--cl-ease);
 
-@media (max-width: 767.98px) {
-  .user-picker {
+  &:hover:not(&--disabled) {
+    border-color: var(--cl-text-subtle);
+  }
+
+  &:focus-within {
+    @include c.focus-ring;
+    border-color: var(--cl-brand);
+  }
+
+  &--disabled {
+    border-color: var(--cl-border);
+    background: var(--cl-bg-sunken);
+    color: var(--cl-text-disabled);
+    cursor: not-allowed;
+  }
+
+  &__selected-avatar,
+  &__placeholder-icon {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--cl-space-6);
+    height: var(--cl-space-6);
+  }
+
+  &__placeholder-icon {
+    @include c.control-icon;
+    width: 1.5rem;
+    color: var(--cl-text-subtle);
+  }
+
+  &__input {
+    flex: 1 1 auto;
     min-width: 0;
-    width: 100%;
-    min-height: 44px;
+    min-height: 0;
+    padding: 0 var(--cl-space-1);
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    text-overflow: ellipsis;
+
+    &::placeholder {
+      color: var(--cl-text-placeholder);
+      opacity: 1;
+    }
+
+    // The focus ring is drawn once, around the whole field.
+    &:focus-visible {
+      outline: none;
+    }
+
+    &:disabled {
+      cursor: not-allowed;
+    }
+  }
+
+  &__button {
+    @include c.icon-button;
+  }
+
+  &__chevron {
+    transition: transform var(--cl-motion-fast) var(--cl-ease);
+
+    @media (prefers-reduced-motion: reduce) {
+      transition: none;
+    }
+  }
+
+  &--open &__chevron {
+    transform: rotate(180deg);
+  }
+
+  // Fixed to the viewport (positions come from the field when the list opens) so it is never clipped.
+  &__panel {
+    position: fixed;
+    z-index: var(--cl-z-overlay);
+    top: var(--user-picker-top, auto);
+    bottom: var(--user-picker-bottom, auto);
+    left: var(--user-picker-left);
+    width: var(--user-picker-width);
+    min-width: var(--cl-menu-w-min);
+    margin: var(--cl-space-1) 0;
+    overflow: hidden;
+    border: 1px solid var(--cl-divider);
+    border-radius: var(--cl-radius-md);
+    background: var(--cl-bg-elevated);
+    box-shadow: var(--cl-elev-overlay);
+  }
+
+  &__list {
+    max-height: calc(var(--cl-menu-item-h) * 7.5);
+    margin: 0;
+    padding: var(--cl-space-1);
+    overflow-y: auto;
+    list-style: none;
+  }
+
+  &__option {
+    @include m.flex-row(2);
+    min-height: var(--cl-menu-item-h);
+    padding: var(--cl-space-1) var(--cl-space-2);
+    border-radius: var(--cl-radius-md);
+    cursor: pointer;
+
+    &--active {
+      background: var(--cl-bg-hover);
+    }
+
+    &--selected {
+      background: var(--cl-bg-selected);
+    }
+  }
+
+  &__option-avatar {
+    flex: none;
+  }
+
+  &__option-text {
+    @include m.flex-column;
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  &__option-name {
+    @include m.truncate;
+    font-size: var(--cl-font-body);
+    line-height: var(--cl-lh-tight);
+    color: var(--cl-text);
+  }
+
+  &__option-email {
+    @include m.truncate;
+    font-size: var(--cl-font-small);
+    line-height: var(--cl-lh-tight);
+    color: var(--cl-text-subtle);
+  }
+
+  &__check {
+    flex: none;
+    color: var(--cl-brand);
+  }
+
+  &__status {
+    @include m.flex-row(2);
+    margin: 0;
+    padding: var(--cl-space-3);
+    font-size: var(--cl-font-body);
+    color: var(--cl-text-subtle);
+  }
+
+  &__spinner {
+    flex: none;
+    width: 1rem;
+    height: 1rem;
+    border: 2px solid var(--cl-border);
+    border-top-color: var(--cl-brand);
+    border-radius: var(--cl-radius-full);
+    animation: user-picker-spin 0.8s linear infinite;
+
+    @media (prefers-reduced-motion: reduce) {
+      animation: none;
+    }
   }
 }
 
-.option {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--cl-space-2);
-}
-
-.avatar {
-  display: inline-flex;
-  flex: none;
-  align-items: center;
-  justify-content: center;
-  width: 22px;
-  height: 22px;
-  margin-inline-end: var(--cl-space-2);
-  border-radius: var(--cl-radius-full);
-  background: var(--cl-brand-subtle);
-  color: var(--cl-brand);
-  font-size: var(--cl-font-caption);
-  font-weight: 600;
+@keyframes user-picker-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }

@@ -3,15 +3,18 @@ import {
   ChangeDetectionStrategy,
   Component,
   Directive,
+  ElementRef,
   TemplateRef,
   computed,
   contentChildren,
+  effect,
   inject,
   input,
   linkedSignal,
   model,
   output,
   signal,
+  viewChild,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import type { MenuItem } from 'primeng/api';
@@ -22,6 +25,9 @@ import { Select } from 'primeng/select';
 import { TableModule } from 'primeng/table';
 
 import { BulkAction, BulkBar } from '@corelog/ui/bulk-bar';
+import { EmptyState } from '@corelog/ui/empty-state';
+import { ErrorState } from '@corelog/ui/error-state';
+import { AppTooltip } from '@corelog/ui/tooltip';
 
 import {
   DENSITY_STORAGE_KEY,
@@ -60,6 +66,8 @@ export interface RowMenuItem {
   readonly label: string;
   readonly icon?: string;
   readonly danger?: boolean;
+  /** The main action of the row: shown as a visible button next to the menu instead of inside it. */
+  readonly primary?: boolean;
   readonly onClick: () => void;
 }
 
@@ -90,11 +98,14 @@ export class DataTableCell<T = unknown> {
   readonly template = inject<TemplateRef<DataTableCellContext<T>>>(TemplateRef);
 }
 
-const PAGE_SIZE_OPTIONS = [20, 50, 100].map((value) => ({ label: `${value} / página`, value }));
+const DEFAULT_PAGE_SIZES: readonly number[] = [20, 50, 100];
 const SKELETON_MAX_ROWS = 10;
 const SKELETON_DEFAULT_ROWS = 5;
 const SKELETON_DELAY_MS = 150;
-const MOBILE_QUERY = '(max-width: 767px)';
+/** Below this width the table becomes a list of cards instead of clipping its columns. */
+export const CARD_LAYOUT_QUERY = '(max-width: 899.98px)';
+/** Pixels of horizontal scroll left before the edge shadow disappears. */
+const SCROLL_EDGE_TOLERANCE = 1;
 const INTERACTIVE_SELECTOR = 'button, a, input, label, select, textarea, [role="menuitem"]';
 
 let nextTableId = 0;
@@ -109,7 +120,7 @@ function isInteractiveTarget(target: EventTarget | null): boolean {
 
 function moveRowFocus(current: HTMLElement, step: 1 | -1): void {
   let sibling = step === 1 ? current.nextElementSibling : current.previousElementSibling;
-  while (sibling && !sibling.classList.contains('cl-data-row')) {
+  while (sibling && !sibling.classList.contains('data-table__row')) {
     sibling = step === 1 ? sibling.nextElementSibling : sibling.previousElementSibling;
   }
   if (sibling instanceof HTMLElement) {
@@ -125,6 +136,13 @@ function handleRowKeyDown(event: KeyboardEvent, onOpen: () => void): void {
   if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
     event.preventDefault();
     moveRowFocus(event.currentTarget as HTMLElement, event.key === 'ArrowDown' ? 1 : -1);
+  } else if (event.key === 'Home' || event.key === 'End') {
+    event.preventDefault();
+    const rows = (event.currentTarget as HTMLElement).parentElement?.querySelectorAll<HTMLElement>(
+      ':scope > .data-table__row',
+    );
+    const target = event.key === 'Home' ? rows?.[0] : rows?.[rows.length - 1];
+    target?.focus();
   } else if (event.key === 'Enter') {
     event.preventDefault();
     onOpen();
@@ -153,7 +171,19 @@ function compareCells(a: unknown, b: unknown): number {
  */
 @Component({
   selector: 'app-data-table',
-  imports: [NgTemplateOutlet, FormsModule, Button, Menu, Popover, Select, TableModule, BulkBar],
+  imports: [
+    NgTemplateOutlet,
+    FormsModule,
+    Button,
+    Menu,
+    Popover,
+    Select,
+    TableModule,
+    BulkBar,
+    EmptyState,
+    ErrorState,
+    AppTooltip,
+  ],
   templateUrl: './data-table.html',
   styleUrl: './data-table.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -171,9 +201,13 @@ export class DataTable<T extends object> {
   readonly loading = input(false);
   /** Error message: replaces the table with an error state and a retry button. */
   readonly error = input<string | null>(null);
+  /** HTTP status of the failure, used to pick friendly copy when the error message is raw. */
+  readonly errorStatus = input<number | null>(null);
   /** Custom empty content (at most 280 px). Defaults to the standard empty message. */
   readonly emptyState = input<TemplateRef<void> | null>(null);
   readonly pagination = input<DataTablePagination | null>(null);
+  /** Page sizes offered in the footer selector. */
+  readonly pageSizes = input<readonly number[]>(DEFAULT_PAGE_SIZES);
   /** Shows the row checkboxes and the bulk bar. */
   readonly selectable = input(false);
   /** Keys of the selected rows (two-way bound). */
@@ -183,7 +217,10 @@ export class DataTable<T extends object> {
   readonly rowOpenable = input(false);
   /** Actions of a row, shown in a menu. Rows without actions show no menu button. */
   readonly rowActions = input<((row: T) => RowMenuItem[]) | null>(null);
-  /** Below 768 px replaces the table with a list of cards rendered by this template. */
+  /**
+   * Below 900 px the table becomes a list of cards. Cards are rendered by this template; without it
+   * each card lists the visible columns as label and value.
+   */
   readonly mobileRender = input<TemplateRef<DataTableCellContext<T>> | null>(null);
   /** Fills the remaining height of the parent flex container. */
   readonly fill = input(false);
@@ -195,7 +232,9 @@ export class DataTable<T extends object> {
   protected readonly cells = contentChildren(DataTableCell);
 
   protected readonly groupName = `corelog-density-${nextTableId++}`;
-  protected readonly pageSizeOptions = PAGE_SIZE_OPTIONS;
+  protected readonly pageSizeOptions = computed(() =>
+    this.pageSizes().map((value) => ({ label: `${value} / página`, value })),
+  );
   protected readonly rowMenuItems = signal<MenuItem[]>([]);
 
   protected readonly density = persistentState<Density>(DENSITY_STORAGE_KEY, 'comfortable');
@@ -214,17 +253,24 @@ export class DataTable<T extends object> {
     readStoredValue(this.columnsStorageKey(), this.defaultHidden()),
   );
 
-  private readonly isMobile = mediaQuery(MOBILE_QUERY);
-  protected readonly cardMode = computed(() => this.isMobile() && this.mobileRender() !== null);
+  private readonly isMobile = mediaQuery(CARD_LAYOUT_QUERY);
+  protected readonly cardMode = computed(() => this.isMobile());
   private readonly primaryOnly = computed(
     () =>
       this.isMobile() &&
-      !this.cardMode() &&
+      this.mobileRender() === null &&
       this.columns().some((column) => column.mobilePrimary === true),
   );
   protected readonly showSkeleton = delayedFlag(this.loading, SKELETON_DELAY_MS);
 
   protected readonly hasHideable = computed(() => this.columns().some((column) => column.hideable));
+
+  /** Roving tab stop: only one row of the table is in the tab order, arrow keys move between rows. */
+  protected readonly activeRow = signal(0);
+
+  private readonly scroller = viewChild<ElementRef<HTMLElement>>('scroller');
+  protected readonly edgeStart = signal(false);
+  protected readonly edgeEnd = signal(false);
   protected readonly visibleColumns = computed(() => {
     const hidden = this.hiddenKeys();
     return this.columns().filter((column) => {
@@ -271,6 +317,14 @@ export class DataTable<T extends object> {
       (this.selectable() ? 1 : 0) +
       (this.showActionsColumn() ? 1 : 0),
   );
+  protected readonly range = computed(() => {
+    const page = this.pagination();
+    if (!page || page.total === 0) {
+      return null;
+    }
+    const from = (page.page - 1) * page.pageSize + 1;
+    return { from, to: Math.min(page.total, page.page * page.pageSize), total: page.total };
+  });
   protected readonly totalPages = computed(() => {
     const page = this.pagination();
     return page ? Math.max(1, Math.ceil(page.total / page.pageSize)) : 1;
@@ -285,6 +339,46 @@ export class DataTable<T extends object> {
     const selected = this.selectedKeys();
     return !this.allChecked() && this.data().some((row) => selected.includes(this.keyOf(row)));
   });
+
+  constructor() {
+    effect((onCleanup) => {
+      const element = this.scroller()?.nativeElement;
+      this.data();
+      this.visibleColumns();
+      if (!element) {
+        this.edgeStart.set(false);
+        this.edgeEnd.set(false);
+        return;
+      }
+      this.updateEdges(element);
+      if (typeof ResizeObserver === 'undefined') {
+        return;
+      }
+      const observer = new ResizeObserver(() => this.updateEdges(element));
+      observer.observe(element);
+      onCleanup(() => observer.disconnect());
+    });
+  }
+
+  /** Shows an edge shadow on each side where there is more content to scroll to. */
+  protected updateEdges(element: HTMLElement): void {
+    const max = element.scrollWidth - element.clientWidth;
+    this.edgeStart.set(element.scrollLeft > SCROLL_EDGE_TOLERANCE);
+    this.edgeEnd.set(max - element.scrollLeft > SCROLL_EDGE_TOLERANCE);
+  }
+
+  protected rowTabIndex(index: number): number | null {
+    if (!this.rowOpenable()) {
+      return null;
+    }
+    return index === Math.min(this.activeRow(), Math.max(0, this.data().length - 1)) ? 0 : -1;
+  }
+
+  protected rowActionsOf(row: T): { primary: RowMenuItem | null; rest: RowMenuItem[] } {
+    const items = this.itemsFor(row);
+    const primary = items.find((item) => item.primary === true) ?? null;
+    return { primary, rest: items.filter((item) => item !== primary) };
+  }
 
   protected keyOf(row: T): string {
     const key = this.rowKey();
@@ -380,8 +474,9 @@ export class DataTable<T extends object> {
   }
 
   protected openRowMenu(event: Event, row: T, menu: Menu): void {
+    event.stopPropagation();
     this.rowMenuItems.set(
-      this.itemsFor(row).map((item) => ({
+      this.rowActionsOf(row).rest.map((item) => ({
         label: item.label,
         icon: item.icon,
         styleClass: item.danger ? 'row-action-danger' : undefined,

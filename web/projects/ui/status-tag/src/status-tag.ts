@@ -3,8 +3,8 @@ import { ISSUE_STATUS_META, IssueStatus } from '@corelog/core';
 import { Tone, ToneTag } from '@corelog/ui/tone-tag';
 
 const TONE_BY_STATUS: Readonly<Record<IssueStatus, Tone>> = {
-  open: 'blue',
-  in_progress: 'gold',
+  open: 'neutral',
+  in_progress: 'blue',
   resolved: 'green',
   closed: 'neutral',
 };

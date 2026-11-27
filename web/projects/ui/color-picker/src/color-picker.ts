@@ -18,6 +18,7 @@ import {
   isHexColor,
   nextPaletteIndex,
   paletteIndexOf,
+  paletteName,
   paletteValue,
 } from './color-value';
 
@@ -67,6 +68,10 @@ export class ColorPicker implements ControlValueAccessor {
   private readonly swatches = viewChildren<ElementRef<HTMLButtonElement>>('swatch');
   private onChangeFn: (value: string | null) => void = () => {};
   private onTouchedFn: () => void = () => {};
+
+  protected nameOf(index: number): string {
+    return paletteName(index);
+  }
 
   protected select(index: number): void {
     this.emit(paletteValue(index));

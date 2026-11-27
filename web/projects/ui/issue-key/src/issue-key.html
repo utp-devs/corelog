@@ -1,32 +1,50 @@
 <span
-  class="wrapper"
+  class="issue-key"
   [attr.data-resolved]="resolved() ? 'true' : null"
   [attr.data-testid]="dataTestId()"
 >
   @if (type(); as kind) {
     <app-issue-type-icon [type]="kind" />
   }
-  @if (isAppPath()) {
-    <a
-      class="link"
-      [class.resolved]="resolved()"
-      [routerLink]="href()"
-      [pTooltip]="summary()"
-      tooltipPosition="top"
-      >{{ issueKey() }}</a
-    >
+  @if (href(); as link) {
+    @if (isAppPath()) {
+      <a
+        class="issue-key__text issue-key__text--link"
+        [class.issue-key__text--resolved]="resolved()"
+        [routerLink]="link"
+        [attr.tabindex]="tabIndex()"
+        [pTooltip]="summary()"
+        tooltipPosition="top"
+        >{{ text() }}</a
+      >
+    } @else {
+      <a
+        class="issue-key__text issue-key__text--link"
+        [class.issue-key__text--resolved]="resolved()"
+        [attr.href]="link"
+        [attr.tabindex]="tabIndex()"
+        [pTooltip]="summary()"
+        tooltipPosition="top"
+        >{{ text() }}</a
+      >
+    }
   } @else {
-    <a
-      class="link"
-      [class.resolved]="resolved()"
-      [attr.href]="href()"
-      [pTooltip]="summary()"
-      tooltipPosition="top"
-      >{{ issueKey() }}</a
+    <span
+      class="issue-key__text"
+      [class.issue-key__text--resolved]="resolved()"
+      [attr.title]="issueKey()"
+      >{{ text() }}</span
     >
   }
-  <span class="copy-wrap">
-    <button type="button" class="copy-button" aria-label="Copiar clave" (click)="copy()">
+  <span class="issue-key__copy">
+    <button
+      type="button"
+      class="issue-key__copy-button"
+      aria-label="Copiar clave"
+      appTooltip="Copiar clave"
+      [attr.tabindex]="tabIndex()"
+      (click)="copy($event)"
+    >
       <i class="pi pi-copy" aria-hidden="true"></i>
     </button>
   </span>

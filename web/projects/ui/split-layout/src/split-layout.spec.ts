@@ -71,7 +71,7 @@ describe('SplitLayout', () => {
   it('defaults to a 320 px side panel and accepts 360 and 400', () => {
     const fixture = TestBed.createComponent(Host);
     fixture.detectChanges();
-    const layout = fixture.nativeElement.querySelector('.layout') as HTMLElement;
+    const layout = fixture.nativeElement.querySelector('.split-layout') as HTMLElement;
     expect(layout.getAttribute('data-side-width')).toBe('320');
     fixture.componentInstance.width.set(400);
     fixture.detectChanges();
@@ -81,7 +81,7 @@ describe('SplitLayout', () => {
   it('is not stacked on wide viewports', () => {
     const fixture = TestBed.createComponent(Host);
     fixture.detectChanges();
-    expect(fixture.nativeElement.querySelector('.layout').getAttribute('data-stacked')).toBe(
+    expect(fixture.nativeElement.querySelector('.split-layout').getAttribute('data-stacked')).toBe(
       'false',
     );
   });
@@ -93,7 +93,7 @@ describe('SplitLayout', () => {
     TestBed.configureTestingModule({ imports: [Host] });
     const fixture = TestBed.createComponent(Host);
     fixture.detectChanges();
-    expect(fixture.nativeElement.querySelector('.layout').getAttribute('data-stacked')).toBe(
+    expect(fixture.nativeElement.querySelector('.split-layout').getAttribute('data-stacked')).toBe(
       'true',
     );
   });

@@ -97,24 +97,26 @@ describe('Section', () => {
   it('pads the body by default and removes the padding with padded=false or flush', () => {
     const { fixture, el } = create();
     const body = () => el.querySelector('section > div') as HTMLElement;
-    expect(body().classList).toContain('body');
-    expect(body().classList).not.toContain('body-flush');
+    expect(body().classList).toContain('section__body');
+    expect(body().classList).not.toContain('section__body--flush');
 
     fixture.componentInstance.padded.set(false);
     fixture.detectChanges();
-    expect(body().classList).toContain('body-flush');
+    expect(body().classList).toContain('section__body--flush');
 
     fixture.componentInstance.padded.set(true);
     fixture.componentInstance.flush.set(true);
     fixture.detectChanges();
-    expect(body().classList).toContain('body-flush');
+    expect(body().classList).toContain('section__body--flush');
   });
 
   it('is not filled by default', () => {
     const { el } = create();
     const section = el.querySelector('section') as HTMLElement;
     expect(section.getAttribute('data-fill')).toBe('false');
-    expect((section.lastElementChild as HTMLElement).classList).not.toContain('grow');
+    expect((section.lastElementChild as HTMLElement).classList).not.toContain(
+      'section__body--grow',
+    );
   });
 
   it('grows with fill and stretches its body to the remaining height', () => {
@@ -124,6 +126,8 @@ describe('Section', () => {
     fixture.detectChanges();
     const section = el.querySelector('section') as HTMLElement;
     expect(section.getAttribute('data-fill')).toBe('true');
-    expect((section.querySelector('.body') as HTMLElement).classList).toContain('grow');
+    expect((section.querySelector('.section__body') as HTMLElement).classList).toContain(
+      'section__body--grow',
+    );
   });
 });

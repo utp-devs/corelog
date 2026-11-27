@@ -9,6 +9,7 @@ import {
   NotificationStore,
   ProjectStore,
   SearchApiService,
+  TeamStore,
   ThemeService,
   UiPreferencesService,
   type Project,
@@ -122,7 +123,11 @@ function routesFor(host: Type<unknown>): Routes {
 }
 
 interface Fakes {
-  auth: { user: ReturnType<typeof signal<User | null>>; logout: ReturnType<typeof vi.fn> };
+  auth: {
+    user: ReturnType<typeof signal<User | null>>;
+    isAuthenticated: ReturnType<typeof signal<boolean>>;
+    logout: ReturnType<typeof vi.fn>;
+  };
   assign: ReturnType<typeof vi.fn>;
   projects: {
     projects: ReturnType<typeof signal<Project[]>>;
@@ -138,6 +143,7 @@ async function render(
   const fakes: Fakes = {
     auth: {
       user: signal<User | null>(options.user === undefined ? adminUser : options.user),
+      isAuthenticated: signal(true),
       logout: vi.fn(),
     },
     assign: vi.fn(),
@@ -152,6 +158,7 @@ async function render(
       { provide: AuthStore, useValue: fakes.auth },
       { provide: LOCATION_ASSIGN, useValue: fakes.assign },
       { provide: ProjectStore, useValue: fakes.projects },
+      { provide: TeamStore, useValue: { teams: signal([]), fetchTeams: vi.fn() } },
       {
         provide: NotificationStore,
         useValue: {
@@ -177,11 +184,12 @@ function byLabel(root: ParentNode, selector: string, label: string): HTMLElement
   return root.querySelector<HTMLElement>(`${selector}[aria-label="${label}"]`);
 }
 
-/** Clicks the menu entry whose text matches. PrimeNG attaches the click handler to the item body, not the li. */
+/** Clicks the open menu row whose text matches. */
 function clickMenuItem(text: string): void {
-  const match = Array.from(document.querySelectorAll<HTMLElement>('[role="menuitem"] > div')).find(
-    (item) => (item.textContent ?? '').trim().includes(text),
+  const rows = document.querySelectorAll<HTMLElement>(
+    '[role="menuitem"], [role="menuitemradio"], [role="menuitemcheckbox"]',
   );
+  const match = Array.from(rows).find((item) => (item.textContent ?? '').trim().includes(text));
   if (!match) throw new Error(`menu item "${text}" not found`);
   match.click();
 }
@@ -201,7 +209,7 @@ describe('AppShell', () => {
     const { root } = await render('/issues');
     const focusable = Array.from(root.querySelectorAll<HTMLElement>('a[href], button, input'));
     expect(focusable[0]?.textContent).toContain('Saltar al contenido');
-    root.querySelector<HTMLAnchorElement>('a.skip')?.click();
+    root.querySelector<HTMLAnchorElement>('a.app-shell__skip')?.click();
     expect(document.getElementById('main-content')).toBe(document.activeElement);
   });
 
@@ -257,15 +265,51 @@ describe('AppShell', () => {
     expect(drawer?.textContent).toContain('Tablero');
   });
 
+  it('groups the drawer: the four menus expand with real entries and the context links follow', async () => {
+    const { root, harness } = await render('/projects/p1/board', { width: 390 });
+    byLabel(root, 'button', 'Abrir menú de navegación')?.click();
+    harness.fixture.detectChanges();
+    const drawer = document.querySelector<HTMLElement>('nav[aria-label="Navegación móvil"]');
+    const toggles = Array.from(
+      drawer?.querySelectorAll<HTMLButtonElement>('button[aria-expanded]') ?? [],
+    );
+    expect(toggles.map((item) => (item.textContent ?? '').trim())).toEqual([
+      'Proyectos',
+      'Filtros',
+      'Paneles',
+      'Equipos',
+    ]);
+    expect(toggles.every((item) => item.getAttribute('aria-expanded') === 'false')).toBe(true);
+    toggles[0].click();
+    harness.fixture.detectChanges();
+    expect(toggles[0].getAttribute('aria-expanded')).toBe('true');
+    expect(drawer?.textContent).toContain('Ver todos los proyectos');
+    expect(drawer?.textContent).toContain('Tablero');
+  });
+
+  it('moves focus into the drawer when it opens and back to the opener when it closes', async () => {
+    const { root, harness } = await render('/projects/p1/board', { width: 390 });
+    const opener = byLabel(root, 'button', 'Abrir menú de navegación') as HTMLButtonElement;
+    opener.focus();
+    opener.click();
+    harness.fixture.detectChanges();
+    TestBed.tick();
+    expect(document.activeElement).toBe(byLabel(root, 'button', 'Cerrar navegación'));
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    harness.fixture.detectChanges();
+    TestBed.tick();
+    expect(document.activeElement).toBe(opener);
+  });
+
   it('closes the phone drawer on Escape and keeps its organization switcher mounted', async () => {
     const { root, harness } = await render('/projects/p1/board', { width: 390 });
     byLabel(root, 'button', 'Abrir menú de navegación')?.click();
     harness.fixture.detectChanges();
-    const drawer = root.querySelector<HTMLElement>('.drawer');
-    expect(drawer?.classList.contains('open')).toBe(true);
+    const drawer = root.querySelector<HTMLElement>('.nav-drawer');
+    expect(drawer?.classList.contains('nav-drawer--open')).toBe(true);
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
     harness.fixture.detectChanges();
-    expect(drawer?.classList.contains('open')).toBe(false);
+    expect(drawer?.classList.contains('nav-drawer--open')).toBe(false);
     expect(drawer?.getAttribute('aria-hidden')).toBe('true');
   });
 
@@ -334,14 +378,18 @@ describe('AppShell user menu and shortcuts', () => {
     expect(fakes.assign).toHaveBeenCalledWith('/workspace/profile');
   });
 
-  it('calls the theme toggle from the user menu', async () => {
+  it('changes the theme from the user menu and keeps the menu open', async () => {
     const { root, harness } = await render('/issues');
-    const toggle = vi
-      .spyOn(TestBed.inject(ThemeService), 'toggle')
-      .mockImplementation(() => undefined);
     openUserMenu(root, harness);
-    clickMenuItem('Usar tema oscuro');
-    expect(toggle).toHaveBeenCalledTimes(1);
+    clickMenuItem('Oscuro');
+    harness.fixture.detectChanges();
+    expect(TestBed.inject(ThemeService).mode()).toBe('dark');
+    const dark = Array.from(document.querySelectorAll('[role="menuitemradio"]')).find((row) =>
+      (row.textContent ?? '').includes('Oscuro'),
+    );
+    expect(dark?.getAttribute('aria-checked')).toBe('true');
+    clickMenuItem('Sistema');
+    expect(TestBed.inject(ThemeService).mode()).toBe('system');
   });
 
   it('persists the density choice in corelog.density', async () => {

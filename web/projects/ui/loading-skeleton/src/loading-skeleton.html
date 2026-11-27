@@ -1,11 +1,18 @@
-<div class="container" role="status" aria-busy="true" aria-label="Cargando">
+<div class="loading-skeleton" role="status" aria-busy="true" aria-label="Cargando">
   @for (block of blocks(); track $index) {
-    <div class="block">
+    <div class="loading-skeleton__block">
       @if (block.title) {
-        <span class="bone title" aria-hidden="true"></span>
+        <span
+          class="loading-skeleton__bone loading-skeleton__bone--title"
+          aria-hidden="true"
+        ></span>
       }
       @for (line of block.lines; track line; let last = $last) {
-        <span class="bone line" [class.short]="last" aria-hidden="true"></span>
+        <span
+          class="loading-skeleton__bone loading-skeleton__bone--line"
+          [class.loading-skeleton__bone--short]="last"
+          aria-hidden="true"
+        ></span>
       }
     </div>
   }

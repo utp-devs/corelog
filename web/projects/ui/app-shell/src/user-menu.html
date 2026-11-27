@@ -1,18 +1,91 @@
 @if (user(); as current) {
-  <button
-    type="button"
-    class="trigger"
-    [attr.aria-label]="'Menú de ' + current.name"
-    aria-haspopup="menu"
-    (click)="toggle($event)"
-  >
-    <app-avatar
-      [id]="current.id"
-      [name]="current.name"
-      [src]="photo()"
-      [size]="32"
-      data-testid="user-menu-avatar"
-    />
-  </button>
-  <p-menu #menu [model]="items()" [popup]="true" appendTo="body" />
+  <app-dropdown-menu [label]="'Cuenta de ' + current.name" align="end">
+    <button
+      appMenuTrigger
+      type="button"
+      class="user-menu__trigger"
+      [attr.aria-label]="'Menú de ' + current.name"
+      appTooltip="Tu cuenta"
+    >
+      <app-avatar
+        [id]="current.id"
+        [name]="current.name"
+        [src]="photo()"
+        [size]="32"
+        data-testid="user-menu-avatar"
+      />
+    </button>
+
+    <div class="user-menu__identity" role="presentation">
+      <app-avatar [id]="current.id" [name]="current.name" [src]="photo()" [size]="40" />
+      <span class="user-menu__identity-text">
+        <span class="user-menu__name">{{ current.name }}</span>
+        <span class="user-menu__email">{{ current.email }}</span>
+        <span class="user-menu__role">{{ roleLabel() }}</span>
+      </span>
+    </div>
+
+    <div class="user-menu__separator" role="separator"></div>
+
+    <button type="button" class="user-menu__item" role="menuitem" (click)="goToProfile()">
+      <app-shell-icon class="user-menu__icon" name="profile" />
+      <span class="user-menu__label">Mi perfil</span>
+    </button>
+
+    <div class="user-menu__separator" role="separator"></div>
+
+    <div class="user-menu__row" role="presentation">
+      <span class="user-menu__row-label">Tema</span>
+      <div class="user-menu__segments" role="group" aria-label="Tema">
+        @for (choice of themeChoices; track choice.mode) {
+          <button
+            type="button"
+            class="user-menu__segment"
+            role="menuitemradio"
+            data-keep-open
+            [attr.aria-checked]="themeMode() === choice.mode"
+            (click)="setTheme(choice.mode)"
+          >
+            <app-shell-icon [name]="choice.icon" />
+            <span>{{ choice.label }}</span>
+          </button>
+        }
+      </div>
+    </div>
+
+    <button
+      type="button"
+      class="user-menu__item"
+      role="menuitemcheckbox"
+      data-keep-open
+      [attr.aria-checked]="compact()"
+      (click)="toggleDensity()"
+    >
+      <app-shell-icon class="user-menu__icon" name="density" />
+      <span class="user-menu__label">Densidad compacta</span>
+      <span
+        class="user-menu__switch"
+        [class.user-menu__switch--on]="compact()"
+        aria-hidden="true"
+      ></span>
+    </button>
+
+    <button type="button" class="user-menu__item" role="menuitem" (click)="openShortcuts.emit()">
+      <app-shell-icon class="user-menu__icon" name="keyboard" />
+      <span class="user-menu__label">Atajos de teclado</span>
+      <kbd class="user-menu__trail">?</kbd>
+    </button>
+
+    <div class="user-menu__separator" role="separator"></div>
+
+    <button
+      type="button"
+      class="user-menu__item user-menu__item--danger"
+      role="menuitem"
+      (click)="signOut()"
+    >
+      <app-shell-icon name="logout" />
+      <span class="user-menu__label">Cerrar sesión</span>
+    </button>
+  </app-dropdown-menu>
 }

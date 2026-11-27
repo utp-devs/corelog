@@ -35,7 +35,7 @@ describe('BulkBar', () => {
       '[role="region"][aria-label="Acciones masivas"]',
     ) as HTMLElement;
     expect(region.textContent).toContain('3 seleccionados');
-    expect(region.querySelector('.count')?.getAttribute('aria-live')).toBe('polite');
+    expect(region.querySelector('.bulk-bar__count')?.getAttribute('aria-live')).toBe('polite');
 
     buttonByText(el, 'Eliminar').click();
     expect(onDelete).toHaveBeenCalledTimes(1);

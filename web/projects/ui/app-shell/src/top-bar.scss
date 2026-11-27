@@ -1,135 +1,135 @@
+@use '../../styles/mixins' as m;
+@use './icon-button' as ib;
+
 :host {
   display: block;
   min-width: 0;
 }
 
-.bar {
+.top-bar {
+  @include m.flex-row(2);
   position: relative;
   z-index: var(--cl-z-header);
-  display: flex;
-  align-items: center;
-  gap: var(--cl-space-2);
   flex: none;
+  box-sizing: border-box;
   height: var(--cl-topbar-h);
   min-width: 0;
-  padding: 0 var(--cl-space-4);
+  padding: 0 max(var(--cl-space-4), env(safe-area-inset-right)) 0
+    max(var(--cl-space-4), env(safe-area-inset-left));
   border-bottom: 1px solid var(--cl-border);
   background: var(--cl-bg-surface);
-}
 
-button {
-  font: inherit;
-  cursor: pointer;
-}
-
-.menu-button,
-.nav-button,
-.create,
-.create-icon {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--cl-space-2);
-  flex: none;
-  min-height: 32px;
-  padding: 0 var(--cl-space-3);
-  border: 0;
-  border-radius: var(--cl-radius-sm);
-  background: transparent;
-  color: var(--cl-text);
-  font-weight: 500;
-}
-
-.menu-button:hover,
-.nav-button:hover {
-  background: var(--cl-bg-sunken);
-}
-
-.menu-button:focus-visible,
-.nav-button:focus-visible,
-.create:focus-visible,
-.brand:focus-visible {
-  outline: none;
-  box-shadow: var(--cl-shadow-focus);
-}
-
-.create,
-.create-icon {
-  background: var(--cl-brand);
-  color: var(--cl-bg-surface);
-}
-
-.create:hover,
-.create-icon:hover {
-  background: var(--cl-brand-hover);
-}
-
-.brand {
-  display: inline-flex;
-  align-items: center;
-  flex: none;
-  margin-right: var(--cl-space-2);
-  border-radius: var(--cl-radius-sm);
-}
-
-.brand-banner {
-  display: block;
-  height: auto;
-}
-
-.brand-icon {
-  display: block;
-  width: 32px;
-  height: 32px;
-}
-
-.nav {
-  display: flex;
-  align-items: center;
-  gap: var(--cl-space-1);
-  flex: none;
-}
-
-.caret {
-  font-size: var(--cl-font-caption);
-  color: var(--cl-text-subtle);
-}
-
-.spacer {
-  flex: 1 1 auto;
-  min-width: var(--cl-space-2);
-}
-
-.org {
-  display: inline-flex;
-  align-items: center;
-  flex: none;
-  max-width: 220px;
-  overflow: hidden;
-  color: var(--cl-text-subtle);
-}
-
-.org-name {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-/* 1024-1279 px: the full menu row needs the room, so the organization name is shorter. */
-@media (max-width: 1279.98px) {
-  .org {
-    max-width: 160px;
-  }
-}
-
-/* Phones: tap targets of 44 px, tighter gutters, every control inside the bar. */
-@media (max-width: 767.98px) {
-  .bar {
+  @include m.respond-down(768px) {
     gap: var(--cl-space-1);
-    padding: 0 var(--cl-space-3);
+    padding-right: max(var(--cl-space-3), env(safe-area-inset-right));
+    padding-left: max(var(--cl-space-3), env(safe-area-inset-left));
   }
 
-  .bar button {
-    min-width: 44px;
-    min-height: 44px;
+  &__menu-button {
+    @include m.flex-row(2);
+    flex: none;
+    min-height: var(--cl-control-h-md);
+    padding: 0 var(--cl-space-3);
+    border: 0;
+    border-radius: var(--cl-radius-md);
+    background: transparent;
+    color: var(--cl-text);
+    font: inherit;
+    font-weight: var(--cl-weight-medium);
+    cursor: pointer;
+
+    &:hover {
+      background: var(--cl-bg-hover);
+    }
+
+    &:focus-visible {
+      outline: none;
+      box-shadow: var(--cl-shadow-focus);
+    }
+
+    @include m.respond-down(768px) {
+      @include ib.icon-button;
+    }
+  }
+
+  &__brand {
+    @include m.flex-row(0);
+    flex: none;
+    margin-right: var(--cl-space-2);
+    border-radius: var(--cl-radius-md);
+
+    &:focus-visible {
+      outline: none;
+      box-shadow: var(--cl-shadow-focus);
+    }
+
+    /* The wordmark is dark blue: in the dark theme it sits on a light chip so it stays legible. */
+    &--on-dark {
+      padding: var(--cl-space-1) var(--cl-space-2);
+      background: var(--cl-text);
+    }
+  }
+
+  &__brand-banner {
+    display: block;
+    height: auto;
+  }
+
+  &__brand-icon {
+    display: block;
+    width: var(--cl-space-8);
+    height: var(--cl-space-8);
+  }
+
+  &__nav {
+    @include m.flex-row(1);
+    flex: none;
+  }
+
+  &__create {
+    @include m.flex-row(2, center, center);
+    flex: none;
+    box-sizing: border-box;
+    min-height: var(--cl-control-h-md);
+    padding: 0 var(--cl-space-4);
+    border: 0;
+    border-radius: var(--cl-radius-md);
+    background: var(--cl-brand);
+    color: var(--cl-text-on-brand);
+    font: inherit;
+    font-weight: var(--cl-btn-weight);
+    cursor: pointer;
+
+    &:hover {
+      background: var(--cl-brand-hover);
+    }
+
+    &:focus-visible {
+      outline: none;
+      box-shadow: var(--cl-shadow-focus);
+    }
+
+    &--icon {
+      width: var(--cl-control-h-lg);
+      height: var(--cl-control-h-lg);
+      padding: 0;
+    }
+  }
+
+  &__spacer {
+    flex: 1 1 auto;
+    min-width: var(--cl-space-2);
+  }
+
+  /* No clipping here: the organization menu opens inside this container. */
+  &__org {
+    @include m.flex-row(0);
+    flex: none;
+    color: var(--cl-text-subtle);
+  }
+
+  &__org-name {
+    @include m.truncate;
+    max-width: var(--cl-menu-w);
   }
 }

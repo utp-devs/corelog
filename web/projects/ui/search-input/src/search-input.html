@@ -1,21 +1,24 @@
-<div class="search">
-  <i class="pi pi-search icon" aria-hidden="true"></i>
+<div class="search-input" [class.search-input--compact]="compact()">
+  <i class="pi pi-search search-input__icon" aria-hidden="true"></i>
   <input
     pInputText
     type="text"
-    class="field"
+    class="search-input__field"
+    autocomplete="off"
     [placeholder]="placeholder()"
     [attr.aria-label]="ariaLabel()"
     [value]="draft()"
     [disabled]="disabled()"
     (input)="onInput($event)"
+    (keydown.escape)="onEscape($event)"
     (blur)="onBlur()"
   />
   @if (draft() !== '') {
     <button
       type="button"
-      class="clear"
+      class="search-input__clear"
       aria-label="Limpiar búsqueda"
+      title="Limpiar búsqueda"
       [disabled]="disabled()"
       (click)="clear()"
     >

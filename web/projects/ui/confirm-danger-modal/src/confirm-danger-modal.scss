@@ -1,48 +1,25 @@
-::ng-deep .cl-confirm-dialog {
-  width: 520px;
-  max-width: calc(100vw - var(--cl-space-8));
-}
+@use '../../styles/mixins' as m;
 
-.cl-modal-text {
-  margin: 0 0 var(--cl-space-2);
-  color: var(--cl-text);
-}
-
-.field {
-  display: flex;
-  flex-direction: column;
-  gap: var(--cl-space-1);
-  margin-top: var(--cl-space-3);
-}
-
-.input {
-  height: 32px;
-  padding: 0 var(--cl-space-3);
-  border: 1px solid var(--cl-border-strong);
-  border-radius: var(--cl-radius-md);
-  background: var(--cl-bg-surface);
-  color: var(--cl-text);
-  font: inherit;
-}
-
-.input:focus-visible {
-  outline: none;
-  box-shadow: var(--cl-shadow-focus);
-}
-
-.cl-modal-actions {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: var(--cl-space-2);
-}
-
-@media (max-width: 767.98px) {
-  .input {
-    height: 44px;
+.confirm-danger-modal {
+  &__text {
+    margin: 0;
+    color: var(--cl-text);
+    line-height: var(--cl-lh-body);
+    overflow-wrap: anywhere;
   }
 
-  .cl-modal-actions ::ng-deep .p-button {
-    min-height: 44px;
+  &__field {
+    @include m.flex-column(1);
+    margin-top: var(--cl-space-4);
+  }
+
+  &__label {
+    color: var(--cl-text);
+    font-size: var(--cl-font-body);
+    overflow-wrap: anywhere;
+  }
+
+  &__input {
+    width: 100%;
   }
 }

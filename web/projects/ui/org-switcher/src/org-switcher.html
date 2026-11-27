@@ -1,35 +1,55 @@
 @if (org(); as current) {
-  <button
-    type="button"
-    class="trigger"
-    aria-haspopup="menu"
-    [attr.aria-label]="'Organización actual: ' + current.name"
-    (click)="toggle($event)"
-  >
-    <app-org-logo
-      [orgId]="current.id"
-      [name]="current.name"
-      [hasLogo]="current.hasLogo"
-      [revision]="logoRevision()"
-    />
-    <span class="name">{{ current.name }}</span>
-    <i class="pi pi-chevron-down caret" aria-hidden="true"></i>
-  </button>
+  <app-dropdown-menu label="Organizaciones">
+    <button
+      appMenuTrigger
+      type="button"
+      class="org-switcher__trigger"
+      [attr.aria-label]="'Organización actual: ' + current.name"
+      appTooltip="Cambiar de organización"
+    >
+      <app-org-logo
+        [orgId]="current.id"
+        [name]="current.name"
+        [hasLogo]="current.hasLogo"
+        [revision]="logoRevision()"
+      />
+      <span class="org-switcher__name">{{ current.name }}</span>
+      <app-shell-icon class="org-switcher__caret" name="caret" />
+    </button>
 
-  <p-menu #menu [model]="items()" [popup]="true" appendTo="body">
-    <ng-template pTemplate="item" let-item>
-      @if (item.disabled) {
-        <span class="group-label">{{ item.label }}</span>
-      } @else {
-        <span class="menu-row">
-          @if (item.current) {
-            <i class="pi pi-check" role="img" aria-label="Organización actual"></i>
-          } @else if (item.icon) {
-            <i [class]="item.icon" aria-hidden="true"></i>
-          }
-          <span class="menu-label">{{ item.label }}</span>
-        </span>
-      }
-    </ng-template>
-  </p-menu>
+    <p class="org-switcher__heading">Tus organizaciones</p>
+    @for (item of orgs(); track item.id) {
+      <button
+        type="button"
+        class="org-switcher__item"
+        role="menuitemradio"
+        [attr.aria-checked]="item.id === current.id"
+        (click)="switchTo(item.id)"
+      >
+        <app-org-logo
+          [orgId]="item.id"
+          [name]="item.name"
+          [hasLogo]="item.hasLogo"
+          [revision]="revisionOf(item.id)"
+        />
+        <span class="org-switcher__label">{{ item.name }}</span>
+        @if (item.id === current.id) {
+          <app-shell-icon class="org-switcher__check" name="check" />
+        }
+      </button>
+    }
+
+    <div class="org-switcher__separator" role="separator"></div>
+
+    <button type="button" class="org-switcher__item" role="menuitem" (click)="createOrganization()">
+      <app-shell-icon class="org-switcher__icon" name="plus" />
+      <span class="org-switcher__label">Crear organización</span>
+    </button>
+    @if (canManage()) {
+      <button type="button" class="org-switcher__item" role="menuitem" (click)="openSettings()">
+        <app-shell-icon class="org-switcher__icon" name="settings" />
+        <span class="org-switcher__label">Configuración de la organización</span>
+      </button>
+    }
+  </app-dropdown-menu>
 }

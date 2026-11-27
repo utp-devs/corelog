@@ -1,0 +1,31 @@
+@use './menu' as menu;
+
+:host {
+  position: relative;
+  display: inline-flex;
+  flex: none;
+}
+
+.dropdown-menu {
+  &__trigger {
+    display: inline-flex;
+  }
+
+  &__panel {
+    @include menu.panel;
+    position: absolute;
+    top: calc(100% + var(--cl-space-1));
+    left: 0;
+    z-index: var(--cl-z-dropdown);
+    text-align: left;
+
+    &--end {
+      right: 0;
+      left: auto;
+    }
+
+    &:focus {
+      outline: none;
+    }
+  }
+}

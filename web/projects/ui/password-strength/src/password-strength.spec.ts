@@ -21,28 +21,28 @@ function setup(): { el: HTMLElement; host: StrengthHost } {
 describe('PasswordStrength', () => {
   it('shows no message and no active segments for an empty password', () => {
     const { el } = setup();
-    expect(el.querySelector('.message')?.textContent?.trim()).toBe('');
-    expect(el.querySelectorAll('[data-on="true"]').length).toBe(0);
+    expect(el.querySelector('.password-strength__message')?.textContent?.trim()).toBe('');
+    expect(el.querySelectorAll('.password-strength__segment--on').length).toBe(0);
   });
 
   it('announces the level in Spanish and lights the matching segments', () => {
     const { el, host } = setup();
     host.password.set('Secreta123!456');
     TestBed.tick();
-    expect(el.querySelector('.message')?.textContent?.trim()).toBe(
+    expect(el.querySelector('.password-strength__message')?.textContent?.trim()).toBe(
       'Seguridad de la contraseña: Fuerte',
     );
     expect(el.querySelector('[data-level]')?.getAttribute('data-level')).toBe('4');
-    expect(el.querySelectorAll('[data-on="true"]').length).toBe(4);
+    expect(el.querySelectorAll('.password-strength__segment--on').length).toBe(4);
   });
 
   it('reports a short password as weak with one segment', () => {
     const { el, host } = setup();
     host.password.set('abc');
     TestBed.tick();
-    expect(el.querySelector('.message')?.textContent?.trim()).toBe(
+    expect(el.querySelector('.password-strength__message')?.textContent?.trim()).toBe(
       'Seguridad de la contraseña: Débil',
     );
-    expect(el.querySelectorAll('[data-on="true"]').length).toBe(1);
+    expect(el.querySelectorAll('.password-strength__segment--on').length).toBe(1);
   });
 });

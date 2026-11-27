@@ -1,124 +1,110 @@
+@use '../../styles/mixins' as m;
+@use '../../field-row/src/control' as c;
+
 :host {
   display: block;
   min-width: 0;
 }
 
-.wrapper {
-  display: flex;
-  flex-direction: column;
-  gap: var(--cl-space-3);
-}
+// Swatches are 32 px; touch screens get the large control height.
+$swatch: var(--cl-space-8);
 
-.swatches {
-  display: grid;
-  grid-template-columns: repeat(6, 24px);
-  gap: var(--cl-space-2);
-}
+.color-picker {
+  @include m.flex-column(3);
 
-.swatch {
-  width: 24px;
-  height: 24px;
-  padding: 0;
-  border: 1px solid var(--cl-border);
-  border-radius: var(--cl-radius-full);
-  cursor: pointer;
-}
-
-.swatch:disabled {
-  cursor: default;
-  opacity: 0.6;
-}
-
-.swatch:focus-visible {
-  outline: none;
-  box-shadow: var(--cl-shadow-focus);
-}
-
-.checked {
-  outline: 2px solid var(--cl-text);
-  outline-offset: 2px;
-}
-
-.swatch[data-palette='1'] {
-  background: var(--cl-palette-1-bg);
-}
-.swatch[data-palette='2'] {
-  background: var(--cl-palette-2-bg);
-}
-.swatch[data-palette='3'] {
-  background: var(--cl-palette-3-bg);
-}
-.swatch[data-palette='4'] {
-  background: var(--cl-palette-4-bg);
-}
-.swatch[data-palette='5'] {
-  background: var(--cl-palette-5-bg);
-}
-.swatch[data-palette='6'] {
-  background: var(--cl-palette-6-bg);
-}
-.swatch[data-palette='7'] {
-  background: var(--cl-palette-7-bg);
-}
-.swatch[data-palette='8'] {
-  background: var(--cl-palette-8-bg);
-}
-.swatch[data-palette='9'] {
-  background: var(--cl-palette-9-bg);
-}
-.swatch[data-palette='10'] {
-  background: var(--cl-palette-10-bg);
-}
-.swatch[data-palette='11'] {
-  background: var(--cl-palette-11-bg);
-}
-.swatch[data-palette='12'] {
-  background: var(--cl-palette-12-bg);
-}
-
-.preview {
-  display: inline-block;
-  width: 24px;
-  height: 24px;
-  border: 1px solid var(--cl-border);
-  border-radius: var(--cl-radius-full);
-  background: var(--cl-custom-color);
-}
-
-.custom {
-  display: flex;
-  flex-direction: column;
-  gap: var(--cl-space-1);
-  max-width: 240px;
-}
-
-.custom-label {
-  font-size: var(--cl-font-small);
-  color: var(--cl-text-subtle);
-}
-
-.error {
-  font-size: var(--cl-font-small);
-  color: var(--cl-danger-text);
-}
-
-.invalid {
-  border-color: var(--cl-danger);
-}
-
-/* Below 768 px the swatches grow to 44 px so they can be tapped. */
-@media (max-width: 767.98px) {
-  .swatches {
-    grid-template-columns: repeat(6, 44px);
+  &__swatches {
+    @include m.cluster(2);
   }
 
-  .swatch {
-    width: 44px;
-    height: 44px;
+  &__swatch {
+    @include m.flex-row(0, center, center);
+    flex: none;
+    width: $swatch;
+    height: $swatch;
+    min-width: $swatch;
+    min-height: $swatch;
+    padding: 0;
+    border: 1px solid var(--cl-border);
+    border-radius: var(--cl-radius-full);
+    background: var(--color-picker-bg);
+    color: var(--color-picker-fg);
+    cursor: pointer;
+    transition: transform var(--cl-motion-fast) var(--cl-ease);
+
+    &:hover:not(:disabled) {
+      transform: scale(1.08);
+    }
+
+    &:focus-visible {
+      @include c.focus-ring;
+    }
+
+    &:disabled {
+      opacity: var(--cl-disabled-opacity);
+      cursor: not-allowed;
+    }
+
+    &--checked {
+      border-color: var(--color-picker-fg);
+      box-shadow:
+        0 0 0 2px var(--cl-bg-surface),
+        0 0 0 4px var(--color-picker-fg);
+
+      &:focus-visible {
+        @include c.focus-ring;
+      }
+    }
+
+    @media (pointer: coarse) {
+      width: var(--cl-control-h-lg);
+      height: var(--cl-control-h-lg);
+      min-width: var(--cl-control-h-lg);
+      min-height: var(--cl-control-h-lg);
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      transition: none;
+    }
   }
 
-  .preview {
-    width: 44px;
-    height: 44px;
+  &__check {
+    @include c.control-icon;
+    font-size: var(--cl-font-body);
+    width: auto;
+    height: auto;
+  }
+
+  &__custom {
+    @include m.flex-column(1);
+    max-width: 15rem;
+  }
+
+  &__custom-label {
+    font-size: var(--cl-font-small);
+    color: var(--cl-text-subtle);
+  }
+
+  &__custom-row {
+    @include m.flex-row(2);
+  }
+
+  &__preview {
+    flex: none;
+    width: $swatch;
+    height: $swatch;
+    border: 1px solid var(--cl-border);
+    border-radius: var(--cl-radius-full);
+    background: var(--color-picker-custom);
+  }
+
+  &__hex {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  &__error {
+    @include m.flex-row(1, flex-start);
+    font-size: var(--cl-font-small);
+    color: var(--cl-danger-text);
   }
 }

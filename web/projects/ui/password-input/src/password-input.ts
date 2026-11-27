@@ -24,6 +24,9 @@ export class PasswordInput implements ControlValueAccessor {
   readonly autocomplete = input('current-password');
   readonly invalid = input(false);
   readonly required = input(false);
+  /** Control height: 36 px (default) or 44 px for auth screens. */
+  readonly size = input<'md' | 'lg'>('md');
+  readonly placeholder = input<string | null>(null);
   /** Id of the element that describes the field (helper or error text). */
   readonly describedBy = input<string | null>(null);
 

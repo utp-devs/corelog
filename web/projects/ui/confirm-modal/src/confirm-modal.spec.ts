@@ -41,7 +41,6 @@ function create(): { fixture: import('@angular/core/testing').ComponentFixture<H
 describe('ConfirmModal', () => {
   afterEach(() => {
     TestBed.resetTestingModule();
-    document.querySelectorAll('.p-dialog-mask').forEach((node) => node.remove());
   });
 
   it('shows the title and the consequence description when open', async () => {
@@ -73,5 +72,30 @@ describe('ConfirmModal', () => {
     buttonNamed('Cancelar')?.click();
     fixture.detectChanges();
     expect(host.cancelled).toBe(1);
+  });
+
+  it('treats Escape and the close button as cancel', async () => {
+    const { fixture, host } = create();
+    await fixture.whenStable();
+
+    const dialog = document.querySelector<HTMLElement>('[role="dialog"]')!;
+    dialog.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    expect(host.cancelled).toBe(1);
+
+    document.querySelector<HTMLButtonElement>('button[aria-label="Cerrar"]')?.click();
+    expect(host.cancelled).toBe(2);
+    expect(host.confirmed).toBe(0);
+  });
+
+  it('starts focus on the cancel button so the action is never confirmed by accident', async () => {
+    const { fixture } = create();
+    await fixture.whenStable();
+    expect(document.activeElement).toBe(buttonNamed('Cancelar'));
+  });
+
+  it('does not use the PrimeNG dialog', async () => {
+    const { fixture } = create();
+    await fixture.whenStable();
+    expect(document.querySelector('.p-dialog')).toBeNull();
   });
 });

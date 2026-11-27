@@ -1,0 +1,105 @@
+@use '../../styles/mixins' as m;
+
+// Shared look of the native form controls of the UI library. PrimeNG controls get the same look from the
+// theme preset; these mixins give the hand-written controls (search, password, hex, textarea, inline editors)
+// the same height, radius, border, hover, focus, disabled and invalid states.
+// Heights come from the --cl-control-h-* tokens, which already grow on touch screens.
+
+/// The single focus ring of the product: a double ring from --cl-shadow-focus.
+@mixin focus-ring {
+  outline: none;
+  box-shadow: var(--cl-shadow-focus);
+}
+
+/// Box of a single-line text control. Use on an input or on the wrapper that draws the border.
+@mixin control-box($height: var(--cl-control-h-md)) {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  min-height: $height;
+  padding: 0 var(--cl-space-3);
+  border: 1px solid var(--cl-border-strong);
+  border-radius: var(--cl-radius-md);
+  background: var(--cl-bg-surface);
+  color: var(--cl-text);
+  font: inherit;
+  line-height: var(--cl-lh-body);
+  transition:
+    border-color var(--cl-motion-fast) var(--cl-ease),
+    background-color var(--cl-motion-fast) var(--cl-ease);
+
+  &::placeholder {
+    color: var(--cl-text-placeholder);
+    opacity: 1;
+  }
+
+  &:hover:not(:disabled):not(:focus-visible) {
+    border-color: var(--cl-text-subtle);
+  }
+
+  &:focus-visible {
+    @include focus-ring;
+    border-color: var(--cl-brand);
+  }
+
+  &[aria-invalid='true'] {
+    border-color: var(--cl-danger);
+  }
+
+  &:disabled {
+    border-color: var(--cl-border);
+    background: var(--cl-bg-sunken);
+    color: var(--cl-text-disabled);
+    cursor: not-allowed;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+  }
+}
+
+/// Square icon-only button that sits inside or next to a control (clear, show password, toolbar tools).
+@mixin icon-button($size: var(--cl-control-h-sm)) {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: $size;
+  min-width: $size;
+  height: $size;
+  min-height: $size;
+  padding: 0;
+  border: 0;
+  border-radius: var(--cl-radius-md);
+  background: transparent;
+  color: var(--cl-text-subtle);
+  font: inherit;
+  cursor: pointer;
+  transition: background-color var(--cl-motion-fast) var(--cl-ease);
+
+  &:hover:not(:disabled) {
+    background: var(--cl-bg-hover);
+    color: var(--cl-text);
+  }
+
+  &:focus-visible {
+    @include focus-ring;
+  }
+
+  &:disabled {
+    opacity: var(--cl-disabled-opacity);
+    cursor: not-allowed;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+  }
+}
+
+/// Icon size used inside controls (one size everywhere).
+@mixin control-icon {
+  width: 1.125rem;
+  height: 1.125rem;
+  font-size: 1.125rem;
+  line-height: 1;
+}

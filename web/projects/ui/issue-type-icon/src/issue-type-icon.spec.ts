@@ -16,12 +16,12 @@ describe('IssueTypeIcon', () => {
   it('exposes the type name to assistive technology', () => {
     const el = create('bug');
     expect(el.querySelector('[title="Error"]')).not.toBeNull();
-    expect(el.querySelector('.sr-only')?.textContent).toBe('Error');
+    expect(el.querySelector('.issue-type-icon__hidden-label')?.textContent).toBe('Error');
   });
 
   it('shows the visible label when requested', () => {
     const el = create('epic', true);
-    expect(el.querySelector('.sr-only')).toBeNull();
+    expect(el.querySelector('.issue-type-icon__hidden-label')).toBeNull();
     expect(el.textContent).toContain('Épica');
   });
 });

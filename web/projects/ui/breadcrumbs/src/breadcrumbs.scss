@@ -1,76 +1,88 @@
+@use '../../styles/mixins' as m;
+
 :host {
   display: block;
   min-width: 0;
 }
 
-.nav {
+.breadcrumbs {
   min-width: 0;
-}
 
-.list {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--cl-space-1);
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  font-size: var(--cl-font-small);
-}
-
-.item {
-  display: inline-flex;
-  align-items: center;
-  min-width: 0;
-}
-
-.item + .item::before {
-  content: '/';
-  margin-right: var(--cl-space-1);
-  color: var(--cl-text-disabled);
-}
-
-.link {
-  color: var(--cl-text-subtle);
-  text-decoration: none;
-  white-space: nowrap;
-}
-
-.link:hover {
-  color: var(--cl-brand);
-  text-decoration: underline;
-}
-
-.link:focus-visible {
-  outline: none;
-  box-shadow: var(--cl-shadow-focus);
-  border-radius: var(--cl-radius-sm);
-}
-
-.plain {
-  color: var(--cl-text-subtle);
-}
-
-.current {
-  color: var(--cl-text);
-  font-weight: 600;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  max-width: 320px;
-}
-
-@media (max-width: 767.98px) {
-  .middle {
-    display: none;
+  &__list {
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: var(--cl-space-1);
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font-size: var(--cl-font-small);
   }
 
-  /* Phones: links are 44 px touch targets. */
-  .link,
-  .plain,
-  .current {
+  &__item {
     display: inline-flex;
+    flex: 0 1 auto;
     align-items: center;
-    min-height: 44px;
+    min-width: 0;
+
+    & + &::before {
+      content: '/';
+      margin-right: var(--cl-space-1);
+      color: var(--cl-text-disabled);
+    }
+
+    /* The last item gives way first, so a long title never pushes the trail out of its row. */
+    &:last-child {
+      flex: 1 1 0;
+    }
+  }
+
+  /* Long names are cut with an ellipsis; the full text is the element title. */
+  &__link,
+  &__plain,
+  &__current {
+    @include m.truncate;
+  }
+
+  &__link {
+    color: var(--cl-text-subtle);
+    text-decoration: none;
+    max-width: 16rem;
+
+    &:hover {
+      color: var(--cl-brand);
+      text-decoration: underline;
+    }
+
+    &:focus-visible {
+      outline: none;
+      border-radius: var(--cl-radius-sm);
+      box-shadow: var(--cl-shadow-focus);
+    }
+  }
+
+  &__plain {
+    color: var(--cl-text-subtle);
+  }
+
+  &__current {
+    color: var(--cl-text);
+    font-weight: var(--cl-weight-semibold);
+  }
+
+  @media (max-width: 767.98px) {
+    &__item--middle {
+      display: none;
+    }
+
+    /* Phones: links are 44 px touch targets. */
+    &__link,
+    &__plain,
+    &__current {
+      display: inline-flex;
+      align-items: center;
+      min-height: var(--cl-control-h-lg);
+    }
   }
 }

@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, inject, input } from '@an
 import { RouterLink } from '@angular/router';
 import { BreakpointService, UiPreferencesService } from '@corelog/core';
 import { ProjectAvatar } from '@corelog/ui/project-avatar';
+import { AppTooltip } from '@corelog/ui/tooltip';
 
 import { isSidebarItemActive, type NavItem } from './navigation';
 import { ShellIcon } from './shell-icon';
@@ -20,7 +21,7 @@ export interface SidebarProject {
  */
 @Component({
   selector: 'app-context-sidebar',
-  imports: [ProjectAvatar, RouterLink, ShellIcon],
+  imports: [AppTooltip, ProjectAvatar, RouterLink, ShellIcon],
   templateUrl: './context-sidebar.html',
   styleUrl: './context-sidebar.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

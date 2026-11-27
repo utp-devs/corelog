@@ -1,42 +1,39 @@
+@use '../../styles/mixins' as m;
+
 :host {
   display: inline-flex;
 }
 
-.wrapper {
+.issue-type-icon {
   display: inline-flex;
   align-items: center;
   gap: var(--cl-space-1);
-}
 
-.icon {
-  display: inline-flex;
-}
+  &__glyph {
+    display: inline-flex;
+  }
 
-.task {
-  color: var(--cl-brand);
-}
+  &__hidden-label {
+    @include m.visually-hidden;
+  }
 
-.bug {
-  color: var(--cl-danger);
-}
+  &--task {
+    color: var(--cl-type-task);
+  }
 
-.story {
-  color: var(--cl-success);
-}
+  &--bug {
+    color: var(--cl-type-bug);
+  }
 
-.epic {
-  color: var(--cl-info);
-}
+  &--story {
+    color: var(--cl-type-story);
+  }
 
-.subtask {
-  color: var(--cl-text-subtle);
-}
+  &--epic {
+    color: var(--cl-type-epic);
+  }
 
-.sr-only {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip: rect(0 0 0 0);
-  white-space: nowrap;
+  &--subtask {
+    color: var(--cl-type-subtask);
+  }
 }

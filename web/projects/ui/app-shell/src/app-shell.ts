@@ -1,12 +1,8 @@
-import { DOCUMENT, NgTemplateOutlet } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
   ElementRef,
-  HostListener,
-  Injector,
   TemplateRef,
-  afterNextRender,
   computed,
   contentChild,
   effect,
@@ -18,7 +14,7 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { Title } from '@angular/platform-browser';
-import { NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
+import { NavigationEnd, Router, RouterOutlet } from '@angular/router';
 import {
   AuthStore,
   BreakpointService,
@@ -36,14 +32,12 @@ import {
   DEFAULT_SHELL_NAV_CONFIG,
   buildSidebar,
   buildTopNav,
-  isSidebarItemActive,
   resolveSidebarContext,
   sidebarTitleOf,
-  type NavItem,
   type ShellNavConfig,
   type ShellOrg,
 } from './navigation';
-import { ShellIcon } from './shell-icon';
+import { NavDrawer } from './nav-drawer';
 import { AppShellCreate, AppShellOrgSwitcher } from './shell-slots';
 import { COLLAPSED_NAV_QUERY, MOBILE_QUERY } from './shell-queries';
 import { TopBar } from './top-bar';
@@ -55,15 +49,7 @@ import { TopBar } from './top-bar';
  */
 @Component({
   selector: 'app-shell',
-  imports: [
-    ContextSidebar,
-    NgTemplateOutlet,
-    RouterLink,
-    RouterOutlet,
-    ShellIcon,
-    ShortcutsDialog,
-    TopBar,
-  ],
+  imports: [ContextSidebar, NavDrawer, RouterOutlet, ShortcutsDialog, TopBar],
   templateUrl: './app-shell.html',
   styleUrl: './app-shell.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -75,7 +61,6 @@ export class AppShell {
   protected readonly hotkeys = inject(HotkeysService);
   private readonly projectStore = inject(ProjectStore);
   private readonly breakpoints = inject(BreakpointService);
-  private readonly document = inject(DOCUMENT);
 
   /** Menus, sidebar items and sidebar titles. */
   readonly navConfig = input<ShellNavConfig>(DEFAULT_SHELL_NAV_CONFIG);
@@ -87,6 +72,10 @@ export class AppShell {
   readonly org = input<ShellOrg | null>(null);
   /** Documentation address. The help menu lists the entry only when it is set. */
   readonly docsUrl = input<string | null>(null);
+  /** Release notes address. The help menu lists the entry only when it is set. */
+  readonly whatsNewUrl = input<string | null>(null);
+  /** Support address. The help menu lists the entry only when it is set. */
+  readonly supportUrl = input<string | null>(null);
 
   private readonly orgSwitcherSlot = contentChild(AppShellOrgSwitcher);
   private readonly createSlotContent = contentChild(AppShellCreate);
@@ -147,9 +136,6 @@ export class AppShell {
   protected readonly helpOpen = signal(false);
   protected readonly drawerOpen = signal(false);
   protected readonly announcement = signal('');
-  private drawerOpener: HTMLElement | null = null;
-  private readonly injector = inject(Injector);
-  protected readonly drawerClose = viewChild<ElementRef<HTMLButtonElement>>('drawerClose');
   private routeCount = 0;
 
   constructor() {
@@ -211,35 +197,6 @@ export class AppShell {
   }
 
   protected openDrawer(): void {
-    const active = this.document.activeElement;
-    this.drawerOpener = active instanceof HTMLElement ? active : null;
-    this.onDrawerVisible(true);
-  }
-
-  /**
-   * Opening or closing the drawer by any means. The drawer stays in the DOM, so closing only hides it;
-   * closing returns focus to the element that opened it, opening moves focus to the drawer's close button.
-   */
-  protected onDrawerVisible(visible: boolean): void {
-    this.drawerOpen.set(visible);
-    if (visible) {
-      afterNextRender(() => this.drawerClose()?.nativeElement.focus(), { injector: this.injector });
-    } else {
-      this.drawerOpener?.focus();
-      this.drawerOpener = null;
-    }
-  }
-
-  @HostListener('document:keydown.escape')
-  protected onEscape(): void {
-    if (this.drawerOpen()) this.closeDrawer();
-  }
-
-  protected closeDrawer(): void {
-    this.onDrawerVisible(false);
-  }
-
-  protected isItemActive(item: NavItem): boolean {
-    return isSidebarItemActive(item, this.pathname());
+    this.drawerOpen.set(true);
   }
 }

@@ -1,6 +1,6 @@
 <ng-template #grid>
   <div
-    class="grid"
+    class="card-grid"
     data-card-grid=""
     [attr.role]="ariaLabel() && !fill() ? 'group' : null"
     [attr.aria-label]="ariaLabel() && !fill() ? ariaLabel() : null"
@@ -12,7 +12,7 @@
 
 @if (fill()) {
   <div
-    class="panel"
+    class="card-grid__panel"
     data-fill="true"
     [attr.role]="ariaLabel() ? 'group' : null"
     [attr.aria-label]="ariaLabel() ?? null"

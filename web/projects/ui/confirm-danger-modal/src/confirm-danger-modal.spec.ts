@@ -64,7 +64,6 @@ describe('isConfirmationMatch', () => {
 describe('ConfirmDangerModal', () => {
   afterEach(() => {
     TestBed.resetTestingModule();
-    document.querySelectorAll('.p-dialog-mask').forEach((node) => node.remove());
   });
 
   it('keeps the danger button disabled until the exact name is typed', async () => {
@@ -107,6 +106,21 @@ describe('ConfirmDangerModal', () => {
     await fixture.whenStable();
     buttonNamed('Cancelar')?.click();
     fixture.detectChanges();
+    expect(host.cancelled).toBe(1);
+  });
+
+  it('focuses the confirmation field when it opens', async () => {
+    const { fixture } = create();
+    await fixture.whenStable();
+    expect(document.activeElement).toBe(fieldLabelled(/para confirmar/));
+  });
+
+  it('treats Escape as cancel', async () => {
+    const { fixture, host } = create();
+    await fixture.whenStable();
+    document
+      .querySelector('[role="dialog"]')!
+      .dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
     expect(host.cancelled).toBe(1);
   });
 });

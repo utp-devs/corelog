@@ -1,28 +1,19 @@
-<p-dialog
-  styleClass="cl-confirm-dialog"
-  [visible]="open()"
-  [header]="title()"
-  [modal]="true"
-  [dismissableMask]="true"
-  (visibleChange)="onVisibleChange($event)"
+<app-dialog
+  size="sm"
+  [stacked]="true"
+  [open]="open()"
+  [heading]="title()"
+  (closeRequested)="onCancel()"
 >
   @if (description()) {
-    <p class="cl-modal-text">{{ description() }}</p>
+    <p class="confirm-modal__text">{{ description() }}</p>
   }
-  <ng-template pTemplate="footer">
-    <div class="cl-modal-actions">
-      <p-button
-        [label]="cancelText()"
-        severity="secondary"
-        [outlined]="true"
-        (onClick)="onCancel()"
-      />
-      <p-button
-        [label]="confirmText()"
-        [severity]="danger() ? 'danger' : 'primary'"
-        [loading]="loading()"
-        (onClick)="onConfirm()"
-      />
-    </div>
-  </ng-template>
-</p-dialog>
+  <p-button dialogFooter [label]="cancelText()" severity="secondary" (onClick)="onCancel()" />
+  <p-button
+    dialogFooter
+    [label]="confirmText()"
+    [severity]="danger() ? 'danger' : 'primary'"
+    [loading]="loading()"
+    (onClick)="onConfirm()"
+  />
+</app-dialog>

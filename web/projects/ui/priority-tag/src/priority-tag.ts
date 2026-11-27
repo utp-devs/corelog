@@ -1,24 +1,23 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 import { ISSUE_PRIORITY_LABELS, IssuePriority } from '@corelog/core';
-import { Tone, ToneTag } from '@corelog/ui/tone-tag';
 
-const TONE_BY_PRIORITY: Readonly<Record<IssuePriority, Tone>> = {
-  low: 'neutral',
-  medium: 'blue',
-  high: 'orange',
-  critical: 'red',
+const ICON_BY_PRIORITY: Readonly<Record<IssuePriority, string>> = {
+  low: 'pi pi-angle-down',
+  medium: 'pi pi-equals',
+  high: 'pi pi-angle-up',
+  critical: 'pi pi-angle-double-up',
 };
 
-/** Issue priority with its semantic color. */
+/** Issue priority: a colored icon followed by the label in regular text color. */
 @Component({
   selector: 'app-priority-tag',
-  imports: [ToneTag],
   templateUrl: './priority-tag.html',
+  styleUrl: './priority-tag.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class PriorityTag {
   readonly priority = input.required<IssuePriority>();
 
   protected readonly label = computed(() => ISSUE_PRIORITY_LABELS[this.priority()]);
-  protected readonly tone = computed(() => TONE_BY_PRIORITY[this.priority()]);
+  protected readonly icon = computed(() => ICON_BY_PRIORITY[this.priority()]);
 }

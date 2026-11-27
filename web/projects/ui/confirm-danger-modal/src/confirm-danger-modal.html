@@ -1,39 +1,36 @@
-<p-dialog
-  styleClass="cl-confirm-dialog"
-  [visible]="open()"
-  [header]="title()"
-  [modal]="true"
-  [dismissableMask]="true"
-  (visibleChange)="onVisibleChange($event)"
-  (onHide)="onDialogHidden()"
+<app-dialog
+  size="sm"
+  [stacked]="true"
+  [open]="open()"
+  [heading]="title()"
+  (closeRequested)="onCancel()"
 >
   @if (description()) {
-    <p class="cl-modal-text">{{ description() }}</p>
+    <p class="confirm-danger-modal__text">{{ description() }}</p>
   }
-  <div class="field">
-    <label [attr.for]="fieldId">
+  <div class="confirm-danger-modal__field">
+    <label class="confirm-danger-modal__label" [attr.for]="fieldId">
       Escribe <strong>{{ confirmation() }}</strong> para confirmar
     </label>
     <input
       #field
+      pInputText
+      data-autofocus
       [id]="fieldId"
       type="text"
       autocomplete="off"
-      class="input"
+      class="confirm-danger-modal__input"
       [value]="typed()"
       (input)="onTyped(field.value)"
     />
   </div>
-  <ng-template pTemplate="footer">
-    <div class="cl-modal-actions">
-      <p-button label="Cancelar" severity="secondary" [outlined]="true" (onClick)="onCancel()" />
-      <p-button
-        [label]="confirmText()"
-        severity="danger"
-        [disabled]="!matches()"
-        [loading]="loading()"
-        (onClick)="onConfirm()"
-      />
-    </div>
-  </ng-template>
-</p-dialog>
+  <p-button dialogFooter label="Cancelar" severity="secondary" (onClick)="onCancel()" />
+  <p-button
+    dialogFooter
+    [label]="confirmText()"
+    severity="danger"
+    [disabled]="!matches()"
+    [loading]="loading()"
+    (onClick)="onConfirm()"
+  />
+</app-dialog>

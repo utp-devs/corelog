@@ -112,8 +112,14 @@ describe('buildSidebar', () => {
     ]);
   });
 
-  it('lists the profile item for everyone and titles each context', () => {
-    expect(buildSidebar({ kind: 'profile' }, new Set()).map((i) => i.path)).toEqual(['/profile']);
+  it('lists every profile section for everyone and titles each context', () => {
+    expect(buildSidebar({ kind: 'profile' }, new Set()).map((i) => i.path)).toEqual([
+      '/profile',
+      '/profile/security',
+      '/profile/notifications',
+      '/profile/tokens',
+      '/profile/appearance',
+    ]);
     expect(sidebarTitleOf({ kind: 'project', projectId: 'p1' }, DEFAULT_SHELL_NAV_CONFIG)).toBe(
       'Proyecto',
     );
@@ -126,5 +132,12 @@ describe('isSidebarItemActive', () => {
     expect(isSidebarItemActive({ path: '/projects/p1/board' }, '/projects/p1/board')).toBe(true);
     expect(isSidebarItemActive({ path: '/projects/p1' }, '/projects/p1/board')).toBe(true);
     expect(isSidebarItemActive({ path: '/projects/p1' }, '/projects/p10')).toBe(false);
+  });
+
+  it('keeps an exact item inactive on the sections nested under its path', () => {
+    const general = { path: '/profile', exact: true };
+    expect(isSidebarItemActive(general, '/profile')).toBe(true);
+    expect(isSidebarItemActive(general, '/profile/appearance')).toBe(false);
+    expect(isSidebarItemActive({ path: '/profile/appearance' }, '/profile/appearance')).toBe(true);
   });
 });

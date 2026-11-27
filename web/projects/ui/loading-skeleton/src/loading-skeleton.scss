@@ -3,58 +3,57 @@
   min-width: 0;
 }
 
-.container {
+.loading-skeleton {
   display: flex;
   flex-direction: column;
   gap: var(--cl-space-4);
   padding: var(--cl-space-4) 0;
+
+  &__block {
+    display: flex;
+    flex-direction: column;
+    gap: var(--cl-space-3);
+  }
+
+  /* Bones use the same radius and heights as the text they stand in for, so nothing jumps on load. */
+  &__bone {
+    display: block;
+    height: var(--cl-space-4);
+    border-radius: var(--cl-radius-sm);
+    background: linear-gradient(
+      90deg,
+      var(--cl-bg-sunken) 25%,
+      var(--cl-bg-hover) 37%,
+      var(--cl-bg-sunken) 63%
+    );
+    background-size: 400% 100%;
+    animation: loading-skeleton-shimmer 1.4s ease infinite;
+
+    &--title {
+      width: 40%;
+      height: var(--cl-space-5);
+    }
+
+    &--line {
+      width: 100%;
+    }
+
+    &--short {
+      width: 60%;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      animation: none;
+    }
+  }
 }
 
-.block {
-  display: flex;
-  flex-direction: column;
-  gap: var(--cl-space-3);
-}
-
-.bone {
-  display: block;
-  height: 14px;
-  border-radius: var(--cl-radius-sm);
-  background: linear-gradient(
-    90deg,
-    var(--cl-bg-sunken) 25%,
-    var(--cl-border) 37%,
-    var(--cl-bg-sunken) 63%
-  );
-  background-size: 400% 100%;
-  animation: skeleton-shimmer 1.4s ease infinite;
-}
-
-.bone.title {
-  width: 40%;
-  height: 20px;
-}
-
-.bone.line {
-  width: 100%;
-}
-
-.bone.line.short {
-  width: 60%;
-}
-
-@keyframes skeleton-shimmer {
+@keyframes loading-skeleton-shimmer {
   0% {
     background-position: 100% 50%;
   }
 
   100% {
     background-position: 0 50%;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .bone {
-    animation: none;
   }
 }

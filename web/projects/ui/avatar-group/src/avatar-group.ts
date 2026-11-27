@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
-import { initialsOf } from '@corelog/ui/avatar';
+import { Avatar } from '@corelog/ui/avatar';
 
 export interface AvatarUser {
   id: string;
@@ -9,6 +9,7 @@ export interface AvatarUser {
 /** Group of initial avatars for assignees and members. */
 @Component({
   selector: 'app-avatar-group',
+  imports: [Avatar],
   templateUrl: './avatar-group.html',
   styleUrl: './avatar-group.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -21,7 +22,7 @@ export class AvatarGroup {
   protected readonly items = computed(() =>
     this.users()
       .slice(0, this.max())
-      .map((user) => ({ id: user.id, name: user.name, initials: initialsOf(user.name) })),
+      .map((user) => ({ id: user.id, name: user.name })),
   );
   protected readonly hidden = computed(() => this.users().length - this.items().length);
 }

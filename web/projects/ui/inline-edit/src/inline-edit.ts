@@ -16,7 +16,16 @@ import { ControlValueAccessor, FormsModule, NG_VALUE_ACCESSOR } from '@angular/f
 import { InputText } from 'primeng/inputtext';
 import { Select } from 'primeng/select';
 
+import { DateField, parseIsoDate } from '@corelog/ui/date-field';
+
 export type InlineEditType = 'text' | 'select' | 'date' | 'user';
+/**
+ * How the closed field looks. `text` reads as plain text (pencil and border appear on hover); `field` looks like a
+ * select (border and chevron always visible); `lozenge` is a tinted pill with a chevron, for status and priority.
+ */
+export type InlineEditAppearance = 'text' | 'field' | 'lozenge';
+/** Color of the lozenge appearance, from the category tokens. */
+export type InlineEditTone = 'neutral' | 'progress' | 'done' | 'danger' | 'warning';
 export interface InlineEditOption {
   readonly value: string;
   readonly label: string;
@@ -25,6 +34,17 @@ export interface InlineEditOption {
 export const INLINE_EDIT_SAVE_ERROR =
   'No se pudo guardar. Revisa tu conexión e inténtalo de nuevo.';
 const EMPTY_TEXT = 'Sin valor';
+
+/** `dd/MM/yyyy` text of an ISO date; the raw text when it is not a valid ISO date. */
+function formatDisplayDate(iso: string): string {
+  const date = parseIsoDate(iso);
+  if (!date) {
+    return iso;
+  }
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  return `${day}/${month}/${date.getFullYear()}`;
+}
 
 /** Message of the error thrown by the save, or the generic message when it carries none. */
 function saveErrorMessage(error: unknown): string {
@@ -39,7 +59,7 @@ function saveErrorMessage(error: unknown): string {
  */
 @Component({
   selector: 'app-inline-edit',
-  imports: [FormsModule, InputText, Select],
+  imports: [FormsModule, InputText, Select, DateField],
   templateUrl: './inline-edit.html',
   styleUrl: './inline-edit.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -60,6 +80,12 @@ export class InlineEdit implements ControlValueAccessor {
   /** Options for select and user (user: value = id, label = name). */
   readonly options = input<InlineEditOption[]>([]);
   readonly placeholder = input(EMPTY_TEXT);
+  /** Look of the closed field. Use `lozenge` or `field` for values that are chosen from a list (status, priority). */
+  readonly appearance = input<InlineEditAppearance>('text');
+  /** Color of the `lozenge` appearance. */
+  readonly tone = input<InlineEditTone>('neutral');
+  /** Why the field cannot be edited. Shown as its tooltip while it is disabled. */
+  readonly disabledReason = input<string>();
   /** Saves the new value. If it throws or rejects, its message is shown (or a generic one) and the previous value is kept. */
   readonly onSave = input<(next: string | null) => void | Promise<void>>(() => {});
 
@@ -82,11 +108,17 @@ export class InlineEdit implements ControlValueAccessor {
   protected readonly shown = computed(() =>
     this.pending() ? (this.pendingValue() ?? null) : this.current(),
   );
+  protected readonly hasChevron = computed(
+    () => this.appearance() !== 'text' || this.isSelectType() || this.type() === 'date',
+  );
   protected readonly isEmpty = computed(() => this.shown() === null || this.shown() === undefined);
   protected readonly shownText = computed(() => {
     const shown = this.shown();
     if (shown === null || shown === undefined) {
       return this.placeholder();
+    }
+    if (this.type() === 'date') {
+      return formatDisplayDate(shown);
     }
     return this.options().find((option) => option.value === shown)?.label ?? shown;
   });
@@ -113,6 +145,10 @@ export class InlineEdit implements ControlValueAccessor {
   }
 
   protected onEditorFocusOut(event: FocusEvent): void {
+    if (this.type() === 'date') {
+      // The calendar panel lives outside the editor: the date field reports when it closes instead.
+      return;
+    }
     const editor = event.currentTarget as HTMLElement;
     if (!editor.contains(event.relatedTarget as Node | null)) {
       this.commit(this.draft());
@@ -121,6 +157,16 @@ export class InlineEdit implements ControlValueAccessor {
 
   protected onDraftInput(event: Event): void {
     this.draft.set((event.target as HTMLInputElement).value);
+  }
+
+  protected onDateChange(next: string | null): void {
+    this.draft.set(next ?? '');
+    this.commit(next ?? '');
+  }
+
+  /** The calendar closed without a pick (outside click or Escape): the edit ends like a blur. */
+  protected onDateClosed(): void {
+    this.commit(this.draft());
   }
 
   protected onSelectChange(next: string | null): void {

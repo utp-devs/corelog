@@ -3,41 +3,39 @@ import {
   ChangeDetectionStrategy,
   Component,
   TemplateRef,
-  computed,
   inject,
   input,
   output,
   signal,
 } from '@angular/core';
-import { Router, RouterLink } from '@angular/router';
-import { BreakpointService, LOCATION_ASSIGN } from '@corelog/core';
-import type { MenuItem } from 'primeng/api';
-import { Menu } from 'primeng/menu';
+import { RouterLink } from '@angular/router';
+import { BreakpointService, ThemeService } from '@corelog/core';
+import { AppTooltip } from '@corelog/ui/tooltip';
 
 import { DEFAULT_SHELL_BRAND, type ShellBrand } from './brand';
 import { CreateIssueDialog } from './create-issue-dialog';
 import { GlobalSearch } from './global-search';
 import { HelpMenu } from './help-menu';
-import { NotesButton } from './notes-button';
+import { TopMenu } from './nav-menu';
 import { NotificationsBell } from './notifications-bell';
-import { VIEW_ALL_LABEL, type NavMenu } from './navigation';
+import type { NavMenu } from './navigation';
 import { ShellIcon } from './shell-icon';
 import { COLLAPSED_NAV_QUERY, ICON_SEARCH_QUERY, MOBILE_QUERY } from './shell-queries';
 import { UserMenu } from './user-menu';
 
-/** Global header: logo, primary menus with dropdowns, Create, search, bell, notes, help and user menu. */
+/** Global header: logo, primary menus with dropdowns, Create, search, bell, help and user menu. */
 @Component({
   selector: 'app-top-bar',
   imports: [
+    AppTooltip,
     CreateIssueDialog,
     GlobalSearch,
     HelpMenu,
-    Menu,
     NgTemplateOutlet,
-    NotesButton,
     NotificationsBell,
     RouterLink,
     ShellIcon,
+    TopMenu,
     UserMenu,
   ],
   templateUrl: './top-bar.html',
@@ -46,8 +44,7 @@ import { UserMenu } from './user-menu';
 })
 export class TopBar {
   private readonly breakpoints = inject(BreakpointService);
-  private readonly router = inject(Router);
-  private readonly assign = inject(LOCATION_ASSIGN);
+  private readonly theme = inject(ThemeService);
 
   readonly menus = input.required<readonly NavMenu[]>();
   readonly canCreate = input(false);
@@ -59,7 +56,12 @@ export class TopBar {
   readonly brand = input<ShellBrand>(DEFAULT_SHELL_BRAND);
   /** Shows the Menú button that opens the navigation drawer. */
   readonly showMenuButton = input(false);
+  /** Path of the page in view, to mark the menu of the current area. */
+  readonly currentPath = input('');
+  /** Documentation, release notes and support addresses of the help menu. */
   readonly docsUrl = input<string | null>(null);
+  readonly whatsNewUrl = input<string | null>(null);
+  readonly supportUrl = input<string | null>(null);
 
   readonly openMenu = output<void>();
   readonly openShortcuts = output<void>();
@@ -67,35 +69,6 @@ export class TopBar {
   protected readonly isMobile = this.breakpoints.matches(MOBILE_QUERY);
   protected readonly collapsedNav = this.breakpoints.matches(COLLAPSED_NAV_QUERY);
   protected readonly iconSearch = this.breakpoints.matches(ICON_SEARCH_QUERY);
+  protected readonly isDark = this.theme.isDark;
   protected readonly createOpen = signal(false);
-
-  /** Dropdown entries of every top menu, keyed by the menu key. */
-  protected readonly menuModels = computed<ReadonlyMap<string, MenuItem[]>>(
-    () => new Map(this.menus().map((menu) => [menu.key, this.dropdownItems(menu)])),
-  );
-
-  protected itemsOf(menu: NavMenu): MenuItem[] {
-    return this.menuModels().get(menu.key) ?? [];
-  }
-
-  protected go(path: string, external = false): void {
-    if (external) {
-      this.assign(path);
-      return;
-    }
-    void this.router.navigateByUrl(path);
-  }
-
-  private dropdownItems(menu: NavMenu): MenuItem[] {
-    return [
-      { label: 'Recientes', disabled: true, styleClass: 'menu-group' },
-      { label: 'Sin elementos recientes', disabled: true },
-      { separator: true },
-      { label: VIEW_ALL_LABEL, command: () => this.go(menu.path, menu.external) },
-      ...(menu.extras ?? []).map((link) => ({
-        label: link.label,
-        command: () => this.go(link.path, link.external),
-      })),
-    ];
-  }
 }

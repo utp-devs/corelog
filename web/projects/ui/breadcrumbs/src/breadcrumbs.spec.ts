@@ -50,7 +50,7 @@ describe('Breadcrumbs', () => {
 
   it('renders an item without a route as plain text', () => {
     const el = render([{ label: 'Ajustes' }, { label: 'Seguridad' }]);
-    const plain = el.querySelector('.plain');
+    const plain = el.querySelector('.breadcrumbs__plain');
     expect(plain?.textContent?.trim()).toBe('Ajustes');
     expect(plain?.tagName).not.toBe('A');
     expect(plain?.hasAttribute('href')).toBe(false);

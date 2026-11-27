@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 
-export type Tone = 'neutral' | 'blue' | 'gold' | 'green' | 'orange' | 'red';
+export type Tone = 'neutral' | 'blue' | 'gold' | 'green' | 'orange' | 'red' | 'purple';
 
 /** Semantic color chip. The colors come from --cl-* tokens, so dark mode needs no extra rules. */
 @Component({

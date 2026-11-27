@@ -3,44 +3,44 @@
   flex: none;
 }
 
-.tile {
+.project-avatar {
   display: inline-flex;
   flex: none;
   align-items: center;
   justify-content: center;
   border-radius: var(--cl-radius-md);
-  font-weight: 600;
+  font-weight: var(--cl-weight-semibold);
   line-height: 1;
   user-select: none;
-}
 
-.size-24 {
-  width: 24px;
-  height: 24px;
-  font-size: var(--cl-font-caption);
-}
+  &--size-24 {
+    width: var(--cl-space-6);
+    height: var(--cl-space-6);
+    font-size: var(--cl-font-caption);
+  }
 
-.size-32 {
-  width: 32px;
-  height: 32px;
-  font-size: var(--cl-font-small);
-}
+  &--size-32 {
+    width: var(--cl-space-8);
+    height: var(--cl-space-8);
+    font-size: var(--cl-font-small);
+  }
 
-.size-40 {
-  width: 40px;
-  height: 40px;
-  font-size: var(--cl-font-body);
-}
+  &--size-40 {
+    width: var(--cl-space-10);
+    height: var(--cl-space-10);
+    font-size: var(--cl-font-body);
+  }
 
-.content {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
+  @for $i from 1 through 12 {
+    &[data-palette='#{$i}'] {
+      background: var(--cl-palette-#{$i}-bg);
+      color: var(--cl-palette-#{$i}-text);
+    }
+  }
 
-@for $i from 1 through 12 {
-  .tile[data-palette='#{$i}'] {
-    background: var(--cl-palette-#{$i}-bg);
-    color: var(--cl-palette-#{$i}-text);
+  &__content {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
   }
 }
