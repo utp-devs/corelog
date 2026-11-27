@@ -1,9 +1,12 @@
 package main
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
+
+	userdomain "github.com/jhonsferg/corelog/internal/user/domain"
 )
 
 // defaultOrgID is the fixed id of the organization "corelog" that migration 000024
@@ -143,13 +146,35 @@ func addSprint(ds *dataset, projectID uuid.UUID, projectKey, name, goal, status 
 	return id
 }
 
-// buildUsers writes the platform accounts once. Organizations reference them by index.
+// seedPhone returns the fake phone of the i-th seeded person, or ok=false for people without one.
+// Numbers follow the documented fake pattern +51 9000 nnnnn (Peru, a block that is not assigned to any
+// operator, so no SMS can ever reach a real person); every 5th person has a phone and every 15th has it
+// verified. The result is a pure function of the position, so seeding is deterministic and idempotent.
+func seedPhone(i int) (national string, verified, ok bool) {
+	if i%5 != 0 {
+		return "", false, false
+	}
+	return fmt.Sprintf("9000%05d", i), i%15 == 0, true
+}
+
+// buildUsers writes the platform accounts once. Organizations reference them by index. name is the full
+// name; first_name and last_name come from the same split the application uses.
 func buildUsers(ds *dataset, people []person, passwordHash string) []uuid.UUID {
-	users := ds.table("users", "id", "name", "display_name", "email", "password_hash", "role", "created_at", "updated_at")
+	users := ds.table("users", "id", "name", "first_name", "last_name", "display_name", "email", "password_hash", "role",
+		"phone_country", "phone_number", "phone_e164", "phone_verified_at", "created_at", "updated_at")
 	ids := make([]uuid.UUID, len(people))
 	for i, p := range people {
 		ids[i] = userID(p.email)
-		users.add(ids[i], p.name, p.name, p.email, passwordHash, p.platform, orgCreated, orgCreated)
+		first, last := userdomain.SplitName(p.name)
+		var country, national, e164, verifiedAt any
+		if n, verified, ok := seedPhone(i); ok {
+			country, national, e164 = "PE", n, "+51"+n
+			if verified {
+				verifiedAt = orgCreated
+			}
+		}
+		users.add(ids[i], p.name, first, last, p.name, p.email, passwordHash, p.platform,
+			country, national, e164, verifiedAt, orgCreated, orgCreated)
 	}
 	return ids
 }

@@ -92,9 +92,15 @@ func Execute(ctx context.Context, db *sqlx.DB, sc Scenario, opts Options) error 
 	if err := prepareDatabase(ctx, db, opts.ForceReset); err != nil {
 		return err
 	}
+	if err := seedLegalDocuments(ctx, db); err != nil {
+		return err
+	}
 	fmt.Fprintf(opts.Out, "Sembrando escenario %q...\n", sc.Name())
 	if err := sc.Run(ctx, db, opts); err != nil {
 		return fmt.Errorf("escenario %q: %w", sc.Name(), err)
+	}
+	if err := seedLegalConsents(ctx, db); err != nil {
+		return err
 	}
 	fmt.Fprintf(opts.Out, "Escenario %q sembrado correctamente.\n", sc.Name())
 	return nil

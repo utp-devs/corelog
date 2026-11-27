@@ -162,7 +162,7 @@ func TestUserHTTP_SearchIsScopedToOrganization(t *testing.T) {
 func TestUserHTTP_LoginRecordsLastLogin(t *testing.T) {
 	router, _, _ := setupUserRouter()
 
-	if rec := doJSON(t, router, http.MethodPost, "/auth/register", `{"name":"Eva Login","email":"eva@example.com","password":"password123"}`, ""); rec.Code != http.StatusCreated {
+	if rec := doJSON(t, router, http.MethodPost, "/auth/register", `{"name":"Eva Login","email":"eva@example.com","password":"password123","password_confirmation":"password123"}`, ""); rec.Code != http.StatusCreated {
 		t.Fatalf("register: status %d: %s", rec.Code, rec.Body.String())
 	}
 	if rec := doJSON(t, router, http.MethodPost, "/auth/login", `{"email":"eva@example.com","password":"wrong-password"}`, ""); rec.Code == http.StatusOK {

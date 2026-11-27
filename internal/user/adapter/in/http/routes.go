@@ -7,6 +7,8 @@ import (
 )
 
 func (h *Handler) RegisterRoutes(r chi.Router) {
+	r.Get("/meta/countries", h.Countries)
+
 	r.Route("/auth", func(r chi.Router) {
 		r.Post("/register", h.Register)
 		r.Post("/login", h.Login)
@@ -29,6 +31,8 @@ func (h *Handler) RegisterRoutes(r chi.Router) {
 		r.Get("/me", h.Me)
 		r.Patch("/me", h.UpdateProfile)
 		r.Post("/me/password", h.ChangePassword)
+		r.Post("/me/phone/verification", h.RequestPhoneVerification)
+		r.Post("/me/phone/verify", h.VerifyPhone)
 		r.Post("/me/deactivate", h.DeactivateAccount)
 		r.Get("/me/sessions", h.ListSessions)
 		r.Delete("/me/sessions/{id}", h.RevokeSession)

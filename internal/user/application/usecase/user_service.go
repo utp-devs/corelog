@@ -3,12 +3,14 @@ package usecase
 import (
 	"context"
 	"errors"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 
 	"github.com/jhonsferg/corelog/internal/platform/apperror"
+	"github.com/jhonsferg/corelog/internal/platform/clock"
 	"github.com/jhonsferg/corelog/internal/platform/database"
 	"github.com/jhonsferg/corelog/internal/user/application/port"
 	"github.com/jhonsferg/corelog/internal/user/domain"
@@ -18,11 +20,17 @@ type UserService struct {
 	repo     port.Repository
 	sessions port.SessionRepository
 	tx       database.TxManager
+	consents port.ConsentGate
 	detacher port.MembershipDetacher
+	clock    clock.Clock
+	phones   port.PhoneVerificationRepository
+	sms      port.SMSSender
+	// codeSource returns a numeric code of the given length; replaced in tests.
+	codeSource func(digits int) (string, error)
 }
 
 func NewUserService(repo port.Repository, sessions port.SessionRepository) *UserService {
-	return &UserService{repo: repo, sessions: sessions}
+	return &UserService{repo: repo, sessions: sessions, clock: clock.RealClock{}, codeSource: randomCode}
 }
 
 // WithAccountClosure enables the cascade of account deactivation: the sole-owner check, the removal of
@@ -34,9 +42,51 @@ func (s *UserService) WithAccountClosure(tx database.TxManager, detacher port.Me
 	return s
 }
 
+// WithClock replaces the time source (tests).
+func (s *UserService) WithClock(c clock.Clock) *UserService {
+	s.clock = c
+	return s
+}
+
+// WithPhoneVerification enables SMS verification of phone numbers. Without it the verification
+// operations answer a conflict because there is no way to deliver the code.
+func (s *UserService) WithPhoneVerification(repo port.PhoneVerificationRepository, sender port.SMSSender) *UserService {
+	s.phones = repo
+	s.sms = sender
+	return s
+}
+
 var _ port.Service = (*UserService)(nil)
 
+// Register creates an account. The password confirmation is compared first (exact, untrimmed), before the
+// names, the policy and any repository access, so a mismatch never creates a user. A password reset flow, if
+// added, must apply the same rule through domain.CheckPasswordConfirmation.
 func (s *UserService) Register(ctx context.Context, in port.RegisterInput) (*domain.User, error) {
+	if err := domain.CheckPasswordConfirmation(in.Password, in.PasswordConfirmation, "password_confirmation"); err != nil {
+		return nil, err
+	}
+	first, last, err := resolveNames(in.FirstName, in.LastName, in.Name)
+	if err != nil {
+		return nil, err
+	}
+	var phone *domain.Phone
+	if in.Phone != nil && !in.Phone.Clear {
+		if phone, err = domain.NewPhone(in.Phone.Country, in.Phone.Number); err != nil {
+			return nil, err
+		}
+	}
+	locale := in.Locale
+	if locale == "" {
+		locale = domain.DefaultLocale
+	}
+	if err := domain.ValidateLocale(locale); err != nil {
+		return nil, err
+	}
+
+	if err := s.validateConsents(ctx, in); err != nil {
+		return nil, err
+	}
+
 	if _, err := s.repo.FindByEmail(ctx, in.Email); err == nil {
 		return nil, domain.ErrEmailAlreadyTaken
 	} else if !errors.Is(err, domain.ErrUserNotFound) {
@@ -61,16 +111,34 @@ func (s *UserService) Register(ctx context.Context, in port.RegisterInput) (*dom
 		role = domain.RoleAdmin
 	}
 
-	user, err := domain.NewUser(in.Name, in.Email, string(hash), role)
+	user, err := domain.NewUser(domain.JoinNames(first, last), in.Email, string(hash), role)
 	if err != nil {
 		return nil, err
 	}
+	user.FirstName, user.LastName = first, last
+	user.Phone = phone
+	user.Locale = locale
+	now := s.clock.Now()
+	user.CreatedAt, user.UpdatedAt = now, now
 
-	if err := s.repo.Save(ctx, user); err != nil {
+	if err := s.saveWithConsents(ctx, user, in); err != nil {
 		return nil, err
 	}
 
 	return user, nil
+}
+
+// resolveNames validates the identity of the input: first_name and last_name when first_name is given,
+// otherwise the legacy single name, which is split.
+func resolveNames(first, last, legacy string) (string, string, error) {
+	switch {
+	case strings.TrimSpace(first) != "" || strings.TrimSpace(last) != "":
+		return domain.ParseNames(first, last)
+	case strings.TrimSpace(legacy) != "":
+		return domain.ParseLegacyName(legacy)
+	default:
+		return "", "", domain.ErrInvalidName
+	}
 }
 
 func (s *UserService) Authenticate(ctx context.Context, in port.AuthenticateInput) (*domain.User, error) {
@@ -91,7 +159,7 @@ func (s *UserService) Authenticate(ctx context.Context, in port.AuthenticateInpu
 		return nil, domain.ErrInvalidCredentials
 	}
 
-	now := time.Now().UTC()
+	now := s.clock.Now()
 	if err := s.repo.RecordLogin(ctx, user.ID, now); err != nil {
 		return nil, err
 	}
@@ -110,14 +178,14 @@ func (s *UserService) UpdateProfile(ctx context.Context, userID uuid.UUID, in po
 		return nil, err
 	}
 
-	name, email := user.Name, user.Email
-	if in.Name != nil {
-		name = *in.Name
-	}
+	email := user.Email
 	if in.Email != nil {
 		email = *in.Email
 	}
 
+	if email == "" {
+		return nil, domain.ErrInvalidEmail
+	}
 	if email != user.Email {
 		if existing, err := s.repo.FindByEmail(ctx, email); err == nil && existing.ID != userID {
 			return nil, domain.ErrEmailAlreadyTaken
@@ -126,8 +194,43 @@ func (s *UserService) UpdateProfile(ctx context.Context, userID uuid.UUID, in po
 		}
 	}
 
-	if err := user.UpdateProfile(name, email); err != nil {
-		return nil, err
+	if in.FirstName != nil || in.LastName != nil {
+		first, last := user.FirstName, user.LastName
+		if in.FirstName != nil {
+			first = *in.FirstName
+		}
+		if in.LastName != nil {
+			last = *in.LastName
+		}
+		first, last, err := domain.ParseNames(first, last)
+		if err != nil {
+			return nil, err
+		}
+		user.SetNames(first, last)
+	} else if in.Name != nil {
+		first, last, err := domain.ParseLegacyName(*in.Name)
+		if err != nil {
+			return nil, err
+		}
+		user.SetNames(first, last)
+	}
+	user.Email = email
+	user.UpdatedAt = s.clock.Now()
+	if in.Phone != nil {
+		if in.Phone.Clear {
+			user.SetPhone(nil)
+		} else {
+			p, err := domain.NewPhone(in.Phone.Country, in.Phone.Number)
+			if err != nil {
+				return nil, err
+			}
+			user.SetPhone(p)
+		}
+	}
+	if in.Locale != nil {
+		if err := user.SetLocale(*in.Locale); err != nil {
+			return nil, err
+		}
 	}
 	if in.DisplayName != nil {
 		if err := user.SetDisplayName(*in.DisplayName); err != nil {
@@ -154,6 +257,9 @@ func (s *UserService) UpdateProfile(ctx context.Context, userID uuid.UUID, in po
 }
 
 func (s *UserService) ChangePassword(ctx context.Context, userID uuid.UUID, in port.ChangePasswordInput) error {
+	if err := domain.CheckPasswordConfirmation(in.NewPassword, in.NewPasswordConfirmation, "new_password_confirmation"); err != nil {
+		return err
+	}
 	user, err := s.repo.FindByID(ctx, userID)
 	if err != nil {
 		return err

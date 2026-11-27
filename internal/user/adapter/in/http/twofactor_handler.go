@@ -272,5 +272,5 @@ func (h *Handler) LoginSecondFactor(w http.ResponseWriter, r *http.Request) {
 		httpresponse.Error(w, apperror.Wrap(apperror.KindInternal, "failed to issue token", err))
 		return
 	}
-	httpresponse.JSON(w, http.StatusOK, authResponse{Token: token, User: toUserResponse(user)})
+	h.writeSession(w, r, token, user)
 }

@@ -142,7 +142,7 @@ func TestUserHTTP_Register(t *testing.T) {
 	router, _, _ := setupUserRouter()
 
 	t.Run("returns 201 on valid registration", func(t *testing.T) {
-		body := `{"name":"Alice","email":"alice@example.com","password":"securepassword123"}`
+		body := `{"name":"Alice","email":"alice@example.com","password":"securepassword123","password_confirmation":"securepassword123"}`
 		req := httptest.NewRequest(http.MethodPost, "/auth/register", bytes.NewBufferString(body))
 		req.Header.Set("Content-Type", "application/json")
 		rec := httptest.NewRecorder()
@@ -155,7 +155,7 @@ func TestUserHTTP_Register(t *testing.T) {
 	})
 
 	t.Run("returns 422 on validation error", func(t *testing.T) {
-		body := `{"name":"","email":"invalid-email","password":"123"}`
+		body := `{"name":"","email":"invalid-email","password":"123","password_confirmation":"123"}`
 		req := httptest.NewRequest(http.MethodPost, "/auth/register", bytes.NewBufferString(body))
 		req.Header.Set("Content-Type", "application/json")
 		rec := httptest.NewRecorder()
@@ -168,7 +168,7 @@ func TestUserHTTP_Register(t *testing.T) {
 	})
 
 	t.Run("returns 409 on duplicate email", func(t *testing.T) {
-		body := `{"name":"Alice","email":"alice@example.com","password":"securepassword123"}`
+		body := `{"name":"Alice","email":"alice@example.com","password":"securepassword123","password_confirmation":"securepassword123"}`
 		req := httptest.NewRequest(http.MethodPost, "/auth/register", bytes.NewBufferString(body))
 		req.Header.Set("Content-Type", "application/json")
 		rec := httptest.NewRecorder()
@@ -185,7 +185,7 @@ func TestUserHTTP_Login(t *testing.T) {
 	router, _, _ := setupUserRouter()
 
 	// Seed user
-	regBody := `{"name":"Bob","email":"bob@example.com","password":"password123"}`
+	regBody := `{"name":"Bob","email":"bob@example.com","password":"password123","password_confirmation":"password123"}`
 	regReq := httptest.NewRequest(http.MethodPost, "/auth/register", bytes.NewBufferString(regBody))
 	regReq.Header.Set("Content-Type", "application/json")
 	router.ServeHTTP(httptest.NewRecorder(), regReq)

@@ -25,6 +25,8 @@ import (
 	issuepostgres "github.com/jhonsferg/corelog/internal/issue/adapter/out/postgres"
 	issueport "github.com/jhonsferg/corelog/internal/issue/application/port"
 	issueusecase "github.com/jhonsferg/corelog/internal/issue/application/usecase"
+	"github.com/jhonsferg/corelog/internal/legal"
+	legalpostgres "github.com/jhonsferg/corelog/internal/legal/adapter/out/postgres"
 	"github.com/jhonsferg/corelog/internal/note"
 	notepostgres "github.com/jhonsferg/corelog/internal/note/adapter/out/postgres"
 	"github.com/jhonsferg/corelog/internal/notification"
@@ -53,6 +55,7 @@ import (
 	"github.com/jhonsferg/corelog/internal/user"
 	userhttp "github.com/jhonsferg/corelog/internal/user/adapter/in/http"
 	userpostgres "github.com/jhonsferg/corelog/internal/user/adapter/out/postgres"
+	usersms "github.com/jhonsferg/corelog/internal/user/adapter/out/sms"
 	userport "github.com/jhonsferg/corelog/internal/user/application/port"
 	"github.com/jhonsferg/corelog/internal/workflow"
 	workflowpostgres "github.com/jhonsferg/corelog/internal/workflow/adapter/out/postgres"
@@ -79,6 +82,10 @@ func buildRouter(cfg *config.Config, db *sqlx.DB, log *slog.Logger) (chi.Router,
 	issueCatalogRepo := issuepostgres.NewCatalogRepository(db)
 
 	userModule := user.NewModule(userRepo, sessionRepo, database.NewTxManager(db), userpostgres.NewMembershipDetacher(db), cfg.Auth.JWTSecret, cfg.Auth.JWTExpiration)
+	legalModule := legal.NewModule(legalpostgres.NewRepository(db), database.NewTxManager(db),
+		events.NewPostgresPublisher(func(ctx context.Context) sqlx.ExtContext { return database.Executor(ctx, db) }),
+		clock.RealClock{}, cfg.Auth.JWTSecret, cfg.Legal.Enforcement)
+	userModule.WithConsents(userConsentGate{legal: legalModule.Service})
 	secretCipher, err := twoFactorCipher(cfg, log)
 	if err != nil {
 		return nil, err
@@ -87,6 +94,7 @@ func buildRouter(cfg *config.Config, db *sqlx.DB, log *slog.Logger) (chi.Router,
 		database.NewTxManager(db), events.NewPostgresPublisher(func(ctx context.Context) sqlx.ExtContext { return database.Executor(ctx, db) }),
 		clock.RealClock{})
 	userModule.Handler.WithTwoFactor(twoFactorService)
+	userModule.WithPhoneVerification(userpostgres.NewPhoneVerificationRepository(db), usersms.NewNoopSender(log, cfg.Server.Env == "development"))
 	orgModule := organization.NewModule(
 		organizationpostgres.NewRepository(db),
 		database.NewTxManager(db),
@@ -95,7 +103,7 @@ func buildRouter(cfg *config.Config, db *sqlx.DB, log *slog.Logger) (chi.Router,
 		cfg.Auth.JWTSecret,
 		orgUserEmails{db: db},
 		os.Getenv("PUBLIC_URL"),
-	).WithCatalogSeeder(issueCatalogRepo)
+	).WithCatalogSeeder(issueCatalogRepo).WithConsentGate(invitationConsentGate{legal: legalModule.Service})
 	orgs := newOrgDirectory(db)
 	teamModule := team.NewModule(teamRepo, orgs, database.NewTxManager(db), cfg.Auth.JWTSecret)
 	authorizer := authusecase.NewAuthorizer(authpostgres.NewRoleLookup(db)).WithSchemes(authpostgres.NewSchemeRepository(db))
@@ -179,11 +187,13 @@ func buildRouter(cfg *config.Config, db *sqlx.DB, log *slog.Logger) (chi.Router,
 
 	router := httpserver.NewRouter(cfg.Server)
 	router.Route("/api/v1", func(r chi.Router) {
+		// In block mode, callers with pending legal consents are refused outside the consent endpoints.
+		r.Use(legalModule.Handler.Enforce)
 		avatar.RegisterRoutes(r)
 		logo.RegisterRoutes(r)
 		catalogModule.Handler.RegisterCatalogRoutes(r)
 		customFieldModule.Handler.RegisterCustomFieldRoutes(r)
-		httpserver.Mount(r, userModule.Handler, teamModule.Handler, projectModule.Handler, boardModule.Handler, issueModule.Handler, sprintModule.Handler, notificationModule.Handler, calendarModule.Handler, searchModule.Handler, dashboardModule.Handler, favoriteModule.Handler, noteModule.Handler, orgModule.Handler, workflowAdmin.Handler, releaseModule.Handler, worklogModule.Handler)
+		httpserver.Mount(r, userModule.Handler, teamModule.Handler, projectModule.Handler, boardModule.Handler, issueModule.Handler, sprintModule.Handler, notificationModule.Handler, calendarModule.Handler, searchModule.Handler, dashboardModule.Handler, favoriteModule.Handler, noteModule.Handler, orgModule.Handler, workflowAdmin.Handler, releaseModule.Handler, worklogModule.Handler, legalModule.Handler)
 	})
 	return router, nil
 }

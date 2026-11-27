@@ -30,7 +30,7 @@ func decodeErrorEnvelope(t *testing.T, body []byte) errorEnvelope {
 func TestUserHTTP_ErrorCodes(t *testing.T) {
 	router, _, _ := setupUserRouter()
 	const email, password = "codigos@example.com", "password123"
-	register := `{"name":"Codigos","email":"` + email + `","password":"` + password + `"}`
+	register := `{"name":"Codigos","email":"` + email + `","password":"` + password + `","password_confirmation":"` + password + `"}`
 
 	if rec := doJSON(t, router, http.MethodPost, "/auth/register", register, ""); rec.Code != http.StatusCreated {
 		t.Fatalf("register status %d: %s", rec.Code, rec.Body.String())
@@ -57,7 +57,7 @@ func TestUserHTTP_ErrorCodes(t *testing.T) {
 	})
 
 	t.Run("invalid body returns validation.failed with field details", func(t *testing.T) {
-		rec := doJSON(t, router, http.MethodPost, "/auth/register", `{"name":"","email":"no-es-correo","password":"x"}`, "")
+		rec := doJSON(t, router, http.MethodPost, "/auth/register", `{"name":"","email":"no-es-correo","password":"x","password_confirmation":"x"}`, "")
 		if rec.Code != http.StatusUnprocessableEntity {
 			t.Fatalf("status %d, want 422", rec.Code)
 		}
@@ -69,7 +69,7 @@ func TestUserHTTP_ErrorCodes(t *testing.T) {
 		for _, d := range env.Error.Details {
 			fields[d.Field] = d.Message
 		}
-		for _, want := range []string{"name", "email", "password"} {
+		for _, want := range []string{"email", "password"} {
 			if fields[want] == "" {
 				t.Errorf("missing detail for field %q; details: %+v", want, env.Error.Details)
 			}

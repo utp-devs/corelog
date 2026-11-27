@@ -9,11 +9,22 @@ import (
 	"github.com/jhonsferg/corelog/internal/user/domain"
 )
 
+// RegisterInput carries the identity of a new account. FirstName and LastName are the current fields;
+// Name is the legacy single field, used only when FirstName is empty.
 type RegisterInput struct {
-	Name     string
-	Email    string
-	Password string
-	Role     domain.Role
+	FirstName string
+	LastName  string
+	Name      string
+	Email     string
+	Password  string
+	// PasswordConfirmation must equal Password exactly.
+	PasswordConfirmation string
+	Role                 domain.Role
+	Phone                *PhoneChange
+	Locale               string
+	// Consents are the legal document versions accepted at registration; ConsentMeta is their evidence.
+	Consents    []ConsentRef
+	ConsentMeta ConsentMeta
 }
 
 type AuthenticateInput struct {
@@ -24,6 +35,10 @@ type AuthenticateInput struct {
 // UpdateProfileInput is a partial update: nil fields are left unchanged.
 type UpdateProfileInput struct {
 	Name        *string
+	FirstName   *string
+	LastName    *string
+	Phone       *PhoneChange
+	Locale      *string
 	Email       *string
 	DisplayName *string
 	JobTitle    *string
@@ -34,6 +49,8 @@ type UpdateProfileInput struct {
 type ChangePasswordInput struct {
 	CurrentPassword string
 	NewPassword     string
+	// NewPasswordConfirmation must equal NewPassword exactly.
+	NewPasswordConfirmation string
 }
 
 type SearchFilter struct {
@@ -68,4 +85,11 @@ type Service interface {
 	// Si el actor no es miembro devuelve domain.ErrNotOrganizationMember.
 	SearchInOrganization(ctx context.Context, actorID, orgID uuid.UUID, query string) ([]*domain.User, error)
 	Search(ctx context.Context, filter SearchFilter) ([]*domain.User, error)
+	// CanViewMemberPhones reports whether the actor is an owner or admin of the organization, who may see
+	// the phone numbers of its members.
+	CanViewMemberPhones(ctx context.Context, actorID, orgID uuid.UUID) (bool, error)
+	// RequestPhoneVerification sends a 6-digit code by SMS to the phone of the user.
+	RequestPhoneVerification(ctx context.Context, userID uuid.UUID) (PhoneVerificationReceipt, error)
+	// VerifyPhone checks the code and marks the phone as verified.
+	VerifyPhone(ctx context.Context, userID uuid.UUID, code string) (*domain.User, error)
 }

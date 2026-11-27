@@ -40,6 +40,8 @@ type Handler struct {
 	clock     clock.Clock
 	jwtSecret string
 	publicURL string
+	// consents is nil when the legal module is not wired.
+	consents ConsentGate
 }
 
 // NewHandler builds the handler. publicURL is the origin used in accept URLs (for example

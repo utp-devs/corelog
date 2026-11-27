@@ -18,7 +18,7 @@ import (
 
 // team_id se deriva de team_members (fuente de verdad, ADR-002). La columna users.team_id se eliminó en la migracion 000019.
 // job_title and department are nullable in the schema; COALESCE maps NULL to an empty string for the domain.
-const selectColumns = `id, name, email, password_hash, role, display_name, COALESCE(job_title, '') AS job_title, COALESCE(department, '') AS department, avatar_key, timezone, (SELECT tm.team_id FROM team_members tm WHERE tm.user_id = users.id ORDER BY tm.created_at LIMIT 1) AS team_id, created_at, updated_at, last_login_at, email_verified_at, deactivated_at`
+const selectColumns = `id, name, first_name, last_name, locale, phone_country, phone_number, phone_e164, phone_verified_at, email, password_hash, role, display_name, COALESCE(job_title, '') AS job_title, COALESCE(department, '') AS department, avatar_key, timezone, (SELECT tm.team_id FROM team_members tm WHERE tm.user_id = users.id ORDER BY tm.created_at LIMIT 1) AS team_id, created_at, updated_at, last_login_at, email_verified_at, deactivated_at`
 
 type UserRepository struct {
 	db *sqlx.DB
@@ -34,15 +34,24 @@ func (r *UserRepository) Save(ctx context.Context, u *domain.User) error {
 	row := fromDomain(u)
 
 	const query = `
-		INSERT INTO users (name, email, password_hash, role, display_name, job_title, department, avatar_key, timezone, last_login_at, email_verified_at, created_at, updated_at)
-		VALUES (:name, :email, :password_hash, :role, :display_name, :job_title, :department, :avatar_key, :timezone, :last_login_at, :email_verified_at, :created_at, :updated_at)
+		INSERT INTO users (name, first_name, last_name, locale, phone_country, phone_number, phone_e164, phone_verified_at, email, password_hash, role, display_name, job_title, department, avatar_key, timezone, last_login_at, email_verified_at, created_at, updated_at)
+		VALUES (:name, :first_name, :last_name, :locale, :phone_country, :phone_number, :phone_e164, :phone_verified_at, :email, :password_hash, :role, :display_name, :job_title, :department, :avatar_key, :timezone, :last_login_at, :email_verified_at, :created_at, :updated_at)
 		RETURNING id`
 
-	tx, err := r.db.BeginTxx(ctx, nil)
-	if err != nil {
-		return apperror.Wrap(apperror.KindInternal, "failed to save user", err)
+	// Inside a caller transaction (registration with consents) the insert joins it; otherwise it opens its own.
+	var tx sqlx.ExtContext
+	commit := func() error { return nil }
+	if ctxTx, ok := database.TxFromContext(ctx); ok {
+		tx = ctxTx
+	} else {
+		own, err := r.db.BeginTxx(ctx, nil)
+		if err != nil {
+			return apperror.Wrap(apperror.KindInternal, "failed to save user", err)
+		}
+		defer func() { _ = own.Rollback() }()
+		tx = own
+		commit = own.Commit
 	}
-	defer func() { _ = tx.Rollback() }()
 
 	id, err := database.InsertReturningID(ctx, tx, query, row)
 	if err != nil {
@@ -59,7 +68,7 @@ func (r *UserRepository) Save(ctx context.Context, u *domain.User) error {
 			return apperror.Wrap(apperror.KindInternal, "failed to sync team membership", err)
 		}
 	}
-	if err := tx.Commit(); err != nil {
+	if err := commit(); err != nil {
 		return apperror.Wrap(apperror.KindInternal, "failed to save user", err)
 	}
 	return nil
@@ -102,7 +111,9 @@ func (r *UserRepository) Update(ctx context.Context, u *domain.User) error {
 
 	const query = `
 		UPDATE users
-		SET name = :name, email = :email, password_hash = :password_hash,
+		SET name = :name, first_name = :first_name, last_name = :last_name, locale = :locale,
+		    phone_country = :phone_country, phone_number = :phone_number, phone_e164 = :phone_e164,
+		    phone_verified_at = :phone_verified_at, email = :email, password_hash = :password_hash,
 		    display_name = :display_name, job_title = :job_title, department = :department,
 		    avatar_key = :avatar_key, timezone = :timezone, email_verified_at = :email_verified_at,
 		    updated_at = :updated_at, deactivated_at = :deactivated_at
@@ -110,6 +121,9 @@ func (r *UserRepository) Update(ctx context.Context, u *domain.User) error {
 
 	result, err := sqlx.NamedExecContext(ctx, database.Executor(ctx, r.db), query, row)
 	if err != nil {
+		if isPhoneTaken(err) {
+			return domain.ErrPhoneTaken
+		}
 		return apperror.Wrap(apperror.KindInternal, "failed to update user", err)
 	}
 
@@ -171,7 +185,7 @@ func (r *UserRepository) Search(ctx context.Context, filter port.SearchFilter) (
 
 	if filter.Query != "" {
 		args = append(args, "%"+filter.Query+"%")
-		query += fmt.Sprintf(" AND (name ILIKE $%d OR email ILIKE $%d)", len(args), len(args))
+		query += fmt.Sprintf(" AND (name ILIKE $%d OR email ILIKE $%d OR first_name ILIKE $%d OR last_name ILIKE $%d)", len(args), len(args), len(args), len(args))
 	}
 	if filter.TeamID != nil {
 		args = append(args, *filter.TeamID)
@@ -222,7 +236,7 @@ func (r *UserRepository) SearchOrganizationMembers(ctx context.Context, filter p
 	if filter.Query != "" {
 		args = append(args, "%"+filter.Query+"%")
 		n := len(args)
-		query += fmt.Sprintf(` AND (users.name ILIKE $%d OR users.email ILIKE $%d OR users.display_name ILIKE $%d)`, n, n, n)
+		query += fmt.Sprintf(` AND (users.name ILIKE $%d OR users.email ILIKE $%d OR users.display_name ILIKE $%d OR users.first_name ILIKE $%d OR users.last_name ILIKE $%d)`, n, n, n, n, n)
 	}
 
 	query += " ORDER BY users.name ASC LIMIT 20"

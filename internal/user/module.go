@@ -13,6 +13,7 @@ import (
 
 type Module struct {
 	Service port.Service
+	users   *usecase.UserService
 	Handler *httpadapter.Handler
 }
 
@@ -24,9 +25,17 @@ func NewModule(repo port.Repository, sessions port.SessionRepository, tx databas
 	handler := httpadapter.NewHandler(service, jwtSecret, jwtExpiration)
 
 	return &Module{
+		users:   service,
 		Service: service,
 		Handler: handler,
 	}
+}
+
+// WithPhoneVerification enables SMS verification of phone numbers: repo stores the hashed codes and sender
+// delivers them (the default is sms.NoopSender; the provider adapter plugs in here).
+func (m *Module) WithPhoneVerification(repo port.PhoneVerificationRepository, sender port.SMSSender) *Module {
+	m.users.WithPhoneVerification(repo, sender)
+	return m
 }
 
 // NewTwoFactorService wires the TOTP second factor. The cipher encrypts the stored secrets; the publisher

@@ -96,6 +96,7 @@ func TestTwoFactorLoginFlowThroughRouter(t *testing.T) {
 
 	if status, _ := c.do(http.MethodPost, "/auth/register", "", map[string]any{
 		"name": "Ana Dos", "email": tfEmail, "password": tfPassword,
+		"password_confirmation": tfPassword,
 	}); status != http.StatusCreated {
 		t.Fatalf("register: status %d", status)
 	}

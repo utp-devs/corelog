@@ -265,3 +265,28 @@ func TestSeededIssuesHaveWorkflowStatuses(t *testing.T) {
 		t.Errorf("status history grew from %d to %d on a second run", before, after)
 	}
 }
+
+func TestSeedUsersHaveSplitNamesAndFakePhones(t *testing.T) {
+	db := testdb.New(t)
+	if err := runScenario(t, db, "e2e", testOptions(t)); err != nil {
+		t.Fatalf("e2e seed: %v", err)
+	}
+	var blank, phones, verified, badFormat, nameMismatch int
+	for query, dst := range map[string]*int{
+		`SELECT count(*) FROM users WHERE first_name = ''`:                                               &blank,
+		`SELECT count(*) FROM users WHERE phone_e164 IS NOT NULL`:                                        &phones,
+		`SELECT count(*) FROM users WHERE phone_verified_at IS NOT NULL`:                                 &verified,
+		`SELECT count(*) FROM users WHERE phone_e164 IS NOT NULL AND phone_e164 !~ '^\+519000[0-9]{5}$'`: &badFormat,
+		`SELECT count(*) FROM users WHERE name <> btrim(first_name || ' ' || last_name)`:                 &nameMismatch,
+	} {
+		if err := db.Get(dst, query); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if blank != 0 || nameMismatch != 0 || badFormat != 0 {
+		t.Errorf("blank=%d nameMismatch=%d badFormat=%d", blank, nameMismatch, badFormat)
+	}
+	if phones == 0 || phones == len(e2ePeople()) || verified == 0 || verified >= phones {
+		t.Errorf("phones=%d verified=%d of %d people", phones, verified, len(e2ePeople()))
+	}
+}

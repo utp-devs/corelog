@@ -137,6 +137,9 @@ func (h *Handler) AcceptInvitation(w http.ResponseWriter, r *http.Request) {
 		fail(w, err)
 		return
 	}
+	if !h.requireConsents(w, r, actor) {
+		return
+	}
 	member, err := h.service.AcceptInvitation(r.Context(), actor, email, chiURLParam(r, "token"))
 	if err != nil {
 		fail(w, err)

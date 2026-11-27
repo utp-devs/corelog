@@ -139,7 +139,7 @@ func TestUserService_Register(t *testing.T) {
 		user, err := svc.Register(ctx, port.RegisterInput{
 			Name:     "Admin User",
 			Email:    "admin@example.com",
-			Password: "securepassword",
+			Password: "securepassword", PasswordConfirmation: "securepassword",
 		})
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -153,7 +153,7 @@ func TestUserService_Register(t *testing.T) {
 		user, err := svc.Register(ctx, port.RegisterInput{
 			Name:     "Second User",
 			Email:    "second@example.com",
-			Password: "securepassword",
+			Password: "securepassword", PasswordConfirmation: "securepassword",
 		})
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -167,7 +167,7 @@ func TestUserService_Register(t *testing.T) {
 		_, err := svc.Register(ctx, port.RegisterInput{
 			Name:     "Duplicate",
 			Email:    "admin@example.com",
-			Password: "password",
+			Password: "password", PasswordConfirmation: "password",
 		})
 		if !errors.Is(err, domain.ErrEmailAlreadyTaken) {
 			t.Errorf("expected ErrEmailAlreadyTaken, got %v", err)
@@ -183,7 +183,7 @@ func TestUserService_Authenticate(t *testing.T) {
 	user, _ := svc.Register(ctx, port.RegisterInput{
 		Name:     "Alice",
 		Email:    "alice@example.com",
-		Password: "password123",
+		Password: "password123", PasswordConfirmation: "password123",
 	})
 
 	t.Run("successful authentication", func(t *testing.T) {
@@ -228,12 +228,12 @@ func TestUserService_ProfileAndPassword(t *testing.T) {
 	user1, _ := svc.Register(ctx, port.RegisterInput{
 		Name:     "User One",
 		Email:    "one@example.com",
-		Password: "oldpassword",
+		Password: "oldpassword", PasswordConfirmation: "oldpassword",
 	})
 	user2, _ := svc.Register(ctx, port.RegisterInput{
 		Name:     "User Two",
 		Email:    "two@example.com",
-		Password: "oldpassword",
+		Password: "oldpassword", PasswordConfirmation: "oldpassword",
 	})
 
 	t.Run("updates profile successfully", func(t *testing.T) {
@@ -261,8 +261,9 @@ func TestUserService_ProfileAndPassword(t *testing.T) {
 
 	t.Run("changes password with valid current password", func(t *testing.T) {
 		err := svc.ChangePassword(ctx, user1.ID, port.ChangePasswordInput{
-			CurrentPassword: "oldpassword",
-			NewPassword:     "newpassword123",
+			CurrentPassword:         "oldpassword",
+			NewPassword:             "newpassword123",
+			NewPasswordConfirmation: "newpassword123",
 		})
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -280,8 +281,9 @@ func TestUserService_ProfileAndPassword(t *testing.T) {
 
 	t.Run("rejects password change with wrong current password", func(t *testing.T) {
 		err := svc.ChangePassword(ctx, user1.ID, port.ChangePasswordInput{
-			CurrentPassword: "wrongpassword",
-			NewPassword:     "anotherpass",
+			CurrentPassword:         "wrongpassword",
+			NewPassword:             "anotherpass",
+			NewPasswordConfirmation: "anotherpass",
 		})
 		if !errors.Is(err, domain.ErrIncorrectPassword) {
 			t.Errorf("expected ErrIncorrectPassword, got %v", err)
@@ -298,12 +300,12 @@ func TestUserService_TeamAndSearch(t *testing.T) {
 	u1, _ := svc.Register(ctx, port.RegisterInput{
 		Name:     "Bob Dylan",
 		Email:    "bob@example.com",
-		Password: "password",
+		Password: "password", PasswordConfirmation: "password",
 	})
 	u2, _ := svc.Register(ctx, port.RegisterInput{
 		Name:     "Bob Marley",
 		Email:    "marley@example.com",
-		Password: "password",
+		Password: "password", PasswordConfirmation: "password",
 	})
 
 	t.Run("SearchTeammates returns empty when user has no team", func(t *testing.T) {

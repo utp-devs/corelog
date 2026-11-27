@@ -21,11 +21,14 @@ const openAPIPath = "../../openapi.yaml"
 
 // publicOperations are the only operations allowed without a security requirement.
 var publicOperations = map[string]bool{
-	"POST /api/v1/auth/register":  true,
-	"GET /api/v1/invitations/{}":  true,
-	"POST /api/v1/auth/login":     true,
-	"POST /api/v1/auth/login/2fa": true,
-	"GET /health":                 true,
+	"POST /api/v1/auth/register":     true,
+	"GET /api/v1/invitations/{}":     true,
+	"POST /api/v1/auth/login":        true,
+	"POST /api/v1/auth/login/2fa":    true,
+	"GET /health":                    true,
+	"GET /api/v1/meta/countries":     true,
+	"GET /api/v1/legal/documents":    true,
+	"GET /api/v1/legal/documents/{}": true,
 }
 
 var (

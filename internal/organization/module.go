@@ -29,6 +29,12 @@ func NewModule(repo port.Repository, tx database.TxManager, pub events.Publisher
 	}
 }
 
+// WithConsentGate makes accepting an invitation require the current legal documents.
+func (m *Module) WithConsentGate(gate httpadapter.ConsentGate) *Module {
+	m.Handler.WithConsentGate(gate)
+	return m
+}
+
 // WithCatalogSeeder makes new organizations start with the default catalogs created by seeder.
 func (m *Module) WithCatalogSeeder(seeder port.CatalogSeeder) *Module {
 	m.service.WithCatalogSeeder(seeder)

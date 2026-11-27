@@ -1,6 +1,7 @@
 package domain
 
 import (
+	"regexp"
 	"time"
 
 	"github.com/google/uuid"
@@ -16,6 +17,9 @@ const (
 // DefaultTimezone is the timezone of users who never chose one.
 const DefaultTimezone = "UTC"
 
+// DefaultLocale is the language of users who never chose one.
+const DefaultLocale = "es"
+
 func (r Role) IsValid() bool {
 	switch r {
 	case RoleAdmin, RoleUser:
@@ -26,8 +30,12 @@ func (r Role) IsValid() bool {
 }
 
 type User struct {
-	ID           uuid.UUID
-	Name         string
+	ID uuid.UUID
+	// Name is the full name (first and last name); it stays in sync with them and every reader uses it.
+	Name string
+	// FirstName and LastName are the separate name parts. LastName may be empty for legacy single-word names.
+	FirstName    string
+	LastName     string
 	Email        string
 	PasswordHash string
 	Role         Role
@@ -36,10 +44,14 @@ type User struct {
 	Department   string
 	AvatarKey    *string
 	Timezone     string
-	TeamID       *uuid.UUID
-	CreatedAt    time.Time
-	UpdatedAt    time.Time
-	LastLoginAt  *time.Time
+	Locale       string
+	// Phone is nil when the user has none. PhoneVerifiedAt is nil until the number is verified.
+	Phone           *Phone
+	PhoneVerifiedAt *time.Time
+	TeamID          *uuid.UUID
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
+	LastLoginAt     *time.Time
 	// EmailVerifiedAt is nil until the address is verified.
 	EmailVerifiedAt *time.Time
 	// DeactivatedAt marca una cuenta cerrada por el propio usuario (borrado logico). Nil = activa.
@@ -60,9 +72,13 @@ func NewUser(name, email, passwordHash string, role Role) (*User, error) {
 		return nil, ErrInvalidRole
 	}
 
+	first, last := SplitName(name)
 	now := time.Now().UTC()
 	return &User{
 		Name:         name,
+		FirstName:    first,
+		LastName:     last,
+		Locale:       DefaultLocale,
 		Email:        email,
 		PasswordHash: passwordHash,
 		Role:         role,
@@ -93,7 +109,7 @@ func (u *User) UpdateProfile(name, email string) error {
 	if email == "" {
 		return ErrInvalidEmail
 	}
-	u.Name = name
+	u.SetFullName(name)
 	u.Email = email
 	u.UpdatedAt = time.Now().UTC()
 	return nil
@@ -154,4 +170,74 @@ func (u *User) Deactivate(now time.Time) {
 	at := now.UTC()
 	u.DeactivatedAt = &at
 	u.UpdatedAt = at
+}
+
+// FullName returns the first and last name joined; it falls back to Name for users without parts.
+func (u *User) FullName() string {
+	if full := JoinNames(u.FirstName, u.LastName); full != "" {
+		return full
+	}
+	return u.Name
+}
+
+// SetNames replaces the first and last name (already validated) and refreshes Name. The display name
+// follows the full name while the user has not chosen a different one.
+func (u *User) SetNames(first, last string) {
+	tracking := u.DisplayName == "" || u.DisplayName == u.FullName()
+	u.FirstName, u.LastName = first, last
+	u.Name = JoinNames(first, last)
+	if tracking {
+		u.DisplayName = u.Name
+	}
+	u.UpdatedAt = time.Now().UTC()
+}
+
+// SetFullName splits a legacy full name into first and last name.
+func (u *User) SetFullName(full string) {
+	first, last := SplitName(full)
+	u.SetNames(first, last)
+}
+
+// SetPhone stores a new phone number, or clears it with nil. Changing the number clears the verification.
+func (u *User) SetPhone(p *Phone) {
+	switch {
+	case p == nil && u.Phone == nil:
+		return
+	case p != nil && u.Phone != nil && p.E164 == u.Phone.E164:
+		u.Phone = p
+		return
+	}
+	u.Phone = p
+	u.PhoneVerifiedAt = nil
+	u.UpdatedAt = time.Now().UTC()
+}
+
+// MarkPhoneVerified records that the current number was verified at the given instant.
+func (u *User) MarkPhoneVerified(at time.Time) {
+	t := at.UTC()
+	u.PhoneVerifiedAt = &t
+	u.UpdatedAt = t
+}
+
+// PhoneVerified reports whether the user has a verified phone number.
+func (u *User) PhoneVerified() bool { return u.Phone != nil && u.PhoneVerifiedAt != nil }
+
+var localePattern = regexp.MustCompile(`^[a-z]{2}(-[A-Z]{2})?$`)
+
+// ValidateLocale accepts language tags such as "es" or "es-PE".
+func ValidateLocale(locale string) error {
+	if !localePattern.MatchString(locale) {
+		return ErrInvalidLocale
+	}
+	return nil
+}
+
+// SetLocale changes the interface language after validating it.
+func (u *User) SetLocale(locale string) error {
+	if err := ValidateLocale(locale); err != nil {
+		return err
+	}
+	u.Locale = locale
+	u.UpdatedAt = time.Now().UTC()
+	return nil
 }

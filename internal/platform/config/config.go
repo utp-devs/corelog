@@ -12,6 +12,7 @@ type Config struct {
 	Server   ServerConfig
 	Database DatabaseConfig
 	Auth     AuthConfig
+	Legal    LegalConfig
 }
 
 type ServerConfig struct {
@@ -48,6 +49,13 @@ type AuthConfig struct {
 	// TwoFactorEncryptionKey is a base64 encoded 32 byte key for the stored TOTP secrets. When empty, a key is
 	// derived from JWTSecret in development; outside development the server refuses to start without it.
 	TwoFactorEncryptionKey string `env:"TWO_FACTOR_ENCRYPTION_KEY"`
+}
+
+// LegalConfig controls how the legal consent requirement is enforced after login.
+type LegalConfig struct {
+	// Enforcement is "warn" (default: pending consents are only reported) or "block" (authenticated calls other
+	// than the consent endpoints answer 403 legal.consent_pending until the user accepts).
+	Enforcement string `env:"LEGAL_ENFORCEMENT" envDefault:"warn"`
 }
 
 func Load() (*Config, error) {

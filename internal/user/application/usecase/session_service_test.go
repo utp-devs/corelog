@@ -70,7 +70,7 @@ var _ port.SessionRepository = (*fakeSessionRepo)(nil)
 
 func registerUser(t *testing.T, svc *UserService, email, password string) uuid.UUID {
 	t.Helper()
-	u, err := svc.Register(context.Background(), port.RegisterInput{Name: "Ana Prueba", Email: email, Password: password})
+	u, err := svc.Register(context.Background(), port.RegisterInput{Name: "Ana Prueba", Email: email, Password: password, PasswordConfirmation: password})
 	if err != nil {
 		t.Fatalf("register: %v", err)
 	}

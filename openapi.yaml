@@ -31,6 +31,8 @@ tags:
     description: Flujo de trabajo por proyecto, plantillas y catalogo de estados de la organizacion
   - name: worklogs
     description: Registro de tiempo, estimaciones de incidencias, hoja de tiempo personal y resumen de tiempo por proyecto
+  - name: legal
+    description: Documentos legales versionados y consentimiento de cada usuario
   - name: health
     description: Service liveness
 paths:
@@ -61,6 +63,31 @@ paths:
           $ref: '#/components/responses/ValidationError'
         '409':
           description: The email address is already registered (code auth.email_taken)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /meta/countries:
+    get:
+      tags: [users]
+      summary: Paises admitidos para telefonos
+      description: Publico y cacheable (Cache-Control public, 24 h). Ordenado por nombre.
+      operationId: listPhoneCountries
+      security: []
+      responses:
+        '200':
+          description: Lista de paises con su prefijo
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Country'
+        '429':
+          description: Demasiadas peticiones
           content:
             application/json:
               schema:
@@ -299,6 +326,7 @@ paths:
     get:
       tags: [users]
       summary: Get the current authenticated user
+      description: Incluye pending_consents (documentos legales obligatorios sin aceptar) junto a los campos del usuario.
       operationId: getCurrentUser
       responses:
         '200':
@@ -366,6 +394,97 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
         '422':
           $ref: '#/components/responses/ValidationError'
+  /users/me/phone/verification:
+    post:
+      tags: [users]
+      summary: Enviar un codigo SMS de 6 digitos al telefono del usuario
+      description: El codigo vence en 10 minutos. Maximo 3 envios por hora (429 user.phone_send_limit). 409 user.phone_not_set si no hay telefono y user.phone_already_verified si ya esta verificado.
+      operationId: requestPhoneVerification
+      responses:
+        '202':
+          description: Codigo emitido
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    required: [destination, expires_at]
+                    properties:
+                      destination:
+                        type: string
+                        example: "+51******678"
+                      expires_at:
+                        type: string
+                        format: date-time
+        '401':
+          description: No autenticado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Sin telefono o ya verificado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Demasiados envios (user.phone_send_limit)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /users/me/phone/verify:
+    post:
+      tags: [users]
+      summary: Verificar el telefono con el codigo recibido por SMS
+      description: Cada intento cuenta; tras 5 el codigo muere (429 user.phone_code_attempts). 422 user.phone_code_invalid o user.phone_code_expired. 409 user.phone_taken si otra cuenta ya verifico ese numero.
+      operationId: verifyPhone
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code]
+              properties:
+                code:
+                  type: string
+                  minLength: 6
+                  maxLength: 6
+                  example: "123456"
+      responses:
+        '200':
+          description: Telefono verificado; devuelve el usuario
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/User'
+        '401':
+          description: No autenticado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Sin telefono, ya verificado o numero en uso (user.phone_taken)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          description: Demasiados intentos (user.phone_code_attempts)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /users/me/deactivate:
     post:
       tags: [users]
@@ -7253,6 +7372,20 @@ paths:
         The caller's account email must match the invited email (case-insensitive). Adds the caller to the organization
         with the invited role.
       operationId: acceptInvitation
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                consents:
+                  type: array
+                  description: >-
+                    Documentos legales aceptados. Si el usuario aun tiene documentos obligatorios pendientes, 422
+                    legal.consent_required y la invitacion no se acepta.
+                  items:
+                    $ref: '#/components/schemas/ConsentRef'
       responses:
         '201':
           description: The caller is now a member
@@ -7276,6 +7409,235 @@ paths:
             The invitation was used (org.invitation_used), revoked (org.invitation_revoked), expired (org.invitation_expired)
             or the caller is already a member (org.already_member).
           content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+  /legal/documents:
+    get:
+      tags: [legal]
+      summary: Listar los documentos legales vigentes
+      description: >-
+        Publico (sin autenticacion). Devuelve la version vigente de cada documento legal sin su contenido. Incluye
+        ETag y Cache-Control (max-age corto); un If-None-Match igual responde 304.
+      operationId: listLegalDocuments
+      security: []
+      responses:
+        '200':
+          description: Documentos vigentes
+          headers:
+            ETag: {schema: {type: string}}
+            Cache-Control: {schema: {type: string}}
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/LegalDocumentSummary'
+        '304':
+          description: El cliente ya tiene esta version (If-None-Match)
+        '422':
+          $ref: '#/components/responses/ValidationError'
+  /legal/documents/{slug}:
+    parameters:
+      - name: slug
+        in: path
+        required: true
+        schema: {$ref: '#/components/schemas/LegalSlug'}
+    get:
+      tags: [legal]
+      summary: Obtener un documento legal con su contenido
+      description: >-
+        Publico (sin autenticacion). Devuelve la version vigente o, con ?version=N, una version concreta. El contenido
+        es Markdown en espanol. ETag por slug y version.
+      operationId: getLegalDocument
+      security: []
+      parameters:
+        - name: version
+          in: query
+          required: false
+          schema: {type: integer, minimum: 1}
+          description: Version concreta; por defecto la vigente. Una version no valida responde 422 legal.version_invalid.
+      responses:
+        '200':
+          description: El documento
+          headers:
+            ETag: {schema: {type: string}}
+            Cache-Control: {schema: {type: string}}
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/LegalDocument'
+        '304':
+          description: El cliente ya tiene esta version (If-None-Match)
+        '404':
+          description: El documento o la version no existe (legal.document_not_found)
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+        '422':
+          $ref: '#/components/responses/ValidationError'
+  /me/consents:
+    get:
+      tags: [legal]
+      summary: Estado de mis consentimientos
+      description: Devuelve la version aceptada de cada documento y la lista de documentos obligatorios pendientes.
+      operationId: getMyConsents
+      responses:
+        '200':
+          description: Estado de consentimientos
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/ConsentStatus'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      tags: [legal]
+      summary: Aceptar documentos legales
+      description: >-
+        Registra la aceptacion de la version vigente de cada documento enviado. Aceptar de nuevo la misma version es
+        idempotente. La direccion IP se guarda anonimizada (IPv4 con el ultimo octeto en cero, IPv6 a /64).
+      operationId: recordMyConsents
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RecordConsentsRequest'
+      responses:
+        '200':
+          description: Estado de consentimientos tras registrar
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/ConsentStatus'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          description: >-
+            Lista vacia (legal.consent_empty), origen no valido (legal.source_invalid), documento no valido
+            (legal.slug_invalid) o version que no es la vigente (legal.version_invalid).
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+  /me/consents/{slug}:
+    parameters:
+      - name: slug
+        in: path
+        required: true
+        schema: {$ref: '#/components/schemas/LegalSlug'}
+    delete:
+      tags: [legal]
+      summary: Revocar el consentimiento de comunicaciones
+      description: Solo el consentimiento opcional communications se puede revocar.
+      operationId: revokeMyConsent
+      responses:
+        '204':
+          description: Consentimiento revocado
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: No hay un consentimiento activo (legal.consent_not_found)
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+        '409':
+          description: El documento es obligatorio y no se puede revocar (legal.consent_not_revocable)
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+        '422':
+          $ref: '#/components/responses/ValidationError'
+  /admin/legal/documents:
+    get:
+      tags: [legal]
+      summary: Listar todas las versiones de los documentos legales
+      description: Solo administradores de la plataforma. Sin contenido (body_markdown vacio).
+      operationId: adminListLegalDocuments
+      responses:
+        '200':
+          description: Todas las versiones
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/LegalDocument'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags: [legal]
+      summary: Publicar una nueva version de un documento legal
+      description: >-
+        Solo administradores de la plataforma. La version se autoincrementa y entra en vigor al publicarse; los
+        usuarios deberan aceptarla de nuevo si el documento es obligatorio.
+      operationId: adminPublishLegalDocument
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PublishLegalDocumentRequest'
+      responses:
+        '201':
+          description: Version publicada
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/LegalDocument'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          description: Otra publicacion simultanea (legal.publish_conflict)
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+        '422':
+          description: Datos no validos (validation.failed), slug (legal.slug_invalid) o communications obligatorio (legal.communications_optional)
+          content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+  /admin/legal/consents:
+    get:
+      tags: [legal]
+      summary: Auditoria de consentimientos
+      description: Solo administradores de la plataforma. Lista los consentimientos, los mas recientes primero.
+      operationId: adminListConsents
+      parameters:
+        - name: user
+          in: query
+          required: false
+          schema: {type: string, format: uuid}
+          description: Filtra por usuario.
+        - name: limit
+          in: query
+          required: false
+          schema: {type: integer, minimum: 1, maximum: 500, default: 100}
+      responses:
+        '200':
+          description: Consentimientos
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ConsentRecord'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
   /health:
     get:
       tags: [health]
@@ -8095,13 +8457,28 @@ components:
       enum: [task, bug, story, epic, subtask]
     RegisterRequest:
       type: object
-      required: [name, email, password]
+      description: |
+        Alta de cuenta. Envia first_name y last_name; el campo heredado name sigue aceptandose (se divide en
+        nombre y apellido) solo cuando first_name viene vacio. password_confirmation debe ser identico a
+        password (sin recortar espacios) y se comprueba antes que la politica de contrasena: si no coincide
+        responde 422 user.password_mismatch con detalle en password_confirmation y no se crea la cuenta.
+      required: [email, password, password_confirmation]
       properties:
+        first_name:
+          type: string
+          maxLength: 80
+          example: Ada
+          description: Nombre (1-80). Solo letras, espacios, guiones y apostrofes. Error 422 user.invalid_name.
+        last_name:
+          type: string
+          maxLength: 120
+          example: Lovelace
+          description: Apellido (1-120), mismo alfabeto que el nombre. Obligatorio si se envia first_name.
         name:
           type: string
-          minLength: 2
           maxLength: 120
           example: Ada Lovelace
+          description: Heredado. Nombre completo; se divide en first_name y last_name. Se ignora si hay first_name.
         email:
           type: string
           format: email
@@ -8110,6 +8487,83 @@ components:
           type: string
           format: password
           minLength: 8
+        password_confirmation:
+          type: string
+          format: password
+          description: Debe ser exactamente igual a password. Si falta o difiere, 422 user.password_mismatch (Las contraseñas no coinciden).
+        phone:
+          $ref: '#/components/schemas/PhoneInput'
+        locale:
+          type: string
+          example: es
+          description: Idioma de la interfaz (es, en, es-PE). Por defecto es.
+        consents:
+          type: array
+          description: >-
+            Versiones aceptadas de los documentos legales. Deben cubrir todos los documentos obligatorios vigentes
+            (privacy_policy, data_processing, terms_of_use) en su version actual; si falta alguno, 422
+            legal.consent_required con los slugs que faltan en details. communications es opcional. Los
+            consentimientos se guardan en la misma transaccion que la cuenta.
+          items:
+            $ref: '#/components/schemas/ConsentRef'
+    PhoneInput:
+      type: object
+      required: [country, number]
+      properties:
+        country:
+          type: string
+          minLength: 2
+          maxLength: 2
+          example: PE
+          description: Codigo ISO 3166-1 alpha-2 (ver GET /meta/countries).
+        number:
+          type: string
+          maxLength: 32
+          example: "+51 912 345 678"
+          description: Numero nacional o con prefijo internacional (+51 o 0051). Se admiten espacios, guiones, puntos y parentesis. Error 422 user.invalid_phone.
+    Phone:
+      type: object
+      description: Telefono del usuario. Solo lo ven el propio usuario y los administradores o propietarios de la organizacion; para los demas el campo se omite.
+      required: [country, number, e164, verified]
+      properties:
+        country:
+          type: string
+          example: PE
+        number:
+          type: string
+          example: "912345678"
+          description: Numero nacional significativo (solo digitos).
+        e164:
+          type: string
+          example: "+51912345678"
+        verified:
+          type: boolean
+        verified_at:
+          type: string
+          format: date-time
+          description: Presente solo cuando el telefono esta verificado.
+    Country:
+      type: object
+      required: [code, name, dial_code]
+      properties:
+        code:
+          type: string
+          example: PE
+        name:
+          type: string
+          example: Perú
+        dial_code:
+          type: string
+          example: "+51"
+        example:
+          type: string
+          example: "912345678"
+          description: Numero nacional de ejemplo, cuando se conoce.
+        areas:
+          type: array
+          items:
+            type: string
+          description: Codigos de area NANP permitidos para paises que comparten +1 (por ejemplo DO 809, 829, 849).
     LoginRequest:
       type: object
       required: [email, password]
@@ -8128,6 +8582,16 @@ components:
           format: uuid
         name:
           type: string
+          description: Nombre completo (first_name + last_name); se mantiene sincronizado.
+        first_name:
+          type: string
+        last_name:
+          type: string
+        locale:
+          type: string
+          example: es
+        phone:
+          $ref: '#/components/schemas/Phone'
         email:
           type: string
           format: email
@@ -8170,6 +8634,23 @@ components:
           type: string
           minLength: 2
           maxLength: 120
+          description: Heredado. Se divide en first_name y last_name; se ignora si se envia first_name o last_name.
+        first_name:
+          type: string
+          maxLength: 80
+          description: Error 422 user.invalid_name si tiene digitos o simbolos.
+        last_name:
+          type: string
+          maxLength: 120
+        phone:
+          allOf:
+            - $ref: '#/components/schemas/PhoneInput'
+          nullable: true
+          description: Omitido conserva el telefono; null lo elimina; un objeto lo reemplaza y borra la verificacion.
+        locale:
+          type: string
+          maxLength: 10
+          description: Idioma (es, en, es-PE). Error 422 user.locale_invalid.
         email:
           type: string
           format: email
@@ -8188,7 +8669,7 @@ components:
           description: IANA time zone name. Invalid values answer 422 (code user.timezone_invalid).
     ChangePasswordRequest:
       type: object
-      required: [current_password, new_password]
+      required: [current_password, new_password, new_password_confirmation]
       properties:
         current_password:
           type: string
@@ -8197,6 +8678,10 @@ components:
           type: string
           format: password
           minLength: 8
+        new_password_confirmation:
+          type: string
+          format: password
+          description: Debe ser exactamente igual a new_password. Si falta o difiere, 422 user.password_mismatch y la contrasena actual sigue vigente.
     SetTeamRequest:
       type: object
       properties:
@@ -9421,6 +9906,14 @@ components:
           description: A signed JWT access token, valid for the duration configured by JWT_EXPIRATION on the server.
         user:
           $ref: '#/components/schemas/User'
+        pending_consents:
+          type: array
+          description: >-
+            Documentos legales obligatorios cuya version vigente el usuario no ha aceptado (siempre presente, puede
+            ser vacia). El login no se bloquea; el cliente debe pedir la aceptacion con POST /me/consents. Con
+            LEGAL_ENFORCEMENT=block, el resto de la API responde 403 legal.consent_pending hasta que acepte.
+          items:
+            $ref: '#/components/schemas/PendingConsent'
     Note:
       type: object
       required: [id, title, body, color, pinned, tags, issue_id, project_id, created_at, updated_at]
@@ -10670,6 +11163,140 @@ components:
         total_seconds: {type: integer}
         total: {type: string}
         count: {type: integer}
+    LegalSlug:
+      type: string
+      enum: [privacy_policy, data_processing, terms_of_use, cookies, communications]
+    ConsentRef:
+      type: object
+      required: [slug, version]
+      properties:
+        slug:
+          $ref: '#/components/schemas/LegalSlug'
+        version:
+          type: integer
+          minimum: 1
+    PendingConsent:
+      type: object
+      properties:
+        slug:
+          $ref: '#/components/schemas/LegalSlug'
+        title:
+          type: string
+        version:
+          type: integer
+    LegalDocumentSummary:
+      type: object
+      properties:
+        slug:
+          $ref: '#/components/schemas/LegalSlug'
+        title:
+          type: string
+        version:
+          type: integer
+        summary:
+          type: string
+        required:
+          type: boolean
+        effective_from:
+          type: string
+          format: date-time
+    LegalDocument:
+      allOf:
+        - $ref: '#/components/schemas/LegalDocumentSummary'
+        - type: object
+          properties:
+            body_markdown:
+              type: string
+              description: Contenido en Markdown (vacio en el listado de administracion).
+            published_at:
+              type: string
+              format: date-time
+            created_by:
+              type: string
+              format: uuid
+              nullable: true
+    ConsentStatus:
+      type: object
+      properties:
+        accepted:
+          type: array
+          items:
+            type: object
+            properties:
+              slug:
+                $ref: '#/components/schemas/LegalSlug'
+              version:
+                type: integer
+              accepted_at:
+                type: string
+                format: date-time
+        pending:
+          type: array
+          items:
+            $ref: '#/components/schemas/PendingConsent'
+    RecordConsentsRequest:
+      type: object
+      additionalProperties: false
+      required: [accepted, source]
+      properties:
+        accepted:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/ConsentRef'
+        source:
+          type: string
+          enum: [register, invite, login_reprompt, profile]
+    PublishLegalDocumentRequest:
+      type: object
+      additionalProperties: false
+      required: [slug, title, body_markdown]
+      properties:
+        slug:
+          $ref: '#/components/schemas/LegalSlug'
+        title:
+          type: string
+          maxLength: 200
+        summary:
+          type: string
+          maxLength: 1000
+        body_markdown:
+          type: string
+          maxLength: 200000
+        required:
+          type: boolean
+          description: Por defecto true para privacy_policy, data_processing y terms_of_use; false para el resto. communications nunca puede ser obligatorio.
+    ConsentRecord:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        slug:
+          $ref: '#/components/schemas/LegalSlug'
+        version:
+          type: integer
+        accepted_at:
+          type: string
+          format: date-time
+        ip:
+          type: string
+          nullable: true
+          description: Direccion anonimizada (IPv4 con el ultimo octeto en cero, IPv6 a /64).
+        user_agent:
+          type: string
+          nullable: true
+          maxLength: 255
+        source:
+          type: string
+          enum: [register, invite, login_reprompt, profile]
+        revoked_at:
+          type: string
+          format: date-time
+          nullable: true
     ErrorResponse:
       type: object
       properties:

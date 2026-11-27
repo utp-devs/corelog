@@ -34,7 +34,7 @@ func TestUserHTTP_DeactivationBlockedForSoleOwner(t *testing.T) {
 	userhttp.NewHandler(service, jwtSecret, 24*time.Hour).RegisterRoutes(r)
 
 	const email, password = "unico-dueno@example.com", "password123"
-	doJSON(t, r, http.MethodPost, "/auth/register", `{"name":"Dueno","email":"`+email+`","password":"`+password+`"}`, "")
+	doJSON(t, r, http.MethodPost, "/auth/register", `{"name":"Dueno","email":"`+email+`","password":"`+password+`","password_confirmation":"`+password+`"}`, "")
 	token := loginToken(t, r, email, password)
 
 	rec := doJSON(t, r, http.MethodPost, "/users/me/deactivate", `{"password":"`+password+`"}`, token)

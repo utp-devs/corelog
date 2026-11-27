@@ -23,6 +23,8 @@ type Handler struct {
 	jwtExpiration time.Duration
 	// twoFactor is nil when the second factor is not wired; logins then never ask for it.
 	twoFactor port.TwoFactorService
+	// consents is nil when the legal module is not wired; registration then asks for no consents.
+	consents port.ConsentGate
 }
 
 func NewHandler(service port.Service, jwtSecret string, jwtExpiration time.Duration) *Handler {
@@ -35,22 +37,34 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 		httpresponse.Error(w, apperror.New(apperror.KindValidation, "invalid request body"))
 		return
 	}
+	// The confirmation is checked before every other validation, so a mismatch never reaches the policy.
+	if err := domain.CheckPasswordConfirmation(req.Password, req.PasswordConfirmation, "password_confirmation"); err != nil {
+		httpresponse.Error(w, err)
+		return
+	}
 	if err := validation.Struct(req); err != nil {
 		httpresponse.Error(w, validation.Failed(req, err))
 		return
 	}
 
 	user, err := h.service.Register(r.Context(), port.RegisterInput{
-		Name:     req.Name,
-		Email:    req.Email,
-		Password: req.Password,
+		FirstName:            req.FirstName,
+		LastName:             req.LastName,
+		Name:                 req.Name,
+		Email:                req.Email,
+		Password:             req.Password,
+		PasswordConfirmation: req.PasswordConfirmation,
+		Phone:                req.Phone.toChange(),
+		Locale:               req.Locale,
+		Consents:             toConsentRefs(req.Consents),
+		ConsentMeta:          consentMeta(r, "register"),
 	})
 	if err != nil {
 		httpresponse.Error(w, err)
 		return
 	}
 
-	httpresponse.JSON(w, http.StatusCreated, toUserResponse(user))
+	httpresponse.JSON(w, http.StatusCreated, toPrivateUserResponse(user))
 }
 
 func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
@@ -108,7 +122,7 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	httpresponse.JSON(w, http.StatusOK, authResponse{Token: token, User: toUserResponse(user)})
+	h.writeSession(w, r, token, user)
 }
 
 func (h *Handler) Me(w http.ResponseWriter, r *http.Request) {
@@ -124,7 +138,7 @@ func (h *Handler) Me(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	httpresponse.JSON(w, http.StatusOK, toUserResponse(user))
+	h.writeMe(w, r, user)
 }
 
 func (h *Handler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
@@ -146,6 +160,10 @@ func (h *Handler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
 
 	user, err := h.service.UpdateProfile(r.Context(), userID, port.UpdateProfileInput{
 		Name:        req.Name,
+		FirstName:   req.FirstName,
+		LastName:    req.LastName,
+		Phone:       req.Phone.toChange(),
+		Locale:      req.Locale,
 		Email:       req.Email,
 		DisplayName: req.DisplayName,
 		JobTitle:    req.JobTitle,
@@ -157,7 +175,7 @@ func (h *Handler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	httpresponse.JSON(w, http.StatusOK, toUserResponse(user))
+	httpresponse.JSON(w, http.StatusOK, toPrivateUserResponse(user))
 }
 
 func (h *Handler) ChangePassword(w http.ResponseWriter, r *http.Request) {
@@ -172,14 +190,19 @@ func (h *Handler) ChangePassword(w http.ResponseWriter, r *http.Request) {
 		httpresponse.Error(w, apperror.New(apperror.KindValidation, "invalid request body"))
 		return
 	}
+	if err := domain.CheckPasswordConfirmation(req.NewPassword, req.NewPasswordConfirmation, "new_password_confirmation"); err != nil {
+		httpresponse.Error(w, err)
+		return
+	}
 	if err := validation.Struct(req); err != nil {
 		httpresponse.Error(w, validation.Failed(req, err))
 		return
 	}
 
 	if err := h.service.ChangePassword(r.Context(), userID, port.ChangePasswordInput{
-		CurrentPassword: req.CurrentPassword,
-		NewPassword:     req.NewPassword,
+		CurrentPassword:         req.CurrentPassword,
+		NewPassword:             req.NewPassword,
+		NewPasswordConfirmation: req.NewPasswordConfirmation,
 	}); err != nil {
 		httpresponse.Error(w, err)
 		return
@@ -210,7 +233,7 @@ func (h *Handler) Search(w http.ResponseWriter, r *http.Request) {
 			httpresponse.Error(w, err)
 			return
 		}
-		httpresponse.JSON(w, http.StatusOK, toUserResponses(users))
+		httpresponse.JSON(w, http.StatusOK, toUserResponses(users, true, userID))
 		return
 	}
 
@@ -226,7 +249,13 @@ func (h *Handler) Search(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	httpresponse.JSON(w, http.StatusOK, toUserResponses(users))
+	showPhones, err := h.service.CanViewMemberPhones(r.Context(), userID, orgID)
+	if err != nil {
+		httpresponse.Error(w, err)
+		return
+	}
+
+	httpresponse.JSON(w, http.StatusOK, toUserResponses(users, showPhones, userID))
 }
 
 var (
@@ -253,7 +282,7 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	httpresponse.JSON(w, http.StatusOK, toUserResponses(users))
+	httpresponse.JSON(w, http.StatusOK, toUserResponses(users, true, uuid.Nil))
 }
 
 func (h *Handler) SetTeam(w http.ResponseWriter, r *http.Request) {
@@ -289,7 +318,7 @@ func (h *Handler) SetTeam(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	httpresponse.JSON(w, http.StatusOK, toUserResponse(user))
+	httpresponse.JSON(w, http.StatusOK, toPrivateUserResponse(user))
 }
 
 // currentSession devuelve la sesion del token de la peticion. Sin validacion de sesiones devuelve uuid.Nil.
@@ -380,4 +409,62 @@ func (h *Handler) DeactivateAccount(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	httpresponse.JSON(w, http.StatusNoContent, nil)
+}
+
+// toChange converts the optional phone of a partial update into the use case input; nil when omitted.
+func (o optionalPhone) toChange() *port.PhoneChange {
+	switch {
+	case !o.Present:
+		return nil
+	case o.Value == nil:
+		return &port.PhoneChange{Clear: true}
+	default:
+		return &port.PhoneChange{Country: o.Value.Country, Number: o.Value.Number}
+	}
+}
+
+// RequestPhoneVerification sends a 6-digit SMS code to the phone of the caller.
+func (h *Handler) RequestPhoneVerification(w http.ResponseWriter, r *http.Request) {
+	userID, ok := appmw.UserIDFromContext(r.Context())
+	if !ok {
+		httpresponse.Error(w, apperror.New(apperror.KindUnauthorized, "not authenticated"))
+		return
+	}
+	receipt, err := h.service.RequestPhoneVerification(r.Context(), userID)
+	if err != nil {
+		httpresponse.Error(w, err)
+		return
+	}
+	httpresponse.JSON(w, http.StatusAccepted, phoneVerificationResponse{Destination: receipt.Destination, ExpiresAt: receipt.ExpiresAt})
+}
+
+// VerifyPhone checks the SMS code and marks the phone of the caller as verified.
+func (h *Handler) VerifyPhone(w http.ResponseWriter, r *http.Request) {
+	userID, ok := appmw.UserIDFromContext(r.Context())
+	if !ok {
+		httpresponse.Error(w, apperror.New(apperror.KindUnauthorized, "not authenticated"))
+		return
+	}
+	var req phoneVerifyRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		httpresponse.Error(w, apperror.New(apperror.KindValidation, "invalid request body"))
+		return
+	}
+	if err := validation.Struct(req); err != nil {
+		httpresponse.Error(w, validation.Failed(req, err))
+		return
+	}
+	user, err := h.service.VerifyPhone(r.Context(), userID, req.Code)
+	if err != nil {
+		httpresponse.Error(w, err)
+		return
+	}
+	httpresponse.JSON(w, http.StatusOK, toPrivateUserResponse(user))
+}
+
+func (p *phoneRequest) toChange() *port.PhoneChange {
+	if p == nil {
+		return nil
+	}
+	return &port.PhoneChange{Country: p.Country, Number: p.Number}
 }
