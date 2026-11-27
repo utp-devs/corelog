@@ -3,7 +3,10 @@
   min-width: 0;
 }
 
+// The picker keeps PrimeNG's flex layout (input grows, calendar button stays fixed); turning it into a
+// block would collapse the input to its intrinsic width.
 .date-field {
-  display: block;
+  display: flex;
   width: 100%;
+  min-width: 0;
 }

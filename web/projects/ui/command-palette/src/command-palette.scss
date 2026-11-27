@@ -243,10 +243,12 @@
 }
 
 // Touch screens have no keyboard: the hints go away and the palette fills the screen as a sheet.
-@media (pointer: coarse) {
-  .command-palette__footer,
-  .command-palette__kbd--close {
-    display: none;
+.command-palette {
+  @media (pointer: coarse) {
+    &__footer,
+    &__kbd--close {
+      display: none;
+    }
   }
 }
 

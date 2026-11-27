@@ -17,7 +17,6 @@ export type ShellIconName =
   | 'invitations'
   | 'profile'
   | 'security'
-  | 'tokens'
   | 'appearance'
   | 'fold'
   | 'unfold'
@@ -70,7 +69,6 @@ export const ICON_PATHS: Readonly<Record<ShellIconName, readonly string[]>> = {
   invitations: ['M3 6h18v12H3z', 'M3 7l9 6 9-6'],
   profile: ['M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8z', 'M4 21c0-4 4-6 8-6s8 2 8 6'],
   security: ['M6 11h12v9H6z', 'M8 11V8a4 4 0 0 1 8 0v3', 'M12 15v2'],
-  tokens: ['M8 14a4 4 0 1 1 3.9-5H21v3h-2v2h-3v-2h-4.1A4 4 0 0 1 8 14z', 'M7 10h.01'],
   appearance: [
     'M12 3a9 9 0 1 0 0 18c1.5 0 2-1 2-2 0-1.5-1-1.5-1-3a2 2 0 0 1 2-2h3a3 3 0 0 0 3-3c0-4.4-4-8-9-8z',
     'M7.5 11h.01',

@@ -117,6 +117,11 @@ function routesFor(host: Type<unknown>): Routes {
           data: { text: 'Tablero del proyecto' },
         },
         { path: 'profile', component: RoutePage, data: { text: 'Perfil' } },
+        {
+          path: 'profile/security',
+          component: RoutePage,
+          data: { text: 'Seguridad de la cuenta' },
+        },
       ],
     },
     { path: 'login', component: RoutePage, data: { text: 'Pantalla de acceso' } },
@@ -215,25 +220,28 @@ describe('AppShell', () => {
   });
 
   it('renders the landmarks: banner, main navigation, main and the context aside', async () => {
-    const { root } = await render('/projects/p1/board');
+    const { root } = await render('/profile/security');
     expect(root.querySelector('header')).not.toBeNull();
     expect(root.querySelector('nav[aria-label="Principal"]')).not.toBeNull();
     expect(root.querySelector('main')?.id).toBe('main-content');
-    expect(root.querySelector('aside[aria-label="Proyecto"]')).not.toBeNull();
-    expect(root.textContent).toContain('Tablero del proyecto');
+    expect(root.querySelector('aside[aria-label="Mi cuenta"]')).not.toBeNull();
+    expect(root.textContent).toContain('Seguridad de la cuenta');
   });
 
-  it('shows the project header and marks the active item with aria-current', async () => {
-    const { root } = await render('/projects/p1/board');
-    const aside = root.querySelector<HTMLElement>('aside[aria-label="Proyecto"]');
-    expect(aside?.textContent).toContain('Proyecto demo');
-    expect(aside?.textContent).toContain('DEM');
-    expect(byLabel(aside as HTMLElement, 'a', 'Tablero')?.getAttribute('aria-current')).toBe(
+  it('titles the sidebar after its context and marks the active item with aria-current', async () => {
+    const { root } = await render('/profile/security');
+    const aside = root.querySelector<HTMLElement>('aside[aria-label="Mi cuenta"]');
+    expect(aside?.textContent).toContain('Mi cuenta');
+    expect(byLabel(aside as HTMLElement, 'a', 'Seguridad')?.getAttribute('aria-current')).toBe(
       'page',
     );
-    expect(byLabel(aside as HTMLElement, 'a', 'Permisos')?.hasAttribute('aria-current')).toBe(
-      false,
-    );
+    expect(byLabel(aside as HTMLElement, 'a', 'General')?.hasAttribute('aria-current')).toBe(false);
+  });
+
+  it('has no sidebar in the project pages, which carry their own tabs', async () => {
+    const { root } = await render('/projects/p1/board');
+    expect(root.querySelector('aside')).toBeNull();
+    expect(root.textContent).toContain('Tablero del proyecto');
   });
 
   it('has no sidebar in the global context', async () => {
@@ -242,7 +250,7 @@ describe('AppShell', () => {
   });
 
   it('collapses below 1280 px by default and persists a manual choice', async () => {
-    const { root } = await render('/projects/p1/board', { width: 1100 });
+    const { root } = await render('/profile/security', { width: 1100 });
     expect(root.querySelector('aside')?.getAttribute('data-collapsed')).toBe('true');
     byLabel(root, 'button', 'Expandir menú lateral')?.click();
     expect(window.localStorage.getItem('corelog.sidebar')).toBe('expanded');
@@ -251,23 +259,32 @@ describe('AppShell', () => {
 
   it('starts the sidebar expanded when the user chose that before', async () => {
     window.localStorage.setItem('corelog.sidebar', 'expanded');
-    const { root } = await render('/projects/p1/board', { width: 1100 });
+    const { root } = await render('/profile/security', { width: 1100 });
     expect(root.querySelector('aside')?.getAttribute('data-collapsed')).toBe('false');
   });
 
   it('replaces the sidebar with a drawer on mobile and opens it from the top bar', async () => {
-    const { root, harness } = await render('/projects/p1/board', { width: 390 });
+    const { root, harness } = await render('/profile/security', { width: 390 });
     expect(root.querySelector('aside')).toBeNull();
     expect(root.querySelector('nav[aria-label="Principal"]')).toBeNull();
     byLabel(root, 'button', 'Abrir menú de navegación')?.click();
     harness.fixture.detectChanges();
     const drawer = document.querySelector<HTMLElement>('nav[aria-label="Navegación móvil"]');
     expect(drawer).not.toBeNull();
-    expect(drawer?.textContent).toContain('Tablero');
+    expect(drawer?.textContent).toContain('Seguridad');
+  });
+
+  it('lists no context links in the phone drawer on project pages', async () => {
+    const { root, harness } = await render('/projects/p1/board', { width: 390 });
+    byLabel(root, 'button', 'Abrir menú de navegación')?.click();
+    harness.fixture.detectChanges();
+    const drawer = document.querySelector<HTMLElement>('nav[aria-label="Navegación móvil"]');
+    expect(drawer).not.toBeNull();
+    expect(drawer?.querySelector('[aria-label="Proyecto"]')).toBeNull();
   });
 
   it('groups the drawer: the four menus expand with real entries and the context links follow', async () => {
-    const { root, harness } = await render('/projects/p1/board', { width: 390 });
+    const { root, harness } = await render('/profile/security', { width: 390 });
     byLabel(root, 'button', 'Abrir menú de navegación')?.click();
     harness.fixture.detectChanges();
     const drawer = document.querySelector<HTMLElement>('nav[aria-label="Navegación móvil"]');
@@ -285,11 +302,11 @@ describe('AppShell', () => {
     harness.fixture.detectChanges();
     expect(toggles[0].getAttribute('aria-expanded')).toBe('true');
     expect(drawer?.textContent).toContain('Ver todos los proyectos');
-    expect(drawer?.textContent).toContain('Tablero');
+    expect(drawer?.textContent).toContain('Seguridad');
   });
 
   it('moves focus into the drawer when it opens and back to the opener when it closes', async () => {
-    const { root, harness } = await render('/projects/p1/board', { width: 390 });
+    const { root, harness } = await render('/profile/security', { width: 390 });
     const opener = byLabel(root, 'button', 'Abrir menú de navegación') as HTMLButtonElement;
     opener.focus();
     opener.click();
@@ -303,7 +320,7 @@ describe('AppShell', () => {
   });
 
   it('closes the phone drawer on Escape and keeps its organization switcher mounted', async () => {
-    const { root, harness } = await render('/projects/p1/board', { width: 390 });
+    const { root, harness } = await render('/profile/security', { width: 390 });
     byLabel(root, 'button', 'Abrir menú de navegación')?.click();
     harness.fixture.detectChanges();
     const drawer = root.querySelector<HTMLElement>('.nav-drawer');
@@ -315,9 +332,9 @@ describe('AppShell', () => {
   });
 
   it('moves the primary menus into the drawer at 820 px and keeps the sidebar', async () => {
-    const { root, harness } = await render('/projects/p1/board', { width: 820 });
+    const { root, harness } = await render('/profile/security', { width: 820 });
     expect(root.querySelector('nav[aria-label="Principal"]')).toBeNull();
-    expect(root.querySelector('aside[aria-label="Proyecto"]')).not.toBeNull();
+    expect(root.querySelector('aside[aria-label="Mi cuenta"]')).not.toBeNull();
     byLabel(root, 'button', 'Abrir menú de navegación')?.click();
     harness.fixture.detectChanges();
     const drawer = document.querySelector<HTMLElement>('nav[aria-label="Navegación móvil"]');

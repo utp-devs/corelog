@@ -1,29 +1,29 @@
 // PrimeNG fixes the container 20 px (one --cl-space-5) from the top and right through an inline style, so the
 // container is moved below the header with a margin instead. On phones it spans the screen minus a margin so
 // a toast is never cut off.
-.p-toast.toast-host {
-  margin-top: calc(var(--cl-topbar-h) + var(--cl-space-3) - var(--cl-space-5));
-  width: var(--cl-toast-w);
-  max-width: calc(100vw - 2 * var(--cl-space-4));
+.toast-host {
+  &.p-toast {
+    margin-top: calc(var(--cl-topbar-h) + var(--cl-space-3) - var(--cl-space-5));
+    width: var(--cl-toast-w);
+    max-width: calc(100vw - 2 * var(--cl-space-4));
 
-  .p-toast-message {
-    margin-bottom: var(--cl-space-2);
-  }
+    .p-toast-message {
+      margin-bottom: var(--cl-space-2);
+    }
 
-  .p-toast-summary {
-    line-height: var(--cl-lh-tight);
-  }
+    .p-toast-summary {
+      line-height: var(--cl-lh-tight);
+    }
 
-  .p-toast-detail {
-    margin-top: var(--cl-space-1);
-    line-height: var(--cl-lh-body);
-    overflow-wrap: anywhere;
-  }
-}
+    .p-toast-detail {
+      margin-top: var(--cl-space-1);
+      line-height: var(--cl-lh-body);
+      overflow-wrap: anywhere;
+    }
 
-@media (max-width: 639.98px) {
-  .p-toast.toast-host {
-    left: var(--cl-space-4);
-    width: auto;
+    @media (max-width: 639.98px) {
+      left: var(--cl-space-4);
+      width: auto;
+    }
   }
 }

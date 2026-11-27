@@ -5,17 +5,7 @@
   [attr.data-collapsed]="collapsed() ? 'true' : 'false'"
 >
   <div class="context-sidebar__header">
-    @if (project(); as current) {
-      <div class="context-sidebar__project">
-        <app-project-avatar [name]="current.name" [projectKey]="current.key" [size]="32" />
-        @if (!collapsed()) {
-          <span class="context-sidebar__project-text">
-            <span class="context-sidebar__project-name">{{ current.name }}</span>
-            <span class="context-sidebar__project-key">{{ current.key }}</span>
-          </span>
-        }
-      </div>
-    } @else if (!collapsed()) {
+    @if (!collapsed()) {
       <span class="context-sidebar__title">{{ title() }}</span>
     }
   </div>

@@ -28,7 +28,7 @@ import { filter, map } from 'rxjs';
 
 import { CreateIssueLauncher } from './create-issue-dialog';
 import { DEFAULT_SHELL_BRAND, type ShellBrand } from './brand';
-import { ContextSidebar, type SidebarProject } from './context-sidebar';
+import { ContextSidebar } from './context-sidebar';
 import {
   DEFAULT_SHELL_NAV_CONFIG,
   buildSidebar,
@@ -110,7 +110,7 @@ export class AppShell {
     return current.kind === 'project' ? current.projectId : null;
   });
 
-  protected readonly project = computed<SidebarProject | null>(() => {
+  private readonly project = computed<{ id: string; name: string; key: string } | null>(() => {
     const id = this.projectId();
     if (!id) return null;
     const found = this.projectStore.projects().find((item) => item.id === id);
@@ -128,9 +128,8 @@ export class AppShell {
       this.navConfig(),
     ),
   );
-  protected readonly showSidebar = computed(
-    () => !this.isMobile() && this.context().kind !== 'global',
-  );
+  /** Contexts without items (the project pages, which have their own tabs) get no sidebar at all. */
+  protected readonly showSidebar = computed(() => !this.isMobile() && this.items().length > 0);
   private readonly nav = computed(() => buildTopNav(this.org(), this.navConfig()));
   protected readonly topMenus = computed(() => this.nav().menus);
   protected readonly orgName = computed(() => this.nav().orgName);
@@ -154,7 +153,7 @@ export class AppShell {
       onCleanup(unregister);
     });
 
-    // The project header needs the projects list; load it when the URL points at a project not loaded yet.
+    // The recent items need the project name; load it when the URL points at a project not loaded yet.
     effect(() => {
       const id = this.projectId();
       const loaded = this.hasProject();

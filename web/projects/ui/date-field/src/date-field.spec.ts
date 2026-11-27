@@ -92,4 +92,14 @@ describe('DateField', () => {
     expect(toIsoDate(component.minDate() as Date)).toBe('2026-11-01');
     expect(toIsoDate(component.maxDate() as Date)).toBe('2026-12-31');
   });
+
+  it('lays the picker out as a flex row so the input fills its container instead of collapsing', () => {
+    const { el } = setup();
+    document.body.appendChild(el);
+    const picker = el.querySelector('p-datepicker') as HTMLElement;
+    const host = el.querySelector('app-date-field') as HTMLElement;
+    expect(getComputedStyle(picker).display).toBe('flex');
+    expect(getComputedStyle(host).minWidth).toBe('0px');
+    el.remove();
+  });
 });

@@ -21,12 +21,7 @@
 
   <div class="app-shell__body">
     @if (showSidebar()) {
-      <app-context-sidebar
-        [title]="sidebarTitle()"
-        [items]="items()"
-        [project]="project()"
-        [currentPath]="pathname()"
-      />
+      <app-context-sidebar [title]="sidebarTitle()" [items]="items()" [currentPath]="pathname()" />
     }
 
     <main id="main-content" #main tabindex="-1" class="app-shell__main">

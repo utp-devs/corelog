@@ -89,18 +89,10 @@ describe('buildSidebar', () => {
     expect(buildSidebar({ kind: 'global' }, adminPerms)).toEqual([]);
   });
 
-  it('lists project items under the project base path', () => {
-    const items = buildSidebar({ kind: 'project', projectId: 'p1' }, new Set());
-    expect(items.map((i) => i.key)).toEqual(['board', 'backlog', 'sprints', 'calendar']);
-    expect(items[0]?.path).toBe('/projects/p1/board');
-  });
-
-  it('hides project permissions without the permission and shows it with it', () => {
+  it('lists no sidebar items on project pages, which have their own tabs', () => {
     const context = { kind: 'project', projectId: 'p1' } as const;
-    expect(buildSidebar(context, new Set()).map((i) => i.key)).not.toContain('permissions');
-    expect(buildSidebar(context, adminPerms)).toContainEqual(
-      expect.objectContaining({ key: 'permissions', path: '/projects/p1/permisos' }),
-    );
+    expect(buildSidebar(context, new Set())).toEqual([]);
+    expect(buildSidebar(context, adminPerms)).toEqual([]);
   });
 
   it('hides org admin items from users without org.admin', () => {
@@ -117,7 +109,6 @@ describe('buildSidebar', () => {
       '/profile',
       '/profile/security',
       '/profile/notifications',
-      '/profile/tokens',
       '/profile/appearance',
     ]);
     expect(sidebarTitleOf({ kind: 'project', projectId: 'p1' }, DEFAULT_SHELL_NAV_CONFIG)).toBe(

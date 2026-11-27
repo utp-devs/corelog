@@ -48,27 +48,6 @@
     font-weight: var(--cl-weight-semibold);
   }
 
-  &__project {
-    @include m.flex-row(2);
-    min-width: 0;
-  }
-
-  &__project-text {
-    @include m.flex-column(0);
-    min-width: 0;
-  }
-
-  &__project-name {
-    @include m.truncate;
-    color: var(--cl-text);
-    font-weight: var(--cl-weight-semibold);
-  }
-
-  &__project-key {
-    color: var(--cl-text-subtle);
-    font-size: var(--cl-font-small);
-  }
-
   &__nav {
     flex: 1 1 auto;
     min-height: 0;
