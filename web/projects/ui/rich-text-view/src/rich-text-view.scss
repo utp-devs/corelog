@@ -1,0 +1,230 @@
+// Markup is inserted as DOM nodes by the component, so these rules are global
+// and scoped under the host class instead of component-emulated attributes.
+
+.rich-text-view {
+  display: block;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-size: var(--cl-font-body);
+  line-height: 1.5;
+  color: var(--cl-text);
+
+  p,
+  ul,
+  ol,
+  blockquote,
+  pre,
+  table {
+    margin: 0 0 var(--cl-space-2);
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    margin: var(--cl-space-3) 0 var(--cl-space-2);
+    font-size: var(--cl-font-body-strong);
+    font-weight: 600;
+  }
+
+  ul,
+  ol {
+    padding-left: var(--cl-space-6);
+  }
+
+  blockquote {
+    padding-left: var(--cl-space-3);
+    border-left: 3px solid var(--cl-border-strong);
+    color: var(--cl-text-subtle);
+  }
+
+  // GFM task lists: the checkbox replaces the bullet.
+  li:has(> input[type='checkbox']) {
+    list-style: none;
+    margin-left: calc(var(--cl-space-4) * -1);
+  }
+
+  code {
+    padding: 0 var(--cl-space-1);
+    border-radius: var(--cl-radius-sm);
+    background: var(--cl-bg-sunken);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: var(--cl-font-small);
+  }
+
+  pre {
+    overflow-x: auto;
+    padding: var(--cl-space-3);
+    border-radius: var(--cl-radius-md);
+    background: var(--cl-bg-sunken);
+
+    code {
+      padding: 0;
+      background: none;
+    }
+  }
+
+  table {
+    display: block;
+    max-width: 100%;
+    overflow-x: auto;
+    border-collapse: collapse;
+  }
+
+  th,
+  td {
+    padding: var(--cl-space-1) var(--cl-space-2);
+    border: 1px solid var(--cl-border);
+    text-align: left;
+  }
+
+  th {
+    background: var(--cl-bg-sunken);
+    font-weight: 600;
+  }
+
+  .cl-rt-link {
+    color: var(--cl-brand);
+    text-decoration: underline;
+  }
+
+  .cl-rt-unsafe-link {
+    color: var(--cl-text-subtle);
+    text-decoration: underline dotted;
+  }
+
+  .cl-rt-link:focus-visible,
+  .cl-rt-mention--button:focus-visible,
+  .cl-rt-image-button:focus-visible,
+  .cl-rt-issue:focus-visible {
+    outline: none;
+    border-radius: var(--cl-radius-sm);
+    box-shadow: var(--cl-shadow-focus);
+  }
+
+  .cl-rt-issue {
+    color: var(--cl-brand);
+    font-weight: 600;
+    text-decoration: none;
+  }
+
+  .cl-rt-issue--resolved {
+    color: var(--cl-text-subtle);
+    text-decoration: line-through;
+  }
+
+  .cl-rt-mention,
+  .cl-rt-mention--button {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--cl-space-1);
+    vertical-align: middle;
+    padding: 0 var(--cl-space-1);
+    border: none;
+    border-radius: var(--cl-radius-full);
+    background: var(--cl-brand-subtle);
+    color: var(--cl-brand-pressed);
+    font: inherit;
+  }
+
+  .cl-rt-mention--button {
+    cursor: pointer;
+  }
+
+  .cl-rt-avatar {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    border-radius: var(--cl-radius-full);
+    background: var(--cl-brand);
+    color: var(--cl-avatar-1-text);
+    font-size: var(--cl-font-caption);
+    font-weight: 600;
+  }
+
+  .cl-rt-image-button {
+    padding: 0;
+    border: none;
+    background: none;
+    cursor: zoom-in;
+  }
+
+  .cl-rt-image {
+    display: block;
+    max-width: 100%;
+    max-height: 320px;
+    border-radius: var(--cl-radius-md);
+  }
+}
+
+@media (max-width: 767.98px) {
+  .rich-text-view .cl-rt-mention--button {
+    min-height: 44px;
+    padding: 0 var(--cl-space-3);
+  }
+}
+
+.rich-text-lightbox-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: var(--cl-z-modal);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--cl-space-4);
+  background: var(--cl-overlay);
+}
+
+.rich-text-lightbox {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cl-space-3);
+  width: min(960px, 100%);
+  max-height: 90vh;
+  padding: var(--cl-space-4);
+  overflow: auto;
+  border-radius: var(--cl-radius-lg);
+  background: var(--cl-bg-surface);
+  box-shadow: var(--cl-shadow-3);
+
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--cl-space-2);
+  }
+
+  &__title {
+    font-size: var(--cl-font-body-strong);
+    font-weight: 600;
+    color: var(--cl-text);
+  }
+
+  &__close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 44px;
+    min-height: 44px;
+    border: none;
+    border-radius: var(--cl-radius-md);
+    background: transparent;
+    color: var(--cl-text);
+    cursor: pointer;
+
+    &:focus-visible {
+      outline: none;
+      box-shadow: var(--cl-shadow-focus);
+    }
+  }
+
+  &__image {
+    display: block;
+    max-width: 100%;
+    margin: 0 auto;
+  }
+}

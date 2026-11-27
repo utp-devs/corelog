@@ -1,0 +1,28 @@
+<div #content class="rich-text-view__body"></div>
+
+@if (lightbox(); as image) {
+  <div class="rich-text-lightbox-backdrop" (click)="onBackdropClick($event)">
+    <div
+      class="rich-text-lightbox"
+      role="dialog"
+      aria-modal="true"
+      data-testid="rich-text-lightbox"
+      [attr.aria-label]="image.alt || 'Imagen'"
+      (keydown.escape)="closeLightbox()"
+    >
+      <div class="rich-text-lightbox__header">
+        <span class="rich-text-lightbox__title">{{ image.alt || 'Imagen' }}</span>
+        <button
+          #closeButton
+          type="button"
+          class="rich-text-lightbox__close"
+          aria-label="Cerrar"
+          (click)="closeLightbox()"
+        >
+          <i class="pi pi-times" aria-hidden="true"></i>
+        </button>
+      </div>
+      <img class="rich-text-lightbox__image" [src]="image.src" [alt]="image.alt" />
+    </div>
+  </div>
+}

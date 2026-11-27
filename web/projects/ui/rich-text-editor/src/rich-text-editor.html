@@ -1,0 +1,155 @@
+<div
+  class="root"
+  [attr.data-dragging]="dragging() ? 'true' : null"
+  (dragover)="onDragOver($event)"
+  (dragleave)="onDragLeave()"
+  (drop)="onDrop($event)"
+>
+  <div class="header">
+    @if (mode() === 'write') {
+      <div class="toolbar" role="toolbar" aria-label="Formato del texto">
+        @for (btn of formatButtons; track btn.action) {
+          <button
+            type="button"
+            class="tool-button"
+            [attr.aria-label]="btn.label"
+            [title]="btn.label"
+            [disabled]="disabled()"
+            (click)="runToolbar(btn.action)"
+          >
+            <i [class]="btn.icon" aria-hidden="true"></i>
+          </button>
+        }
+        <button
+          type="button"
+          class="tool-button"
+          aria-label="Mencionar persona"
+          title="Mencionar persona"
+          [disabled]="disabled()"
+          (click)="insertMentionTrigger()"
+        >
+          <i class="pi pi-at" aria-hidden="true"></i>
+        </button>
+        <button
+          type="button"
+          class="tool-button"
+          aria-label="Enlazar incidencia"
+          title="Enlazar incidencia"
+          [disabled]="disabled()"
+          (click)="insertIssueTrigger()"
+        >
+          <i class="pi pi-hashtag" aria-hidden="true"></i>
+        </button>
+        @if (uploadImage()) {
+          <button
+            type="button"
+            class="tool-button"
+            aria-label="Subir imagen"
+            title="Subir imagen"
+            [disabled]="disabled() || uploading()"
+            (click)="openFilePicker()"
+          >
+            <i class="pi pi-image" aria-hidden="true"></i>
+          </button>
+        }
+        <input
+          #fileInput
+          type="file"
+          class="visually-hidden"
+          [accept]="acceptedTypes"
+          aria-label="Seleccionar imagen"
+          tabindex="-1"
+          (change)="onFileChange($event)"
+        />
+      </div>
+    }
+    <div class="modes">
+      <button
+        type="button"
+        class="mode-button"
+        [attr.aria-pressed]="mode() === 'write'"
+        (click)="setMode('write')"
+      >
+        <i class="pi pi-pencil" aria-hidden="true"></i>
+        Escribir
+      </button>
+      <button
+        type="button"
+        class="mode-button"
+        [attr.aria-pressed]="mode() === 'preview'"
+        (click)="setMode('preview')"
+      >
+        <i class="pi pi-eye" aria-hidden="true"></i>
+        Vista previa
+      </button>
+    </div>
+  </div>
+
+  @if (mode() === 'write') {
+    <div class="editor-area">
+      <textarea
+        #textarea
+        [id]="id"
+        class="textarea"
+        [attr.rows]="minRows()"
+        [value]="value()"
+        [placeholder]="placeholder()"
+        [disabled]="disabled()"
+        [attr.aria-label]="ariaLabel()"
+        aria-multiline="true"
+        [attr.aria-keyshortcuts]="submittable() ? 'Control+Enter' : null"
+        [attr.aria-autocomplete]="popup() ? 'list' : null"
+        [attr.aria-expanded]="showListbox()"
+        [attr.aria-controls]="showListbox() ? listboxId : null"
+        [attr.aria-activedescendant]="activeOptionId()"
+        (input)="onInput($event)"
+        (keydown)="onKeyDown($event)"
+        (paste)="onPaste($event)"
+        (blur)="onBlur()"
+      ></textarea>
+      @if (showListbox()) {
+        <ul [id]="listboxId" class="listbox" role="listbox" [attr.aria-label]="pickerLabel()">
+          @if (pickerLoading()) {
+            <li class="option-detail">Buscando…</li>
+          }
+          @for (item of currentItems(); track item.id; let i = $index) {
+            <li
+              [id]="optionId(i)"
+              class="option"
+              role="option"
+              [attr.aria-selected]="i === activeIndex()"
+              (mousedown)="$event.preventDefault(); pickItem(item)"
+            >
+              <span>{{ item.label }}</span>
+              @if (item.detail) {
+                <span class="option-detail">{{ item.detail }}</span>
+              }
+            </li>
+          }
+        </ul>
+      }
+    </div>
+  } @else {
+    <div class="preview" role="region" aria-label="Vista previa">
+      @if (value().trim()) {
+        <app-rich-text-view [value]="value()" />
+      } @else {
+        <span class="option-detail">Nada que previsualizar.</span>
+      }
+    </div>
+  }
+
+  <div class="footer">
+    <span>
+      @if (uploading()) {
+        <span role="status">Subiendo imagen…</span>
+      }
+      @if (uploadError(); as error) {
+        <span role="alert" class="error">{{ error }}</span>
+      }
+    </span>
+    @if (submittable()) {
+      <span>Ctrl+Enter para enviar</span>
+    }
+  </div>
+</div>
