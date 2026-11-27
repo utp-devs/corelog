@@ -23,6 +23,7 @@ const (
 	StatusClosed     IssueStatus = "closed"
 )
 
+// Board is a view of the issues of a project. Its columns map to sets of workflow statuses.
 type Board struct {
 	ID        uuid.UUID
 	ProjectID uuid.UUID
@@ -33,8 +34,19 @@ type Board struct {
 	Columns   []Column
 	CreatedAt time.Time
 	UpdatedAt time.Time
+
+	SwimlaneMode     SwimlaneMode
+	Estimation       Estimation
+	CardFields       []string
+	ShowUnmappedLane bool
+	// DoneRetentionDays hides the cards of done statuses not updated for that many days; nil keeps them all.
+	DoneRetentionDays *int
+	QuickFilters      []QuickFilter
+	Swimlanes         []Swimlane
 }
 
+// Column is a board column. WIPLimit is the maximum number of cards (max_issues in the API). The legacy Status is
+// kept for boards created before columns were bound to workflow statuses.
 type Column struct {
 	ID        uuid.UUID
 	BoardID   uuid.UUID
@@ -42,6 +54,9 @@ type Column struct {
 	Status    IssueStatus
 	Position  int
 	WIPLimit  *int
+	MinIssues *int
+	Color     string
+	StatusIDs []uuid.UUID
 	CreatedAt time.Time
 	UpdatedAt time.Time
 	Cards     []IssueCard

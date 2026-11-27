@@ -15,6 +15,7 @@ import (
 
 type Handler struct {
 	service   port.Service
+	boards    port.BoardsService
 	jwtSecret string
 }
 
@@ -23,6 +24,9 @@ func NewHandler(service port.Service, jwtSecret string) *Handler {
 }
 
 func (h *Handler) RegisterRoutes(r chi.Router) {
+	if h.boards != nil {
+		h.registerBoardRoutes(r)
+	}
 	r.Route("/projects/{id}/board", func(r chi.Router) {
 		r.Use(appmw.Authenticate(h.jwtSecret))
 		r.Get("/", h.Get)

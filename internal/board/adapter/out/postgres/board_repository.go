@@ -13,10 +13,12 @@ import (
 
 type BoardRepository struct {
 	db *sqlx.DB
+	// q runs the read statements; it is the pool unless a test wraps it to count statements.
+	q sqlx.ExtContext
 }
 
 func NewBoardRepository(db *sqlx.DB) *BoardRepository {
-	return &BoardRepository{db: db}
+	return &BoardRepository{db: db, q: db}
 }
 
 var _ port.Repository = (*BoardRepository)(nil)
@@ -45,7 +47,7 @@ type boardColumnIssueRow struct {
 func (r *BoardRepository) FindDefaultByProject(ctx context.Context, projectID uuid.UUID) (*domain.Board, error) {
 	const query = `
 		SELECT b.id AS board_id, b.project_id, b.name AS board_name, b.type AS board_type,
-		       c.id AS column_id, c.name AS column_name, c.status AS column_status,
+		       c.id AS column_id, c.name AS column_name, COALESCE(c.status, '') AS column_status,
 		       c.position AS column_position, c.wip_limit,
 		       i.id AS issue_id, i.issue_type, i.summary, i.status AS issue_status,
 		       i.priority, i.assignee_id, assignee.name AS assignee_name,
