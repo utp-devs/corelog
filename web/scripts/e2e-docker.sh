@@ -6,9 +6,11 @@
 # Limits (override with env): DOCKER_CPUS (default 4), DOCKER_MEMORY (default 6g), PW_WORKERS (default 2),
 # PW_OUT (host dir receiving test-results; default web/test-results), PW_IMAGE (default mcr.microsoft.com/playwright:v1.65.1-noble), E2E_BASE_URL, E2E_API_URL.
 set -eu
+. "$(dirname "$0")/docker-lock.sh"
+acquire_docker_lock
 ROOT="$(cd "$(dirname "$0")/.." && pwd -W 2>/dev/null || pwd)"
 ENV_FILE="${E2E_ENV_FILE:-$ROOT/.env.e2e}"
-exec docker run --rm --ipc=host \
+docker run --rm --ipc=host \
   --cpus="${DOCKER_CPUS:-4}" --memory="${DOCKER_MEMORY:-6g}" \
   --env-file "$ENV_FILE" \
   -e CI= -e E2E_ENV_FILE= -e PW_WORKERS="${PW_WORKERS:-2}" \
