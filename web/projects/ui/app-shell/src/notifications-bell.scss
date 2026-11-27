@@ -9,8 +9,9 @@
 
   &__panel {
     @include m.flex-column(2);
-    width: var(--cl-popover-w);
-    max-width: calc(100vw - var(--cl-space-8));
+    /* The popover adds its own padding and caps its width at the popover token. */
+    width: calc(var(--cl-popover-w) - 2 * var(--cl-space-4));
+    max-width: calc(100vw - var(--cl-space-12));
     max-height: 26rem;
     overflow-y: auto;
   }

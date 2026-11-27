@@ -180,6 +180,10 @@
     left: 0;
     z-index: var(--cl-z-dropdown);
     margin: var(--cl-space-1) 0 0;
+    padding: var(--cl-space-1) var(--cl-space-2);
+    border-radius: var(--cl-radius-sm);
+    background: var(--cl-bg-elevated);
+    box-shadow: var(--cl-elev-raised);
     white-space: nowrap;
     font-size: var(--cl-font-small);
     color: var(--cl-text-subtle);

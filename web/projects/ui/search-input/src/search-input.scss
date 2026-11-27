@@ -10,7 +10,7 @@
   position: relative;
   @include m.flex-row;
   // A search field never gets narrower than a readable placeholder.
-  min-width: min(100%, 14rem);
+  min-width: min(100%, 16rem);
 
   &__icon {
     position: absolute;
