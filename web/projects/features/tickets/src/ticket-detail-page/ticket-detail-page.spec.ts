@@ -7,7 +7,14 @@ import { guardConsole, installViewport } from '@corelog/core/testing';
 import { NEVER, of, throwError } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { ISSUE_ID, memberOf, setupTickets, ticketOf, userOf } from '../testing/ticket-test-kit';
+import {
+  ISSUE_ID,
+  memberOf,
+  projectOf,
+  setupTickets,
+  ticketOf,
+  userOf,
+} from '../testing/ticket-test-kit';
 import { TicketDetailPage } from './ticket-detail-page';
 
 @Component({ selector: 'app-list-stub', template: '<p>Listado de incidencias</p>' })
@@ -319,6 +326,25 @@ describe('TicketDetailPage', () => {
     await renderDetail();
 
     expect(ctx.projectApi.listMembers).toHaveBeenCalledWith(expect.any(String), { silent: true });
+  });
+
+  it('says the project is archived and offers no edit controls', async () => {
+    setupTickets({
+      user: userOf({ role: 'user' }),
+      ticketApi: { getById: () => of(ticketOf({})) },
+      projectApi: {
+        listMembers: () => of([memberOf('user-1', 'contributor')]),
+        get: () => of(projectOf({ archivedAt: '2026-03-01T00:00:00Z' })),
+      },
+    });
+    await renderDetail();
+
+    expect(document.body.textContent).toContain(
+      'Este proyecto está archivado y es de solo lectura',
+    );
+    expect(buttonIn(document, 'Editar')).toBeUndefined();
+    expect(buttonIn(document, 'Vincular')).toBeUndefined();
+    expect(buttonIn(document, 'Cargar archivo (máximo 10 MB)')?.disabled).toBe(true);
   });
 
   it('shows the clear option to a project contributor who is not a platform admin', async () => {

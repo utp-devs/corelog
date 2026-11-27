@@ -176,6 +176,25 @@ describe('ProjectsPage', () => {
     expect(byTestId(closed.root, 'projects-create')).toBeNull();
   });
 
+  it('does not read the member directory for guests and reads it silently for others', async () => {
+    const guest = await render({
+      organization: { role: 'guest', policy: 'members' },
+      role: 'user',
+      projectApi: { listPage: () => page(projects) },
+      orgApi: { listMembers: () => of([]) },
+    });
+    expect(guest.env.orgApi['listMembers']).not.toHaveBeenCalled();
+    TestBed.resetTestingModule();
+
+    const member = await render({
+      projectApi: { listPage: () => page(projects) },
+      orgApi: { listMembers: () => of([]) },
+    });
+    expect(member.env.orgApi['listMembers']).toHaveBeenCalledWith(expect.anything(), {
+      silent: true,
+    });
+  });
+
   it('teases the templates when the organization has no projects', async () => {
     const { root } = await render({ projectApi: { listPage: () => page([]) } });
 

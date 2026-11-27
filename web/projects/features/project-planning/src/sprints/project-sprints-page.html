@@ -8,6 +8,7 @@
       title="Sprints"
       subtitle="Planifica el trabajo, activa un sprint y ciérralo al terminar."
     />
+    <app-archived-notice />
 
     @if (loadErrorMessage(); as message) {
       <app-error-state [message]="message" [canRetry]="true" (retry)="store.retry()" />
@@ -57,49 +58,51 @@
             }
           </app-section>
 
-          <app-section title="Nuevo sprint">
-            <div class="project-sprints__form">
-              <app-field-row #nameRow label="Nombre" [required]="true">
-                <input
-                  pInputText
-                  appFieldControl
-                  type="text"
-                  placeholder="Sprint 3"
-                  maxlength="80"
-                  [value]="draft().name"
-                  (input)="setDraft('name', $event)"
-                />
-              </app-field-row>
-              <app-field-row #goalRow label="Objetivo" [optional]="true">
-                <input
-                  pInputText
-                  appFieldControl
-                  type="text"
-                  maxlength="500"
-                  [value]="draft().goal"
-                  (input)="setDraft('goal', $event)"
-                />
-              </app-field-row>
-              <div class="project-sprints__dates-row">
-                <app-field-row #startRow label="Inicio" [optional]="true">
-                  <app-date-field
-                    [inputId]="startRow.controlId"
-                    [ngModel]="draft().startDate || null"
-                    (ngModelChange)="setDraftDate('startDate', $event)"
+          @if (!archived()) {
+            <app-section title="Nuevo sprint">
+              <div class="project-sprints__form">
+                <app-field-row #nameRow label="Nombre" [required]="true">
+                  <input
+                    pInputText
+                    appFieldControl
+                    type="text"
+                    placeholder="Sprint 3"
+                    maxlength="80"
+                    [value]="draft().name"
+                    (input)="setDraft('name', $event)"
                   />
                 </app-field-row>
-                <app-field-row #endRow label="Fin" [optional]="true">
-                  <app-date-field
-                    [inputId]="endRow.controlId"
-                    [min]="draft().startDate || null"
-                    [ngModel]="draft().endDate || null"
-                    (ngModelChange)="setDraftDate('endDate', $event)"
+                <app-field-row #goalRow label="Objetivo" [optional]="true">
+                  <input
+                    pInputText
+                    appFieldControl
+                    type="text"
+                    maxlength="500"
+                    [value]="draft().goal"
+                    (input)="setDraft('goal', $event)"
                   />
                 </app-field-row>
+                <div class="project-sprints__dates-row">
+                  <app-field-row #startRow label="Inicio" [optional]="true">
+                    <app-date-field
+                      [inputId]="startRow.controlId"
+                      [ngModel]="draft().startDate || null"
+                      (ngModelChange)="setDraftDate('startDate', $event)"
+                    />
+                  </app-field-row>
+                  <app-field-row #endRow label="Fin" [optional]="true">
+                    <app-date-field
+                      [inputId]="endRow.controlId"
+                      [min]="draft().startDate || null"
+                      [ngModel]="draft().endDate || null"
+                      (ngModelChange)="setDraftDate('endDate', $event)"
+                    />
+                  </app-field-row>
+                </div>
+                <p-button label="Planificar sprint" icon="pi pi-plus" (onClick)="store.create()" />
               </div>
-              <p-button label="Planificar sprint" icon="pi pi-plus" (onClick)="store.create()" />
-            </div>
-          </app-section>
+            </app-section>
+          }
         </div>
 
         <div class="project-sprints__main">
@@ -112,10 +115,10 @@
                 <app-lozenge [tone]="statusTone(sprint.status)">{{
                   statusLabel(sprint.status)
                 }}</app-lozenge>
-                @if (sprint.status === 'planned') {
+                @if (sprint.status === 'planned' && !archived()) {
                   <p-button label="Iniciar sprint" (onClick)="store.start(sprint.id)" />
                 }
-                @if (sprint.status === 'active') {
+                @if (sprint.status === 'active' && !archived()) {
                   <p-button
                     severity="danger"
                     [outlined]="true"
@@ -187,7 +190,7 @@
             }
 
             <app-section title="Incidencias del sprint">
-              @if (sprint.status !== 'closed') {
+              @if (sprint.status !== 'closed' && !archived()) {
                 <div class="project-sprints__add">
                   <p-select
                     ariaLabel="Incidencia a añadir"

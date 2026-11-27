@@ -1,6 +1,6 @@
 <app-section title="Descripción">
   <div appSectionActions>
-    @if (!editing()) {
+    @if (!editing() && !readOnly()) {
       <p-button
         label="Editar"
         icon="pi pi-pencil"

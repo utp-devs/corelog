@@ -15,6 +15,7 @@
             : 'Arrastra una incidencia a otra columna, o usa el menú «Mover a» de cada tarjeta.'
         "
       />
+      <app-archived-notice />
       <p class="project-board__live" role="status" aria-live="polite">{{ announcement() }}</p>
 
       @if (store.moveError(); as message) {

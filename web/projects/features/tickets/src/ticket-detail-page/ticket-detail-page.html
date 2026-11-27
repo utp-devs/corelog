@@ -30,6 +30,8 @@
               [tone]="statusTone(selected.status)"
               [value]="selected.status"
               [options]="statusOptions()"
+              [locked]="archived()"
+              [disabledReason]="archivedReason"
               [onSave]="saveStatus"
             />
           </app-field-row>
@@ -47,6 +49,8 @@
                 appearance="field"
                 [value]="selected.priority"
                 [options]="priorityOptions"
+                [locked]="archived()"
+                [disabledReason]="archivedReason"
                 [onSave]="savePriority"
               />
             </div>
@@ -54,7 +58,9 @@
 
           <app-field-row
             label="Responsable"
-            [disabledReason]="canChangeAssignee() ? undefined : noAssignPermission"
+            [disabledReason]="
+              canChangeAssignee() ? undefined : archived() ? archivedReason : noAssignPermission
+            "
           >
             <app-user-picker
               ariaLabel="Responsable"
@@ -63,7 +69,7 @@
               [allowClear]="false"
               [loading]="teammates.loading() || names.isLoading() || assigning()"
               [disabled]="assigning() || !canChangeAssignee()"
-              [disabledReason]="noAssignPermission"
+              [disabledReason]="archived() ? archivedReason : noAssignPermission"
               placeholder="Sin asignar"
               (valueChange)="assign($event)"
               (search)="teammates.search($event)"
@@ -150,6 +156,13 @@
         <p-message severity="error" [closable]="false">{{ message }}</p-message>
       }
 
+      <app-archived-notice
+        [archived]="archived()"
+        [projectId]="projectId() ?? null"
+        [canRestore]="canRestoreProject()"
+        (restored)="archived.set(false)"
+      />
+
       <header class="ticket-detail__header">
         <app-breadcrumbs [items]="breadcrumbs()" />
         <div class="ticket-detail__bar">
@@ -202,6 +215,8 @@
             label="Título"
             type="text"
             [value]="selected.title"
+            [locked]="archived()"
+            [disabledReason]="archivedReason"
             [onSave]="saveTitle"
           />
         </h1>
@@ -236,6 +251,7 @@
         [ticket]="selected"
         [saveDetails]="saveDetails"
         [searchUsers]="mentionSearch"
+        [readOnly]="archived()"
       />
 
       <app-section title="Adjuntos">
@@ -259,7 +275,7 @@
           severity="secondary"
           [outlined]="true"
           class="touch-target"
-          [disabled]="attachmentsLoading()"
+          [disabled]="attachmentsLoading() || archived()"
           (onClick)="fileInput.click()"
         />
 
@@ -293,26 +309,28 @@
       </app-section>
 
       <app-section title="Vínculos">
-        <div class="ticket-detail__link-form">
-          <app-issue-picker
-            class="ticket-detail__link-picker"
-            [excludeId]="selected.id"
-            [(value)]="linkTarget"
-          />
-          <app-select-field
-            ariaLabel="Tipo de vínculo"
-            class="ticket-detail__link-kind"
-            [options]="linkKindOptions"
-            [ngModel]="linkKind()"
-            (ngModelChange)="onLinkKind($event)"
-          />
-          <p-button
-            label="Vincular"
-            class="touch-target"
-            [disabled]="collaborationLoading() || !linkTarget()"
-            (onClick)="createLink()"
-          />
-        </div>
+        @if (!archived()) {
+          <div class="ticket-detail__link-form">
+            <app-issue-picker
+              class="ticket-detail__link-picker"
+              [excludeId]="selected.id"
+              [(value)]="linkTarget"
+            />
+            <app-select-field
+              ariaLabel="Tipo de vínculo"
+              class="ticket-detail__link-kind"
+              [options]="linkKindOptions"
+              [ngModel]="linkKind()"
+              (ngModelChange)="onLinkKind($event)"
+            />
+            <p-button
+              label="Vincular"
+              class="touch-target"
+              [disabled]="collaborationLoading() || !linkTarget()"
+              (onClick)="createLink()"
+            />
+          </div>
+        }
 
         @if (collaborationLoading()) {
           <app-loading-skeleton variant="card" />
@@ -328,13 +346,15 @@
                     linkKey(link)
                   }}</a>
                 </span>
-                <p-button
-                  label="Eliminar"
-                  severity="danger"
-                  [text]="true"
-                  class="touch-target"
-                  (onClick)="removeLink(link.id)"
-                />
+                @if (!archived()) {
+                  <p-button
+                    label="Eliminar"
+                    severity="danger"
+                    [text]="true"
+                    class="touch-target"
+                    (onClick)="removeLink(link.id)"
+                  />
+                }
               </li>
             }
           </ul>
@@ -345,7 +365,7 @@
         [comments]="visibleComments()"
         [activities]="visibleActivities()"
         [loading]="collaborationLoading()"
-        [currentUser]="currentUser()"
+        [currentUser]="archived() ? null : currentUser()"
         [nameOf]="nameOf"
         [searchUsers]="mentionSearch"
         [onCreate]="createComment"

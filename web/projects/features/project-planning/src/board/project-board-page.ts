@@ -31,6 +31,7 @@ import {
   PROJECT_MOBILE_QUERY,
   projectAccessVariantOf,
 } from '@corelog/core';
+import { ArchivedNotice } from '@corelog/ui/archived-notice';
 import { DropdownMenu } from '@corelog/ui/app-shell';
 import { EmptyState } from '@corelog/ui/empty-state';
 import { ErrorPage } from '@corelog/ui/error-page';
@@ -70,6 +71,7 @@ const LOAD_ERROR_MESSAGE =
 @Component({
   selector: 'app-project-board-page',
   imports: [
+    ArchivedNotice,
     FormsModule,
     CdkDrag,
     CdkDragPreview,
@@ -100,6 +102,7 @@ export class ProjectBoardPage {
   private readonly auth = inject(AuthStore);
   private readonly orgs = inject(OrganizationStore);
   private readonly projects = inject(ProjectStore);
+  private readonly currentProject = inject(CurrentProjectStore);
   private readonly breakpoints = inject(BreakpointService);
   private readonly destroyRef = inject(DestroyRef);
 
@@ -110,14 +113,16 @@ export class ProjectBoardPage {
   protected readonly isMobile = this.breakpoints.matches(PROJECT_MOBILE_QUERY);
   protected readonly skeletonColumns = [0, 1, 2, 3];
 
-  /** Viewers and guests see the board but cannot move cards or change limits. */
-  protected readonly readOnly = computed(() =>
-    isReadOnlyRole(
-      this.auth.user()?.role,
-      this.orgs.currentRole(),
-      this.auth.user()?.id,
-      this.projects.members(),
-    ),
+  /** Viewers, guests and archived projects: the board can be read but not changed. */
+  protected readonly readOnly = computed(
+    () =>
+      this.currentProject.isArchived() ||
+      isReadOnlyRole(
+        this.auth.user()?.role,
+        this.orgs.currentRole(),
+        this.auth.user()?.id,
+        this.projects.members(),
+      ),
   );
   protected readonly canManage = computed(
     () => (this.board()?.canManageBoard ?? false) && !this.readOnly(),

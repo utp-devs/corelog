@@ -44,6 +44,7 @@ import {
   issuePath,
   projectPath,
 } from '@corelog/core';
+import { ArchivedNotice } from '@corelog/ui/archived-notice';
 import { BreadcrumbItem, Breadcrumbs } from '@corelog/ui/breadcrumbs';
 import { trackRecent } from '@corelog/ui/command-palette';
 import { ErrorState } from '@corelog/ui/error-state';
@@ -74,6 +75,7 @@ import { TicketActivity } from './ticket-activity';
 import { TicketDescriptionSection } from './ticket-description-section';
 
 const COLLABORATION_ERROR = 'No se pudo cargar toda la información de colaboración.';
+const ARCHIVED_REASON = 'El proyecto está archivado y es de solo lectura.';
 const NO_PERMISSION_TO_ASSIGN = 'No tienes permiso para cambiar el responsable.';
 /** Same breakpoints as the page container: the side panel stacks below 992 px, phones are below 768 px. */
 const STACKED_QUERY = '(max-width: 991.98px)';
@@ -120,6 +122,7 @@ interface ProjectMembership {
   selector: 'app-ticket-detail-page',
   imports: [
     AppTooltip,
+    ArchivedNotice,
     Breadcrumbs,
     Button,
     DatePipe,
@@ -260,11 +263,24 @@ export class TicketDetailPage {
     const loaded = this.membership();
     if (!ticket || !loaded || loaded.projectId !== ticket.projectId) return false;
     const user = this.auth.user();
-    return hasProjectPermission(
-      effectiveProjectRole(user?.role, user?.id, loaded.members),
-      'edit_issue',
+    return (
+      !this.archived() &&
+      hasProjectPermission(effectiveProjectRole(user?.role, user?.id, loaded.members), 'edit_issue')
     );
   });
+  /** Whether the project of the issue is archived: the issue can be read but not changed. */
+  protected readonly archived = signal(false);
+  protected readonly canRestoreProject = computed(() => {
+    const loaded = this.membership();
+    const user = this.auth.user();
+    if (!loaded || loaded.projectId !== this.projectId()) return false;
+    return hasProjectPermission(
+      effectiveProjectRole(user?.role, user?.id, loaded.members),
+      'edit_project',
+    );
+  });
+  /** Why an archived project blocks every edit. */
+  protected readonly archivedReason = ARCHIVED_REASON;
   protected readonly assigning = signal(false);
   protected readonly assignAnnouncement = signal('');
   protected readonly currentUser = computed(() => {
@@ -376,7 +392,12 @@ export class TicketDetailPage {
 
     effect(() => {
       const projectId = this.projectId();
-      if (projectId) untracked(() => this.loadMembership(projectId));
+      if (projectId) {
+        untracked(() => {
+          this.loadMembership(projectId);
+          this.loadArchived(projectId);
+        });
+      }
     });
 
     // The breadcrumb names the project: the projects list is loaded when it is not there yet.
@@ -412,7 +433,10 @@ export class TicketDetailPage {
       }
     });
 
-    this.destroyRef.onDestroy(() => this.membersRequest?.unsubscribe());
+    this.destroyRef.onDestroy(() => {
+      this.membersRequest?.unsubscribe();
+      this.archivedRequest?.unsubscribe();
+    });
   }
 
   // Inline edits. Arrow properties keep `this` for the inline editors that call them.
@@ -705,6 +729,17 @@ export class TicketDetailPage {
     this.store.fetchLinks(id);
     this.store.fetchAttachments(id);
     this.store.fetchWatchers(id);
+  }
+
+  private archivedRequest: Subscription | undefined;
+
+  private loadArchived(projectId: string): void {
+    this.archivedRequest?.unsubscribe();
+    this.archived.set(false);
+    this.archivedRequest = this.projectApi.get(projectId, { silent: true }).subscribe({
+      next: (project) => this.archived.set(!!project.archivedAt),
+      error: () => this.archived.set(false),
+    });
   }
 
   private loadMembership(projectId: string): void {

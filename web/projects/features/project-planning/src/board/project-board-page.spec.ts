@@ -305,6 +305,24 @@ describe('ProjectBoardPage', () => {
     harness.fixture.destroy();
   });
 
+  it('shows the archived notice and removes the move controls of an archived project', async () => {
+    const archived = { ...projectOf(), archivedAt: '2026-03-01T00:00:00Z' };
+    const { harness } = await renderPage(of(baseBoard()), of(archived));
+
+    expect(bodyText()).toContain('Este proyecto está archivado y es de solo lectura');
+    expect(bodyText()).toContain('No carga la pantalla');
+    expect(byAriaLabel('Mover No carga la pantalla a columna')).toBeNull();
+    expect(document.querySelector('.project-board__card-row--draggable')).toBeNull();
+    harness.fixture.destroy();
+  });
+
+  it('does not show the archived notice on a live project', async () => {
+    const { harness } = await renderPage();
+
+    expect(document.querySelector('[data-testid="archived-notice"]')).toBeNull();
+    harness.fixture.destroy();
+  });
+
   it('shows skeleton columns with busy feedback while the board loads', async () => {
     const { harness } = await renderPage(NEVER);
 

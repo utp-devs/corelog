@@ -52,6 +52,8 @@ export class TicketDescriptionSection {
   readonly ticket = input.required<Ticket>();
   /** Saves the detail fields. Resolves true when the issue was saved and the form may close. */
   readonly saveDetails = input.required<(input: UpdateIssueDetailsInput) => Promise<boolean>>();
+  /** The issue cannot be changed (archived project): the edit action is not offered. */
+  readonly readOnly = input(false);
   readonly searchUsers = input<(query: string) => Promise<MentionUser[]>>();
 
   protected readonly issueTypeOptions = ISSUE_TYPE_OPTIONS;

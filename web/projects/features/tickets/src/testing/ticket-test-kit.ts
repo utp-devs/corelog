@@ -183,6 +183,7 @@ export function setupTickets(options: TicketTestOptions = {}): TicketTestSetup {
     {
       listMembers: () => of([] as ProjectMember[]),
       list: () => of([projectOf()]),
+      get: () => of(projectOf()),
     } as unknown as Record<keyof ProjectApiService, Impl>,
     options.projectApi ?? {},
   );

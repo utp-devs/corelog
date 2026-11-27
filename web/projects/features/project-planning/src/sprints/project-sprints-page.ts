@@ -9,6 +9,7 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import {
+  CurrentProjectStore,
   Sprint,
   SprintDraft,
   SprintIssue,
@@ -18,6 +19,7 @@ import {
   WorkItemStatus,
   projectAccessVariantOf,
 } from '@corelog/core';
+import { ArchivedNotice } from '@corelog/ui/archived-notice';
 import { ConfirmModal } from '@corelog/ui/confirm-modal';
 import { DataTable, DataTableCell, DataTableColumn } from '@corelog/ui/data-table';
 import { DateField } from '@corelog/ui/date-field';
@@ -61,6 +63,7 @@ const ISSUE_COLUMNS: DataTableColumn[] = [
 @Component({
   selector: 'app-project-sprints-page',
   imports: [
+    ArchivedNotice,
     FormsModule,
     Button,
     InputText,
@@ -91,6 +94,10 @@ const ISSUE_COLUMNS: DataTableColumn[] = [
 export class ProjectSprintsPage {
   protected readonly store = inject(SprintStore);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly currentProject = inject(CurrentProjectStore);
+
+  /** An archived project is read-only: no planning, starting, closing or assigning. */
+  protected readonly archived = this.currentProject.isArchived;
 
   protected readonly sprints = this.store.sprints;
   protected readonly selected = this.store.selected;
@@ -183,6 +190,6 @@ export class ProjectSprintsPage {
   }
 
   protected canRemove(sprint: Sprint): boolean {
-    return sprint.status !== 'closed';
+    return sprint.status !== 'closed' && !this.archived();
   }
 }

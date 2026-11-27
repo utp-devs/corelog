@@ -303,9 +303,10 @@ export class ProjectsPage implements OnInit {
 
   private loadLeads(): void {
     const organizationId = this.organizationId();
-    if (!organizationId) return;
+    // Guests cannot read the directory: the request is skipped instead of answered with a 403.
+    if (!organizationId || this.orgs.currentRole() === 'guest') return;
     this.orgApi
-      .listMembers(organizationId)
+      .listMembers(organizationId, { silent: true })
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (members) =>

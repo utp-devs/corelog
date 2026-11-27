@@ -21,6 +21,7 @@ import {
   projectAccessVariantOf,
   shortIssueKeyOf,
 } from '@corelog/core';
+import { ArchivedNotice } from '@corelog/ui/archived-notice';
 import { DropdownMenu } from '@corelog/ui/app-shell';
 import { DataTable, DataTableCell, DataTableColumn } from '@corelog/ui/data-table';
 import { EmptyState } from '@corelog/ui/empty-state';
@@ -70,6 +71,7 @@ const BACKLOG_SECTION_ID = 'backlog';
 @Component({
   selector: 'app-project-backlog-page',
   imports: [
+    ArchivedNotice,
     NgTemplateOutlet,
     RouterLink,
     Button,
@@ -96,6 +98,7 @@ export class ProjectBacklogPage {
   private readonly auth = inject(AuthStore);
   private readonly orgs = inject(OrganizationStore);
   private readonly projects = inject(ProjectStore);
+  private readonly currentProject = inject(CurrentProjectStore);
   private readonly destroyRef = inject(DestroyRef);
 
   protected readonly items = computed(() => [...this.store.unplanned()]);
@@ -123,14 +126,16 @@ export class ProjectBacklogPage {
     },
   );
 
-  /** Viewers and guests read the backlog; only editors reorder it. */
-  protected readonly readOnly = computed(() =>
-    isReadOnlyRole(
-      this.auth.user()?.role,
-      this.orgs.currentRole(),
-      this.auth.user()?.id,
-      this.projects.members(),
-    ),
+  /** Viewers, guests and archived projects read the backlog; only editors of a live project reorder it. */
+  protected readonly readOnly = computed(
+    () =>
+      this.currentProject.isArchived() ||
+      isReadOnlyRole(
+        this.auth.user()?.role,
+        this.orgs.currentRole(),
+        this.auth.user()?.id,
+        this.projects.members(),
+      ),
   );
 
   protected isOpen(sectionId: string): boolean {
