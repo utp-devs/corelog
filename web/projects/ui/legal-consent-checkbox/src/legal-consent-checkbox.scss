@@ -92,9 +92,12 @@
     opacity: var(--cl-disabled-opacity);
   }
 
+  // The first line of text is centered on the same horizontal axis as the box (the control is one control
+  // height tall and the mark sits in its middle); further lines wrap below it.
   &__text {
     flex: 1 1 auto;
     min-width: 0;
+    padding-block: calc((var(--cl-control-h-md) - 1lh) / 2);
     font-size: var(--cl-font-body);
     line-height: var(--cl-lh-body);
     color: var(--cl-text);
