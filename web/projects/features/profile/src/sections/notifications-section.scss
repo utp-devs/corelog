@@ -1,7 +1,9 @@
 @use '../../../../ui/styles/mixins' as m;
 
 :host {
-  display: block;
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
   min-width: 0;
 }
 
@@ -10,6 +12,16 @@
     @include m.flex-row(4, center, space-between);
     flex-wrap: wrap;
     min-width: 0;
+
+    & + & {
+      margin-block-start: var(--cl-space-5);
+      padding-block-start: var(--cl-space-5);
+      border-block-start: 1px solid var(--cl-border);
+    }
+  }
+
+  &__select {
+    min-width: 12rem;
   }
 
   &__text {

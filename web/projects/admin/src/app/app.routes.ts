@@ -9,7 +9,13 @@ import {
   sameUrl,
 } from '@corelog/core';
 import { ORG_AUDIT_ROUTES, PLATFORM_AUDIT_ROUTES } from '@corelog/features/audit';
-import { ORG_ADMIN_ROUTES } from '@corelog/features/organizations';
+import { ORG_WEBHOOKS_ROUTES } from '@corelog/features/integrations';
+import { ORG_NOTIFICATION_ROUTES } from '@corelog/features/notification-settings';
+import {
+  ORG_ADMIN_ROUTES,
+  ORG_OVERVIEW_ROUTES,
+  PLATFORM_ADMIN_ROUTES,
+} from '@corelog/features/organizations';
 
 /**
  * Admin routes at /admin/. Work pages, the profile and onboarding belong to other applications and
@@ -28,15 +34,19 @@ export const routes: Routes = [
     canActivateChild: [authGuard, requireOrgGuard],
     loadComponent: () => import('./shell/admin-shell').then((m) => m.AdminShell),
     children: [
-      { path: '', pathMatch: 'full', redirectTo: 'organization/settings' },
+      { path: '', pathMatch: 'full', redirectTo: 'organization/overview' },
       {
         path: 'organization',
         canActivate: [requireOrgAdminGuard],
         canActivateChild: [requireOrgAdminGuard],
         children: [
-          { path: '', pathMatch: 'full', redirectTo: 'settings' },
+          { path: '', pathMatch: 'full', redirectTo: 'overview' },
+          ...ORG_OVERVIEW_ROUTES,
           ...ORG_ADMIN_ROUTES,
+          ...ORG_NOTIFICATION_ROUTES,
+          ...PLATFORM_ADMIN_ROUTES,
           { path: 'audit', children: ORG_AUDIT_ROUTES },
+          { path: 'webhooks', children: ORG_WEBHOOKS_ROUTES },
           {
             path: 'platform-audit',
             canActivate: [requirePlatformAdminGuard],

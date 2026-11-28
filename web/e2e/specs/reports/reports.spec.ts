@@ -112,8 +112,9 @@ test.describe('reportes del proyecto', () => {
     await page.getByTestId('report-sort-assignee').click();
     const ascending = (await rows.allTextContents()).map((text) => text.trim());
     await page.getByTestId('report-sort-assignee').click();
-    const descending = (await rows.allTextContents()).map((text) => text.trim());
-    expect(descending).toEqual([...ascending].reverse());
+    await expect
+      .poll(async () => (await rows.allTextContents()).map((text) => text.trim()))
+      .toEqual([...ascending].reverse());
   });
 
   test('viewer ve los reportes permitidos y abre uno', async ({ as }) => {

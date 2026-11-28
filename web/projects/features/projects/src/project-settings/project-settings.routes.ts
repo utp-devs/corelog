@@ -70,6 +70,24 @@ export const PROJECT_SETTINGS_ROUTES: Routes = [
         loadComponent: () => import('@corelog/features/workflow').then((m) => m.WorkflowEditorPage),
       },
       {
+        path: 'notifications',
+        title: 'Notificaciones del proyecto',
+        loadComponent: () =>
+          import('@corelog/features/notification-settings').then((m) => m.ProjectNotificationsPage),
+      },
+      {
+        path: 'automation',
+        loadChildren: () => import('@corelog/features/automation').then((m) => m.AUTOMATION_ROUTES),
+      },
+      {
+        path: 'import',
+        loadChildren: () => import('@corelog/features/import-export').then((m) => m.IMPORT_ROUTES),
+      },
+      {
+        path: 'export',
+        loadChildren: () => import('@corelog/features/import-export').then((m) => m.EXPORT_ROUTES),
+      },
+      {
         path: 'danger',
         title: 'Zona de peligro',
         loadComponent: () =>

@@ -497,9 +497,9 @@ describe('ProfilePage', () => {
       expect(root(harness).textContent).not.toContain('Próximamente');
     });
 
-    it('shows the general section for the removed tokens address', async () => {
+    it('shows the general section for an unknown address', async () => {
       setup();
-      const harness = await render('/profile/tokens');
+      const harness = await render('/profile/unknown');
       await expectText(harness, 'Datos personales');
     });
 

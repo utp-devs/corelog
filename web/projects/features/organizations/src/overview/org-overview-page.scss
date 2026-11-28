@@ -1,0 +1,105 @@
+@use '../../../../ui/styles/mixins' as m;
+
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.org-overview {
+  &__tiles {
+    @include m.grid-auto(12rem, 3);
+    margin-block-end: var(--cl-space-4);
+  }
+
+  &__columns {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--cl-space-4);
+
+    @include m.respond-up(1024px) {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      align-items: start;
+    }
+  }
+
+  &__muted {
+    margin: 0;
+    color: var(--cl-text-subtle);
+  }
+
+  &__activity,
+  &__shortcuts {
+    @include m.flex-column(2);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  &__event {
+    @include m.flex-row(3, flex-start, space-between);
+    padding-block: var(--cl-space-2);
+    border-block-end: 1px solid var(--cl-border);
+  }
+
+  &__event-text {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  &__event-time {
+    flex: none;
+    color: var(--cl-text-subtle);
+    font-size: var(--cl-font-small);
+  }
+
+  &__more {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--cl-control-h-md);
+    margin-block-start: var(--cl-space-3);
+    color: var(--cl-brand);
+    font-weight: var(--cl-weight-semibold);
+
+    &:focus-visible {
+      outline: none;
+      box-shadow: var(--cl-shadow-focus);
+    }
+  }
+
+  &__shortcut {
+    @include m.flex-row(3);
+    min-height: var(--cl-control-h-lg);
+    padding: var(--cl-space-2) var(--cl-space-3);
+    border: 1px solid var(--cl-border);
+    border-radius: var(--cl-radius-md);
+    color: var(--cl-text);
+    text-decoration: none;
+
+    &:hover {
+      background: var(--cl-bg-hover);
+    }
+
+    &:focus-visible {
+      outline: none;
+      box-shadow: var(--cl-shadow-focus);
+    }
+  }
+
+  &__shortcut-icon {
+    color: var(--cl-brand);
+  }
+
+  &__shortcut-text {
+    @include m.flex-column(0);
+    min-width: 0;
+  }
+
+  &__shortcut-label {
+    font-weight: var(--cl-weight-semibold);
+  }
+
+  &__shortcut-hint {
+    color: var(--cl-text-subtle);
+    font-size: var(--cl-font-small);
+  }
+}

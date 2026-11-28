@@ -3,7 +3,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { TestBed } from '@angular/core/testing';
 
 import { provideCorelogTesting } from '../../../testing';
-import type { AppNotification } from '../../models/notification.model';
+import type { AppNotification, NotificationPreferences } from '../../models/notification.model';
 import { NotificationApiService } from './notification-api.service';
 
 function setup(): { service: NotificationApiService; backend: HttpTestingController } {
@@ -68,18 +68,35 @@ describe('NotificationApiService', () => {
 
   it('reads and writes the in-app preference', () => {
     const { service, backend } = setup();
-    let prefs: { inApp: boolean } | undefined;
+    let prefs: NotificationPreferences | undefined;
 
     service.getPreferences().subscribe((value) => (prefs = value));
     backend.expectOne('/api/v1/notifications/preferences').flush({ data: { in_app: true } });
-    expect(prefs).toEqual({ inApp: true });
+    expect(prefs).toEqual({ inApp: true, email: 'immediate', notifyOwnActions: false });
 
     service.updatePreferences(false).subscribe((value) => (prefs = value));
     const put = backend.expectOne('/api/v1/notifications/preferences');
     expect(put.request.method).toBe('PUT');
     expect(put.request.body).toEqual({ in_app: false });
     put.flush({ data: { in_app: false } });
-    expect(prefs).toEqual({ inApp: false });
+    expect(prefs).toEqual({ inApp: false, email: 'immediate', notifyOwnActions: false });
+    backend.verify();
+  });
+
+  it('reads and writes the email mode and the own actions flag', () => {
+    const { service, backend } = setup();
+    let prefs: NotificationPreferences | undefined;
+
+    service.getPreferences().subscribe((value) => (prefs = value));
+    backend
+      .expectOne('/api/v1/notifications/preferences')
+      .flush({ data: { in_app: true, email: 'daily', notify_own_actions: true } });
+    expect(prefs).toEqual({ inApp: true, email: 'daily', notifyOwnActions: true });
+
+    service.updatePreferences(true, { email: 'off', notifyOwnActions: false }).subscribe();
+    const put = backend.expectOne('/api/v1/notifications/preferences');
+    expect(put.request.body).toEqual({ in_app: true, email: 'off', notify_own_actions: false });
+    put.flush({ data: { in_app: true, email: 'off', notify_own_actions: false } });
     backend.verify();
   });
 });

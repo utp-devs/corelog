@@ -1,0 +1,70 @@
+<app-page-container
+  variant="wide"
+  pageName="scheduled-jobs"
+  [fill]="true"
+  [ready]="store.loaded() || store.error() !== null"
+>
+  <app-page-header
+    banner="settings"
+    title="Trabajos programados"
+    subtitle="Tareas que la plataforma ejecuta sola y el resultado de su última ejecución."
+  >
+    <div appPageHeaderActions class="scheduled-jobs__actions">
+      <label class="scheduled-jobs__auto" data-testid="jobs-auto">
+        <p-toggleswitch
+          ariaLabel="Actualizar automáticamente"
+          [ngModel]="autoRefresh()"
+          (onChange)="autoRefresh.set($event.checked)"
+        />
+        <span>Actualizar cada {{ refreshSeconds }} s</span>
+        @if (autoRefresh()) {
+          <span
+            class="scheduled-jobs__pulse"
+            role="status"
+            aria-label="Actualización automática activa"
+          ></span>
+        }
+      </label>
+      <p-button
+        label="Actualizar"
+        icon="pi pi-refresh"
+        severity="secondary"
+        [outlined]="true"
+        [loading]="store.loading()"
+        data-testid="jobs-refresh"
+        (onClick)="refresh()"
+      />
+    </div>
+  </app-page-header>
+
+  @if (refreshFailed()) {
+    <p class="scheduled-jobs__stale" role="status">
+      No se pudo actualizar; se muestran los últimos datos.
+    </p>
+  }
+
+  <app-data-table
+    tableKey="scheduled-jobs"
+    [fill]="true"
+    rowKey="name"
+    [columns]="columns"
+    [data]="rows()"
+    [loading]="store.loading() && !store.loaded()"
+    [error]="loadError()"
+    [errorStatus]="store.error()?.status ?? null"
+    (retry)="refresh()"
+  >
+    <ng-template appDataTableCell="status" let-row>
+      <app-tone-tag [label]="statusLabel(row)" [tone]="statusTone(row)" />
+    </ng-template>
+    <ng-template appDataTableCell="schedule" let-row>{{ schedule(row) }}</ng-template>
+    <ng-template appDataTableCell="started" let-row>
+      <span [attr.title]="exact(row.lastRun?.startedAt)">{{ ago(row.lastRun?.startedAt) }}</span>
+    </ng-template>
+    <ng-template appDataTableCell="duration" let-row>{{ duration(row) }}</ng-template>
+    <ng-template appDataTableCell="success" let-row>
+      <span [attr.title]="exact(row.lastSuccessAt)">{{ ago(row.lastSuccessAt) }}</span>
+    </ng-template>
+    <ng-template appDataTableCell="error" let-row>{{ row.lastRun?.error || '-' }}</ng-template>
+  </app-data-table>
+</app-page-container>

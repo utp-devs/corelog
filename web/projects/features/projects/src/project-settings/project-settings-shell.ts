@@ -27,6 +27,10 @@ export const SETTINGS_SECTIONS: readonly SettingsSection[] = [
   { path: 'components', label: 'Componentes', icon: 'pi pi-th-large' },
   { path: 'fields', label: 'Campos', icon: 'pi pi-list' },
   { path: 'workflow', label: 'Flujo de trabajo', icon: 'pi pi-sitemap' },
+  { path: 'notifications', label: 'Notificaciones', icon: 'pi pi-bell' },
+  { path: 'automation', label: 'Automatización', icon: 'pi pi-bolt' },
+  { path: 'import', label: 'Importar', icon: 'pi pi-upload' },
+  { path: 'export', label: 'Exportar', icon: 'pi pi-download' },
   { path: 'danger', label: 'Zona de peligro', icon: 'pi pi-exclamation-triangle', danger: true },
 ];
 

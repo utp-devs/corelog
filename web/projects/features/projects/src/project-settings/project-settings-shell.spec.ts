@@ -34,6 +34,10 @@ describe('ProjectSettingsShell', () => {
       'Componentes',
       'Campos',
       'Flujo de trabajo',
+      'Notificaciones',
+      'Automatización',
+      'Importar',
+      'Exportar',
       'Zona de peligro',
     ]);
     expect(links[0].href).toBe('/projects/CORE/settings/details');
@@ -45,7 +49,7 @@ describe('ProjectSettingsShell', () => {
     expect(element.querySelector('[data-testid="settings-readonly"]')?.textContent).toContain(
       'Solo lectura',
     );
-    expect(element.querySelectorAll('a')).toHaveLength(10);
+    expect(element.querySelectorAll('a')).toHaveLength(14);
   });
 
   it('shows the forbidden state to viewers', async () => {

@@ -1,0 +1,48 @@
+@use '../../../../ui/styles/mixins' as m;
+
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.scheduled-jobs {
+  &__actions {
+    @include m.cluster(3);
+  }
+
+  &__auto {
+    @include m.flex-row(2);
+    min-height: var(--cl-control-h-md);
+    font-size: var(--cl-font-body);
+    cursor: pointer;
+  }
+
+  &__pulse {
+    width: var(--cl-space-2);
+    height: var(--cl-space-2);
+    border-radius: var(--cl-radius-full);
+    background: var(--cl-success);
+    animation: scheduled-jobs-pulse 1.6s ease-in-out infinite;
+
+    @media (prefers-reduced-motion: reduce) {
+      animation: none;
+    }
+  }
+
+  &__stale {
+    margin: 0 0 var(--cl-space-3);
+    font-size: var(--cl-font-small);
+    color: var(--cl-warning-text);
+  }
+}
+
+@keyframes scheduled-jobs-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.3;
+  }
+}

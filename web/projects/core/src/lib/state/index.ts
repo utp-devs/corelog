@@ -34,3 +34,6 @@ export * from './calendar-v2.store';
 export * from './audit.store';
 export * from './dashboard-v2.store';
 export * from './roadmap.store';
+export * from './notification-scheme.store';
+export * from './email-outbox.store';
+export * from './scheduled-job.store';

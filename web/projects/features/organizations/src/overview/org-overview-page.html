@@ -1,0 +1,71 @@
+<app-page-container variant="wide" pageName="org-overview" [ready]="ready()">
+  <app-page-header
+    banner="settings"
+    [title]="name()"
+    subtitle="Resumen de la organización y accesos rápidos a su administración."
+  />
+
+  <div class="org-overview__tiles" data-testid="overview-tiles">
+    <app-stat-tile label="Miembros" [value]="display(members())" />
+    <app-stat-tile label="Proyectos" [value]="display(projects())" />
+    <app-stat-tile label="Equipos" [value]="display(teams())" />
+    <app-stat-tile
+      label="Invitaciones pendientes"
+      [value]="display(pendingInvitations())"
+      hint="Esperando respuesta"
+    />
+  </div>
+
+  <div class="org-overview__columns">
+    <app-section
+      title="Actividad reciente"
+      description="Los últimos cinco eventos del registro de auditoría."
+    >
+      @if (recent() === undefined) {
+        <p class="org-overview__muted" role="status">Cargando actividad...</p>
+      } @else if (recent() === null) {
+        <p class="org-overview__muted" role="alert" data-testid="overview-activity-error">
+          No se pudo cargar la actividad reciente.
+        </p>
+      } @else {
+        @let entries = recent() ?? [];
+        @if (entries.length === 0) {
+          <p class="org-overview__muted" data-testid="overview-activity-empty">
+            Todavía no hay actividad registrada.
+          </p>
+        } @else {
+          <ul class="org-overview__activity" data-testid="overview-activity">
+            @for (entry of entries; track entry.id) {
+              <li class="org-overview__event">
+                <span class="org-overview__event-text">
+                  @if (entry.actorName && !(entry.summary || '').startsWith(entry.actorName)) {
+                    <strong>{{ entry.actorName }}</strong>
+                  }
+                  {{ entry.summary || entry.action }}
+                </span>
+                <span class="org-overview__event-time">{{ ago(entry.createdAt) }}</span>
+              </li>
+            }
+          </ul>
+        }
+        <a class="org-overview__more" routerLink="/organization/audit">Ver toda la auditoría</a>
+      }
+    </app-section>
+
+    <app-section title="Administración" description="Todo lo que puedes configurar.">
+      <ul class="org-overview__shortcuts" data-testid="overview-shortcuts">
+        @for (shortcut of shortcuts(); track shortcut.path) {
+          <li>
+            <a class="org-overview__shortcut" [routerLink]="shortcut.path">
+              <i class="org-overview__shortcut-icon" [class]="shortcut.icon" aria-hidden="true"></i>
+              <span class="org-overview__shortcut-text">
+                <span class="org-overview__shortcut-label">{{ shortcut.label }}</span>
+                <span class="org-overview__shortcut-hint">{{ shortcut.hint }}</span>
+              </span>
+            </a>
+          </li>
+        }
+      </ul>
+    </app-section>
+  </div>
+</app-page-container>

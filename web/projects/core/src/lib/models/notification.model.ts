@@ -8,7 +8,18 @@ export interface AppNotification {
   readonly createdAt: string;
 }
 
-/** Notification preferences of the signed-in user. The email channel is not available yet. */
+/** How email notices are delivered: each one at once, one daily digest, or never. */
+export type EmailNotificationMode = 'immediate' | 'daily' | 'off';
+
+/** Notification preferences of the signed-in user. */
 export interface NotificationPreferences {
   readonly inApp: boolean;
+  readonly email: EmailNotificationMode;
+  readonly notifyOwnActions: boolean;
+}
+
+/** Fields besides the in-app flag that a preferences update may carry. */
+export interface NotificationPreferencesChange {
+  readonly email?: EmailNotificationMode;
+  readonly notifyOwnActions?: boolean;
 }

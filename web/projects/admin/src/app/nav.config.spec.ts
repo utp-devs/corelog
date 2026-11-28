@@ -82,13 +82,16 @@ describe('admin navigation', () => {
     it('lists the organization administration items for owners, with local paths', () => {
       const items = buildSidebar({ kind: 'org-admin' }, permissionsFor(member, 'owner'), ADMIN_NAV);
       expect(items.map((item) => [item.label, item.path])).toEqual([
+        ['Resumen', '/organization/overview'],
         ['Configuración', '/organization/settings'],
         ['Miembros', '/organization/members'],
         ['Incidencias', '/organization/catalogs'],
         ['Campos', '/organization/custom-fields'],
         ['Estados', '/organization/statuses'],
         ['Invitaciones', '/organization/invitations'],
+        ['Notificaciones', '/organization/notifications'],
         ['Auditoría', '/organization/audit'],
+        ['Webhooks', '/organization/webhooks'],
       ]);
     });
 
@@ -111,6 +114,7 @@ describe('admin navigation', () => {
         '/workspace/profile/security',
         '/workspace/profile/notifications',
         '/workspace/profile/appearance',
+        '/workspace/profile/tokens',
         '/workspace/profile/privacy',
       ]);
       expect(items.every((item) => item.external)).toBe(true);

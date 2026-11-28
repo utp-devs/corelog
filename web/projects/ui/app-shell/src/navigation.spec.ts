@@ -113,6 +113,7 @@ describe('buildSidebar', () => {
       '/profile/security',
       '/profile/notifications',
       '/profile/appearance',
+      '/profile/tokens',
       '/profile/privacy',
     ]);
     expect(sidebarTitleOf({ kind: 'project', projectId: 'p1' }, DEFAULT_SHELL_NAV_CONFIG)).toBe(

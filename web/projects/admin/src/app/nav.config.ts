@@ -42,6 +42,13 @@ export const ADMIN_NAV: ShellNavConfig = {
     project: [],
     'org-admin': [
       {
+        key: 'org-overview',
+        label: 'Resumen',
+        path: '/organization/overview',
+        icon: 'dashboard',
+        permission: 'org.admin',
+      },
+      {
         key: 'org-settings',
         label: 'Configuración',
         path: '/organization/settings',
@@ -84,6 +91,13 @@ export const ADMIN_NAV: ShellNavConfig = {
         permission: 'org.admin',
       },
       {
+        key: 'org-notifications',
+        label: 'Notificaciones',
+        path: '/organization/notifications',
+        icon: 'bell',
+        permission: 'org.admin',
+      },
+      {
         key: 'org-audit',
         label: 'Auditoría',
         path: '/organization/audit',
@@ -98,10 +112,31 @@ export const ADMIN_NAV: ShellNavConfig = {
         permission: 'platform.admin',
       },
       {
+        key: 'org-webhooks',
+        label: 'Webhooks',
+        path: '/organization/webhooks',
+        icon: 'workflow',
+        permission: 'org.admin',
+      },
+      {
         key: 'org-legal',
         label: 'Documentos legales',
         path: '/organization/legal',
         icon: 'security',
+        permission: 'platform.admin',
+      },
+      {
+        key: 'org-email-outbox',
+        label: 'Cola de correo',
+        path: '/organization/email-outbox',
+        icon: 'invitations',
+        permission: 'platform.admin',
+      },
+      {
+        key: 'org-jobs',
+        label: 'Trabajos programados',
+        path: '/organization/jobs',
+        icon: 'workflow',
         permission: 'platform.admin',
       },
     ],
@@ -134,6 +169,13 @@ export const ADMIN_NAV: ShellNavConfig = {
         path: '/workspace/profile/appearance',
         external: true,
         icon: 'appearance',
+      },
+      {
+        key: 'tokens',
+        label: 'Tokens de acceso',
+        path: '/workspace/profile/tokens',
+        external: true,
+        icon: 'security',
       },
       {
         key: 'privacy',

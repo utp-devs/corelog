@@ -45,6 +45,7 @@ import type { ShellIconName } from './shell-icon';
 import { NavDrawer } from './nav-drawer';
 import { AppShellCreate, AppShellOrgSwitcher } from './shell-slots';
 import { COLLAPSED_NAV_QUERY, MOBILE_QUERY } from './shell-queries';
+import { VerifyEmailBanner } from '@corelog/ui/verify-email-banner';
 import { TopBar } from './top-bar';
 
 /** Icon of each section of a project in the sidebar. */
@@ -64,7 +65,15 @@ const PROJECT_SECTION_ICONS: Readonly<Record<string, ShellIconName>> = {
  */
 @Component({
   selector: 'app-shell',
-  imports: [ContextSidebar, NavDrawer, RouterOutlet, ScratchpadDrawer, ShortcutsDialog, TopBar],
+  imports: [
+    ContextSidebar,
+    NavDrawer,
+    RouterOutlet,
+    ScratchpadDrawer,
+    ShortcutsDialog,
+    TopBar,
+    VerifyEmailBanner,
+  ],
   templateUrl: './app-shell.html',
   styleUrl: './app-shell.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

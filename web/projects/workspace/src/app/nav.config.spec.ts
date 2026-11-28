@@ -126,6 +126,7 @@ describe('workspace navigation', () => {
         ['Seguridad', '/profile/security'],
         ['Notificaciones', '/profile/notifications'],
         ['Apariencia', '/profile/appearance'],
+        ['Tokens de acceso', '/profile/tokens'],
         ['Privacidad', '/profile/privacy'],
       ]);
       expect(items[0].exact).toBe(true);

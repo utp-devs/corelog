@@ -1,4 +1,8 @@
-<app-section title="Avisos" description="Los avisos aparecen en la campana de la barra superior.">
+<app-section
+  [fill]="true"
+  title="Avisos"
+  description="Elige cómo quieres enterarte: en la campana de la barra superior, por correo o ambos."
+>
   <div class="notifications-section__row">
     <div class="notifications-section__text">
       <span class="notifications-section__title" id="notifications-in-app-label">
@@ -20,6 +24,48 @@
         [ngModel]="inAppEnabled() ?? false"
         [disabled]="loading() || inAppEnabled() === null"
         (onChange)="toggleInApp($event.checked)"
+      />
+    </div>
+  </div>
+
+  <div class="notifications-section__row">
+    <div class="notifications-section__text">
+      <span class="notifications-section__title" id="notifications-email-label">Correo</span>
+      <p class="notifications-section__hint">
+        Inmediato envía un correo por cada aviso. El resumen diario reúne los avisos del día en un
+        solo correo.
+      </p>
+      <p class="notifications-section__hint" data-testid="notifications-digest-note">
+        El resumen diario se envía a las 08:00 UTC (hora universal) y no se puede cambiar.
+      </p>
+    </div>
+    <div class="notifications-section__control">
+      <app-select-field
+        class="notifications-section__select"
+        ariaLabelledBy="notifications-email-label"
+        [options]="emailModes"
+        [ngModel]="emailMode()"
+        [disabled]="loading() || inAppEnabled() === null"
+        (ngModelChange)="changeEmailMode($event)"
+      />
+    </div>
+  </div>
+
+  <div class="notifications-section__row">
+    <div class="notifications-section__text">
+      <span class="notifications-section__title" id="notifications-own-label">
+        Notificarme de mis propias acciones
+      </span>
+      <p class="notifications-section__hint">
+        Por defecto no recibes avisos de lo que haces tú mismo. Actívalo si quieres verlos también.
+      </p>
+    </div>
+    <div class="notifications-section__control">
+      <p-toggleswitch
+        ariaLabel="Notificarme de mis propias acciones"
+        [ngModel]="notifyOwnActions()"
+        [disabled]="loading() || inAppEnabled() === null"
+        (onChange)="toggleOwnActions($event.checked)"
       />
     </div>
   </div>

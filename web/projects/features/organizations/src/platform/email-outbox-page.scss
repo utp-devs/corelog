@@ -1,0 +1,57 @@
+@use '../../../../ui/styles/mixins' as m;
+
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.email-outbox {
+  &__actions {
+    @include m.cluster(3);
+  }
+
+  &__auto {
+    @include m.flex-row(2);
+    min-height: var(--cl-control-h-md);
+    font-size: var(--cl-font-body);
+    cursor: pointer;
+  }
+
+  &__pulse {
+    width: var(--cl-space-2);
+    height: var(--cl-space-2);
+    border-radius: var(--cl-radius-full);
+    background: var(--cl-success);
+    animation: email-outbox-pulse 1.6s ease-in-out infinite;
+
+    @media (prefers-reduced-motion: reduce) {
+      animation: none;
+    }
+  }
+
+  &__filters {
+    @include m.cluster(3);
+    margin-block-end: var(--cl-space-4);
+  }
+
+  &__filters-label,
+  &__stale {
+    color: var(--cl-text-subtle);
+    font-size: var(--cl-font-small);
+  }
+
+  &__stale {
+    color: var(--cl-warning-text);
+  }
+}
+
+@keyframes email-outbox-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.3;
+  }
+}

@@ -63,6 +63,7 @@ describe('admin routes', () => {
     const organization = shell?.children?.find((route) => route.path === 'organization');
     expect(organization?.children?.map((route) => route.path)).toEqual([
       '',
+      'overview',
       'settings',
       'members',
       'catalogs',
@@ -70,15 +71,19 @@ describe('admin routes', () => {
       'statuses',
       'invitations',
       'legal',
+      'notifications',
+      'email-outbox',
+      'jobs',
       'audit',
+      'webhooks',
       'platform-audit',
     ]);
   });
 
-  it('redirects the admin root to the organization settings for owners', async () => {
+  it('redirects the admin root to the organization overview for owners', async () => {
     const { router } = setup({ role: 'owner' });
     await router.navigateByUrl('/');
-    expect(router.url).toBe('/organization/settings');
+    expect(router.url).toBe('/organization/overview');
   });
 
   it('redirects the admin root to the 403 page for members', async () => {
@@ -96,6 +101,8 @@ describe('admin routes', () => {
         '/organization/custom-fields',
         '/organization/statuses',
         '/organization/invitations',
+        '/organization/overview',
+        '/organization/notifications',
       ]) {
         TestBed.resetTestingModule();
         const { router } = setup({ role });

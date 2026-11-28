@@ -4,7 +4,12 @@ import { Observable, map } from 'rxjs';
 
 import { API_URL } from '../../config/api.config';
 import { normalizeIssueLink } from '../../config/issue-paths';
-import type { AppNotification, NotificationPreferences } from '../../models/notification.model';
+import type {
+  AppNotification,
+  EmailNotificationMode,
+  NotificationPreferences,
+  NotificationPreferencesChange,
+} from '../../models/notification.model';
 import { backgroundRequest, silentRequest } from '../../utils/silent-request';
 
 interface NotificationDto {
@@ -18,6 +23,8 @@ interface NotificationDto {
 
 interface PreferencesDto {
   readonly in_app: boolean;
+  readonly email?: EmailNotificationMode;
+  readonly notify_own_actions?: boolean;
 }
 
 interface DataEnvelope<T> {
@@ -36,7 +43,11 @@ function toNotification(dto: NotificationDto): AppNotification {
 }
 
 function toPreferences(dto: PreferencesDto): NotificationPreferences {
-  return { inApp: dto.in_app };
+  return {
+    inApp: dto.in_app,
+    email: dto.email ?? 'immediate',
+    notifyOwnActions: dto.notify_own_actions ?? false,
+  };
 }
 
 /** In-app notifications of the signed-in user and their preferences. */
@@ -82,11 +93,20 @@ export class NotificationApiService {
       .pipe(map((response) => toPreferences(response.data)));
   }
 
-  updatePreferences(inApp: boolean): Observable<NotificationPreferences> {
+  updatePreferences(
+    inApp: boolean,
+    change: NotificationPreferencesChange = {},
+  ): Observable<NotificationPreferences> {
     return this.http
       .put<DataEnvelope<PreferencesDto>>(
         `${this.baseUrl}/notifications/preferences`,
-        { in_app: inApp },
+        {
+          in_app: inApp,
+          ...(change.email !== undefined ? { email: change.email } : {}),
+          ...(change.notifyOwnActions !== undefined
+            ? { notify_own_actions: change.notifyOwnActions }
+            : {}),
+        },
         { context: silentRequest() },
       )
       .pipe(map((response) => toPreferences(response.data)));

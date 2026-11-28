@@ -24,6 +24,7 @@ export * from './lib/services/theme.service';
 export * from './lib/state';
 export * from './lib/state/org-members-by-id';
 export * from './lib/utils/api-error';
+export * from './lib/utils/download-file';
 export * from './lib/validators';
 export * from './lib/utils/org-id-provider';
 export * from './lib/utils/issue-draft-form';

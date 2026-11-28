@@ -141,6 +141,7 @@ export const DEFAULT_SHELL_NAV_CONFIG: ShellNavConfig = {
         icon: 'bell',
       },
       { key: 'appearance', label: 'Apariencia', path: '/profile/appearance', icon: 'appearance' },
+      { key: 'tokens', label: 'Tokens de acceso', path: '/profile/tokens', icon: 'security' },
       { key: 'privacy', label: 'Privacidad', path: '/profile/privacy', icon: 'security' },
     ],
   },

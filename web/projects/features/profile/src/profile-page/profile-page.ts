@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@a
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute } from '@angular/router';
 import { AuthStore, User, warnBeforeUnload } from '@corelog/core';
+import { ApiTokensSection } from '@corelog/features/integrations';
 import { PageContainer } from '@corelog/ui/page-container';
 import { PageHeader } from '@corelog/ui/page-header';
 import { map } from 'rxjs';
@@ -12,7 +13,7 @@ import { ProfileNotificationsSection } from '../sections/notifications-section';
 import { ProfilePrivacySection } from '../sections/privacy-section';
 import { ProfileSecuritySection } from '../sections/security-section';
 
-type SectionKey = 'general' | 'security' | 'notifications' | 'appearance' | 'privacy';
+type SectionKey = 'general' | 'security' | 'notifications' | 'appearance' | 'privacy' | 'tokens';
 
 interface SectionMeta {
   readonly title: string;
@@ -37,6 +38,10 @@ const SECTIONS: Readonly<Record<SectionKey, SectionMeta>> = {
     title: 'Apariencia',
     description: 'Tema y densidad de la interfaz en este navegador.',
   },
+  tokens: {
+    title: 'Tokens de acceso',
+    description: 'Conecta programas y scripts a tu cuenta sin compartir tu contraseña.',
+  },
   privacy: {
     title: 'Privacidad y consentimientos',
     description: 'Los documentos legales que aceptaste y tus autorizaciones opcionales.',
@@ -51,6 +56,7 @@ function sectionOf(value: string | null): SectionKey {
 @Component({
   selector: 'app-profile-page',
   imports: [
+    ApiTokensSection,
     PageContainer,
     PageHeader,
     ProfileAppearanceSection,

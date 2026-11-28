@@ -5,7 +5,12 @@
 
       <div
         class="profile-page__content"
-        [class.profile-page__content--wide]="section() === 'general' || section() === 'privacy'"
+        [class.profile-page__content--wide]="
+          section() === 'general' ||
+          section() === 'privacy' ||
+          section() === 'tokens' ||
+          section() === 'notifications'
+        "
       >
         @switch (section()) {
           @case ('general') {
@@ -23,6 +28,9 @@
           }
           @case ('appearance') {
             <app-profile-appearance-section />
+          }
+          @case ('tokens') {
+            <app-api-tokens-section />
           }
           @case ('privacy') {
             <app-profile-privacy-section />

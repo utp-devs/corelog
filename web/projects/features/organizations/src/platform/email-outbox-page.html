@@ -1,0 +1,92 @@
+<app-page-container
+  variant="wide"
+  pageName="email-outbox"
+  [fill]="true"
+  [ready]="store.loaded() || store.error() !== null"
+>
+  <app-page-header
+    banner="settings"
+    title="Cola de correo"
+    subtitle="Correos salientes de toda la plataforma. Las direcciones se muestran enmascaradas."
+  >
+    <div appPageHeaderActions class="email-outbox__actions">
+      <label class="email-outbox__auto" data-testid="outbox-auto">
+        <p-toggleswitch
+          ariaLabel="Actualizar automáticamente"
+          [ngModel]="autoRefresh()"
+          (onChange)="autoRefresh.set($event.checked)"
+        />
+        <span>Actualizar cada {{ refreshSeconds }} s</span>
+        @if (autoRefresh()) {
+          <span
+            class="email-outbox__pulse"
+            role="status"
+            aria-label="Actualización automática activa"
+          ></span>
+        }
+      </label>
+      <p-button
+        label="Actualizar"
+        icon="pi pi-refresh"
+        severity="secondary"
+        [outlined]="true"
+        [loading]="store.loading()"
+        data-testid="outbox-refresh"
+        (onClick)="refresh()"
+      />
+    </div>
+  </app-page-header>
+
+  <div class="email-outbox__filters">
+    <p-selectbutton
+      ariaLabelledBy="outbox-filter-label"
+      [options]="filters"
+      optionLabel="label"
+      optionValue="value"
+      [allowEmpty]="false"
+      [ngModel]="filter()"
+      (onChange)="setFilter($event.value)"
+      data-testid="outbox-filter"
+    />
+    <span id="outbox-filter-label" class="email-outbox__filters-label">
+      {{ store.total() }} {{ store.total() === 1 ? 'correo' : 'correos' }}
+    </span>
+    @if (refreshFailed()) {
+      <span class="email-outbox__stale" role="status">
+        No se pudo actualizar; se muestran los últimos datos.
+      </span>
+    }
+  </div>
+
+  <app-data-table
+    tableKey="email-outbox"
+    [fill]="true"
+    rowKey="id"
+    [columns]="columns"
+    [data]="rows()"
+    [loading]="store.loading() && !store.loaded()"
+    [error]="loadError()"
+    [errorStatus]="store.error()?.status ?? null"
+    [pagination]="pagination()"
+    [pageSizes]="[25]"
+    [rowActions]="rowActions"
+    (pageChange)="changePage($event)"
+    (retry)="refresh()"
+  >
+    <ng-template appDataTableCell="status" let-row>
+      <app-tone-tag [label]="statusLabel(row)" [tone]="statusTone(row)" />
+    </ng-template>
+    <ng-template appDataTableCell="created" let-row>
+      <span [attr.title]="exact(row.createdAt)">{{ ago(row.createdAt) }}</span>
+    </ng-template>
+    <ng-template appDataTableCell="next" let-row>
+      @if (row.status === 'pending') {
+        <span [attr.title]="exact(row.nextAttemptAt)">{{ ago(row.nextAttemptAt) }}</span>
+      } @else if (row.status === 'sent') {
+        <span [attr.title]="exact(row.sentAt)">Enviado {{ ago(row.sentAt) }}</span>
+      } @else {
+        <span>-</span>
+      }
+    </ng-template>
+  </app-data-table>
+</app-page-container>
