@@ -130,3 +130,20 @@ Todos los endpoints que devuelven listados de recursos deben soportar paginació
 
 - La especificación OpenAPI (`openapi.yaml`) en la raíz del repositorio es el contrato vivo de la API.
 - **Regla estricta**: Todo commit o PR que añada o modifique un endpoint HTTP debe actualizar simultáneamente `openapi.yaml`.
+
+---
+
+## 7. Configuración por entorno
+
+Toda variable de entorno nueva debe documentarse en `.env.example` y en la sección "Variables de entorno de la API" de `docs/despliegue.md`, con su valor por defecto, su propósito y la recomendación para producción. Las variables sensibles (claves, contraseñas, tokens) nunca se escriben en el repositorio ni en los registros.
+
+## 8. Autenticación con tokens de API
+
+Además del JWT de sesión, las rutas protegidas aceptan un token de API personal en la misma cabecera: `Authorization: Bearer cl_pat_...`. El token tiene alcances (`read`, `write`, `admin`): `read` solo permite consultas, `write` permite además modificar y `admin` queda reservado a administradores de la plataforma. Un alcance insuficiente responde 403 `api_token.scope_insufficient`. Cada token tiene un límite de peticiones por minuto (`API_TOKEN_RATE_LIMIT_PER_MIN`) y se responde 429 al superarlo.
+
+## 9. Límites y protecciones comunes
+
+- Los cuerpos JSON admiten como máximo `MAX_JSON_BODY_BYTES` (1 MiB por defecto) y se rechazan los campos desconocidos.
+- Los inicios de sesión, registros, recuperaciones de contraseña y verificaciones de teléfono tienen límite de frecuencia por dirección; superarlo responde 429.
+- Tras varios intentos fallidos la cuenta se bloquea temporalmente (`LOCKOUT_*`).
+- Las acciones masivas admiten hasta 200 incidencias; las importaciones CSV, hasta 20 000 filas y 10 MiB.
