@@ -19,9 +19,19 @@ test.describe('onboarding de cuentas nuevas', () => {
     const email = `e2e.ui.${Date.now().toString(36)}@corelog.test`;
     try {
       await page.goto(appPath('/register'));
-      await page.getByLabel(/^Nombre(\*| |$)/).fill('Registro UI');
+      await page.getByLabel(/^Nombres/).fill('Registro');
+      await page.getByLabel(/^Apellidos/).fill('Interfaz');
+      await page.getByLabel(/^Teléfono/).fill('+51 912 345 678');
       await page.getByLabel('Correo electrónico').fill(email);
       await page.getByLabel(/^Contraseña/).fill(password ?? '');
+      await page.getByLabel(/^Confirmar contraseña/).fill(password ?? '');
+      for (const name of [
+        /Política de privacidad/,
+        /tratamiento de mis datos/,
+        /Términos de uso/,
+      ]) {
+        await page.getByRole('checkbox', { name }).check();
+      }
       await page.getByRole('button', { name: 'Crear cuenta' }).click();
       await expect(page).toHaveURL(/\/onboarding/);
     } finally {

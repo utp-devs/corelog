@@ -1,6 +1,7 @@
 import { expect, test } from '../../fixtures/test.ts';
 import { orgIdBySlug } from '../../lib/api.ts';
 import { appPath } from '../../lib/paths.ts';
+import { createProjectViaApi } from '../../lib/projects-api.ts';
 import {
   addTransitionViaApi,
   createIssueViaApi,
@@ -65,20 +66,19 @@ test.describe('transiciones de incidencias', () => {
   }) => {
     const owner = await api('owner');
     const acme = await orgIdBySlug(owner, 'acme');
-    const project = await data.createProject('owner', acme, 'wfb');
+    // A Kanban board lists every issue; a Scrum board only shows the active sprint.
+    const project = await createProjectViaApi(owner, acme, data.uniqueName('wfb'));
+    data.trackProject('owner', project);
     const issue = await createIssueViaApi(owner, project.id, 'Tarjeta del tablero');
 
     const page = await as('owner');
     await page.goto(appPath(`/projects/${project.key}/board`));
-    const card = page.locator('app-board-card', { hasText: 'Tarjeta del tablero' });
+    const card = page.getByTestId(`kanban-card-${issue.key}`);
     await expect(card).toBeVisible();
-    await card.getByRole('button', { name: /^Mover .* a columna$/ }).click();
-    // The menu lists the other columns; pick the first one that is enabled.
-    const target = page.getByRole('menuitem').filter({ hasNotText: 'Límite WIP' }).first();
-    await target.click();
-    await expect(page.getByRole('status').filter({ hasText: 'Incidencia movida a' })).toHaveCount(
-      1,
-    );
+    await card.getByRole('button', { name: /^Mover .* a otra columna$/ }).click();
+    // The menu lists the other columns; pick the first one.
+    await page.getByRole('menuitem').first().click();
+    await expect(page.getByRole('status').filter({ hasText: 'movida a' })).toHaveCount(1);
 
     const moved = await owner.get(`issues/${issue.id}`);
     expect(moved.ok()).toBe(true);

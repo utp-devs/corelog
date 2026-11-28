@@ -224,7 +224,7 @@ test.describe('ciclo de vida de un proyecto', () => {
       'Este proyecto está archivado y es de solo lectura',
     );
     await expect(page.getByText('project.archived')).toHaveCount(0);
-    await expect(page.getByRole('button', { name: /^Mover .* a columna$/ })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: /^Mover .* a otra columna$/ })).toHaveCount(0);
 
     await page.goto(appPath(`/browse/${issueId}`));
     await expect(page.getByTestId('archived-notice')).toBeVisible();

@@ -251,12 +251,28 @@ export const test = base.extend<E2eFixtures>({
       },
       registerUser: async (prefix = 'user') => {
         const email = `e2e.${slug(prefix)}.${randomSuffix(8)}@corelog.test`;
-        const name = `Usuario ${randomSuffix(6)}`;
+        const surname = randomSuffix(6).replace(/[0-9]/g, (digit) =>
+          String.fromCharCode(97 + Number(digit)),
+        );
+        const name = `Usuario ${surname}`;
         const password = readE2eEnv().password ?? '';
         const anonymous = await playwright.request.newContext({ baseURL: `${env.apiURL}/` });
         try {
+          const documents = await anonymous.get('legal/documents');
+          const { data: legal } = (await documents.json()) as {
+            data: Array<{ slug: string; version: number; required: boolean }>;
+          };
           const registered = await anonymous.post('auth/register', {
-            data: { name, email, password },
+            data: {
+              first_name: 'Usuario',
+              last_name: surname,
+              email,
+              password,
+              password_confirmation: password,
+              consents: legal
+                .filter((doc) => doc.required)
+                .map((doc) => ({ slug: doc.slug, version: doc.version })),
+            },
           });
           expect(registered.status(), 'POST auth/register should return 201').toBe(201);
           const login = await anonymous.post('auth/login', { data: { email, password } });
