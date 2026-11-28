@@ -1,0 +1,211 @@
+<div class="api-tokens">
+  <app-section
+    title="Tokens de acceso personales"
+    description="Permiten que un programa o script use CoreLog en tu nombre, sin tu contraseña."
+    ariaLabel="Tokens de acceso personales"
+  >
+    <p-button
+      appSectionActions
+      label="Crear token"
+      icon="pi pi-plus"
+      data-testid="token-new"
+      (onClick)="openForm()"
+    />
+
+    <div class="api-tokens__notice" data-testid="token-notice">
+      <i class="pi pi-shield" aria-hidden="true"></i>
+      <p>
+        Un token actúa como tú y tiene tus mismos permisos, limitados por el alcance que elijas. No
+        pasa por la verificación en dos pasos, así que trátalo como una contraseña: no lo compartas
+        ni lo guardes en el código. Solo puedes crear o revocar tokens con una sesión iniciada; un
+        token no puede gestionar otros tokens. Tienes {{ activeCount() }} de 20 tokens activos.
+      </p>
+    </div>
+
+    @if (status() === 'error') {
+      <app-error-state
+        message="No se pudieron cargar tus tokens."
+        [canRetry]="true"
+        (retry)="load()"
+      />
+    } @else if (status() === 'loading') {
+      <app-loading-skeleton variant="detail" [rows]="3" />
+    } @else if (tokens().length === 0) {
+      <div class="api-tokens__empty" data-testid="token-empty">
+        <img
+          class="api-tokens__empty-image"
+          src="/images/modules/module-security.webp"
+          alt=""
+          width="480"
+          height="320"
+          decoding="async"
+        />
+        <app-empty-state
+          title="Aún no tienes tokens"
+          description="Crea uno cuando necesites conectar una herramienta externa a tu cuenta."
+        />
+      </div>
+    } @else {
+      <ul class="api-tokens__list" data-testid="token-list">
+        @for (token of tokens(); track token.id) {
+          <li
+            class="api-tokens__item"
+            [class.api-tokens__item--inactive]="stateOf(token) !== 'active'"
+            data-testid="token-item"
+            [attr.data-name]="token.name"
+          >
+            <div class="api-tokens__head">
+              <h3 class="api-tokens__name">{{ token.name }}</h3>
+              <app-tone-tag [label]="stateLabels[stateOf(token)]" [tone]="toneOf(token)" />
+              <app-tone-tag [label]="scopeText(token)" tone="blue" />
+            </div>
+            <p class="api-tokens__prefix">
+              <span class="api-tokens__sr">Empieza por </span><code>{{ token.prefix }}…</code>
+            </p>
+            <dl class="api-tokens__dates">
+              <div>
+                <dt>Creado</dt>
+                <dd>{{ token.createdAt | date: 'dd/MM/yyyy' }}</dd>
+              </div>
+              <div>
+                <dt>Último uso</dt>
+                <dd>
+                  @if (token.lastUsedAt) {
+                    {{ token.lastUsedAt | date: 'dd/MM/yyyy HH:mm' }}
+                  } @else {
+                    Nunca
+                  }
+                </dd>
+              </div>
+              <div>
+                <dt>Caduca</dt>
+                <dd>
+                  @if (token.expiresAt) {
+                    {{ token.expiresAt | date: 'dd/MM/yyyy' }}
+                  } @else {
+                    No caduca
+                  }
+                </dd>
+              </div>
+            </dl>
+            @if (stateOf(token) !== 'revoked') {
+              <div class="api-tokens__actions">
+                <p-button
+                  label="Revocar"
+                  icon="pi pi-ban"
+                  severity="danger"
+                  [text]="true"
+                  data-testid="token-revoke"
+                  [attr.aria-label]="'Revocar el token ' + token.name"
+                  (onClick)="revoking.set(token)"
+                />
+              </div>
+            }
+          </li>
+        }
+      </ul>
+    }
+  </app-section>
+</div>
+
+<app-dialog
+  size="md"
+  [heading]="revealed() ? 'Token creado' : 'Crear token de acceso'"
+  [subtitle]="revealed() ? undefined : 'Elige qué podrá hacer y cuándo dejará de funcionar.'"
+  [open]="formOpen()"
+  [dismissable]="!revealed()"
+  [showClose]="!revealed()"
+  (closeRequested)="closeForm()"
+>
+  @if (revealed()) {
+    <app-secret-reveal
+      label="Tu token"
+      warning="No volverás a ver este token. Cópialo ahora: si lo pierdes tendrás que crear otro."
+      confirmText="Ya lo copié"
+      [secret]="revealed()"
+      (dismissed)="onRevealDismissed()"
+    />
+  } @else {
+    <form class="api-tokens__form" [formGroup]="form" (ngSubmit)="create()" id="token-form">
+      <label class="api-tokens__field">
+        <span class="api-tokens__label">Nombre</span>
+        <input
+          pInputText
+          formControlName="name"
+          maxlength="80"
+          placeholder="Por ejemplo: Integración con CI"
+          data-autofocus
+          data-testid="token-name"
+        />
+      </label>
+
+      <fieldset class="api-tokens__scopes">
+        <legend class="api-tokens__label">Qué podrá hacer</legend>
+        <label class="api-tokens__radio">
+          <input type="radio" formControlName="scope" value="read" data-testid="token-scope-read" />
+          <span>
+            <strong>Solo lectura</strong>
+            <span class="api-tokens__hint"
+              >Puede consultar proyectos, incidencias y reportes, pero no cambiar nada.</span
+            >
+          </span>
+        </label>
+        <label class="api-tokens__radio">
+          <input
+            type="radio"
+            formControlName="scope"
+            value="write"
+            data-testid="token-scope-write"
+          />
+          <span>
+            <strong>Lectura y escritura</strong>
+            <span class="api-tokens__hint"
+              >Además puede crear y modificar incidencias, comentarios y otros datos que tú puedas
+              cambiar.</span
+            >
+          </span>
+        </label>
+      </fieldset>
+
+      <label class="api-tokens__field">
+        <span class="api-tokens__label">Caduca el <em>(opcional)</em></span>
+        <input
+          pInputText
+          type="date"
+          formControlName="expires"
+          [min]="minDate"
+          data-testid="token-expires"
+        />
+        <span class="api-tokens__hint">Sin fecha, el token funciona hasta que lo revoques.</span>
+      </label>
+
+      @if (formError(); as message) {
+        <p class="api-tokens__error" role="alert" data-testid="token-error">{{ message }}</p>
+      }
+    </form>
+  }
+  @if (!revealed()) {
+    <p-button dialogFooter label="Cancelar" severity="secondary" (onClick)="closeForm()" />
+  }
+  @if (!revealed()) {
+    <p-button
+      dialogFooter
+      label="Crear token"
+      data-testid="token-create"
+      [disabled]="form.invalid"
+      [loading]="saving()"
+      (onClick)="create()"
+    />
+  }
+</app-dialog>
+
+<app-confirm-modal
+  [open]="revoking() !== null"
+  [title]="'¿Revocar «' + (revoking()?.name ?? '') + '»?'"
+  description="Cualquier programa que use este token dejará de funcionar de inmediato. No se puede deshacer."
+  confirmText="Revocar token"
+  [danger]="true"
+  [loading]="revokeBusy()"
+  (confirmed)="revoke()"
+  (cancelled)="revoking.set(null)"
+/>

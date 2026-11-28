@@ -86,7 +86,7 @@ describe('UserMenu panel', () => {
     ) as HTMLButtonElement;
     trigger.click();
     fixture.detectChanges();
-    return { fixture, menu: fixture.nativeElement.querySelector('[role="menu"]') as HTMLElement };
+    return { fixture, menu: document.querySelector('[role="menu"]') as HTMLElement };
   }
 
   const row = (menu: HTMLElement, text: string): HTMLElement =>
@@ -137,7 +137,7 @@ describe('UserMenu panel', () => {
     row(menu, 'Sistema').click();
     fixture.detectChanges();
     expect(theme.mode()).toBe('system');
-    expect(fixture.nativeElement.querySelector('[role="menu"]')).not.toBeNull();
+    expect(document.querySelector('[role="menu"]')).not.toBeNull();
   });
 
   it('exposes the compact density as a checked switch', () => {
@@ -159,7 +159,7 @@ describe('UserMenu panel', () => {
       fixture.nativeElement.querySelector('button[aria-haspopup="menu"]') as HTMLButtonElement
     ).click();
     fixture.detectChanges();
-    const menu = fixture.nativeElement.querySelector('[role="menu"]') as HTMLElement;
+    const menu = document.querySelector('[role="menu"]') as HTMLElement;
     expect(row(menu, 'Atajos de teclado').textContent).toContain('?');
     row(menu, 'Atajos de teclado').click();
     expect(opened).toHaveBeenCalledTimes(1);

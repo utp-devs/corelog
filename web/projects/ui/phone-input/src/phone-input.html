@@ -1,5 +1,7 @@
 <div
   class="phone-input"
+  cdkOverlayOrigin
+  #origin="cdkOverlayOrigin"
   [class.phone-input--lg]="size() === 'lg'"
   [class.phone-input--invalid]="invalid()"
   [class.phone-input--open]="open()"
@@ -39,45 +41,57 @@
     (input)="onInput($event)"
     (blur)="onBlur()"
   />
-
-  @if (open()) {
-    <div class="phone-input__panel">
-      <input
-        #search
-        class="phone-input__search"
-        type="text"
-        role="combobox"
-        aria-label="Buscar país o prefijo"
-        placeholder="Buscar país o prefijo"
-        autocomplete="off"
-        spellcheck="false"
-        aria-expanded="true"
-        [attr.aria-controls]="listId"
-        [attr.aria-activedescendant]="activeId()"
-        [value]="query()"
-        (input)="onSearch($event)"
-        (keydown)="onSearchKey($event)"
-      />
-      <ul class="phone-input__list" role="listbox" aria-label="Países" [attr.id]="listId">
-        @for (item of filtered(); track item.code; let i = $index) {
-          <li
-            class="phone-input__option"
-            role="option"
-            [class.phone-input__option--active]="i === active()"
-            [attr.id]="listId + '-' + item.code"
-            [attr.aria-selected]="item.code === countryCode()"
-            (mousedown)="$event.preventDefault()"
-            (click)="choose(item)"
-            (mousemove)="active.set(i)"
-          >
-            <span class="phone-input__flag" aria-hidden="true">{{ flagOf(item.code) }}</span>
-            <span class="phone-input__name">{{ item.name }}</span>
-            <span class="phone-input__option-dial">{{ item.dialCode }}</span>
-          </li>
-        } @empty {
-          <li class="phone-input__empty" role="presentation">Sin resultados</li>
-        }
-      </ul>
-    </div>
-  }
 </div>
+
+<ng-template
+  cdkConnectedOverlay
+  [cdkConnectedOverlayOrigin]="origin"
+  [cdkConnectedOverlayOpen]="open()"
+  [cdkConnectedOverlayPositions]="positions"
+  [cdkConnectedOverlayMinWidth]="minWidth()"
+  [cdkConnectedOverlayFlexibleDimensions]="true"
+  [cdkConnectedOverlayPush]="true"
+  [cdkConnectedOverlayViewportMargin]="8"
+  cdkConnectedOverlayPanelClass="phone-input-overlay"
+  (attach)="onAttach()"
+  (detach)="open.set(false)"
+>
+  <div #panel class="phone-input__panel">
+    <input
+      #search
+      class="phone-input__search"
+      type="text"
+      role="combobox"
+      aria-label="Buscar país o prefijo"
+      placeholder="Buscar país o prefijo"
+      autocomplete="off"
+      spellcheck="false"
+      aria-expanded="true"
+      [attr.aria-controls]="listId"
+      [attr.aria-activedescendant]="activeId()"
+      [value]="query()"
+      (input)="onSearch($event)"
+      (keydown)="onSearchKey($event)"
+    />
+    <ul class="phone-input__list" role="listbox" aria-label="Países" [attr.id]="listId">
+      @for (item of filtered(); track item.code; let i = $index) {
+        <li
+          class="phone-input__option"
+          role="option"
+          [class.phone-input__option--active]="i === active()"
+          [attr.id]="listId + '-' + item.code"
+          [attr.aria-selected]="item.code === countryCode()"
+          (mousedown)="$event.preventDefault()"
+          (click)="choose(item)"
+          (mousemove)="active.set(i)"
+        >
+          <span class="phone-input__flag" aria-hidden="true">{{ flagOf(item.code) }}</span>
+          <span class="phone-input__name">{{ item.name }}</span>
+          <span class="phone-input__option-dial">{{ item.dialCode }}</span>
+        </li>
+      } @empty {
+        <li class="phone-input__empty" role="presentation">Sin resultados</li>
+      }
+    </ul>
+  </div>
+</ng-template>

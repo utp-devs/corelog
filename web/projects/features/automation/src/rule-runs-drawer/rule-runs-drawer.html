@@ -1,0 +1,71 @@
+<app-side-panel
+  size="lg"
+  [open]="rule() !== null"
+  [heading]="'Historial de ' + (rule()?.name ?? '')"
+  subtitle="Las últimas ejecuciones de la regla."
+  (closeRequested)="closed.emit()"
+>
+  <div class="rule-runs">
+    <div class="rule-runs__toolbar">
+      <div class="rule-runs__filters" role="group" aria-label="Filtrar por resultado">
+        @for (option of filters; track option.value) {
+          <button
+            type="button"
+            class="rule-runs__filter"
+            [class.rule-runs__filter--active]="filter() === option.value"
+            [attr.aria-pressed]="filter() === option.value"
+            [attr.data-testid]="'run-filter-' + option.value"
+            (click)="setFilter(option.value)"
+          >
+            {{ option.label }}
+          </button>
+        }
+      </div>
+      <p-button
+        label="Actualizar"
+        icon="pi pi-refresh"
+        severity="secondary"
+        [outlined]="true"
+        data-testid="run-refresh"
+        (onClick)="reload()"
+      />
+    </div>
+
+    @if (status() === 'error') {
+      <app-error-state
+        message="No se pudo cargar el historial."
+        [canRetry]="true"
+        (retry)="reload()"
+      />
+    } @else if (status() === 'loading') {
+      <app-loading-skeleton variant="detail" [rows]="4" />
+    } @else if (runs().length === 0) {
+      <app-empty-state
+        title="Sin ejecuciones"
+        description="La regla aún no se ha ejecutado con este filtro."
+      />
+    } @else {
+      <ul class="rule-runs__list" data-testid="run-list">
+        @for (run of runs(); track run.id) {
+          <li class="rule-runs__item" data-testid="run-item" [attr.data-status]="run.status">
+            <div class="rule-runs__row">
+              <app-tone-tag [label]="labels[run.status]" [tone]="tones[run.status]" />
+              <time class="rule-runs__time" [attr.datetime]="run.createdAt">{{
+                run.createdAt | date: 'dd/MM/yyyy HH:mm:ss'
+              }}</time>
+            </div>
+            @if (run.detail) {
+              <p class="rule-runs__detail">{{ run.detail }}</p>
+            }
+            @if (run.issueId) {
+              <a class="rule-runs__issue" [routerLink]="issuePath(run.issueId)">
+                <i class="pi pi-external-link" aria-hidden="true"></i> Ver la incidencia
+              </a>
+            }
+          </li>
+        }
+      </ul>
+    }
+  </div>
+  <p-button panelFooter label="Cerrar" severity="secondary" (onClick)="closed.emit()" />
+</app-side-panel>

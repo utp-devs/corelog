@@ -1,0 +1,250 @@
+@use '../../styles/mixins' as m;
+
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.rule-builder {
+  @include m.flex-column(6);
+  min-width: 0;
+
+  &__block {
+    @include m.flex-column(3);
+    min-width: 0;
+  }
+
+  &__block-title {
+    @include m.flex-row(2);
+    margin: 0;
+    font-size: var(--cl-font-body-strong);
+    font-weight: var(--cl-weight-semibold);
+
+    em {
+      color: var(--cl-text-subtle);
+      font-size: var(--cl-font-small);
+      font-style: normal;
+      font-weight: var(--cl-weight-regular);
+    }
+  }
+
+  &__badge {
+    @include m.flex-row(0, center, center);
+    width: var(--cl-space-6);
+    height: var(--cl-space-6);
+    border-radius: var(--cl-radius-full);
+    background: var(--cl-brand-subtle);
+    color: var(--cl-brand);
+    font-size: var(--cl-font-small);
+    font-weight: var(--cl-weight-semibold);
+  }
+
+  &__hint {
+    margin: 0;
+    color: var(--cl-text-subtle);
+    font-size: var(--cl-font-small);
+  }
+
+  &__list {
+    @include m.flex-column(3);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  &__card {
+    @include m.flex-column(3);
+    padding: var(--cl-space-4);
+    border: 1px solid var(--cl-border);
+    border-radius: var(--cl-radius-md);
+    background: var(--cl-bg-surface);
+    min-width: 0;
+  }
+
+  &__item-head {
+    @include m.flex-row(3, flex-end);
+    flex-wrap: wrap;
+  }
+
+  &__grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--cl-space-3);
+
+    @include m.respond-down(640px) {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+
+  &__field {
+    @include m.flex-column(1);
+    min-width: 0;
+
+    &--grow {
+      flex: 1 1 12rem;
+    }
+  }
+
+  &__label {
+    font-size: var(--cl-font-small);
+    font-weight: var(--cl-weight-medium);
+
+    em {
+      color: var(--cl-text-subtle);
+      font-style: normal;
+      font-weight: var(--cl-weight-regular);
+    }
+  }
+
+  &__control {
+    width: 100%;
+    min-width: 0;
+    min-height: var(--cl-control-h-md);
+    padding: 0 var(--cl-space-3);
+    border: 1px solid var(--cl-border-strong);
+    border-radius: var(--cl-radius-md);
+    background: var(--cl-bg-surface);
+    color: var(--cl-text);
+    font: inherit;
+
+    &::placeholder {
+      color: var(--cl-text-placeholder);
+    }
+
+    &:focus-visible {
+      outline: none;
+      box-shadow: var(--cl-shadow-focus);
+    }
+
+    &:disabled {
+      opacity: var(--cl-disabled-opacity);
+    }
+
+    &--area {
+      padding: var(--cl-space-2) var(--cl-space-3);
+      resize: vertical;
+      line-height: var(--cl-lh-body);
+    }
+  }
+
+  &__tools {
+    @include m.flex-row(1);
+  }
+
+  &__tool {
+    @include m.flex-row(0, center, center);
+    @include m.touch-target;
+    border: 1px solid transparent;
+    border-radius: var(--cl-radius-md);
+    background: none;
+    color: var(--cl-text-subtle);
+    cursor: pointer;
+
+    &:hover:not(:disabled) {
+      background: var(--cl-bg-hover);
+      color: var(--cl-text);
+    }
+
+    &:focus-visible {
+      outline: none;
+      box-shadow: var(--cl-shadow-focus);
+    }
+
+    &:disabled {
+      opacity: var(--cl-disabled-opacity);
+      cursor: default;
+    }
+
+    &--danger:hover:not(:disabled) {
+      background: var(--cl-danger-bg);
+      color: var(--cl-danger-text);
+    }
+  }
+
+  &__add {
+    @include m.flex-row(2, center, center);
+    min-height: var(--cl-control-h-md);
+    padding: 0 var(--cl-space-4);
+    border: 1px dashed var(--cl-border-strong);
+    border-radius: var(--cl-radius-md);
+    background: none;
+    color: var(--cl-brand);
+    font: inherit;
+    font-weight: var(--cl-weight-medium);
+    cursor: pointer;
+
+    &:hover:not(:disabled) {
+      background: var(--cl-brand-subtle);
+    }
+
+    &:focus-visible {
+      outline: none;
+      box-shadow: var(--cl-shadow-focus);
+    }
+
+    &:disabled {
+      opacity: var(--cl-disabled-opacity);
+      cursor: default;
+    }
+  }
+
+  &__smart {
+    @include m.cluster(1);
+  }
+
+  &__smart-label {
+    color: var(--cl-text-subtle);
+    font-size: var(--cl-font-small);
+  }
+
+  &__chip {
+    min-height: var(--cl-control-h-sm);
+    padding: 0 var(--cl-space-3);
+    border: 1px solid var(--cl-border);
+    border-radius: var(--cl-radius-full);
+    background: var(--cl-bg-sunken);
+    color: var(--cl-text);
+    font: inherit;
+    font-size: var(--cl-font-caption);
+    cursor: pointer;
+
+    &:hover {
+      border-color: var(--cl-brand);
+      background: var(--cl-brand-subtle);
+    }
+
+    &:focus-visible {
+      outline: none;
+      box-shadow: var(--cl-shadow-focus);
+    }
+  }
+
+  &__error {
+    margin: 0;
+    color: var(--cl-danger-text);
+    font-size: var(--cl-font-small);
+  }
+
+  &__summary {
+    padding: var(--cl-space-4);
+    border: 1px solid var(--cl-brand);
+    border-radius: var(--cl-radius-md);
+    background: var(--cl-brand-subtle);
+  }
+
+  &__summary-title {
+    margin: 0 0 var(--cl-space-1);
+    color: var(--cl-text-subtle);
+    font-size: var(--cl-font-small);
+    font-weight: var(--cl-weight-semibold);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  &__summary-text {
+    margin: 0;
+    color: var(--cl-text);
+    line-height: var(--cl-lh-body);
+    overflow-wrap: anywhere;
+  }
+}

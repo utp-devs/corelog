@@ -64,14 +64,14 @@
     color: var(--cl-text-subtle);
   }
 
+  // Rendered in the overlay container (outside every clipping ancestor); the overlay sizes the pane, the panel
+  // fills it and the list scrolls inside when the space is short.
   &__panel {
-    position: absolute;
-    top: calc(100% + var(--cl-space-1));
-    left: 0;
-    z-index: var(--cl-z-dropdown);
     @include m.flex-column(1);
-    width: min(100%, var(--cl-popover-w));
-    min-width: var(--cl-menu-w-min);
+    box-sizing: border-box;
+    width: 100%;
+    min-width: var(--cl-popover-w);
+    max-width: calc(100vw - var(--cl-space-4));
     padding: var(--cl-space-2);
     border: 1px solid var(--cl-border);
     border-radius: var(--cl-radius-lg);
@@ -84,6 +84,8 @@
   }
 
   &__list {
+    flex: 1 1 auto;
+    min-height: 0;
     max-height: calc(var(--cl-menu-item-h) * 7.5);
     margin: 0;
     padding: 0;

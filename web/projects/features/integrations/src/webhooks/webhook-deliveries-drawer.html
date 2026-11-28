@@ -1,0 +1,123 @@
+<app-side-panel
+  size="lg"
+  [open]="webhook() !== null"
+  [heading]="'Entregas de ' + (webhook()?.name ?? '')"
+  subtitle="Los últimos avisos enviados a esta dirección."
+  (closeRequested)="closed.emit()"
+>
+  <div class="deliveries">
+    <div class="deliveries__toolbar">
+      <div class="deliveries__filters" role="group" aria-label="Filtrar por estado">
+        @for (option of filters; track option.value) {
+          <button
+            type="button"
+            class="deliveries__filter"
+            [class.deliveries__filter--active]="filter() === option.value"
+            [attr.aria-pressed]="filter() === option.value"
+            [attr.data-testid]="'delivery-filter-' + option.value"
+            (click)="filter.set(option.value)"
+          >
+            {{ option.label }}
+          </button>
+        }
+      </div>
+      <p-button
+        label="Actualizar"
+        icon="pi pi-refresh"
+        severity="secondary"
+        [outlined]="true"
+        data-testid="delivery-refresh"
+        (onClick)="load()"
+      />
+    </div>
+
+    @if (status() === 'error') {
+      <app-error-state
+        message="No se pudo cargar el historial de entregas."
+        [canRetry]="true"
+        (retry)="load()"
+      />
+    } @else if (status() === 'loading') {
+      <app-loading-skeleton variant="detail" [rows]="4" />
+    } @else if (visible().length === 0) {
+      <app-empty-state
+        [title]="deliveries().length === 0 ? 'Aún no hay entregas' : 'Ninguna entrega coincide'"
+        [description]="
+          deliveries().length === 0
+            ? 'Cuando ocurra un evento suscrito, o al enviar una prueba, el aviso aparecerá aquí.'
+            : 'Prueba con otro estado.'
+        "
+      />
+    } @else {
+      <ul class="deliveries__list" data-testid="delivery-list">
+        @for (delivery of visible(); track delivery.id) {
+          <li
+            class="deliveries__item"
+            data-testid="delivery-item"
+            [attr.data-status]="delivery.status"
+          >
+            <div class="deliveries__row">
+              <app-tone-tag [label]="labels[delivery.status]" [tone]="tones[delivery.status]" />
+              <span class="deliveries__event">{{ eventLabel(delivery.event) }}</span>
+              <time class="deliveries__time" [attr.datetime]="delivery.createdAt">{{
+                delivery.createdAt | date: 'dd/MM/yyyy HH:mm:ss'
+              }}</time>
+            </div>
+            <dl class="deliveries__facts">
+              <div>
+                <dt>Intentos</dt>
+                <dd>{{ delivery.attempts }}</dd>
+              </div>
+              <div>
+                <dt>Respuesta HTTP</dt>
+                <dd>{{ delivery.responseStatus ?? 'Sin respuesta' }}</dd>
+              </div>
+              <div>
+                <dt>Duración</dt>
+                <dd>{{ delivery.durationMs }} ms</dd>
+              </div>
+            </dl>
+            @if (delivery.responseExcerpt) {
+              <p class="deliveries__excerpt">{{ delivery.responseExcerpt }}</p>
+            }
+            <div class="deliveries__actions">
+              <button
+                type="button"
+                class="deliveries__link"
+                [attr.aria-expanded]="expanded().has(delivery.id)"
+                [attr.data-testid]="'delivery-payload-toggle'"
+                (click)="toggle(delivery.id)"
+              >
+                <i
+                  [class]="
+                    expanded().has(delivery.id) ? 'pi pi-chevron-down' : 'pi pi-chevron-right'
+                  "
+                  aria-hidden="true"
+                ></i>
+                {{ expanded().has(delivery.id) ? 'Ocultar contenido' : 'Ver contenido enviado' }}
+              </button>
+              @if (canRedeliver(delivery.status)) {
+                <p-button
+                  label="Reenviar"
+                  icon="pi pi-replay"
+                  severity="secondary"
+                  [outlined]="true"
+                  size="small"
+                  data-testid="delivery-redeliver"
+                  [loading]="busy() === delivery.id"
+                  (onClick)="redeliver(delivery)"
+                />
+              }
+            </div>
+            @if (expanded().has(delivery.id)) {
+              <pre class="deliveries__payload" tabindex="0" aria-label="Contenido enviado">{{
+                prettyPayload(delivery.payload)
+              }}</pre>
+            }
+          </li>
+        }
+      </ul>
+    }
+  </div>
+  <p-button panelFooter label="Cerrar" severity="secondary" (onClick)="closed.emit()" />
+</app-side-panel>

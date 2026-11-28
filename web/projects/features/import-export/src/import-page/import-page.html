@@ -1,0 +1,307 @@
+<div class="import-page">
+  <app-section
+    fill
+    title="Importar incidencias"
+    description="Sube un archivo CSV, indica a qué campo va cada columna y revisa el resultado antes de crear nada."
+    ariaLabel="Importar incidencias desde CSV"
+  >
+    @if (!ready()) {
+      <app-loading-skeleton variant="detail" [rows]="3" />
+    } @else if (!canImport()) {
+      <div class="import-page__empty" data-testid="import-forbidden">
+        <img
+          class="import-page__image"
+          src="/images/modules/module-import-export.webp"
+          alt=""
+          width="480"
+          height="320"
+          decoding="async"
+        />
+        <app-empty-state
+          [title]="archived() ? 'El proyecto está archivado' : 'No puedes importar incidencias'"
+          [description]="
+            archived()
+              ? 'Restáuralo desde «Zona de peligro» para volver a importar.'
+              : 'Solo quienes lideran el proyecto pueden importar incidencias.'
+          "
+        />
+      </div>
+    } @else {
+      <app-stepper
+        class="import-page__stepper"
+        label="Pasos de la importación"
+        [steps]="steps"
+        [current]="step()"
+        [backable]="step() < 3"
+        (select)="backTo($event)"
+      />
+
+      @if (error(); as message) {
+        <p class="import-page__error" role="alert" data-testid="import-error">
+          <i class="pi pi-exclamation-circle" aria-hidden="true"></i> {{ message }}
+        </p>
+      }
+
+      @switch (step()) {
+        @case (0) {
+          <div class="import-page__step" data-testid="import-step-upload">
+            <div
+              class="import-page__drop"
+              [class.import-page__drop--active]="dragging()"
+              [class.import-page__drop--busy]="busy()"
+              role="button"
+              tabindex="0"
+              aria-label="Elegir un archivo CSV o soltarlo aquí"
+              data-testid="import-drop"
+              (click)="openPicker()"
+              (keydown.enter)="openPicker()"
+              (keydown.space)="$event.preventDefault(); openPicker()"
+              (dragover)="onDragOver($event)"
+              (dragleave)="dragging.set(false)"
+              (drop)="onDrop($event)"
+            >
+              <i class="pi pi-upload import-page__drop-icon" aria-hidden="true"></i>
+              @if (busy()) {
+                <p class="import-page__drop-title">Leyendo el archivo…</p>
+              } @else {
+                <p class="import-page__drop-title">Suelta aquí tu archivo CSV</p>
+                <p class="import-page__drop-text">o elige uno de tu equipo</p>
+              }
+              <p-button
+                label="Elegir archivo"
+                icon="pi pi-folder-open"
+                severity="secondary"
+                [outlined]="true"
+                [disabled]="busy()"
+                data-testid="import-pick"
+              />
+            </div>
+            <input
+              #picker
+              class="import-page__input"
+              type="file"
+              accept=".csv,text/csv"
+              tabindex="-1"
+              aria-hidden="true"
+              data-testid="import-file"
+              (change)="onPicked($event)"
+            />
+            <ul class="import-page__rules">
+              <li>
+                Formato CSV con codificación UTF-8 y una primera fila con los títulos de las
+                columnas.
+              </li>
+              <li>Tamaño máximo: {{ maxText }}. Hasta 20 000 filas.</li>
+              <li>La columna de resumen es obligatoria; las demás son opcionales.</li>
+            </ul>
+          </div>
+        }
+
+        @case (1) {
+          <div class="import-page__step" data-testid="import-step-map">
+            @if (file(); as chosen) {
+              <p class="import-page__file">
+                <i class="pi pi-file" aria-hidden="true"></i>
+                <strong>{{ chosen.name }}</strong>
+                <span>{{ formatBytes(chosen.size) }} · {{ preview()?.totalRows }} filas</span>
+              </p>
+            }
+            @if (preview(); as data) {
+              <app-mapping-table
+                [columns]="data.columns"
+                [sampleRows]="data.sampleRows"
+                [(mapping)]="mapping"
+              />
+            }
+            <div class="import-page__footer">
+              <p-button
+                label="Elegir otro archivo"
+                severity="secondary"
+                [text]="true"
+                [disabled]="busy()"
+                (onClick)="restart()"
+              />
+              <p-button
+                label="Revisar antes de importar"
+                icon="pi pi-arrow-right"
+                iconPos="right"
+                data-testid="import-review"
+                [disabled]="!mappingReady()"
+                [loading]="busy()"
+                (onClick)="review()"
+              />
+            </div>
+            @if (busy() && dryRun(); as job) {
+              <app-progress-bar [value]="percent(job)" label="Revisando las filas" />
+            }
+          </div>
+        }
+
+        @case (2) {
+          <div class="import-page__step" data-testid="import-step-review">
+            @if (dryRun(); as job) {
+              <h3 class="import-page__heading">Resultado de la revisión</h3>
+              <dl class="import-page__counts">
+                <div class="import-page__count">
+                  <dt>Filas leídas</dt>
+                  <dd data-testid="dry-total">{{ job.totalRows }}</dd>
+                </div>
+                <div class="import-page__count import-page__count--ok">
+                  <dt>Se crearían</dt>
+                  <dd data-testid="dry-created">{{ job.createdRows }}</dd>
+                </div>
+                <div class="import-page__count" [class.import-page__count--bad]="job.errorRows > 0">
+                  <dt>Con errores</dt>
+                  <dd data-testid="dry-errors">{{ job.errorRows }}</dd>
+                </div>
+              </dl>
+
+              @if (job.errorRows > 0) {
+                <p class="import-page__note">
+                  Las filas con errores no se importarán; el resto sí. Corrige el archivo y vuelve a
+                  subirlo si quieres incluirlas.
+                </p>
+                <div class="import-page__table-wrap">
+                  <table class="import-page__table" data-testid="dry-error-table">
+                    <caption class="import-page__sr">
+                      Filas con errores
+                    </caption>
+                    <thead>
+                      <tr>
+                        <th scope="col">Fila</th>
+                        <th scope="col">Qué falla</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (item of job.errors; track item.row) {
+                        <tr>
+                          <th scope="row">{{ item.row }}</th>
+                          <td>{{ item.errors.join(' · ') }}</td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+                @if (job.errorRows > job.errors.length) {
+                  <p class="import-page__note">
+                    Se muestran las primeras {{ job.errors.length }}; el informe completo está en el
+                    archivo de errores.
+                  </p>
+                }
+                <p-button
+                  label="Descargar informe de errores (CSV)"
+                  icon="pi pi-download"
+                  severity="secondary"
+                  [outlined]="true"
+                  data-testid="import-errors-csv"
+                  [loading]="downloading()"
+                  (onClick)="downloadErrors(job)"
+                />
+              }
+
+              <div class="import-page__footer">
+                <p-button
+                  label="Volver a las columnas"
+                  severity="secondary"
+                  [text]="true"
+                  (onClick)="backTo(1)"
+                />
+                <p-button
+                  [label]="'Importar ' + job.createdRows + ' incidencias'"
+                  icon="pi pi-check"
+                  data-testid="import-start"
+                  [disabled]="job.createdRows === 0"
+                  [loading]="busy()"
+                  (onClick)="runImport()"
+                />
+              </div>
+            }
+          </div>
+        }
+
+        @case (3) {
+          <div class="import-page__step" data-testid="import-step-result">
+            @if (result(); as job) {
+              <div aria-live="polite">
+                <app-progress-bar
+                  [value]="percent(job)"
+                  [label]="
+                    statusText[job.status] +
+                    ': ' +
+                    job.processedRows +
+                    ' de ' +
+                    job.totalRows +
+                    ' filas'
+                  "
+                  [tone]="job.status === 'done' ? 'success' : 'brand'"
+                  data-testid="import-progress"
+                />
+              </div>
+              @if (job.status === 'done') {
+                <h3 class="import-page__heading">Importación terminada</h3>
+                <dl class="import-page__counts">
+                  <div class="import-page__count import-page__count--ok">
+                    <dt>Incidencias creadas</dt>
+                    <dd data-testid="import-created">{{ job.createdRows }}</dd>
+                  </div>
+                  <div
+                    class="import-page__count"
+                    [class.import-page__count--bad]="job.errorRows > 0"
+                  >
+                    <dt>Filas con errores</dt>
+                    <dd data-testid="import-error-rows">{{ job.errorRows }}</dd>
+                  </div>
+                </dl>
+                @if (job.errorRows > 0) {
+                  <p-button
+                    label="Descargar informe de errores (CSV)"
+                    icon="pi pi-download"
+                    severity="secondary"
+                    [outlined]="true"
+                    [loading]="downloading()"
+                    (onClick)="downloadErrors(job)"
+                  />
+                }
+                <div class="import-page__footer">
+                  <p-button
+                    label="Importar otro archivo"
+                    severity="secondary"
+                    [text]="true"
+                    (onClick)="restart()"
+                  />
+                  @if (issuesLink(); as jql) {
+                    <a
+                      class="import-page__cta p-button p-component"
+                      routerLink="/issues"
+                      [queryParams]="{ mode: 'advanced', jql: jql }"
+                      data-testid="import-open-issues"
+                    >
+                      Ver las incidencias importadas
+                    </a>
+                  }
+                </div>
+              } @else if (job.status === 'failed') {
+                <p class="import-page__error" role="alert">
+                  La importación terminó con errores y no se pudo completar.
+                </p>
+                <div class="import-page__footer">
+                  <p-button label="Empezar de nuevo" (onClick)="restart()" />
+                </div>
+              } @else {
+                <p class="import-page__note">
+                  Puedes seguir en esta página mientras termina; no cierres la pestaña.
+                </p>
+              }
+            } @else if (busy()) {
+              <app-loading-skeleton variant="detail" [rows]="2" />
+            } @else {
+              <div class="import-page__footer">
+                <p-button label="Empezar de nuevo" (onClick)="restart()" />
+              </div>
+            }
+          </div>
+        }
+      }
+    }
+  </app-section>
+</div>

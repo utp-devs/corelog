@@ -6,8 +6,9 @@
 // theme the person chose in the app does not change this screen.
 :host {
   display: block;
-  min-height: 100vh;
-  min-height: 100dvh;
+  height: 100vh;
+  height: 100dvh;
+  overflow: clip;
   background: var(--cl-auth-bg);
   color: var(--cl-auth-text);
   @include a.dark-scope;
@@ -40,9 +41,7 @@
   --cl-hero-text-subtle: var(--cl-auth-light-hero-text-subtle);
   --cl-hero-panel: var(--cl-auth-light-hero-panel);
   --cl-hero-chip: var(--cl-auth-light-hero-chip);
-  --cl-auth-card: var(--cl-auth-light-card);
   --cl-auth-panel: var(--cl-auth-light-panel);
-  --cl-auth-card-border: var(--cl-auth-light-card-border);
   --cl-auth-page-tint: var(--cl-auth-light-page-tint);
 }
 
@@ -66,83 +65,45 @@
   }
 
   &__main {
-    min-height: 100vh;
-    min-height: 100dvh;
+    height: 100vh;
+    height: 100dvh;
 
     &:focus {
       outline: none;
     }
   }
 
-  // The page measured by the layout audit: full width, with the container centered on a deep navy backdrop.
+  // The page measured by the layout audit: exactly the viewport, never taller. The hero and the form panel are its
+  // direct children and split it edge to edge; nothing inside can make the document scroll.
   &__page {
     position: relative;
     isolation: isolate;
     display: grid;
-    place-items: center;
-    min-height: 100vh;
-    min-height: 100dvh;
-    padding: var(--cl-space-8) var(--cl-gutter);
-    background: var(--cl-auth-bg);
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
+    grid-template-rows: minmax(0, 1fr);
+    overflow: clip;
+    width: 100%;
+    height: 100vh;
+    height: 100dvh;
+    background: var(--cl-auth-panel);
   }
 
-  // Blurred photograph under everything: the same image as the active slide, scaled so the blurred edges never
-  // show, under one flat dim tint. The page color stays behind it as the fallback.
-  &__backdrop {
-    position: absolute;
-    inset: 0;
-    z-index: -1;
-    overflow: hidden;
-    background: var(--cl-auth-bg);
-  }
-
-  &__backdrop-image,
+  // Phone only: the blurred photograph behind the whole form, under one flat tint.
   &__background {
     position: absolute;
     inset: 0;
+    z-index: -1;
     width: 100%;
     height: 100%;
     object-fit: cover;
-    transform: scale(1.05);
     filter: blur(var(--cl-auth-blur-page));
   }
 
-  &__backdrop-image {
-    opacity: 0;
-    transition: opacity 700ms var(--cl-ease);
-
-    &--active {
-      opacity: 1;
-    }
-
-    @media (prefers-reduced-motion: reduce) {
-      transition: none;
-    }
-  }
-
-  // One flat uniform tint over the photograph.
   &__veil {
     position: absolute;
     inset: 0;
+    z-index: -1;
     background: var(--cl-auth-page-tint);
-  }
-
-  // Large rounded container: hero on the left, form on the right.
-  &__shell {
-    position: relative;
-    display: grid;
-    grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
-    overflow: hidden;
-    grid-template-rows: minmax(0, 1fr);
-    width: min(100%, 80rem);
-    // Fixed base height: it never depends on what the form holds, so the login and every step of the registration
-    // share the same container. It shrinks only when the viewport is shorter than the base height.
-    height: min(var(--cl-auth-container-h), calc(100vh - var(--cl-space-8) * 2));
-    height: min(var(--cl-auth-container-h), calc(100dvh - var(--cl-space-8) * 2));
-    border: 1px solid var(--cl-auth-card-border);
-    border-radius: calc(var(--cl-radius-lg) * 3);
-    background: var(--cl-auth-card);
-    box-shadow: var(--cl-elev-modal);
   }
 
   // Minimal top bar: the logo on a light pill so its dark lettering stays legible on the photograph.
@@ -169,6 +130,7 @@
   }
 
   &__hero {
+    position: relative;
     grid-column: 1;
     grid-row: 1;
     min-width: 0;
@@ -179,7 +141,7 @@
     @include m.flex-column(3);
     justify-content: flex-end;
     height: 100%;
-    padding: var(--cl-space-16) var(--cl-space-8) var(--cl-space-2);
+    padding: var(--cl-space-16) var(--cl-space-10) var(--cl-space-2);
   }
 
   // Flat tint behind the text block only, so the photograph stays sharp and the text stays legible.
@@ -216,29 +178,33 @@
     color: var(--cl-hero-text-subtle);
   }
 
-  // The panel clips: a form can never make the container taller. Anything longer scrolls inside the card.
+  // Full-height form column: the card centered in the free space and the legal links pinned to the bottom edge.
+  // It clips: a form can never make the page taller. Anything longer scrolls inside the card.
   &__panel {
-    @include m.flex-row(0, stretch, center);
-    overflow: hidden;
+    @include m.flex-column(0, center);
+    overflow: clip;
     grid-column: 2;
     grid-row: 1;
     min-width: 0;
     min-height: 0;
-    padding: var(--cl-space-12) var(--cl-space-10);
+    padding: var(--cl-space-8) var(--cl-space-10) var(--cl-space-4);
     background: var(--cl-auth-panel);
   }
 
-  // Heading on top, the form (scrolls inside when the viewport is too short) and the pinned links below.
+  // Heading on top, then the form (scrolls inside when the viewport is too short).
   &__card {
     @include m.flex-column(0);
+    flex: 0 1 auto;
     justify-content: center;
-    width: min(28rem, 100%);
+    width: min(32rem, 100%);
     min-width: 0;
     min-height: 0;
+    margin-block: auto;
 
-    // Multi-step forms start at the top so the heading and the stepper stay put from one step to the next.
+    // Multi-step forms keep one height from step to step: the heading and the stepper stay put.
     &--fill {
       justify-content: flex-start;
+      flex: 0 1 var(--cl-auth-step-card-h);
     }
   }
 
@@ -247,9 +213,10 @@
     flex: 0 1 auto;
     min-height: 0;
     overflow-y: auto;
-    // Room for the focus rings and halos of the controls that sit on the edge of the scroll area.
-    margin-inline: calc(var(--cl-space-1) * -1);
-    padding-inline: var(--cl-space-1);
+    // Room for the focus rings and halos of the controls that sit on the edge of the scroll area: the ring is
+    // 4px wide, so the area is padded by more than that and pulled back with a negative margin.
+    margin-inline: calc(var(--cl-space-2) * -1);
+    padding: var(--cl-space-2);
 
     &--fill {
       flex: 1 1 auto;
@@ -278,7 +245,7 @@
 
   &__heading {
     flex: none;
-    margin-bottom: var(--cl-space-6);
+    margin-bottom: var(--cl-space-4);
   }
 
   &__subtitle {
@@ -286,10 +253,12 @@
     color: var(--cl-auth-text-subtle);
   }
 
+  // Footer of the panel, centered on its bottom edge.
   &__legal {
     @include m.flex-row(1, center, center);
+    flex: none;
     flex-wrap: wrap;
-    margin-top: var(--cl-space-2);
+    padding-top: var(--cl-space-2);
   }
 
   &__legal-link {
@@ -314,7 +283,7 @@
   }
 
   &__switch {
-    margin: var(--cl-space-6) 0 0;
+    margin: var(--cl-space-4) 0 0;
     text-align: center;
     font-size: var(--cl-font-body);
     color: var(--cl-auth-text-subtle);
@@ -340,14 +309,11 @@
     }
   }
 
-  // Tablet: the hero becomes a strip above the form.
+  // Tablet: the hero becomes a strip above the form, which takes the rest of the viewport.
   @include m.respond-down(1024px) {
-    &__shell {
+    &__page {
       grid-template-columns: minmax(0, 1fr);
-      grid-template-rows: 15.75rem minmax(0, 1fr);
-      width: min(100%, 44rem);
-      height: min(var(--cl-auth-container-h-tablet), calc(100vh - var(--cl-space-8) * 2));
-      height: min(var(--cl-auth-container-h-tablet), calc(100dvh - var(--cl-space-8) * 2));
+      grid-template-rows: var(--cl-auth-hero-strip-h) minmax(0, 1fr);
     }
 
     &__hero,
@@ -357,7 +323,7 @@
 
     &__panel {
       grid-row: 2;
-      padding: var(--cl-space-8);
+      padding: var(--cl-space-6) var(--cl-space-8) var(--cl-space-4);
     }
 
     &__brand {
@@ -366,7 +332,11 @@
     }
 
     &__pitch {
-      padding: var(--cl-space-12) var(--cl-space-6) 0;
+      padding: var(--cl-space-16) var(--cl-space-6) 0;
+    }
+
+    &__pitch-card {
+      padding: var(--cl-space-2) var(--cl-space-4);
     }
 
     &__headline {
@@ -378,33 +348,23 @@
     }
   }
 
-  // Phone: no photograph in the container; a full-bleed background sits behind the form.
+  // Phone: no photograph panel; the blurred background sits behind a full-screen form.
   @include m.respond-down(721px) {
     &__page {
-      display: block;
-      padding: 0;
-    }
-
-    &__shell {
       display: flex;
       flex-direction: column;
-      width: 100%;
-      height: 100vh;
-      height: 100dvh;
-      border: 0;
-      border-radius: 0;
-      background: transparent;
-      box-shadow: none;
     }
 
     &__brand {
       position: static;
+      flex: none;
       padding: var(--cl-space-6) var(--cl-gutter) var(--cl-space-4);
     }
 
     &__panel {
       flex: 1 1 auto;
       padding: var(--cl-space-6) var(--cl-gutter) var(--cl-space-4);
+      align-items: stretch;
       border-radius: calc(var(--cl-radius-lg) * 3) calc(var(--cl-radius-lg) * 3) 0 0;
       background: var(--cl-auth-panel);
     }
@@ -415,7 +375,7 @@
 
     // Keeps the legal links clear of the floating theme button.
     &__legal {
-      margin-bottom: var(--cl-space-12);
+      padding-bottom: var(--cl-space-12);
     }
 
     &__switch {
@@ -434,7 +394,7 @@
   // Short viewports (a 720px-high laptop): tighter vertical rhythm so each step still fits without scrolling.
   @media (max-height: 760px) and (min-width: 1025px) {
     &__panel {
-      padding-block: var(--cl-space-6);
+      padding-block: var(--cl-space-4);
     }
 
     &__heading {

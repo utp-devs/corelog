@@ -1,0 +1,150 @@
+<div class="rule-editor">
+  <a class="rule-editor__back" [routerLink]="backLink()" data-testid="rule-back">
+    <i class="pi pi-arrow-left" aria-hidden="true"></i> Volver a las reglas
+  </a>
+
+  @if (status() === 'loading') {
+    <app-loading-skeleton variant="detail" [rows]="5" />
+  } @else if (status() === 'error') {
+    <app-error-state
+      message="No se pudo cargar la regla."
+      [canRetry]="true"
+      (retry)="retryLoad()"
+    />
+  } @else if (status() === 'forbidden') {
+    <app-error-state
+      title="No puedes gestionar automatizaciones"
+      message="Esta sección es para quienes lideran el proyecto."
+      [status]="403"
+    />
+  } @else {
+    <app-section
+      [title]="isNew() ? 'Nueva regla' : 'Editar regla'"
+      description="Define cuándo se activa, qué condiciones debe cumplir y qué hace."
+      ariaLabel="Editor de la regla"
+    >
+      @if (!canEdit()) {
+        <p class="rule-editor__notice" role="status">
+          @if (archived()) {
+            El proyecto está archivado: la regla está en solo lectura.
+          } @else {
+            No tienes permiso para cambiar reglas: la ves en solo lectura.
+          }
+        </p>
+      }
+
+      @if (conflict()) {
+        <div class="rule-editor__conflict" role="alert" data-testid="rule-conflict">
+          <p>
+            <strong>La regla cambió mientras la editabas.</strong> Otra persona guardó una versión
+            más reciente. Recárgala para ver sus cambios; tus ediciones sin guardar se perderán.
+          </p>
+          <p-button
+            label="Recargar la regla"
+            icon="pi pi-refresh"
+            data-testid="rule-reload"
+            (onClick)="reloadFromServer()"
+          />
+        </div>
+      }
+
+      <div class="rule-editor__top">
+        <label class="rule-editor__field">
+          <span class="rule-editor__label">Nombre de la regla</span>
+          <input
+            pInputText
+            maxlength="120"
+            placeholder="Por ejemplo: Comentar al crear una incidencia"
+            data-testid="rule-name"
+            [attr.aria-invalid]="nameProblem() ? 'true' : null"
+            [disabled]="!canEdit()"
+            [value]="rule().name"
+            (input)="setName($event)"
+          />
+          @if (nameProblem(); as message) {
+            <span class="rule-editor__error" role="alert">{{ message }}</span>
+          }
+        </label>
+        <label class="rule-editor__switch">
+          <p-toggleswitch
+            [ngModel]="rule().enabled"
+            [disabled]="!canEdit()"
+            ariaLabel="Regla activa"
+            data-testid="rule-enabled-toggle"
+            (onChange)="setEnabled($event.checked)"
+          />
+          <span>{{ rule().enabled ? 'Activa' : 'Desactivada' }}</span>
+        </label>
+      </div>
+
+      <app-rule-builder
+        [rule]="rule()"
+        (ruleChange)="setRule($event)"
+        [statuses]="statuses()"
+        [people]="people()"
+        [teams]="teams()"
+        [problems]="shownProblems()"
+        [readonly]="!canEdit()"
+      />
+
+      @if (serverCheck(); as check) {
+        <section
+          class="rule-editor__check"
+          [class.rule-editor__check--bad]="!check.valid"
+          aria-live="polite"
+          data-testid="rule-validation"
+        >
+          <h3 class="rule-editor__check-title">
+            <i
+              [class]="check.valid ? 'pi pi-check-circle' : 'pi pi-times-circle'"
+              aria-hidden="true"
+            ></i>
+            {{ check.valid ? 'La regla es válida' : 'La regla tiene errores' }}
+          </h3>
+          @if (check.errors.length > 0) {
+            <ul>
+              @for (message of check.errors; track message) {
+                <li>{{ message }}</li>
+              }
+            </ul>
+          }
+          @if (check.plannedActions.length > 0) {
+            <p class="rule-editor__check-sub">Acciones que se ejecutarían:</p>
+            <ol>
+              @for (planned of check.plannedActions; track $index) {
+                <li>{{ planned }}</li>
+              }
+            </ol>
+          }
+        </section>
+      }
+
+      @if (serverError(); as message) {
+        <p class="rule-editor__error" role="alert" data-testid="rule-error">{{ message }}</p>
+      }
+
+      <div class="rule-editor__footer">
+        <a class="rule-editor__cancel" [routerLink]="backLink()">Cancelar</a>
+        @if (canEdit()) {
+          <p-button
+            label="Validar"
+            icon="pi pi-check-square"
+            severity="secondary"
+            [outlined]="true"
+            data-testid="rule-validate"
+            [loading]="validating()"
+            (onClick)="validate()"
+          />
+          <p-button
+            label="Guardar regla"
+            icon="pi pi-save"
+            data-testid="rule-save"
+            [loading]="saving()"
+            [disabled]="conflict()"
+            (onClick)="save()"
+          />
+        }
+      </div>
+    </app-section>
+  }
+</div>

@@ -1,115 +1,88 @@
 <a class="auth-layout__skip" href="#auth-main">Saltar al formulario</a>
 
+<ng-template #brandTpl>
+  <div class="auth-layout__brand">
+    <span class="auth-layout__logo-plate">
+      <img
+        class="auth-layout__logo"
+        decoding="async"
+        [attr.src]="logo.src"
+        [attr.srcset]="logo.srcset"
+        [attr.sizes]="logo.sizes"
+        [attr.alt]="logo.alt"
+        [attr.width]="logo.width"
+        [attr.height]="logo.height"
+      />
+    </span>
+  </div>
+</ng-template>
+
 <main class="auth-layout__main" [attr.id]="mainId" tabindex="-1">
   <div class="auth-layout__page" data-page="auth">
-    <div class="auth-layout__backdrop" aria-hidden="true" data-scroll-x>
-      @if (phone()) {
-        <img
-          class="auth-layout__background"
-          alt=""
-          aria-hidden="true"
-          width="1024"
-          height="1536"
-          decoding="async"
-          fetchpriority="high"
-          [attr.src]="mobileBackground"
-        />
-      } @else {
-        @for (slide of hero().slides; track slide.src; let i = $index) {
-          <img
-            class="auth-layout__backdrop-image"
-            alt=""
-            aria-hidden="true"
-            width="1536"
-            height="1024"
-            decoding="async"
-            [class.auth-layout__backdrop-image--active]="i === activeSlide()"
-            [attr.src]="slide.src"
-            [attr.loading]="i === 0 ? 'eager' : 'lazy'"
-          />
-        }
-      }
-      <span class="auth-layout__veil"></span>
-    </div>
-
-    <div class="auth-layout__shell">
-      <div class="auth-layout__brand">
-        <span class="auth-layout__logo-plate">
-          <img
-            class="auth-layout__logo"
-            decoding="async"
-            [attr.src]="logo.src"
-            [attr.srcset]="logo.srcset"
-            [attr.sizes]="logo.sizes"
-            [attr.alt]="logo.alt"
-            [attr.width]="logo.width"
-            [attr.height]="logo.height"
-          />
-        </span>
-      </div>
-
-      @if (!phone()) {
-        <div class="auth-layout__hero">
-          <app-hero-carousel
-            [slides]="hero().slides"
-            [label]="hero().label"
-            (slideChange)="activeSlide.set($event)"
-          >
-            <div class="auth-layout__pitch">
-              <div class="auth-layout__pitch-card">
-                <p class="auth-layout__headline">
-                  <span class="auth-layout__headline-line">{{ hero().lineOne }}</span>
-                  <span class="auth-layout__headline-line">
-                    {{ hero().before }}<span class="auth-layout__accent">{{ hero().accent }}</span
-                    >{{ hero().after }}
-                  </span>
-                </p>
-                <p class="auth-layout__lead">{{ hero().subtitle }}</p>
-              </div>
-            </div>
-          </app-hero-carousel>
-        </div>
-      }
-
-      <section class="auth-layout__panel" [attr.aria-labelledby]="titleId">
-        <div class="auth-layout__card" [class.auth-layout__card--fill]="fill()">
-          <header class="auth-layout__heading">
-            <h1 class="auth-layout__title" [attr.id]="titleId">{{ title() }}</h1>
-            @if (subtitle(); as text) {
-              <p class="auth-layout__subtitle">{{ text }}</p>
-            }
-          </header>
-          <div class="auth-layout__content" [class.auth-layout__content--fill]="fill()">
-            <ng-content />
-          </div>
-          <footer class="auth-layout__footer">
-            @if (switchPath(); as path) {
-              <p class="auth-layout__switch">
-                {{ switchText() }}
-                <a
-                  class="auth-layout__switch-link"
-                  [routerLink]="path"
-                  [queryParams]="switchQuery()"
-                >
-                  {{ switchLabel() }}
-                </a>
+    @if (phone()) {
+      <img
+        class="auth-layout__background"
+        alt=""
+        aria-hidden="true"
+        width="1024"
+        height="1536"
+        decoding="async"
+        fetchpriority="high"
+        [attr.src]="mobileBackground"
+      />
+      <span class="auth-layout__veil" aria-hidden="true"></span>
+      <ng-container [ngTemplateOutlet]="brandTpl" />
+    }
+    @if (!phone()) {
+      <div class="auth-layout__hero">
+        <ng-container [ngTemplateOutlet]="brandTpl" />
+        <app-hero-carousel [slides]="hero().slides" [label]="hero().label">
+          <div class="auth-layout__pitch">
+            <div class="auth-layout__pitch-card">
+              <p class="auth-layout__headline">
+                <span class="auth-layout__headline-line">{{ hero().lineOne }}</span>
+                <span class="auth-layout__headline-line">
+                  {{ hero().before }}<span class="auth-layout__accent">{{ hero().accent }}</span
+                  >{{ hero().after }}
+                </span>
               </p>
-            }
-            <nav class="auth-layout__legal" aria-label="Documentos legales">
-              @for (link of legalLinks; track link.slug) {
-                <button
-                  type="button"
-                  class="auth-layout__legal-link"
-                  (click)="reading.set(link.slug)"
-                >
-                  {{ link.label }}
-                </button>
-              }
-            </nav>
-          </footer>
+              <p class="auth-layout__lead">{{ hero().subtitle }}</p>
+            </div>
+          </div>
+        </app-hero-carousel>
+      </div>
+    }
+
+    <section class="auth-layout__panel" [attr.aria-labelledby]="titleId">
+      <div class="auth-layout__card" [class.auth-layout__card--fill]="fill()">
+        <header class="auth-layout__heading">
+          <h1 class="auth-layout__title" [attr.id]="titleId">{{ title() }}</h1>
+          @if (subtitle(); as text) {
+            <p class="auth-layout__subtitle">{{ text }}</p>
+          }
+        </header>
+        <div class="auth-layout__content" [class.auth-layout__content--fill]="fill()">
+          <ng-content />
         </div>
-      </section>
-    </div>
+        <footer class="auth-layout__footer">
+          @if (switchPath(); as path) {
+            <p class="auth-layout__switch">
+              {{ switchText() }}
+              <a class="auth-layout__switch-link" [routerLink]="path" [queryParams]="switchQuery()">
+                {{ switchLabel() }}
+              </a>
+            </p>
+          }
+        </footer>
+      </div>
+      <nav class="auth-layout__legal" aria-label="Documentos legales">
+        @for (link of legalLinks; track link.slug) {
+          <button type="button" class="auth-layout__legal-link" (click)="reading.set(link.slug)">
+            {{ link.label }}
+          </button>
+        }
+      </nav>
+    </section>
   </div>
 </main>
 

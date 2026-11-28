@@ -1,4 +1,4 @@
-import { DOCUMENT } from '@angular/common';
+import { DOCUMENT, NgTemplateOutlet } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -38,14 +38,14 @@ export const AUTH_MOBILE_BACKGROUND = '/images/auth/auth-mobile-bg.webp';
 
 /**
  * Shared template for the access screens: dark by default and light when the visitor chose it (a floating button
- * switches the app theme), a large rounded container with a photo hero
+ * switches the app theme), two panels that fill the viewport: a photo hero
  * (carousel, headline and subtitle) beside the form. On tablets the hero becomes a strip above the form; on
  * phones the hero is dropped and a background image goes behind the form instead. The optional switch link
  * ("already have an account?") is rendered under the form.
  */
 @Component({
   selector: 'app-auth-layout',
-  imports: [RouterLink, HeroCarousel, LegalDocumentDialog, ThemeToggleFab],
+  imports: [NgTemplateOutlet, RouterLink, HeroCarousel, LegalDocumentDialog, ThemeToggleFab],
   host: { '[attr.data-auth-theme]': 'authTheme()' },
   templateUrl: './auth-layout.html',
   styleUrl: './auth-layout.scss',
@@ -78,8 +78,6 @@ export class AuthLayout {
   protected readonly legalLinks = LEGAL_LINKS;
   /** Slug of the legal document open in the modal; null while closed. */
   protected readonly reading = signal<string | null>(null);
-  /** Slide shown by the carousel; the blurred backdrop shows the same photograph. */
-  protected readonly activeSlide = signal(0);
 
   constructor() {
     const query = inject(DOCUMENT).defaultView?.matchMedia?.(PHONE_QUERY);

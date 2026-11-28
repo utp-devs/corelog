@@ -12,7 +12,7 @@ function open(inputs: Record<string, string | null> = {}): {
   fixture.detectChanges();
   (fixture.nativeElement.querySelector('button[aria-label="Ayuda"]') as HTMLButtonElement).click();
   fixture.detectChanges();
-  return { fixture, menu: fixture.nativeElement.querySelector('[role="menu"]') as HTMLElement };
+  return { fixture, menu: document.querySelector('[role="menu"]') as HTMLElement };
 }
 
 describe('HelpMenu', () => {
@@ -55,7 +55,7 @@ describe('HelpMenu', () => {
       fixture.nativeElement.querySelector('button[aria-label="Ayuda"]') as HTMLButtonElement
     ).click();
     fixture.detectChanges();
-    (fixture.nativeElement.querySelector('[role="menuitem"]') as HTMLElement).click();
+    (document.querySelector('[role="menuitem"]') as HTMLElement).click();
     expect(opened).toHaveBeenCalledTimes(1);
   });
 });

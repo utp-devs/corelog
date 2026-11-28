@@ -184,12 +184,12 @@ describe('PhoneInput', () => {
 describe('PhoneInput country list', () => {
   afterEach(() => TestBed.resetTestingModule());
 
+  /** Opens the panel. It lives in the overlay container, so the whole document is the search root. */
   async function open(fixture: ComponentFixture<Host>): Promise<HTMLElement> {
-    const el = fixture.nativeElement as HTMLElement;
-    trigger(el).click();
+    trigger(fixture.nativeElement as HTMLElement).click();
     fixture.detectChanges();
-    await Promise.resolve();
-    return el;
+    await fixture.whenStable();
+    return document.body;
   }
 
   function search(el: HTMLElement): HTMLInputElement {
@@ -212,6 +212,47 @@ describe('PhoneInput country list', () => {
       'Perú',
     );
     expect(options[0].textContent).toContain('+51');
+  });
+
+  it('renders the panel through the overlay container, outside the field and its clipping ancestors', async () => {
+    const { fixture } = setup();
+    await open(fixture);
+    const panel = document.querySelector('.phone-input__panel') as HTMLElement;
+    expect(panel).not.toBeNull();
+    expect(fixture.nativeElement.contains(panel)).toBe(false);
+    expect(panel.closest('.cdk-overlay-container')).not.toBeNull();
+    expect(panel.closest('.phone-input-overlay')).not.toBeNull();
+  });
+
+  it('opens focused on the search field and exposes the active option', async () => {
+    const { fixture } = setup();
+    const el = await open(fixture);
+    expect(document.activeElement).toBe(search(el));
+    expect(search(el).getAttribute('aria-activedescendant')).toContain('-PE');
+  });
+
+  it('selects a country with a click and closes', async () => {
+    const { fixture, host } = setup();
+    const el = await open(fixture);
+    el.querySelectorAll<HTMLElement>('[role="option"]')[1].click();
+    fixture.detectChanges();
+    expect(document.querySelector('[role="listbox"]')).toBeNull();
+    expect(trigger(fixture.nativeElement).getAttribute('aria-label')).toBe('País: Colombia +57');
+    type(fixture, '3211234567');
+    expect(host.control.value).toEqual({ country: 'CO', number: '3211234567' });
+  });
+
+  it('stays open when the press lands inside the panel and closes when the page scrolls', async () => {
+    const { fixture } = setup();
+    const el = await open(fixture);
+    search(el).dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+    fixture.detectChanges();
+    expect(el.querySelector('[role="listbox"]')).not.toBeNull();
+    document.body.dispatchEvent(new Event('scroll'));
+    document.dispatchEvent(new Event('scroll'));
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect(el.querySelector('[role="listbox"]')).toBeNull();
   });
 
   it('filters by name without accents, by prefix and by code', async () => {
@@ -241,7 +282,7 @@ describe('PhoneInput country list', () => {
     fixture.detectChanges();
     expect(el.querySelector('[role="listbox"]')).toBeNull();
     expect(trigger(el).getAttribute('aria-label')).toBe('País: Colombia +57');
-    expect(document.activeElement === field(el) || true).toBe(true);
+    expect(document.activeElement).toBe(field(fixture.nativeElement));
     type(fixture, '3211234567');
     expect(host.control.value).toEqual({ country: 'CO', number: '3211234567' });
   });
@@ -253,7 +294,7 @@ describe('PhoneInput country list', () => {
     press(el, 'Escape');
     fixture.detectChanges();
     expect(el.querySelector('[role="listbox"]')).toBeNull();
-    expect(document.activeElement).toBe(trigger(el));
+    expect(document.activeElement).toBe(trigger(fixture.nativeElement));
     fixture.nativeElement.remove();
   });
 

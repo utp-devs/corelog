@@ -1,0 +1,239 @@
+@if (status() === 'forbidden') {
+  <app-page-container variant="wide" pageName="webhooks" [ready]="true" [fill]="true">
+    <app-error-page
+      [variant]="403"
+      title="No tienes acceso a los webhooks"
+      description="Solo los propietarios y administradores de la organización pueden gestionarlos."
+      [framed]="true"
+    />
+  </app-page-container>
+} @else {
+  <app-page-container
+    variant="wide"
+    pageName="webhooks"
+    [ready]="status() !== 'loading'"
+    [fill]="true"
+  >
+    <app-page-header
+      banner="settings"
+      title="Webhooks"
+      subtitle="Avisa a otros sistemas cuando algo ocurra en CoreLog: cada aviso va firmado y puedes revisar sus entregas."
+    >
+      <p-button
+        appPageHeaderActions
+        label="Nuevo webhook"
+        icon="pi pi-plus"
+        data-testid="webhook-new"
+        (onClick)="openCreate()"
+      />
+    </app-page-header>
+
+    @if (status() === 'error') {
+      <app-error-state
+        message="No se pudieron cargar los webhooks."
+        [canRetry]="true"
+        (retry)="load()"
+      />
+    } @else if (status() === 'loading') {
+      <app-loading-skeleton variant="detail" [rows]="3" />
+    } @else if (webhooks().length === 0) {
+      <div class="webhooks__empty" data-testid="webhook-empty">
+        <img
+          class="webhooks__empty-image"
+          src="/images/modules/module-integrations.webp"
+          alt=""
+          width="480"
+          height="320"
+          decoding="async"
+        />
+        <app-empty-state
+          title="Aún no hay webhooks"
+          description="Crea uno para enviar los eventos de tus proyectos a un chat, un sistema de despliegue u otra aplicación."
+        />
+        <p-button label="Crear el primer webhook" icon="pi pi-plus" (onClick)="openCreate()" />
+      </div>
+    } @else {
+      <div class="webhooks__panel">
+        <ul class="webhooks__list" data-testid="webhook-list">
+          @for (hook of webhooks(); track hook.id) {
+            <li
+              class="webhooks__item"
+              [class.webhooks__item--off]="!hook.enabled"
+              data-testid="webhook-item"
+              [attr.data-name]="hook.name"
+            >
+              <div class="webhooks__head">
+                <div class="webhooks__title">
+                  <h2 class="webhooks__name">{{ hook.name }}</h2>
+                  <p class="webhooks__host">
+                    <i class="pi pi-link" aria-hidden="true"></i>
+                    <span title="{{ hook.url }}">{{ hostOf(hook.url) }}</span>
+                  </p>
+                </div>
+                <label class="webhooks__switch">
+                  <p-toggleswitch
+                    [ngModel]="hook.enabled"
+                    [ariaLabel]="
+                      'Webhook ' + hook.name + (hook.enabled ? ' activo' : ' desactivado')
+                    "
+                    data-testid="webhook-enabled"
+                    (onChange)="setEnabled(hook, $event.checked)"
+                  />
+                  <span>{{ hook.enabled ? 'Activo' : 'Desactivado' }}</span>
+                </label>
+              </div>
+
+              <ul class="webhooks__events" aria-label="Eventos suscritos">
+                @for (text of eventsText(hook); track text) {
+                  <li class="webhooks__event">{{ text }}</li>
+                }
+              </ul>
+
+              <p class="webhooks__last">
+                <span class="webhooks__last-label">Última entrega:</span>
+                @if (lastDelivery()[hook.id]; as last) {
+                  <app-tone-tag [label]="labels[last.status]" [tone]="tones[last.status]" />
+                  <time [attr.datetime]="last.createdAt">{{
+                    last.createdAt | date: 'dd/MM/yyyy HH:mm'
+                  }}</time>
+                } @else {
+                  <span class="webhooks__muted">Ninguna todavía</span>
+                }
+              </p>
+
+              @if (pingOf(hook); as ping) {
+                <p
+                  class="webhooks__ping"
+                  [class.webhooks__ping--ok]="ping.status === 'success'"
+                  role="status"
+                  data-testid="webhook-ping-result"
+                >
+                  <app-tone-tag [label]="labels[ping.status]" [tone]="tones[ping.status]" />
+                  <span>
+                    Prueba enviada:
+                    @if (ping.responseStatus !== null) {
+                      el destino respondió HTTP {{ ping.responseStatus }}
+                    } @else {
+                      el destino no respondió
+                    }
+                    en {{ ping.durationMs }} ms.
+                    @if (ping.status !== 'success' && ping.responseExcerpt) {
+                      <span class="webhooks__excerpt">{{ ping.responseExcerpt }}</span>
+                    }
+                  </span>
+                </p>
+              } @else if (pings()[hook.id] === 'error') {
+                <p class="webhooks__ping" role="alert" data-testid="webhook-ping-result">
+                  <app-tone-tag label="Error" tone="red" />
+                  <span>{{ pingError()[hook.id] || 'No se pudo enviar la prueba.' }}</span>
+                </p>
+              }
+
+              <div class="webhooks__actions">
+                <p-button
+                  label="Enviar prueba"
+                  icon="pi pi-send"
+                  severity="secondary"
+                  [outlined]="true"
+                  size="small"
+                  data-testid="webhook-test"
+                  [loading]="testing() === hook.id"
+                  (onClick)="test(hook)"
+                />
+                <p-button
+                  label="Entregas"
+                  icon="pi pi-history"
+                  severity="secondary"
+                  [outlined]="true"
+                  size="small"
+                  data-testid="webhook-deliveries"
+                  (onClick)="history.set(hook)"
+                />
+                <p-button
+                  label="Editar"
+                  icon="pi pi-pencil"
+                  severity="secondary"
+                  [text]="true"
+                  size="small"
+                  data-testid="webhook-edit"
+                  (onClick)="openEdit(hook)"
+                />
+                <p-button
+                  label="Rotar secreto"
+                  icon="pi pi-key"
+                  severity="secondary"
+                  [text]="true"
+                  size="small"
+                  data-testid="webhook-rotate"
+                  (onClick)="rotating.set(hook)"
+                />
+                <p-button
+                  label="Eliminar"
+                  icon="pi pi-trash"
+                  severity="danger"
+                  [text]="true"
+                  size="small"
+                  data-testid="webhook-delete"
+                  (onClick)="deleting.set(hook)"
+                />
+              </div>
+            </li>
+          }
+        </ul>
+      </div>
+    }
+  </app-page-container>
+}
+
+@if (org(); as organizationId) {
+  <app-webhook-dialog
+    [open]="formOpen()"
+    [organizationId]="organizationId"
+    [webhook]="editing()"
+    [projects]="projectOptions()"
+    (saved)="onSaved($event)"
+    (closed)="formOpen.set(false)"
+  />
+  <app-webhook-deliveries-drawer
+    [webhook]="history()"
+    [organizationId]="organizationId"
+    (closed)="history.set(null)"
+  />
+}
+
+<app-confirm-modal
+  [open]="rotating() !== null"
+  [title]="'¿Rotar el secreto de «' + (rotating()?.name ?? '') + '»?'"
+  description="El secreto actual dejará de ser válido de inmediato: el sistema que recibe los avisos tendrá que usar el nuevo."
+  confirmText="Rotar secreto"
+  [danger]="true"
+  [loading]="rotateBusy()"
+  (confirmed)="rotate()"
+  (cancelled)="rotating.set(null)"
+/>
+
+<app-dialog
+  size="md"
+  heading="Nuevo secreto de firma"
+  [open]="rotatedSecret() !== null"
+  [dismissable]="false"
+  [showClose]="false"
+>
+  <app-secret-reveal
+    label="El nuevo secreto"
+    warning="No volverás a ver este secreto. El anterior ya no es válido."
+    [secret]="rotatedSecret()"
+    (dismissed)="rotatedSecret.set(null)"
+  />
+</app-dialog>
+
+<app-confirm-danger-modal
+  [open]="deleting() !== null"
+  title="Eliminar webhook"
+  [description]="'Se eliminarán el webhook y todo su historial de entregas. No se puede deshacer.'"
+  [confirmation]="deleting()?.name ?? ''"
+  confirmText="Eliminar webhook"
+  [loading]="deleteBusy()"
+  (confirmed)="remove()"
+  (cancelled)="deleting.set(null)"
+/>

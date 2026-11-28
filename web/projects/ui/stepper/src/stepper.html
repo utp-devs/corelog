@@ -1,0 +1,52 @@
+<nav class="stepper" [attr.aria-label]="label()">
+  <p class="stepper__summary">
+    <span class="stepper__count">Paso {{ current() + 1 }} de {{ total() }}</span>
+    <span class="stepper__name">{{ steps()[current()].label }}</span>
+  </p>
+  <div class="stepper__bar" aria-hidden="true">
+    <span class="stepper__bar-fill" [style.--stepper-progress]="progress()"></span>
+  </div>
+
+  <ol class="stepper__list">
+    @for (step of steps(); track step.label; let i = $index) {
+      <li
+        class="stepper__item"
+        [class.stepper__item--done]="i < current()"
+        [class.stepper__item--current]="i === current()"
+      >
+        @if (i < current() && backable()) {
+          <button
+            type="button"
+            class="stepper__step"
+            [attr.data-testid]="'stepper-link-' + (i + 1)"
+            (click)="select.emit(i)"
+          >
+            <span class="stepper__dot" aria-hidden="true"
+              ><i class="pi pi-check stepper__check"></i
+            ></span>
+            <span class="stepper__label"
+              ><span class="stepper__sr">Paso {{ i + 1 }} completado: volver a </span
+              >{{ step.label }}</span
+            >
+          </button>
+        } @else {
+          <span class="stepper__step" [attr.aria-current]="i === current() ? 'step' : null">
+            <span class="stepper__dot" aria-hidden="true">
+              @if (i < current()) {
+                <i class="pi pi-check stepper__check"></i>
+              } @else {
+                {{ i + 1 }}
+              }
+            </span>
+            <span class="stepper__label">
+              @if (i === current()) {
+                <span class="stepper__sr">Paso {{ i + 1 }} de {{ total() }}: </span>
+              }
+              {{ step.label }}
+            </span>
+          </span>
+        }
+      </li>
+    }
+  </ol>
+</nav>

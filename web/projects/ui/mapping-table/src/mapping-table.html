@@ -1,0 +1,63 @@
+<div class="mapping-table">
+  @if (missing().length > 0) {
+    <p class="mapping-table__missing" role="status" data-testid="mapping-missing">
+      <i class="pi pi-exclamation-circle" aria-hidden="true"></i>
+      <span
+        >Falta indicar una columna para:
+        @for (field of missing(); track field.key; let last = $last) {
+          <strong>{{ field.label }}</strong
+          >{{ last ? '.' : ', ' }}
+        }
+      </span>
+    </p>
+  }
+
+  <div class="mapping-table__scroll">
+    <table class="mapping-table__table" data-testid="mapping-table">
+      <caption class="mapping-table__caption">
+        Columnas del archivo y el campo de CoreLog donde se importarán
+      </caption>
+      <thead>
+        <tr>
+          <th scope="col">Columna del archivo</th>
+          <th scope="col">Valores de ejemplo</th>
+          <th scope="col">Campo de CoreLog</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (row of rows(); track row.name; let i = $index) {
+          <tr class="mapping-table__row" [attr.data-column]="row.name">
+            <th scope="row" class="mapping-table__column">{{ row.name || '(sin título)' }}</th>
+            <td class="mapping-table__samples" data-label="Valores de ejemplo">
+              @for (sample of row.samples; track $index) {
+                <span class="mapping-table__sample">{{ sample }}</span>
+              } @empty {
+                <span class="mapping-table__none">Sin datos</span>
+              }
+            </td>
+            <td class="mapping-table__target" data-label="Campo de CoreLog">
+              <select
+                class="mapping-table__select"
+                [class.mapping-table__select--active]="fieldOf(row.name) !== ''"
+                [attr.aria-label]="'Campo para la columna ' + row.name"
+                [attr.data-testid]="'mapping-select-' + i"
+                (change)="choose(row.name, $event)"
+              >
+                <option value="" [selected]="fieldOf(row.name) === ''">No importar</option>
+                @for (field of fields(); track field.key) {
+                  <option
+                    [value]="field.key"
+                    [selected]="fieldOf(row.name) === field.key"
+                    [disabled]="isUsedElsewhere(field.key, row.name)"
+                  >
+                    {{ field.label }}{{ field.required ? ' (obligatorio)' : '' }}
+                  </option>
+                }
+              </select>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+</div>

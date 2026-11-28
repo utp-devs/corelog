@@ -99,7 +99,7 @@ describe('KanbanCard', () => {
     expect(trigger).not.toBeNull();
     trigger?.click();
     detect();
-    const items = Array.from(el.querySelectorAll('[role="menuitem"]')).map((item) =>
+    const items = Array.from(document.querySelectorAll('[role="menuitem"]')).map((item) =>
       item.textContent?.trim(),
     );
     expect(items).toEqual(['En curso', 'Hecho']);
@@ -109,7 +109,7 @@ describe('KanbanCard', () => {
     const { el, moved, detect } = create(cardOf(), [{ id: 'c2', name: 'En curso' }]);
     el.querySelector<HTMLButtonElement>(`[aria-label="${MENU_LABEL}"]`)?.click();
     detect();
-    el.querySelector<HTMLButtonElement>('[role="menuitem"]')?.click();
+    document.querySelector<HTMLButtonElement>('[role="menuitem"]')?.click();
     expect(moved).toEqual(['c2']);
   });
 

@@ -206,8 +206,8 @@ describe('TopBar', () => {
     render();
     button('Ayuda')?.click();
     fixture.detectChanges();
-    expect(el.textContent).toContain('Atajos de teclado');
-    expect(el.textContent).not.toContain('Documentación');
+    expect(document.body.textContent).toContain('Atajos de teclado');
+    expect(document.body.textContent).not.toContain('Documentación');
   });
 
   it('renders the real org switcher slot instead of the organization name', () => {

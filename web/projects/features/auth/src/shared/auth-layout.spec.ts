@@ -83,30 +83,13 @@ describe('AuthLayout', () => {
     expect(section?.textContent).toContain('Formulario');
   });
 
-  it('puts the same photographs, decorative and blurred by css, behind the container', () => {
-    const el = render('login');
-    const backdrop = el.querySelector('.auth-layout__backdrop');
-    expect(backdrop?.getAttribute('aria-hidden')).toBe('true');
-    const images = Array.from(backdrop?.querySelectorAll('img') ?? []);
-    const carousel = Array.from(el.querySelectorAll('.hero-carousel__image')).map((i) =>
-      i.getAttribute('src'),
-    );
-    expect(images.map((i) => i.getAttribute('src'))).toEqual(carousel);
-    expect(images.every((i) => i.getAttribute('alt') === '')).toBe(true);
-    expect(images[0].getAttribute('loading')).toBe('eager');
-    expect(images[1].getAttribute('loading')).toBe('lazy');
-  });
-
-  it('cross-fades the backdrop to the slide the carousel shows', () => {
-    const el = render('login');
-    const active = (): number =>
-      Array.from(el.querySelectorAll('.auth-layout__backdrop-image')).findIndex((i) =>
-        i.classList.contains('auth-layout__backdrop-image--active'),
-      );
-    expect(active()).toBe(0);
-    el.querySelector<HTMLElement>('.hero-carousel__button[aria-label="Imagen siguiente"]')?.click();
-    TestBed.tick();
-    expect(active()).toBe(1);
+  it('has no floating shell: the hero and the form panel are direct children of the page', () => {
+    const el = render();
+    expect(el.querySelector('.auth-layout__shell')).toBeNull();
+    expect(el.querySelector('.auth-layout__backdrop')).toBeNull();
+    const page = el.querySelector('.auth-layout__page');
+    const children = Array.from(page?.children ?? []).map((c) => c.className);
+    expect(children).toEqual(['auth-layout__hero', 'auth-layout__panel']);
   });
 
   it('is dark when the visitor has no stored preference', () => {
@@ -139,6 +122,9 @@ describe('AuthLayout', () => {
     stubPhone(true);
     const el = render();
     expect(el.querySelector('.auth-layout__hero')).toBeNull();
+    const page = el.querySelector('.auth-layout__page');
+    expect(page?.querySelector(':scope > .auth-layout__panel')).not.toBeNull();
+    expect(page?.querySelector(':scope > .auth-layout__brand')).not.toBeNull();
     expect(el.querySelector('app-hero-carousel')).toBeNull();
     const background = el.querySelector('.auth-layout__background');
     expect(background?.getAttribute('src')).toBe('/images/auth/auth-mobile-bg.webp');

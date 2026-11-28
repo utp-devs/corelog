@@ -1,7 +1,14 @@
 import {
+  CdkConnectedOverlay,
+  CdkOverlayOrigin,
+  type ConnectedPosition,
+} from '@angular/cdk/overlay';
+import {
   ChangeDetectionStrategy,
   Component,
   ElementRef,
+  Injector,
+  afterNextRender,
   computed,
   effect,
   forwardRef,
@@ -34,6 +41,37 @@ import {
   type PhoneValue,
 } from '@corelog/core';
 
+/** Gap in px between the field and its country panel. */
+const PANEL_GAP = 4;
+
+/** Panel below the field, or above it when there is no room below. */
+const PANEL_POSITIONS: ConnectedPosition[] = [
+  { originX: 'start', originY: 'bottom', overlayX: 'start', overlayY: 'top', offsetY: PANEL_GAP },
+  { originX: 'start', originY: 'top', overlayX: 'start', overlayY: 'bottom', offsetY: -PANEL_GAP },
+];
+
+/**
+ * Tokens the panel needs. The panel is rendered in the overlay container, outside the page scope that may re-map
+ * them (the access screens do), so the values the field sees are copied onto the panel when it opens.
+ */
+const PANEL_TOKENS: readonly string[] = [
+  '--cl-bg-elevated',
+  '--cl-bg-surface',
+  '--cl-bg-sunken',
+  '--cl-bg-hover',
+  '--cl-bg-selected',
+  '--cl-border',
+  '--cl-border-strong',
+  '--cl-text',
+  '--cl-text-subtle',
+  '--cl-text-placeholder',
+  '--cl-text-disabled',
+  '--cl-brand',
+  '--cl-danger',
+  '--cl-shadow-focus',
+  '--cl-control-h-md',
+];
+
 let nextPhoneInputId = 0;
 
 /** Text without accents and case, to match what the user types against country names. */
@@ -53,6 +91,7 @@ function plain(text: string): string {
   templateUrl: './phone-input.html',
   styleUrl: './phone-input.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [CdkConnectedOverlay, CdkOverlayOrigin],
   host: { '(document:mousedown)': 'onDocumentPress($event)' },
   providers: [
     { provide: NG_VALUE_ACCESSOR, useExisting: forwardRef(() => PhoneInput), multi: true },
@@ -65,6 +104,8 @@ export class PhoneInput implements ControlValueAccessor, Validator {
   private readonly field = viewChild<ElementRef<HTMLInputElement>>('field');
   private readonly trigger = viewChild<ElementRef<HTMLButtonElement>>('trigger');
   private readonly search = viewChild<ElementRef<HTMLInputElement>>('search');
+  private readonly panel = viewChild<ElementRef<HTMLElement>>('panel');
+  private readonly injector = inject(Injector);
 
   /** Id of the national number input; the caption of the surrounding field points to it. */
   readonly inputId = input.required<string>();
@@ -89,6 +130,9 @@ export class PhoneInput implements ControlValueAccessor, Validator {
   protected readonly open = signal(false);
   protected readonly query = signal('');
   protected readonly active = signal(0);
+  protected readonly positions = PANEL_POSITIONS;
+  /** Width of the field when the panel opened: the panel is never narrower. */
+  protected readonly minWidth = signal(0);
 
   protected readonly country = computed(() => this.store.find(this.countryCode()));
   protected readonly flag = computed(() => flagOf(this.countryCode() ?? ''));
@@ -129,6 +173,15 @@ export class PhoneInput implements ControlValueAccessor, Validator {
 
   constructor() {
     void this.store.load();
+    // When the page or a container scrolls the panel would drift from the field: close it.
+    effect((onCleanup) => {
+      if (!this.open()) return;
+      const close = (event: Event): void => {
+        if (!this.panel()?.nativeElement.contains(event.target as Node)) this.close(false);
+      };
+      document.addEventListener('scroll', close, true);
+      onCleanup(() => document.removeEventListener('scroll', close, true));
+    });
     effect(() => {
       const ready = this.countries().length > 0;
       untracked(() => {
@@ -219,11 +272,27 @@ export class PhoneInput implements ControlValueAccessor, Validator {
     this.query.set('');
     const index = this.countries().findIndex((c) => c.code === this.countryCode());
     this.active.set(Math.max(index, 0));
+    this.minWidth.set(this.host.nativeElement.getBoundingClientRect().width);
     this.open.set(true);
-    queueMicrotask(() => {
-      this.search()?.nativeElement.focus();
-      this.scrollToActive();
-    });
+  }
+
+  /** The panel is in the DOM: copy the tokens, focus the search and bring the current country into view. */
+  protected onAttach(): void {
+    afterNextRender(
+      () => {
+        const panel = this.panel()?.nativeElement;
+        if (panel) {
+          const style = getComputedStyle(this.host.nativeElement);
+          for (const token of PANEL_TOKENS) {
+            const value = style.getPropertyValue(token);
+            if (value) panel.style.setProperty(token, value);
+          }
+        }
+        this.search()?.nativeElement.focus();
+        this.scrollToActive();
+      },
+      { injector: this.injector },
+    );
   }
 
   protected close(focusTrigger: boolean): void {
@@ -286,7 +355,11 @@ export class PhoneInput implements ControlValueAccessor, Validator {
   }
 
   protected onDocumentPress(event: MouseEvent): void {
-    if (this.open() && !this.host.nativeElement.contains(event.target as Node)) this.close(false);
+    const target = event.target as Node;
+    if (!this.open()) return;
+    if (this.host.nativeElement.contains(target) || this.panel()?.nativeElement.contains(target))
+      return;
+    this.close(false);
   }
 
   private capped(digits: string, country: Country | undefined): string {
@@ -317,7 +390,7 @@ export class PhoneInput implements ControlValueAccessor, Validator {
     queueMicrotask(() => {
       const id = this.activeId();
       if (id)
-        this.host.nativeElement.querySelector(`#${id}`)?.scrollIntoView?.({ block: 'nearest' });
+        this.panel()?.nativeElement.querySelector(`#${id}`)?.scrollIntoView?.({ block: 'nearest' });
     });
   }
 }

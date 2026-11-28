@@ -120,7 +120,7 @@ const trigger = (el: HTMLElement): HTMLButtonElement =>
 function open(s: Setup): HTMLElement {
   trigger(s.el).click();
   s.fixture.detectChanges();
-  return s.el.querySelector('[role="menu"]') as HTMLElement;
+  return document.querySelector('[role="menu"]') as HTMLElement;
 }
 
 function rows(menu: HTMLElement): HTMLElement[] {
@@ -142,7 +142,7 @@ describe('TopMenu', () => {
 
   it('is closed until the trigger is used and exposes its state', () => {
     const s = setup(projectsMenu);
-    expect(s.el.querySelector('[role="menu"]')).toBeNull();
+    expect(document.querySelector('[role="menu"]')).toBeNull();
     expect(trigger(s.el).getAttribute('aria-expanded')).toBe('false');
     const menu = open(s);
     expect(menu.getAttribute('aria-label')).toBe('Proyectos');
@@ -242,7 +242,7 @@ describe('TopMenu', () => {
     trigger(s.el).click();
     s.fixture.detectChanges();
     TestBed.tick();
-    const menu = s.el.querySelector('[role="menu"]') as HTMLElement;
+    const menu = document.querySelector('[role="menu"]') as HTMLElement;
     const all = rows(menu);
     expect(all.length).toBeGreaterThanOrEqual(3);
     expect(document.activeElement).toBe(all[0]);
@@ -263,10 +263,10 @@ describe('TopMenu', () => {
     trigger(s.el).click();
     s.fixture.detectChanges();
     TestBed.tick();
-    const menu = s.el.querySelector('[role="menu"]') as HTMLElement;
+    const menu = document.querySelector('[role="menu"]') as HTMLElement;
     press(menu, 'Escape');
     s.fixture.detectChanges();
-    expect(s.el.querySelector('[role="menu"]')).toBeNull();
+    expect(document.querySelector('[role="menu"]')).toBeNull();
     expect(document.activeElement).toBe(trigger(s.el));
   });
 
@@ -275,7 +275,7 @@ describe('TopMenu', () => {
     open(s);
     document.body.click();
     s.fixture.detectChanges();
-    expect(s.el.querySelector('[role="menu"]')).toBeNull();
+    expect(document.querySelector('[role="menu"]')).toBeNull();
   });
 
   it('navigates and closes when a row is chosen', async () => {
@@ -287,7 +287,7 @@ describe('TopMenu', () => {
     people?.click();
     s.fixture.detectChanges();
     expect(navigate).toHaveBeenCalled();
-    expect(s.el.querySelector('[role="menu"]')).toBeNull();
+    expect(document.querySelector('[role="menu"]')).toBeNull();
   });
 
   it('reads the starred and recent projects each time the menu opens', () => {

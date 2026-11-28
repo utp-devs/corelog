@@ -1,0 +1,165 @@
+<div class="automation-rules">
+  <app-section
+    fill
+    title="Automatización"
+    description="Reglas que actúan solas: cuando pasa algo en el proyecto, hacen lo que les indiques."
+    ariaLabel="Reglas de automatización"
+  >
+    @if (canEdit()) {
+      <a
+        appSectionActions
+        class="automation-rules__create p-button p-component"
+        [routerLink]="newLink()"
+        data-testid="rule-new"
+      >
+        <i class="pi pi-plus" aria-hidden="true"></i>
+        <span>Crear regla</span>
+      </a>
+    }
+
+    @if (status() === 'forbidden') {
+      <div class="automation-rules__empty" data-testid="rules-forbidden">
+        <img
+          class="automation-rules__image"
+          src="/images/modules/module-security.webp"
+          alt=""
+          width="480"
+          height="320"
+          decoding="async"
+        />
+        <app-empty-state
+          title="No puedes gestionar automatizaciones"
+          description="Esta sección es para quienes lideran el proyecto. Pide a un líder que te dé el permiso si lo necesitas."
+        />
+      </div>
+    } @else if (status() === 'error') {
+      <app-error-state
+        message="No se pudieron cargar las reglas."
+        [canRetry]="true"
+        (retry)="load()"
+      />
+    } @else if (status() === 'loading') {
+      <app-loading-skeleton variant="detail" [rows]="3" />
+    } @else if (rules().length === 0) {
+      <div class="automation-rules__empty" data-testid="rules-empty">
+        <img
+          class="automation-rules__image"
+          src="/images/modules/module-automation.webp"
+          alt=""
+          width="480"
+          height="320"
+          decoding="async"
+        />
+        <app-empty-state
+          title="Aún no hay reglas"
+          description="Automatiza tareas repetitivas: asignar, comentar, etiquetar o mover incidencias sin hacerlo a mano."
+        />
+      </div>
+    } @else {
+      <ul class="automation-rules__list" data-testid="rules-list">
+        @for (rule of rules(); track rule.id) {
+          <li
+            class="automation-rules__item"
+            [class.automation-rules__item--off]="!rule.enabled"
+            data-testid="rule-item"
+            [attr.data-name]="rule.name"
+          >
+            <div class="automation-rules__head">
+              <div class="automation-rules__title">
+                <h3 class="automation-rules__name">{{ rule.name }}</h3>
+                <p class="automation-rules__trigger">{{ trigger(rule) }}</p>
+              </div>
+              <label class="automation-rules__switch">
+                <p-toggleswitch
+                  [ngModel]="rule.enabled"
+                  [disabled]="!canEdit()"
+                  [ariaLabel]="'Regla ' + rule.name + (rule.enabled ? ' activa' : ' desactivada')"
+                  data-testid="rule-enabled"
+                  (onChange)="setEnabled(rule, $event.checked)"
+                />
+                <span>{{ rule.enabled ? 'Activa' : 'Desactivada' }}</span>
+              </label>
+            </div>
+            <dl class="automation-rules__facts">
+              <div>
+                <dt>Ejecuciones</dt>
+                <dd data-testid="rule-run-count">{{ rule.runCount }}</dd>
+              </div>
+              <div>
+                <dt>Última ejecución</dt>
+                <dd>
+                  @if (rule.lastRunAt) {
+                    {{ rule.lastRunAt | date: 'dd/MM/yyyy HH:mm' }}
+                  } @else {
+                    Nunca
+                  }
+                </dd>
+              </div>
+              <div>
+                <dt>Versión</dt>
+                <dd>{{ rule.version }}</dd>
+              </div>
+            </dl>
+            <div class="automation-rules__actions">
+              <p-button
+                label="Historial"
+                icon="pi pi-history"
+                severity="secondary"
+                [outlined]="true"
+                size="small"
+                data-testid="rule-runs"
+                (onClick)="runsOf.set(rule)"
+              />
+              @if (canEdit()) {
+                <a
+                  class="automation-rules__link"
+                  [routerLink]="link(rule.id)"
+                  data-testid="rule-edit"
+                  [attr.aria-label]="'Editar la regla ' + rule.name"
+                >
+                  <i class="pi pi-pencil" aria-hidden="true"></i> Editar
+                </a>
+                <p-button
+                  label="Duplicar"
+                  icon="pi pi-copy"
+                  severity="secondary"
+                  [text]="true"
+                  size="small"
+                  data-testid="rule-duplicate"
+                  [disabled]="busy()"
+                  (onClick)="duplicate(rule)"
+                />
+                <p-button
+                  label="Eliminar"
+                  icon="pi pi-trash"
+                  severity="danger"
+                  [text]="true"
+                  size="small"
+                  data-testid="rule-delete"
+                  (onClick)="deleting.set(rule)"
+                />
+              } @else {
+                <a class="automation-rules__link" [routerLink]="link(rule.id)">
+                  <i class="pi pi-eye" aria-hidden="true"></i> Ver
+                </a>
+              }
+            </div>
+          </li>
+        }
+      </ul>
+    }
+  </app-section>
+</div>
+
+<app-rule-runs-drawer [rule]="runsOf()" (closed)="runsOf.set(null)" />
+
+<app-confirm-modal
+  [open]="deleting() !== null"
+  [title]="'¿Eliminar la regla «' + (deleting()?.name ?? '') + '»?'"
+  description="La regla y su historial de ejecuciones se eliminan. No se puede deshacer."
+  confirmText="Eliminar regla"
+  [danger]="true"
+  [loading]="busy()"
+  (confirmed)="remove()"
+  (cancelled)="deleting.set(null)"
+/>

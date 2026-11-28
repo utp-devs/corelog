@@ -69,7 +69,7 @@
 
     /* The wordmark is dark blue: in the dark theme it sits on a light chip so it stays legible. */
     &--on-dark {
-      padding: var(--cl-space-1) var(--cl-space-2);
+      // padding: var(--cl-space-1) var(--cl-space-2); - It is said that this line causes a sudden jump in the header options when switching to dark mode.
       background: var(--cl-text);
     }
   }

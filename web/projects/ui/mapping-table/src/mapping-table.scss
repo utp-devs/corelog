@@ -1,0 +1,150 @@
+@use '../../styles/mixins' as m;
+
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.mapping-table {
+  @include m.flex-column(3);
+  min-width: 0;
+
+  &__missing {
+    @include m.flex-row(2, flex-start);
+    margin: 0;
+    padding: var(--cl-space-3);
+    border: 1px solid var(--cl-warning);
+    border-radius: var(--cl-radius-md);
+    background: var(--cl-warning-bg);
+    color: var(--cl-warning-text);
+    font-size: var(--cl-font-small);
+
+    i {
+      margin-block-start: var(--cl-space-1);
+    }
+  }
+
+  &__scroll {
+    overflow-x: auto;
+    border: 1px solid var(--cl-border);
+    border-radius: var(--cl-radius-md);
+  }
+
+  &__caption {
+    @include m.visually-hidden;
+  }
+
+  &__table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--cl-font-small);
+
+    thead th {
+      padding: var(--cl-space-2) var(--cl-space-3);
+      background: var(--cl-bg-sunken);
+      color: var(--cl-text-subtle);
+      font-weight: var(--cl-weight-semibold);
+      text-align: start;
+      white-space: nowrap;
+    }
+
+    tbody tr + tr > * {
+      border-block-start: 1px solid var(--cl-divider);
+    }
+  }
+
+  &__column,
+  &__samples,
+  &__target {
+    padding: var(--cl-space-2) var(--cl-space-3);
+    vertical-align: middle;
+    text-align: start;
+  }
+
+  &__column {
+    font-weight: var(--cl-weight-medium);
+    overflow-wrap: anywhere;
+    max-width: 14rem;
+  }
+
+  &__samples {
+    max-width: 18rem;
+  }
+
+  &__sample {
+    @include m.truncate;
+    display: block;
+    max-width: 100%;
+    color: var(--cl-text-subtle);
+  }
+
+  &__none {
+    color: var(--cl-text-placeholder);
+  }
+
+  // Phones: every column becomes a small card (name, examples, field) instead of a wide table.
+  @include m.respond-down(640px) {
+    &__table,
+    &__table tbody,
+    &__row,
+    &__column,
+    &__samples,
+    &__target {
+      display: block;
+    }
+
+    &__table thead {
+      @include m.visually-hidden;
+    }
+
+    &__row {
+      padding: var(--cl-space-3);
+
+      & + & {
+        border-block-start: 1px solid var(--cl-divider);
+      }
+    }
+
+    &__table tbody tr + tr > * {
+      border-block-start: 0;
+    }
+
+    &__column,
+    &__samples,
+    &__target {
+      max-width: none;
+      padding: var(--cl-space-1) 0;
+    }
+
+    &__samples::before,
+    &__target::before {
+      content: attr(data-label);
+      display: block;
+      color: var(--cl-text-subtle);
+      font-size: var(--cl-font-caption);
+    }
+  }
+
+  &__select {
+    width: 100%;
+    min-width: 10rem;
+    min-height: var(--cl-control-h-md);
+    padding: 0 var(--cl-space-3);
+    border: 1px solid var(--cl-border-strong);
+    border-radius: var(--cl-radius-md);
+    background: var(--cl-bg-surface);
+    color: var(--cl-text-subtle);
+    font: inherit;
+
+    &--active {
+      border-color: var(--cl-brand);
+      color: var(--cl-text);
+      font-weight: var(--cl-weight-medium);
+    }
+
+    &:focus-visible {
+      outline: none;
+      box-shadow: var(--cl-shadow-focus);
+    }
+  }
+}

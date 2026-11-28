@@ -1,0 +1,617 @@
+<div class="rule-builder">
+  <section class="rule-builder__block" aria-labelledby="rb-trigger-title">
+    <h3 class="rule-builder__block-title" id="rb-trigger-title">
+      <span class="rule-builder__badge">1</span> Cuándo
+    </h3>
+    <div class="rule-builder__card">
+      <div class="rule-builder__grid">
+        <label class="rule-builder__field">
+          <span class="rule-builder__label">Disparador</span>
+          <select
+            class="rule-builder__control"
+            data-testid="rule-trigger"
+            [disabled]="readonly()"
+            (change)="setTriggerType($event)"
+          >
+            @for (choice of triggerChoices; track choice.value) {
+              <option [value]="choice.value" [selected]="choice.value === trigger().type">
+                {{ choice.label }}
+              </option>
+            }
+          </select>
+        </label>
+
+        @if (trigger().type === 'issue_updated') {
+          <label class="rule-builder__field">
+            <span class="rule-builder__label">Campo que cambia</span>
+            <select
+              class="rule-builder__control"
+              [disabled]="readonly()"
+              (change)="patchTrigger({ field: $any($event.target).value || undefined })"
+            >
+              @for (choice of updatedFields; track choice.value) {
+                <option
+                  [value]="choice.value"
+                  [selected]="choice.value === (trigger().field ?? '')"
+                >
+                  {{ choice.label }}
+                </option>
+              }
+            </select>
+          </label>
+        }
+
+        @if (trigger().type === 'issue_transitioned') {
+          <label class="rule-builder__field">
+            <span class="rule-builder__label">Desde el estado <em>(opcional)</em></span>
+            <input
+              class="rule-builder__control"
+              type="text"
+              list="rule-builder-statuses"
+              placeholder="Cualquiera"
+              data-testid="rule-trigger-from"
+              [disabled]="readonly()"
+              [value]="trigger().from ?? ''"
+              (input)="patchTrigger({ from: $any($event.target).value || undefined })"
+            />
+          </label>
+          <label class="rule-builder__field">
+            <span class="rule-builder__label">Hasta el estado <em>(opcional)</em></span>
+            <input
+              class="rule-builder__control"
+              type="text"
+              list="rule-builder-statuses"
+              placeholder="Cualquiera"
+              data-testid="rule-trigger-to"
+              [disabled]="readonly()"
+              [value]="trigger().to ?? ''"
+              (input)="patchTrigger({ to: $any($event.target).value || undefined })"
+            />
+          </label>
+        }
+
+        @if (trigger().type === 'scheduled') {
+          <label class="rule-builder__field">
+            <span class="rule-builder__label">Repetir cada (minutos)</span>
+            <input
+              class="rule-builder__control"
+              type="number"
+              min="5"
+              max="10080"
+              data-testid="rule-trigger-every"
+              [disabled]="readonly()"
+              [value]="trigger().everyMinutes ?? ''"
+              (input)="setEvery($event)"
+            />
+          </label>
+        }
+      </div>
+
+      @if (trigger().type === 'scheduled') {
+        <div class="rule-builder__field">
+          <span class="rule-builder__label">Incidencias que revisar (consulta CoreQL)</span>
+          <app-coreql-field
+            ariaLabel="Consulta de las incidencias a revisar"
+            [value]="trigger().query ?? ''"
+            (valueChange)="patchTrigger({ query: $event })"
+          />
+        </div>
+      }
+
+      @for (message of issues('trigger'); track message) {
+        <p class="rule-builder__error" role="alert">{{ message }}</p>
+      }
+    </div>
+  </section>
+
+  <section class="rule-builder__block" aria-labelledby="rb-conditions-title">
+    <h3 class="rule-builder__block-title" id="rb-conditions-title">
+      <span class="rule-builder__badge">2</span> Solo si <em>(opcional)</em>
+    </h3>
+
+    @if (rule().conditions.length === 0) {
+      <p class="rule-builder__hint">
+        Sin condiciones, la regla se aplica cada vez que ocurre el disparador.
+      </p>
+    }
+
+    <ol class="rule-builder__list" data-testid="rule-conditions">
+      @for (condition of rule().conditions; track $index; let i = $index; let last = $last) {
+        <li class="rule-builder__card" [attr.data-testid]="'rule-condition-' + i">
+          <div class="rule-builder__item-head">
+            <label class="rule-builder__field rule-builder__field--grow">
+              <span class="rule-builder__label">Condición {{ i + 1 }}</span>
+              <select
+                class="rule-builder__control"
+                [disabled]="readonly()"
+                [attr.aria-label]="'Tipo de la condición ' + (i + 1)"
+                (change)="setConditionType(i, $event)"
+              >
+                @for (choice of conditionChoices; track choice.value) {
+                  <option [value]="choice.value" [selected]="choice.value === condition.type">
+                    {{ choice.label }}
+                  </option>
+                }
+              </select>
+            </label>
+            @if (!readonly()) {
+              <div class="rule-builder__tools">
+                <button
+                  type="button"
+                  class="rule-builder__tool"
+                  aria-label="Subir la condición"
+                  appTooltip="Subir"
+                  [disabled]="i === 0"
+                  (click)="moveCondition(i, -1)"
+                >
+                  <i class="pi pi-arrow-up" aria-hidden="true"></i>
+                </button>
+                <button
+                  type="button"
+                  class="rule-builder__tool"
+                  aria-label="Bajar la condición"
+                  appTooltip="Bajar"
+                  [disabled]="last"
+                  (click)="moveCondition(i, 1)"
+                >
+                  <i class="pi pi-arrow-down" aria-hidden="true"></i>
+                </button>
+                <button
+                  type="button"
+                  class="rule-builder__tool rule-builder__tool--danger"
+                  aria-label="Quitar la condición"
+                  appTooltip="Quitar"
+                  data-testid="rule-condition-remove"
+                  (click)="removeCondition(i)"
+                >
+                  <i class="pi pi-trash" aria-hidden="true"></i>
+                </button>
+              </div>
+            }
+          </div>
+
+          @switch (condition.type) {
+            @case ('field_equals') {
+              <div class="rule-builder__grid">
+                <label class="rule-builder__field">
+                  <span class="rule-builder__label">Campo</span>
+                  <select
+                    class="rule-builder__control"
+                    [disabled]="readonly()"
+                    (change)="patchCondition(i, { field: $any($event.target).value })"
+                  >
+                    @for (choice of comparable; track choice.value) {
+                      <option [value]="choice.value" [selected]="choice.value === condition.field">
+                        {{ choice.label }}
+                      </option>
+                    }
+                  </select>
+                </label>
+                <label class="rule-builder__field">
+                  <span class="rule-builder__label">Es igual a</span>
+                  <input
+                    class="rule-builder__control"
+                    type="text"
+                    [disabled]="readonly()"
+                    [value]="condition.value ?? ''"
+                    (input)="patchCondition(i, { value: $any($event.target).value })"
+                  />
+                </label>
+              </div>
+            }
+            @case ('field_in') {
+              <div class="rule-builder__grid">
+                <label class="rule-builder__field">
+                  <span class="rule-builder__label">Campo</span>
+                  <select
+                    class="rule-builder__control"
+                    [disabled]="readonly()"
+                    (change)="patchCondition(i, { field: $any($event.target).value })"
+                  >
+                    @for (choice of comparable; track choice.value) {
+                      <option [value]="choice.value" [selected]="choice.value === condition.field">
+                        {{ choice.label }}
+                      </option>
+                    }
+                  </select>
+                </label>
+                <label class="rule-builder__field">
+                  <span class="rule-builder__label">Es uno de (separados por coma)</span>
+                  <input
+                    class="rule-builder__control"
+                    type="text"
+                    [disabled]="readonly()"
+                    [value]="listText(condition.values)"
+                    (input)="setConditionValues(i, $event)"
+                  />
+                </label>
+              </div>
+            }
+            @case ('issue_type') {
+              <label class="rule-builder__field">
+                <span class="rule-builder__label">Tipos de incidencia (separados por coma)</span>
+                <input
+                  class="rule-builder__control"
+                  type="text"
+                  placeholder="Error, Tarea"
+                  [disabled]="readonly()"
+                  [value]="listText(condition.values)"
+                  (input)="setConditionValues(i, $event)"
+                />
+              </label>
+            }
+            @case ('actor_role') {
+              <label class="rule-builder__field">
+                <span class="rule-builder__label">Rol de quien actúa</span>
+                <select
+                  class="rule-builder__control"
+                  [disabled]="readonly()"
+                  (change)="patchCondition(i, { role: $any($event.target).value })"
+                >
+                  @for (choice of roles; track choice.value) {
+                    <option [value]="choice.value" [selected]="choice.value === condition.role">
+                      {{ choice.label }}
+                    </option>
+                  }
+                </select>
+              </label>
+            }
+            @case ('query') {
+              <div class="rule-builder__field">
+                <span class="rule-builder__label">Consulta CoreQL</span>
+                <app-coreql-field
+                  [ariaLabel]="'Consulta de la condición ' + (i + 1)"
+                  [value]="condition.query ?? ''"
+                  (valueChange)="patchCondition(i, { query: $event })"
+                />
+              </div>
+            }
+          }
+
+          @for (message of issues('conditions[' + i + ']'); track message) {
+            <p class="rule-builder__error" role="alert">{{ message }}</p>
+          }
+        </li>
+      }
+    </ol>
+
+    @if (!readonly()) {
+      <button
+        type="button"
+        class="rule-builder__add"
+        data-testid="rule-add-condition"
+        [disabled]="rule().conditions.length >= maxConditions"
+        (click)="addCondition()"
+      >
+        <i class="pi pi-plus" aria-hidden="true"></i> Añadir condición
+      </button>
+    }
+  </section>
+
+  <section class="rule-builder__block" aria-labelledby="rb-actions-title">
+    <h3 class="rule-builder__block-title" id="rb-actions-title">
+      <span class="rule-builder__badge">3</span> Entonces
+    </h3>
+
+    <ol class="rule-builder__list" data-testid="rule-actions">
+      @for (action of rule().actions; track $index; let i = $index; let last = $last) {
+        <li class="rule-builder__card" [attr.data-testid]="'rule-action-' + i">
+          <div class="rule-builder__item-head">
+            <label class="rule-builder__field rule-builder__field--grow">
+              <span class="rule-builder__label">Acción {{ i + 1 }}</span>
+              <select
+                class="rule-builder__control"
+                [disabled]="readonly()"
+                [attr.aria-label]="'Tipo de la acción ' + (i + 1)"
+                [attr.data-testid]="'rule-action-type-' + i"
+                (change)="setActionType(i, $event)"
+              >
+                @for (choice of actionChoices; track choice.value) {
+                  <option [value]="choice.value" [selected]="choice.value === action.type">
+                    {{ choice.label }}
+                  </option>
+                }
+              </select>
+            </label>
+            @if (!readonly()) {
+              <div class="rule-builder__tools">
+                <button
+                  type="button"
+                  class="rule-builder__tool"
+                  aria-label="Subir la acción"
+                  appTooltip="Subir"
+                  data-testid="rule-action-up"
+                  [disabled]="i === 0"
+                  (click)="moveAction(i, -1)"
+                >
+                  <i class="pi pi-arrow-up" aria-hidden="true"></i>
+                </button>
+                <button
+                  type="button"
+                  class="rule-builder__tool"
+                  aria-label="Bajar la acción"
+                  appTooltip="Bajar"
+                  data-testid="rule-action-down"
+                  [disabled]="last"
+                  (click)="moveAction(i, 1)"
+                >
+                  <i class="pi pi-arrow-down" aria-hidden="true"></i>
+                </button>
+                <button
+                  type="button"
+                  class="rule-builder__tool rule-builder__tool--danger"
+                  aria-label="Quitar la acción"
+                  appTooltip="Quitar"
+                  data-testid="rule-action-remove"
+                  (click)="removeAction(i)"
+                >
+                  <i class="pi pi-trash" aria-hidden="true"></i>
+                </button>
+              </div>
+            }
+          </div>
+
+          @switch (action.type) {
+            @case ('transition_issue') {
+              <label class="rule-builder__field">
+                <span class="rule-builder__label">Estado de destino</span>
+                <input
+                  class="rule-builder__control"
+                  type="text"
+                  list="rule-builder-statuses"
+                  [disabled]="readonly()"
+                  [value]="action.status ?? ''"
+                  (input)="patchAction(i, { status: $any($event.target).value })"
+                />
+              </label>
+            }
+            @case ('assign_issue') {
+              <div class="rule-builder__grid">
+                <label class="rule-builder__field">
+                  <span class="rule-builder__label">Asignar a</span>
+                  <select
+                    class="rule-builder__control"
+                    [disabled]="readonly()"
+                    (change)="setWho(i, $event)"
+                  >
+                    @for (choice of assignChoices; track choice.value) {
+                      <option [value]="choice.value" [selected]="choice.value === action.who">
+                        {{ choice.label }}
+                      </option>
+                    }
+                  </select>
+                </label>
+                @if (action.who === 'user') {
+                  <label class="rule-builder__field">
+                    <span class="rule-builder__label">Persona</span>
+                    <select
+                      class="rule-builder__control"
+                      [disabled]="readonly()"
+                      (change)="patchAction(i, { userId: $any($event.target).value || undefined })"
+                    >
+                      <option value="" [selected]="!action.userId">Elige una persona</option>
+                      @for (person of people(); track person.id) {
+                        <option [value]="person.id" [selected]="person.id === action.userId">
+                          {{ person.name }}
+                        </option>
+                      }
+                    </select>
+                  </label>
+                }
+                @if (action.who === 'round_robin') {
+                  <label class="rule-builder__field">
+                    <span class="rule-builder__label">Equipo</span>
+                    <select
+                      class="rule-builder__control"
+                      [disabled]="readonly()"
+                      (change)="patchAction(i, { teamId: $any($event.target).value || undefined })"
+                    >
+                      <option value="" [selected]="!action.teamId">Elige un equipo</option>
+                      @for (team of teams(); track team.id) {
+                        <option [value]="team.id" [selected]="team.id === action.teamId">
+                          {{ team.name }}
+                        </option>
+                      }
+                    </select>
+                  </label>
+                }
+              </div>
+            }
+            @case ('set_field') {
+              <div class="rule-builder__grid">
+                <label class="rule-builder__field">
+                  <span class="rule-builder__label">Campo</span>
+                  <select
+                    class="rule-builder__control"
+                    [disabled]="readonly()"
+                    (change)="patchAction(i, { field: $any($event.target).value })"
+                  >
+                    @for (choice of settable; track choice.value) {
+                      <option [value]="choice.value" [selected]="choice.value === action.field">
+                        {{ choice.label }}
+                      </option>
+                    }
+                  </select>
+                </label>
+                <label class="rule-builder__field">
+                  <span class="rule-builder__label">Nuevo valor</span>
+                  <input
+                    class="rule-builder__control"
+                    type="text"
+                    [disabled]="readonly()"
+                    [value]="action.value ?? ''"
+                    (focus)="rememberText($event, i)"
+                    (input)="patchAction(i, { value: $any($event.target).value })"
+                  />
+                </label>
+              </div>
+            }
+            @case ('add_comment') {
+              <label class="rule-builder__field">
+                <span class="rule-builder__label">Comentario</span>
+                <textarea
+                  class="rule-builder__control rule-builder__control--area"
+                  rows="3"
+                  data-testid="rule-action-text"
+                  [disabled]="readonly()"
+                  [value]="action.text ?? ''"
+                  (focus)="rememberText($event, i)"
+                  (input)="patchAction(i, { text: $any($event.target).value })"
+                ></textarea>
+              </label>
+            }
+            @case ('create_subtask') {
+              <label class="rule-builder__field">
+                <span class="rule-builder__label">Resumen de la subtarea</span>
+                <input
+                  class="rule-builder__control"
+                  type="text"
+                  [disabled]="readonly()"
+                  [value]="action.text ?? ''"
+                  (focus)="rememberText($event, i)"
+                  (input)="patchAction(i, { text: $any($event.target).value })"
+                />
+              </label>
+            }
+            @case ('add_label') {
+              <label class="rule-builder__field">
+                <span class="rule-builder__label">Etiqueta</span>
+                <input
+                  class="rule-builder__control"
+                  type="text"
+                  maxlength="50"
+                  [disabled]="readonly()"
+                  [value]="action.label ?? ''"
+                  (input)="patchAction(i, { label: $any($event.target).value })"
+                />
+              </label>
+            }
+            @case ('remove_label') {
+              <label class="rule-builder__field">
+                <span class="rule-builder__label">Etiqueta</span>
+                <input
+                  class="rule-builder__control"
+                  type="text"
+                  maxlength="50"
+                  [disabled]="readonly()"
+                  [value]="action.label ?? ''"
+                  (input)="patchAction(i, { label: $any($event.target).value })"
+                />
+              </label>
+            }
+            @case ('send_webhook') {
+              <label class="rule-builder__field">
+                <span class="rule-builder__label">Dirección (http o https)</span>
+                <input
+                  class="rule-builder__control"
+                  type="url"
+                  placeholder="https://ejemplo.com/aviso"
+                  [disabled]="readonly()"
+                  [value]="action.url ?? ''"
+                  (input)="patchAction(i, { url: $any($event.target).value })"
+                />
+              </label>
+            }
+            @case ('send_notification') {
+              <div class="rule-builder__grid">
+                <label class="rule-builder__field">
+                  <span class="rule-builder__label">Avisar a</span>
+                  <select
+                    class="rule-builder__control"
+                    [disabled]="readonly()"
+                    (change)="setWho(i, $event)"
+                  >
+                    @for (choice of notifyChoices; track choice.value) {
+                      <option [value]="choice.value" [selected]="choice.value === action.who">
+                        {{ choice.label }}
+                      </option>
+                    }
+                  </select>
+                </label>
+                @if (action.who === 'user') {
+                  <label class="rule-builder__field">
+                    <span class="rule-builder__label">Persona</span>
+                    <select
+                      class="rule-builder__control"
+                      [disabled]="readonly()"
+                      (change)="patchAction(i, { userId: $any($event.target).value || undefined })"
+                    >
+                      <option value="" [selected]="!action.userId">Elige una persona</option>
+                      @for (person of people(); track person.id) {
+                        <option [value]="person.id" [selected]="person.id === action.userId">
+                          {{ person.name }}
+                        </option>
+                      }
+                    </select>
+                  </label>
+                }
+              </div>
+              <label class="rule-builder__field">
+                <span class="rule-builder__label">Mensaje</span>
+                <textarea
+                  class="rule-builder__control rule-builder__control--area"
+                  rows="2"
+                  [disabled]="readonly()"
+                  [value]="action.text ?? ''"
+                  (focus)="rememberText($event, i)"
+                  (input)="patchAction(i, { text: $any($event.target).value })"
+                ></textarea>
+              </label>
+            }
+          }
+
+          @if (acceptsSmart(action) && !readonly()) {
+            <div class="rule-builder__smart" role="group" aria-label="Valores inteligentes">
+              <span class="rule-builder__smart-label">Insertar:</span>
+              @for (smart of smartValues; track smart.value) {
+                <button
+                  type="button"
+                  class="rule-builder__chip"
+                  [attr.data-testid]="'rule-smart-' + smart.value"
+                  [attr.aria-label]="'Insertar ' + smart.label"
+                  (mousedown)="$event.preventDefault()"
+                  (click)="insertSmart(smart.value, i)"
+                >
+                  {{ smart.label }}
+                </button>
+              }
+            </div>
+          }
+
+          @for (message of issues('actions[' + i + ']'); track message) {
+            <p class="rule-builder__error" role="alert">{{ message }}</p>
+          }
+        </li>
+      }
+    </ol>
+
+    @for (message of issues('actions'); track message) {
+      <p class="rule-builder__error" role="alert">{{ message }}</p>
+    }
+
+    @if (!readonly()) {
+      <button
+        type="button"
+        class="rule-builder__add"
+        data-testid="rule-add-action"
+        [disabled]="rule().actions.length >= maxActions"
+        (click)="addAction()"
+      >
+        <i class="pi pi-plus" aria-hidden="true"></i> Añadir acción
+      </button>
+    }
+  </section>
+
+  <section class="rule-builder__summary" aria-labelledby="rb-summary-title">
+    <h3 class="rule-builder__summary-title" id="rb-summary-title">Resumen</h3>
+    <p class="rule-builder__summary-text" data-testid="rule-summary" aria-live="polite">
+      {{ summary() }}
+    </p>
+  </section>
+
+  <datalist id="rule-builder-statuses">
+    @for (status of statuses(); track status) {
+      <option [value]="status"></option>
+    }
+  </datalist>
+</div>

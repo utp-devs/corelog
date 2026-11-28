@@ -1,0 +1,161 @@
+<app-dialog
+  size="lg"
+  [heading]="secret() ? 'Webhook creado' : editing() ? 'Editar webhook' : 'Nuevo webhook'"
+  [subtitle]="
+    secret()
+      ? undefined
+      : 'CoreLog enviará un aviso firmado a esta dirección cuando ocurran los eventos elegidos.'
+  "
+  [open]="open()"
+  [dismissable]="!secret()"
+  [showClose]="!secret()"
+  (closeRequested)="requestClose()"
+>
+  @if (secret()) {
+    <app-secret-reveal
+      label="El secreto de firma"
+      warning="No volverás a ver este secreto. Úsalo para verificar la firma X-CoreLog-Signature de cada aviso."
+      [secret]="secret()"
+      (dismissed)="onRevealDismissed()"
+    />
+  } @else {
+    <form class="webhook-dialog__form" [formGroup]="form" (ngSubmit)="save()">
+      <label class="webhook-dialog__field">
+        <span class="webhook-dialog__label">Nombre</span>
+        <input
+          pInputText
+          formControlName="name"
+          maxlength="120"
+          placeholder="Por ejemplo: Avisos al chat del equipo"
+          data-autofocus
+          data-testid="webhook-name"
+        />
+      </label>
+
+      <label class="webhook-dialog__field">
+        <span class="webhook-dialog__label">Dirección de destino</span>
+        <input
+          pInputText
+          type="url"
+          formControlName="url"
+          placeholder="https://ejemplo.com/hook"
+          autocomplete="off"
+          spellcheck="false"
+          data-testid="webhook-url"
+          [attr.aria-invalid]="urlCheck().message ? 'true' : null"
+          aria-describedby="webhook-url-help"
+          (blur)="urlTouched.set(true)"
+        />
+        <span class="webhook-dialog__hint" id="webhook-url-help">
+          @if (urlCheck().message; as message) {
+            <span class="webhook-dialog__problem" role="alert" data-testid="webhook-url-error">{{
+              message
+            }}</span>
+          } @else if (urlCheck().valid) {
+            <span class="webhook-dialog__ok"
+              ><i class="pi pi-check" aria-hidden="true"></i> Dirección válida.</span
+            >
+          } @else {
+            Debe ser http o https. Las direcciones privadas o locales (localhost, 192.168.x.x,
+            10.x.x.x) están bloqueadas.
+          }
+        </span>
+      </label>
+
+      <fieldset class="webhook-dialog__events" data-testid="webhook-events">
+        <legend class="webhook-dialog__label">Eventos que se envían</legend>
+        <label class="webhook-dialog__check webhook-dialog__check--all">
+          <input
+            type="checkbox"
+            [checked]="events().includes(allEvents)"
+            data-testid="webhook-event-all"
+            (change)="toggleEverything()"
+          />
+          <span><strong>Todos los eventos</strong> (incluidos los que se añadan más adelante)</span>
+        </label>
+        <div class="webhook-dialog__groups">
+          @for (group of groups; track group.key; let g = $index) {
+            <div class="webhook-dialog__group" role="group" [attr.aria-label]="group.label">
+              <p class="webhook-dialog__group-title">
+                {{ group.label }}
+                <span class="webhook-dialog__count"
+                  >{{ countOf(g) }}/{{ group.events.length }}</span
+                >
+              </p>
+              @for (event of group.events; track event.value) {
+                <label class="webhook-dialog__check">
+                  <input
+                    type="checkbox"
+                    [checked]="selected(event.value)"
+                    [attr.data-testid]="'webhook-event-' + event.value"
+                    (change)="toggle(event.value)"
+                  />
+                  <span>{{ event.label }}</span>
+                </label>
+              }
+            </div>
+          }
+        </div>
+        @if (events().length === 0) {
+          <p class="webhook-dialog__problem" role="alert">Elige al menos un evento.</p>
+        }
+      </fieldset>
+
+      @if (!editing() && projects().length > 0) {
+        <label class="webhook-dialog__field">
+          <span class="webhook-dialog__label">Proyecto <em>(opcional)</em></span>
+          <select
+            class="webhook-dialog__select"
+            formControlName="projectId"
+            data-testid="webhook-project"
+          >
+            <option value="">Todos los proyectos de la organización</option>
+            @for (project of projects(); track project.id) {
+              <option [value]="project.id">{{ project.name }}</option>
+            }
+          </select>
+          <span class="webhook-dialog__hint"
+            >Con un proyecto, solo se envían los eventos de ese proyecto.</span
+          >
+        </label>
+      }
+
+      <div class="webhook-dialog__field">
+        <span class="webhook-dialog__label">Filtro CoreQL <em>(opcional)</em></span>
+        <app-coreql-field
+          ariaLabel="Filtro CoreQL del webhook"
+          placeholder="Por ejemplo: priority = High"
+          [(value)]="filter"
+        />
+        <span class="webhook-dialog__hint"
+          >Solo se envían los eventos de incidencias que cumplan la consulta.</span
+        >
+      </div>
+
+      <label class="webhook-dialog__switch">
+        <p-toggleswitch formControlName="enabled" inputId="webhook-enabled" />
+        <span>Activo (si lo apagas, CoreLog no envía avisos)</span>
+      </label>
+
+      @if (error(); as message) {
+        <p class="webhook-dialog__problem" role="alert" data-testid="webhook-error">
+          {{ message }}
+        </p>
+      }
+    </form>
+  }
+
+  @if (!secret()) {
+    <p-button dialogFooter label="Cancelar" severity="secondary" (onClick)="requestClose()" />
+  }
+  @if (!secret()) {
+    <p-button
+      dialogFooter
+      [label]="editing() ? 'Guardar cambios' : 'Crear webhook'"
+      data-testid="webhook-save"
+      [disabled]="!canSave()"
+      [loading]="saving()"
+      (onClick)="save()"
+    />
+  }
+</app-dialog>

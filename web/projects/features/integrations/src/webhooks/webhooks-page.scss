@@ -1,0 +1,135 @@
+@use '../../../../ui/styles/mixins' as m;
+
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.webhooks {
+  &__empty {
+    @include m.flex-column(3, center);
+    flex: 1 1 auto;
+    justify-content: center;
+    min-height: 50vh;
+    padding: var(--cl-space-8) var(--cl-space-4);
+    border: 1px solid var(--cl-border);
+    border-radius: var(--cl-radius-lg);
+    background: var(--cl-bg-surface);
+  }
+
+  &__empty-image {
+    width: min(100%, 20rem);
+    height: auto;
+    border-radius: var(--cl-radius-lg);
+  }
+
+  // The list sits on a panel that fills the page, so a short list never leaves a bare area under it.
+  &__panel {
+    flex: 1 1 auto;
+    padding: var(--cl-space-4);
+    border: 1px solid var(--cl-border);
+    border-radius: var(--cl-radius-lg);
+    background: var(--cl-bg-sunken);
+  }
+
+  &__list {
+    @include m.flex-column(4);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  &__item {
+    @include m.flex-column(3);
+    padding: var(--cl-space-4);
+    border: 1px solid var(--cl-border);
+    border-radius: var(--cl-radius-lg);
+    background: var(--cl-bg-surface);
+    min-width: 0;
+
+    &--off {
+      background: var(--cl-bg-sunken);
+    }
+  }
+
+  &__head {
+    @include m.cluster(3, flex-start, space-between);
+  }
+
+  &__title {
+    min-width: 0;
+  }
+
+  &__name {
+    margin: 0;
+    font-size: var(--cl-font-body-strong);
+    font-weight: var(--cl-weight-semibold);
+    overflow-wrap: anywhere;
+  }
+
+  &__host {
+    @include m.flex-row(2);
+    margin: var(--cl-space-1) 0 0;
+    color: var(--cl-text-subtle);
+    font-size: var(--cl-font-small);
+    overflow-wrap: anywhere;
+  }
+
+  &__switch {
+    @include m.flex-row(2);
+    font-size: var(--cl-font-small);
+  }
+
+  &__events {
+    @include m.cluster(1);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  &__event {
+    padding: var(--cl-space-1) var(--cl-space-3);
+    border-radius: var(--cl-radius-full);
+    background: var(--cl-bg-sunken);
+    color: var(--cl-text);
+    font-size: var(--cl-font-caption);
+  }
+
+  &__last {
+    @include m.cluster(2);
+    margin: 0;
+    font-size: var(--cl-font-small);
+  }
+
+  &__last-label,
+  &__muted {
+    color: var(--cl-text-subtle);
+  }
+
+  &__ping {
+    @include m.flex-row(2, flex-start);
+    margin: 0;
+    padding: var(--cl-space-3);
+    border: 1px solid var(--cl-danger);
+    border-radius: var(--cl-radius-md);
+    background: var(--cl-danger-bg);
+    color: var(--cl-danger-text);
+    font-size: var(--cl-font-small);
+
+    &--ok {
+      border-color: var(--cl-success);
+      background: var(--cl-success-bg);
+      color: var(--cl-success-text);
+    }
+  }
+
+  &__excerpt {
+    display: block;
+    margin-block-start: var(--cl-space-1);
+    overflow-wrap: anywhere;
+  }
+
+  &__actions {
+    @include m.cluster(2);
+  }
+}

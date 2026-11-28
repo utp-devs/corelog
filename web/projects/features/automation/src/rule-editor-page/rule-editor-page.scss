@@ -1,0 +1,132 @@
+@use '../../../../ui/styles/mixins' as m;
+
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.rule-editor {
+  @include m.flex-column(4);
+  min-width: 0;
+
+  &__back {
+    @include m.flex-row(2);
+    align-self: flex-start;
+    min-height: var(--cl-control-h-md);
+    color: var(--cl-brand);
+    font-size: var(--cl-font-small);
+    text-decoration: none;
+
+    &:hover {
+      text-decoration: underline;
+    }
+
+    &:focus-visible {
+      outline: none;
+      box-shadow: var(--cl-shadow-focus);
+    }
+  }
+
+  &__notice,
+  &__conflict {
+    margin: 0 0 var(--cl-space-4);
+    padding: var(--cl-space-3) var(--cl-space-4);
+    border: 1px solid var(--cl-warning);
+    border-radius: var(--cl-radius-md);
+    background: var(--cl-warning-bg);
+    color: var(--cl-warning-text);
+    font-size: var(--cl-font-small);
+  }
+
+  &__conflict {
+    @include m.flex-column(3, flex-start);
+
+    p {
+      margin: 0;
+    }
+  }
+
+  &__top {
+    @include m.cluster(4, flex-end, space-between);
+    margin-block-end: var(--cl-space-6);
+  }
+
+  &__field {
+    @include m.flex-column(1);
+    flex: 1 1 18rem;
+    min-width: 0;
+  }
+
+  &__label {
+    font-size: var(--cl-font-small);
+    font-weight: var(--cl-weight-medium);
+  }
+
+  &__switch {
+    @include m.flex-row(2);
+    min-height: var(--cl-control-h-md);
+  }
+
+  &__error {
+    margin: 0;
+    color: var(--cl-danger-text);
+    font-size: var(--cl-font-small);
+  }
+
+  &__check {
+    margin-block-start: var(--cl-space-6);
+    padding: var(--cl-space-4);
+    border: 1px solid var(--cl-success);
+    border-radius: var(--cl-radius-md);
+    background: var(--cl-success-bg);
+    color: var(--cl-success-text);
+
+    &--bad {
+      border-color: var(--cl-danger);
+      background: var(--cl-danger-bg);
+      color: var(--cl-danger-text);
+    }
+
+    ul,
+    ol {
+      margin: var(--cl-space-1) 0 0;
+      padding-inline-start: var(--cl-space-6);
+      font-size: var(--cl-font-small);
+    }
+  }
+
+  &__check-title {
+    @include m.flex-row(2);
+    margin: 0;
+    font-size: var(--cl-font-body-strong);
+  }
+
+  &__check-sub {
+    margin: var(--cl-space-3) 0 0;
+    font-size: var(--cl-font-small);
+    font-weight: var(--cl-weight-medium);
+  }
+
+  &__footer {
+    @include m.cluster(3, center, flex-end);
+    margin-block-start: var(--cl-space-6);
+  }
+
+  &__cancel {
+    @include m.flex-row(0, center, center);
+    @include m.touch-target;
+    padding: 0 var(--cl-space-4);
+    border-radius: var(--cl-radius-md);
+    color: var(--cl-text);
+    text-decoration: none;
+
+    &:hover {
+      background: var(--cl-bg-hover);
+    }
+
+    &:focus-visible {
+      outline: none;
+      box-shadow: var(--cl-shadow-focus);
+    }
+  }
+}

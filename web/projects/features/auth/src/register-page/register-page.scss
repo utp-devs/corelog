@@ -23,13 +23,13 @@
     min-height: 0;
     overflow-y: auto;
     // Room for the focus rings of the controls that touch the edge of the scroll area.
-    margin: calc(var(--cl-space-1) * -1);
-    padding: var(--cl-space-1);
+    margin-inline: calc(var(--cl-space-2) * -1);
+    padding: var(--cl-space-2);
   }
 
   &__step {
     @include m.flex-column(3);
-    animation: register-page-step-in 180ms var(--cl-ease) both;
+    animation: register-page-step-in 180ms var(--cl-ease) backwards;
 
     &[hidden] {
       display: none;
@@ -44,11 +44,9 @@
     animation-name: register-page-step-in-back;
   }
 
-  // Given names and surnames side by side while there is room; stacked on narrow screens.
+  // Given names and surnames stacked, one field under the other.
   &__names {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
-    gap: var(--cl-space-3);
+    @include m.flex-column(3);
   }
 
   &__input {

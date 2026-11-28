@@ -1,5 +1,10 @@
 import { DOCUMENT } from '@angular/common';
 import {
+  CdkConnectedOverlay,
+  CdkOverlayOrigin,
+  type ConnectedPosition,
+} from '@angular/cdk/overlay';
+import {
   ChangeDetectionStrategy,
   Component,
   ElementRef,
@@ -7,6 +12,7 @@ import {
   Injector,
   afterNextRender,
   effect,
+  computed,
   inject,
   input,
   model,
@@ -19,6 +25,17 @@ const ITEM_SELECTOR = '[role="menuitem"], [role="menuitemcheckbox"], [role="menu
 
 let nextPanelId = 0;
 
+/** Gap in px between the trigger and the panel. */
+const PANEL_GAP = 4;
+
+/** Panel below the trigger lined up with one edge, flipping above when there is no room below. */
+function positionsFor(edge: 'start' | 'end'): ConnectedPosition[] {
+  return [
+    { originX: edge, originY: 'bottom', overlayX: edge, overlayY: 'top', offsetY: PANEL_GAP },
+    { originX: edge, originY: 'top', overlayX: edge, overlayY: 'bottom', offsetY: -PANEL_GAP },
+  ];
+}
+
 /**
  * Menu panel opened by a trigger. The trigger is projected with the `appMenuTrigger` attribute; the
  * rows are the default content and carry `role="menuitem"` (or `menuitemcheckbox` / `menuitemradio`).
@@ -27,9 +44,12 @@ let nextPanelId = 0;
  * keyboard moves focus to the first row; Arrow keys, Home and End move between rows; Escape closes
  * and returns focus to the trigger; Tab and a click outside close it; choosing a row closes it unless
  * the row has `data-keep-open`.
+ *
+ * The panel is rendered through the CDK overlay, so no scrolling or clipping ancestor of the trigger can cut it.
  */
 @Component({
   selector: 'app-dropdown-menu',
+  imports: [CdkConnectedOverlay, CdkOverlayOrigin],
   templateUrl: './dropdown-menu.html',
   styleUrl: './dropdown-menu.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -44,6 +64,7 @@ export class DropdownMenu {
   /** Which edge of the trigger the panel lines up with. */
   readonly align = input<'start' | 'end'>('start');
   readonly open = model(false);
+  protected readonly positions = computed(() => positionsFor(this.align()));
   /** Emits when the panel opens, before its rows are rendered. */
   readonly opened = output<void>();
 
@@ -155,7 +176,10 @@ export class DropdownMenu {
 
   @HostListener('document:click', ['$event'])
   protected onDocumentClick(event: MouseEvent): void {
-    const inside = event.target instanceof Node && this.host.nativeElement.contains(event.target);
+    const target = event.target;
+    const inside =
+      target instanceof Node &&
+      (this.host.nativeElement.contains(target) || !!this.panel()?.nativeElement.contains(target));
     if (this.open() && !inside) this.close(false);
   }
 

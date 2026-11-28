@@ -1,0 +1,125 @@
+<div class="export-page">
+  <app-section
+    fill
+    title="Exportar"
+    description="Descarga las incidencias del proyecto o una copia completa para guardarla."
+    ariaLabel="Exportar el proyecto"
+  >
+    @if (!ready()) {
+      <app-loading-skeleton variant="detail" [rows]="3" />
+    } @else if (!allowed()) {
+      <div class="export-page__empty" data-testid="export-forbidden">
+        <img
+          class="export-page__image"
+          src="/images/modules/module-import-export.webp"
+          alt=""
+          width="480"
+          height="320"
+          decoding="async"
+        />
+        <app-empty-state
+          title="No puedes exportar este proyecto"
+          description="Pide a un líder del proyecto que te dé el permiso de exportación."
+        />
+      </div>
+    } @else {
+      <div class="export-page__cards">
+        <article class="export-page__card" aria-labelledby="export-csv-title">
+          <h3 class="export-page__title" id="export-csv-title">
+            <i class="pi pi-file" aria-hidden="true"></i> Incidencias (CSV)
+          </h3>
+          <p class="export-page__text">
+            Una fila por incidencia, lista para abrir en una hoja de cálculo. Solo incluye lo que tú
+            puedes ver.
+          </p>
+          <div class="export-page__field">
+            <span class="export-page__label">Filtro CoreQL <em>(opcional)</em></span>
+            <app-coreql-field
+              ariaLabel="Filtro CoreQL de la exportación"
+              placeholder="Por ejemplo: statusCategory != done"
+              [(value)]="filter"
+            />
+            <span class="export-page__hint"
+              >Sin filtro se exportan todas las incidencias del proyecto.</span
+            >
+          </div>
+          @if (error(); as failure) {
+            @if (failure.kind === 'csv') {
+              <p class="export-page__error" role="alert" data-testid="export-csv-error">
+                {{ failure.message }}
+              </p>
+            }
+          }
+          @if (done(); as result) {
+            @if (result.kind === 'csv') {
+              <p class="export-page__ok" role="status" data-testid="export-csv-done">
+                <i class="pi pi-check-circle" aria-hidden="true"></i> Se descargó
+                {{ result.name }} ({{ result.size }}).
+              </p>
+            }
+          }
+          <div class="export-page__actions">
+            <p-button
+              label="Exportar incidencias (CSV)"
+              icon="pi pi-download"
+              data-testid="export-csv"
+              [disabled]="!canCsv()"
+              [loading]="busy() === 'csv'"
+              (onClick)="export('csv')"
+            />
+          </div>
+          @if (!canCsv()) {
+            <p class="export-page__hint">No tienes permiso para exportar incidencias.</p>
+          }
+        </article>
+
+        <article class="export-page__card" aria-labelledby="export-json-title">
+          <h3 class="export-page__title" id="export-json-title">
+            <i class="pi pi-database" aria-hidden="true"></i> Copia completa del proyecto (JSON)
+          </h3>
+          <p class="export-page__text">
+            Proyecto, incidencias, comentarios, registros de trabajo y vínculos en un solo archivo.
+            Es una copia de seguridad: para recuperarla hace falta un administrador.
+          </p>
+          <p class="export-page__warning">
+            <i class="pi pi-exclamation-triangle" aria-hidden="true"></i>
+            En proyectos muy grandes la copia se recorta a un máximo de elementos; si pasa, el
+            archivo lo indica en el campo <code>truncated</code>.
+          </p>
+          @if (error(); as failure) {
+            @if (failure.kind === 'json') {
+              <p class="export-page__error" role="alert" data-testid="export-json-error">
+                {{ failure.message }}
+              </p>
+            }
+          }
+          @if (done(); as result) {
+            @if (result.kind === 'json') {
+              <p class="export-page__ok" role="status" data-testid="export-json-done">
+                <i class="pi pi-check-circle" aria-hidden="true"></i> Se descargó
+                {{ result.name }} ({{ result.size }}).
+              </p>
+            }
+          }
+          <div class="export-page__actions">
+            <p-button
+              label="Descargar copia completa (JSON)"
+              icon="pi pi-download"
+              severity="secondary"
+              [outlined]="true"
+              data-testid="export-json"
+              [disabled]="!canJson()"
+              [loading]="busy() === 'json'"
+              (onClick)="export('json')"
+            />
+          </div>
+          @if (!canJson()) {
+            <p class="export-page__hint">
+              Solo quienes lideran el proyecto pueden descargar la copia completa.
+            </p>
+          }
+        </article>
+      </div>
+    }
+  </app-section>
+</div>

@@ -13,16 +13,8 @@
 
   &__panel {
     @include menu.panel;
-    position: absolute;
-    top: calc(100% + var(--cl-space-1));
-    left: 0;
-    z-index: var(--cl-z-dropdown);
     text-align: left;
-
-    &--end {
-      right: 0;
-      left: auto;
-    }
+    // Rendered in the overlay container: no ancestor of the trigger can scroll or clip it.
 
     &:focus {
       outline: none;

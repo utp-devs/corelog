@@ -1,11 +1,24 @@
-<span #slot class="dropdown-menu__trigger" (click)="onTriggerClick($event)">
+<span
+  #slot
+  cdkOverlayOrigin
+  #origin="cdkOverlayOrigin"
+  class="dropdown-menu__trigger"
+  (click)="onTriggerClick($event)"
+>
   <ng-content select="[appMenuTrigger]" />
 </span>
-@if (open()) {
+<ng-template
+  cdkConnectedOverlay
+  [cdkConnectedOverlayOrigin]="origin"
+  [cdkConnectedOverlayOpen]="open()"
+  [cdkConnectedOverlayPositions]="positions()"
+  [cdkConnectedOverlayPush]="true"
+  [cdkConnectedOverlayViewportMargin]="8"
+  (detach)="open.set(false)"
+>
   <div
     #panel
     class="dropdown-menu__panel"
-    [class.dropdown-menu__panel--end]="align() === 'end'"
     role="menu"
     tabindex="-1"
     [attr.id]="panelId"
@@ -15,4 +28,4 @@
   >
     <ng-content />
   </div>
-}
+</ng-template>
