@@ -46,7 +46,12 @@ function trigger(el: HTMLElement): HTMLButtonElement {
   return el.querySelector('[data-testid="transition-button"]') as HTMLButtonElement;
 }
 
+/** The menu lives in the overlay container, so the whole document is the search root. */
+const menu = (): HTMLElement | null => document.querySelector('[role="menu"]');
+
 describe('TransitionButton', () => {
+  afterEach(() => TestBed.resetTestingModule());
+
   it('shows the current status with the color of its category', () => {
     const { el } = create();
     expect(trigger(el).textContent).toContain('Por hacer');
@@ -57,7 +62,8 @@ describe('TransitionButton', () => {
     const { fixture, el } = create();
     trigger(el).click();
     fixture.detectChanges();
-    const options = el.querySelectorAll('[role="menuitem"]');
+    expect(menu()?.closest('.cdk-overlay-container')).not.toBeNull();
+    const options = document.querySelectorAll('[role="menuitem"]');
     expect(options).toHaveLength(2);
     expect(options[1].querySelector('.transition-button__target--done')?.textContent).toContain(
       'Hecho',
@@ -70,10 +76,10 @@ describe('TransitionButton', () => {
     fixture.componentInstance.selected.subscribe((item) => chosen.push(item.id));
     trigger(el).click();
     fixture.detectChanges();
-    (el.querySelector('[data-testid="transition-option-finish"]') as HTMLElement).click();
+    (document.querySelector('[data-testid="transition-option-finish"]') as HTMLElement).click();
     fixture.detectChanges();
     expect(chosen).toEqual(['finish']);
-    expect(el.querySelector('[role="menu"]')).toBeNull();
+    expect(menu()).toBeNull();
   });
 
   it('is inert with an explanation when there is no transition to run', () => {
@@ -82,7 +88,7 @@ describe('TransitionButton', () => {
     expect(trigger(el).getAttribute('title')).toContain('No hay transiciones');
     trigger(el).click();
     fixture.detectChanges();
-    expect(el.querySelector('[role="menu"]')).toBeNull();
+    expect(menu()).toBeNull();
   });
 
   it('shows the loading state and blocks the menu while a transition runs', () => {
@@ -102,8 +108,8 @@ describe('TransitionButton', () => {
     fixture.componentInstance.retry.subscribe(() => (retried += 1));
     trigger(el).click();
     fixture.detectChanges();
-    expect(el.querySelector('[role="alert"]')?.textContent).toContain('No se pudo cargar');
-    (el.querySelector('.transition-button__retry') as HTMLElement).click();
+    expect(document.querySelector('[role="alert"]')?.textContent).toContain('No se pudo cargar');
+    (document.querySelector('.transition-button__retry') as HTMLElement).click();
     expect(retried).toBe(1);
   });
 
@@ -119,11 +125,21 @@ describe('TransitionButton', () => {
     fixture.detectChanges();
     el.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
     fixture.detectChanges();
-    expect(el.querySelector('[role="menu"]')).toBeNull();
+    expect(menu()).toBeNull();
     trigger(el).click();
     fixture.detectChanges();
-    document.body.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+    document.body.click();
     fixture.detectChanges();
-    expect(el.querySelector('[role="menu"]')).toBeNull();
+    expect(menu()).toBeNull();
+  });
+
+  it('returns focus to the button when Escape closes the menu', () => {
+    const { fixture, el } = create();
+    trigger(el).click();
+    fixture.detectChanges();
+    menu()?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    fixture.detectChanges();
+    expect(menu()).toBeNull();
+    expect(document.activeElement).toBe(trigger(el));
   });
 });

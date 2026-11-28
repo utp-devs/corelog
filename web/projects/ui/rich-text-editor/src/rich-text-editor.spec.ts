@@ -83,8 +83,9 @@ function button(el: HTMLElement, label: string): HTMLButtonElement {
   return found;
 }
 
-function options(el: HTMLElement): HTMLElement[] {
-  return Array.from(el.querySelectorAll<HTMLElement>('[role="option"]'));
+function options(_el: HTMLElement): HTMLElement[] {
+  // The list lives in the overlay container, so the whole document is the search root.
+  return Array.from(document.querySelectorAll<HTMLElement>('[role="option"]'));
 }
 
 function typeText(fixture: ComponentFixture<HostComponent>, el: HTMLElement, value: string): void {
@@ -222,16 +223,16 @@ describe('RichTextEditor mention picker', () => {
 
     keydown(fixture, area, { key: 'Enter' });
     expect(area.value).toBe(`Hola @[Luis Gómez](user:${UID2}) `);
-    expect(el.querySelector('[role="listbox"]')).toBeNull();
+    expect(document.querySelector('[role="listbox"]')).toBeNull();
   });
 
   it('closes with Escape without changing the text', async () => {
     const searchUsers = vi.fn().mockResolvedValue([{ id: UID, name: 'Ana' }]);
     const { fixture, el } = setup({ searchUsers });
     typeText(fixture, el, '@a');
-    await until(fixture, () => el.querySelector('[role="listbox"]') !== null);
+    await until(fixture, () => document.querySelector('[role="listbox"]') !== null);
     keydown(fixture, textarea(el), { key: 'Escape' });
-    expect(el.querySelector('[role="listbox"]')).toBeNull();
+    expect(document.querySelector('[role="listbox"]')).toBeNull();
     expect(textarea(el).value).toBe('@a');
   });
 

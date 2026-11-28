@@ -36,7 +36,7 @@ describe('GadgetFrame', () => {
   it('names the region with its title and shows the content when ready', () => {
     const { el } = render();
     const section = el.querySelector('section') as HTMLElement;
-    const heading = el.querySelector('h3') as HTMLElement;
+    const heading = el.querySelector('h2') as HTMLElement;
     expect(heading.textContent).toContain('Asignadas a mí');
     expect(section.getAttribute('aria-labelledby')).toBe(heading.id);
     expect(el.querySelector('#content')).not.toBeNull();

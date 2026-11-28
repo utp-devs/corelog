@@ -10,7 +10,7 @@
       [attr.aria-labelledby]="titleId"
       (keydown)="onKeydown($event)"
     >
-      <header class="side-panel__header">
+      <div class="side-panel__header">
         <div class="side-panel__heading">
           <h2 class="side-panel__title" [id]="titleId">{{ heading() }}</h2>
           @if (subtitle(); as text) {
@@ -27,15 +27,15 @@
             <path d="M6 6l12 12M18 6 6 18" />
           </svg>
         </button>
-      </header>
+      </div>
 
       <div class="side-panel__body">
         <ng-content />
       </div>
 
-      <footer class="side-panel__footer">
+      <div class="side-panel__footer">
         <ng-content select="[panelFooter]" />
-      </footer>
+      </div>
     </div>
   </div>
 }

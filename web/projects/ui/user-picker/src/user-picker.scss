@@ -94,16 +94,12 @@
     transform: rotate(180deg);
   }
 
-  // Fixed to the viewport (positions come from the field when the list opens) so it is never clipped.
+  // Rendered in the overlay container: no card or dialog around the field can clip it.
   &__panel {
-    position: fixed;
-    z-index: var(--cl-z-overlay);
-    top: var(--user-picker-top, auto);
-    bottom: var(--user-picker-bottom, auto);
-    left: var(--user-picker-left);
-    width: var(--user-picker-width);
+    box-sizing: border-box;
+    width: 100%;
     min-width: var(--cl-menu-w-min);
-    margin: var(--cl-space-1) 0;
+    max-width: calc(100vw - var(--cl-space-4));
     overflow: hidden;
     border: 1px solid var(--cl-divider);
     border-radius: var(--cl-radius-md);

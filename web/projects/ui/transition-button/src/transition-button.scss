@@ -57,13 +57,11 @@
   }
 
   &__panel {
-    position: absolute;
-    top: calc(100% + var(--cl-space-1));
-    left: 0;
-    z-index: var(--cl-z-dropdown);
     box-sizing: border-box;
     min-width: var(--cl-menu-w-min);
-    max-width: calc(100vw - var(--cl-space-6));
+    max-width: calc(100vw - var(--cl-space-4));
+    max-height: calc(100vh - var(--cl-space-4));
+    overflow-y: auto;
     padding: var(--cl-space-1);
     border: 1px solid var(--cl-divider);
     border-radius: var(--cl-radius-md);

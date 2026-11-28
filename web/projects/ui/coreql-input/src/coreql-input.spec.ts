@@ -124,8 +124,11 @@ describe('CoreqlInput', () => {
       vi.advanceTimersByTime(SUGGEST_DEBOUNCE_MS + 1);
       fixture.detectChanges();
       expect(provider).toHaveBeenCalledTimes(1);
-      const options = (fixture.nativeElement as HTMLElement).querySelectorAll('[role="option"]');
+      // The list lives in the overlay container, so the whole document is the search root.
+      const options = document.querySelectorAll('[role="option"]');
       expect(options).toHaveLength(2);
+      expect(options[0].closest('.cdk-overlay-container')).not.toBeNull();
+      expect(area.getAttribute('aria-controls')).not.toBeNull();
 
       area.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown' }));
       area.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
@@ -147,7 +150,7 @@ describe('CoreqlInput', () => {
       fixture.detectChanges();
       area.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
       fixture.detectChanges();
-      expect((fixture.nativeElement as HTMLElement).querySelector('[role="listbox"]')).toBeNull();
+      expect(document.querySelector('[role="listbox"]')).toBeNull();
       area.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', ctrlKey: true }));
       expect(runs).toBe(1);
     } finally {

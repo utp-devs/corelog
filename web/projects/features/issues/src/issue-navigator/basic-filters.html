@@ -1,5 +1,6 @@
 <div class="basic-filters" role="group" aria-label="Filtros básicos">
   <p-multiselect
+    appendTo="body"
     class="basic-filters__field"
     inputId="nav-project"
     ariaLabel="Proyecto"
@@ -16,6 +17,7 @@
     (ngModelChange)="setList('projects', $event)"
   />
   <p-multiselect
+    appendTo="body"
     class="basic-filters__field"
     ariaLabel="Tipo"
     placeholder="Tipo"
@@ -30,6 +32,7 @@
     (ngModelChange)="setList('types', $event)"
   />
   <p-multiselect
+    appendTo="body"
     class="basic-filters__field"
     ariaLabel="Estado"
     placeholder="Estado"
@@ -44,6 +47,7 @@
     (ngModelChange)="setList('statusCategories', $event)"
   />
   <p-multiselect
+    appendTo="body"
     class="basic-filters__field"
     ariaLabel="Responsable"
     placeholder="Responsable"
@@ -59,6 +63,7 @@
     (ngModelChange)="setList('assignees', $event)"
   />
   <p-multiselect
+    appendTo="body"
     class="basic-filters__field"
     ariaLabel="Informante"
     placeholder="Informante"
@@ -74,6 +79,7 @@
     (ngModelChange)="setList('reporters', $event)"
   />
   <p-multiselect
+    appendTo="body"
     class="basic-filters__field"
     ariaLabel="Etiqueta"
     placeholder="Etiqueta"
@@ -89,6 +95,7 @@
     (ngModelChange)="setList('labels', $event)"
   />
   <p-multiselect
+    appendTo="body"
     class="basic-filters__field"
     ariaLabel="Componente"
     placeholder="Componente"
@@ -104,6 +111,7 @@
     (ngModelChange)="setList('components', $event)"
   />
   <p-multiselect
+    appendTo="body"
     class="basic-filters__field"
     ariaLabel="Versión de corrección"
     placeholder="Versión"

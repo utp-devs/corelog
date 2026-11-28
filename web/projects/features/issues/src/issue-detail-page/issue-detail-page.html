@@ -189,7 +189,12 @@
                 class="touch-target"
                 data-testid="issue-vote"
                 [label]="'' + view.counts.votes"
-                [ariaLabel]="view.viewerHasVoted ? 'Quitar mi voto' : 'Votar esta incidencia'"
+                [ariaLabel]="
+                  (view.viewerHasVoted ? 'Quitar mi voto' : 'Votar esta incidencia') +
+                  ', ' +
+                  view.counts.votes +
+                  ' votos'
+                "
                 [appTooltip]="view.viewerHasVoted ? 'Quitar mi voto' : 'Votar esta incidencia'"
                 [disabled]="!canVote() || voteBusy()"
                 (onClick)="toggleVote()"

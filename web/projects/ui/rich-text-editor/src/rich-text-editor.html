@@ -59,7 +59,7 @@
   </div>
 
   @if (mode() === 'write') {
-    <div class="rich-text-editor__area">
+    <div class="rich-text-editor__area" cdkOverlayOrigin #origin="cdkOverlayOrigin">
       <textarea
         #textarea
         [id]="id"
@@ -72,7 +72,6 @@
         aria-multiline="true"
         [attr.aria-keyshortcuts]="submittable() ? 'Control+Enter' : null"
         [attr.aria-autocomplete]="popup() ? 'list' : null"
-        [attr.aria-expanded]="showListbox()"
         [attr.aria-controls]="showListbox() ? listboxId : null"
         [attr.aria-activedescendant]="activeOptionId()"
         (input)="onInput($event)"
@@ -81,7 +80,16 @@
         (mouseup)="onResizeEnd($event)"
         (blur)="onBlur()"
       ></textarea>
-      @if (showListbox()) {
+      <ng-template
+        cdkConnectedOverlay
+        [cdkConnectedOverlayOrigin]="origin"
+        [cdkConnectedOverlayOpen]="showListbox()"
+        [cdkConnectedOverlayPositions]="listPositions"
+        [cdkConnectedOverlayScrollStrategy]="scrollStrategy"
+        [cdkConnectedOverlayPush]="true"
+        [cdkConnectedOverlayViewportMargin]="8"
+        (detach)="onListDetach()"
+      >
         <ul
           [id]="listboxId"
           class="rich-text-editor__listbox"
@@ -123,7 +131,7 @@
             </li>
           }
         </ul>
-      }
+      </ng-template>
     </div>
   } @else {
     <div class="rich-text-editor__preview" role="region" aria-label="Vista previa">

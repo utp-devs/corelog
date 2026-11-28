@@ -58,7 +58,7 @@ describe('UserMenu avatar', () => {
     const fixture: ComponentFixture<UserMenu> = TestBed.createComponent(UserMenu);
     fixture.detectChanges();
     const avatar = fixture.nativeElement.querySelector('app-avatar') as HTMLElement;
-    expect(avatar.textContent).toContain('AP');
+    expect(avatar.querySelector('[data-initials]')?.getAttribute('data-initials')).toBe('AP');
     expect(getAvatar).not.toHaveBeenCalled();
   });
 

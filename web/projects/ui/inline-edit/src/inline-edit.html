@@ -1,11 +1,14 @@
 @if (editing()) {
   <div
     class="inline-edit__editor"
+    cdkOverlayOrigin
+    #origin="cdkOverlayOrigin"
     (keydown)="onEditorKeyDown($event)"
     (focusout)="onEditorFocusOut($event)"
   >
     @if (isSelectType()) {
       <p-select
+        appendTo="body"
         class="inline-edit__control"
         [autofocus]="true"
         [options]="options()"
@@ -37,7 +40,16 @@
         (input)="onDraftInput($event)"
       />
     }
-    <p class="inline-edit__hint">Enter para guardar, Esc para cancelar</p>
+    <ng-template
+      cdkConnectedOverlay
+      [cdkConnectedOverlayOrigin]="origin"
+      [cdkConnectedOverlayOpen]="true"
+      [cdkConnectedOverlayPositions]="hintPositions"
+      [cdkConnectedOverlayPush]="true"
+      [cdkConnectedOverlayViewportMargin]="8"
+    >
+      <p class="inline-edit__hint">Enter para guardar, Esc para cancelar</p>
+    </ng-template>
   </div>
 } @else {
   <div

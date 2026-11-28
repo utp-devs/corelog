@@ -154,7 +154,7 @@ describe('PeoplePage', () => {
 
       await expectText(fixture, 'Analista de datos');
       expect(headerTexts(fixture)).not.toContain('Cargo');
-      expect(fixture.nativeElement.textContent).toContain('LP');
+      expect(fixture.nativeElement.querySelector('[data-initials="LP"]')).not.toBeNull();
       expect(fixture.nativeElement.textContent).toContain('Miembro');
     } finally {
       restoreViewport();

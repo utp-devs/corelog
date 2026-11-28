@@ -158,7 +158,6 @@
           [class.backlog-row--selected]="selected().has(issue.id)"
           [class.backlog-row--done]="issue.statusCategory === 'done'"
           [attr.data-testid]="'backlog-row-' + issue.key"
-          [attr.aria-selected]="selected().has(issue.id)"
           tabindex="0"
           (click)="onRowClick($event, issue)"
           (keydown)="onRowKeydown($event, issue, index)"

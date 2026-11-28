@@ -233,8 +233,9 @@
     height: auto;
     aspect-ratio: 3 / 2;
     object-fit: cover;
+    object-position: center;
     border-radius: var(--cl-radius-md);
-    background: var(--cl-media-bg);
+    background: var(--cl-media-fallback);
 
     @include m.respond-down(768px) {
       aspect-ratio: 21 / 9;

@@ -10,6 +10,7 @@ import {
   inject,
   input,
   output,
+  signal,
   untracked,
   viewChild,
 } from '@angular/core';
@@ -60,6 +61,10 @@ export class Dialog implements OnDestroy {
 
   protected readonly titleId = `cl-dialog-title-${nextDialogId++}`;
 
+  /** The body overflows and scrolls: it takes a tab stop so the keyboard can scroll it. */
+  protected readonly bodyScrollable = signal(false);
+
+  private bodyObservers: Array<{ disconnect(): void }> = [];
   private previousFocus: HTMLElement | null = null;
   private locked = false;
 
@@ -106,18 +111,48 @@ export class Dialog implements OnDestroy {
     if (openDialogs++ === 0) {
       this.document.body.style.overflow = 'hidden';
     }
-    afterNextRender(() => this.focusInitial(), { injector: this.injector });
+    afterNextRender(
+      () => {
+        this.focusInitial();
+        this.watchBodyOverflow();
+      },
+      { injector: this.injector },
+    );
   }
 
   private onClosed(): void {
     if (!this.locked) return;
     this.locked = false;
+    this.stopWatchingBody();
     if (--openDialogs === 0) {
       this.document.body.style.removeProperty('overflow');
     }
     const previous = this.previousFocus;
     this.previousFocus = null;
     if (previous?.isConnected) previous.focus();
+  }
+
+  private watchBodyOverflow(): void {
+    const body = this.panel()?.nativeElement.querySelector<HTMLElement>('.dialog__body');
+    if (!body) return;
+    const update = () => this.bodyScrollable.set(body.scrollHeight - body.clientHeight > 1);
+    update();
+    if (typeof ResizeObserver !== 'undefined') {
+      const resize = new ResizeObserver(update);
+      resize.observe(body);
+      this.bodyObservers.push(resize);
+    }
+    if (typeof MutationObserver !== 'undefined') {
+      const mutation = new MutationObserver(update);
+      mutation.observe(body, { childList: true, subtree: true, characterData: true });
+      this.bodyObservers.push(mutation);
+    }
+  }
+
+  private stopWatchingBody(): void {
+    for (const observer of this.bodyObservers) observer.disconnect();
+    this.bodyObservers = [];
+    this.bodyScrollable.set(false);
   }
 
   private focusInitial(): void {

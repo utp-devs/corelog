@@ -1,4 +1,9 @@
 import {
+  CdkConnectedOverlay,
+  CdkOverlayOrigin,
+  type ConnectedPosition,
+} from '@angular/cdk/overlay';
+import {
   ChangeDetectionStrategy,
   Component,
   ElementRef,
@@ -35,6 +40,12 @@ export const INLINE_EDIT_SAVE_ERROR =
   'No se pudo guardar. Revisa tu conexión e inténtalo de nuevo.';
 const EMPTY_TEXT = 'Sin valor';
 
+/** Hint under the editor, or above it when there is no room below. */
+const HINT_POSITIONS: ConnectedPosition[] = [
+  { originX: 'start', originY: 'bottom', overlayX: 'start', overlayY: 'top', offsetY: 4 },
+  { originX: 'start', originY: 'top', overlayX: 'start', overlayY: 'bottom', offsetY: -4 },
+];
+
 /** `dd/MM/yyyy` text of an ISO date; the raw text when it is not a valid ISO date. */
 function formatDisplayDate(iso: string): string {
   const date = parseIsoDate(iso);
@@ -59,7 +70,7 @@ function saveErrorMessage(error: unknown): string {
  */
 @Component({
   selector: 'app-inline-edit',
-  imports: [FormsModule, InputText, Select, DateField],
+  imports: [CdkConnectedOverlay, CdkOverlayOrigin, FormsModule, InputText, Select, DateField],
   templateUrl: './inline-edit.html',
   styleUrl: './inline-edit.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -72,6 +83,7 @@ function saveErrorMessage(error: unknown): string {
   ],
 })
 export class InlineEdit implements ControlValueAccessor {
+  protected readonly hintPositions = HINT_POSITIONS;
   /** Field name, for example "Título". Used as the accessible name of the editor. */
   readonly label = input.required<string>();
   readonly type = input<InlineEditType>('text');

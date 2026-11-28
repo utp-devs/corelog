@@ -77,7 +77,7 @@ describe('GlobalSearch', () => {
     type('ex');
     vi.advanceTimersByTime(HEADER_SEARCH_DEBOUNCE_MS);
     fixture.detectChanges();
-    expect(el.textContent).toContain('Exportar datos');
+    expect(document.body.textContent).toContain('Exportar datos');
     expect(search).toHaveBeenCalledWith('ex', 10);
   });
 
@@ -86,7 +86,7 @@ describe('GlobalSearch', () => {
     type('zz');
     vi.advanceTimersByTime(HEADER_SEARCH_DEBOUNCE_MS);
     fixture.detectChanges();
-    expect(el.querySelector('[role="status"]')?.textContent).toContain('Sin resultados');
+    expect(document.querySelector('[role="status"]')?.textContent).toContain('Sin resultados');
   });
 
   it('opens the command palette with Ctrl+K and closes it with Escape', () => {

@@ -271,6 +271,8 @@ export class DataTable<T extends object> {
   private readonly scroller = viewChild<ElementRef<HTMLElement>>('scroller');
   protected readonly edgeStart = signal(false);
   protected readonly edgeEnd = signal(false);
+  /** The scroll area overflows in either direction, so it needs to be reachable with the keyboard. */
+  protected readonly overflowing = signal(false);
   protected readonly visibleColumns = computed(() => {
     const hidden = this.hiddenKeys();
     return this.columns().filter((column) => {
@@ -348,6 +350,7 @@ export class DataTable<T extends object> {
       if (!element) {
         this.edgeStart.set(false);
         this.edgeEnd.set(false);
+        this.overflowing.set(false);
         return;
       }
       this.updateEdges(element);
@@ -365,6 +368,10 @@ export class DataTable<T extends object> {
     const max = element.scrollWidth - element.clientWidth;
     this.edgeStart.set(element.scrollLeft > SCROLL_EDGE_TOLERANCE);
     this.edgeEnd.set(max - element.scrollLeft > SCROLL_EDGE_TOLERANCE);
+    this.overflowing.set(
+      max > SCROLL_EDGE_TOLERANCE ||
+        element.scrollHeight - element.clientHeight > SCROLL_EDGE_TOLERANCE,
+    );
   }
 
   protected rowTabIndex(index: number): number | null {

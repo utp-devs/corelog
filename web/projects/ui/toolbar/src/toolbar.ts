@@ -1,4 +1,10 @@
 import { BreakpointObserver } from '@angular/cdk/layout';
+import {
+  CdkConnectedOverlay,
+  CdkOverlayOrigin,
+  Overlay,
+  type ConnectedPosition,
+} from '@angular/cdk/overlay';
 import { NgTemplateOutlet } from '@angular/common';
 import {
   booleanAttribute,
@@ -17,6 +23,17 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { map } from 'rxjs';
 
 const OVERFLOW_QUERY = '(max-width: 1279.98px)';
+
+/** Gap in px between the "Más" button and its menu. */
+const MENU_GAP = 4;
+
+/** Menu below the button lined up with its right edge, or above it when there is no room below. */
+const MENU_POSITIONS: ConnectedPosition[] = [
+  { originX: 'end', originY: 'bottom', overlayX: 'end', overlayY: 'top', offsetY: MENU_GAP },
+  { originX: 'end', originY: 'top', overlayX: 'end', overlayY: 'bottom', offsetY: -MENU_GAP },
+];
+
+let nextToolbarId = 0;
 
 /** Marks the element projected into the left (filters and search) slot of a toolbar. */
 @Directive({
@@ -45,13 +62,12 @@ export class ToolbarSecondary {}
  */
 @Component({
   selector: 'app-toolbar',
-  imports: [NgTemplateOutlet],
+  imports: [NgTemplateOutlet, CdkConnectedOverlay, CdkOverlayOrigin],
   templateUrl: './toolbar.html',
   styleUrl: './toolbar.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
     '(document:keydown.escape)': 'onEscape()',
-    '(document:click)': 'onDocumentClick($event)',
   },
 })
 export class Toolbar {
@@ -78,6 +94,10 @@ export class Toolbar {
   );
   protected readonly moveToMenu = computed(() => this.hasSecondary() && this.overflow());
   protected readonly menuOpen = signal(false);
+  protected readonly menuId = `cl-toolbar-menu-${nextToolbarId++}`;
+  protected readonly positions = MENU_POSITIONS;
+  /** The menu closes when the page scrolls under it, so it never floats away from its button. */
+  protected readonly scrollStrategy = inject(Overlay).scrollStrategies.close();
 
   protected toggleMenu(): void {
     this.menuOpen.update((open) => !open);
@@ -94,8 +114,8 @@ export class Toolbar {
     this.closeMenu(true);
   }
 
-  /** A click outside the toolbar closes the overflow menu. */
-  protected onDocumentClick(event: Event): void {
+  /** A press outside the menu closes it; the "Más" button itself toggles. */
+  protected onOutsideClick(event: MouseEvent): void {
     const target = event.target;
     if (target instanceof Node && this.host.nativeElement.contains(target)) return;
     this.closeMenu(false);

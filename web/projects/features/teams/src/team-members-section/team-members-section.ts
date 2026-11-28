@@ -87,7 +87,7 @@ export class TeamMembersSection {
   protected readonly columns: DataTableColumn[] = [
     { key: 'person', title: 'Persona', mobilePrimary: true },
     { key: 'role', title: 'Rol', mobilePrimary: true },
-    { key: 'actions', title: '', align: 'right' },
+    { key: 'actions', title: 'Acciones', align: 'right' },
   ];
 
   protected readonly pickedId = signal<string | undefined>(undefined);

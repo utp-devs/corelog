@@ -66,6 +66,7 @@
         </app-field-row>
         <app-field-row class="invite-step__role-field" label="Rol">
           <p-select
+            appendTo="body"
             [ngModel]="row.role"
             [ngModelOptions]="{ standalone: true }"
             (ngModelChange)="updateRow(row.id, { role: $event })"

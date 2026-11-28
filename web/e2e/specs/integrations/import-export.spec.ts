@@ -120,7 +120,7 @@ test.describe('importar y exportar', () => {
     const page = await as('owner');
     await page.goto(appPath(`/projects/${project.key}/settings/export`));
     await page
-      .getByRole('combobox', { name: 'Filtro CoreQL de la exportación' })
+      .getByRole('textbox', { name: 'Filtro CoreQL de la exportación' })
       .fill('esto no es ((');
     await page.getByTestId('export-csv').getByRole('button').click();
     await expect(page.getByTestId('export-csv-error')).toBeVisible();

@@ -1,8 +1,13 @@
 import {
+  CdkConnectedOverlay,
+  CdkOverlayOrigin,
+  Overlay,
+  type ConnectedPosition,
+} from '@angular/cdk/overlay';
+import {
   ChangeDetectionStrategy,
   Component,
   ElementRef,
-  DestroyRef,
   computed,
   inject,
   input,
@@ -23,16 +28,14 @@ export interface PickableUser {
 
 let nextUserPickerId = 0;
 
-/** Room the list needs below the field before it opens upwards instead. */
-const PANEL_SPACE = 300;
+/** Gap in px between the field and its list. */
+const PANEL_GAP = 4;
 
-/** Fixed position of the open list, taken from the field when it opens. */
-interface PanelAnchor {
-  readonly left: number;
-  readonly width: number;
-  readonly top: number | null;
-  readonly bottom: number | null;
-}
+/** List below the field, or above it when there is no room below. */
+const PANEL_POSITIONS: ConnectedPosition[] = [
+  { originX: 'start', originY: 'bottom', overlayX: 'start', overlayY: 'top', offsetY: PANEL_GAP },
+  { originX: 'start', originY: 'top', overlayX: 'start', overlayY: 'bottom', offsetY: -PANEL_GAP },
+];
 
 /**
  * User selector: a combobox with search, avatar, name and email in every option, a selected state with
@@ -43,11 +46,10 @@ interface PanelAnchor {
  */
 @Component({
   selector: 'app-user-picker',
-  imports: [Avatar],
+  imports: [Avatar, CdkConnectedOverlay, CdkOverlayOrigin],
   templateUrl: './user-picker.html',
   styleUrl: './user-picker.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  host: { '(document:pointerdown)': 'onDocumentPointerDown($event)' },
 })
 export class UserPicker {
   readonly users = input.required<PickableUser[]>();
@@ -71,16 +73,11 @@ export class UserPicker {
 
   /** Text typed by the user while the list is open; null shows the selected name instead. */
   private readonly typed = signal<string | null>(null);
-  private readonly destroyRef = inject(DestroyRef);
-  /** Where the list is drawn. It is fixed to the viewport so cards with hidden overflow never clip it. */
-  protected readonly anchor = signal<PanelAnchor | null>(null);
-  private readonly closeOnScroll = (event: Event): void => {
-    const target = event.target;
-    if (target instanceof Element && target.closest('.user-picker__panel')) {
-      return;
-    }
-    this.close();
-  };
+  protected readonly positions = PANEL_POSITIONS;
+  /** The list closes when the page scrolls under it, so it never floats away from the field. */
+  protected readonly scrollStrategy = inject(Overlay).scrollStrategies.close();
+  /** Width of the field in px: the list is as wide as the field it completes. */
+  protected readonly panelWidth = signal(0);
   protected readonly open = signal(false);
   protected readonly active = signal(0);
 
@@ -109,13 +106,6 @@ export class UserPicker {
   protected readonly activeOptionId = computed(() =>
     this.open() && this.suggestions().length > 0 ? this.optionId(this.active()) : null,
   );
-
-  constructor() {
-    this.destroyRef.onDestroy(() => {
-      window.removeEventListener('scroll', this.closeOnScroll, true);
-      window.removeEventListener('resize', this.closeOnScroll);
-    });
-  }
 
   protected optionId(index: number): string {
     return `${this.id}-option-${index}`;
@@ -209,41 +199,25 @@ export class UserPicker {
     }
   }
 
-  protected onDocumentPointerDown(event: Event): void {
-    const target = event.target as Element | null;
-    const inside =
-      this.hostRef.nativeElement.contains(target) || !!target?.closest?.('.user-picker__panel');
-    if (this.open() && !inside) {
-      this.close();
-    }
+  /** A press outside the field and its list closes it (the list lives in the overlay container). */
+  protected onOutsideClick(event: MouseEvent): void {
+    if (event.target instanceof Node && this.hostRef.nativeElement.contains(event.target)) return;
+    this.close();
+  }
+
+  /** The overlay detached on its own (the page scrolled): the list is closed. */
+  protected onDetach(): void {
+    if (this.open()) this.close();
   }
 
   private openList(term: string): void {
-    if (!this.open()) {
-      this.anchor.set(this.measureAnchor());
-      window.addEventListener('scroll', this.closeOnScroll, true);
-      window.addEventListener('resize', this.closeOnScroll);
-    }
+    this.panelWidth.set(this.hostRef.nativeElement.getBoundingClientRect().width);
     this.open.set(true);
     this.search.emit(term);
   }
 
-  private measureAnchor(): PanelAnchor {
-    const rect = this.hostRef.nativeElement.getBoundingClientRect();
-    const below = window.innerHeight - rect.bottom;
-    const opensUp = below < PANEL_SPACE && rect.top > below;
-    return {
-      left: rect.left,
-      width: rect.width,
-      top: opensUp ? null : rect.bottom,
-      bottom: opensUp ? window.innerHeight - rect.top : null,
-    };
-  }
-
   /** Closes the list and puts the selected name back in the field (typed text is not a selection). */
   private close(): void {
-    window.removeEventListener('scroll', this.closeOnScroll, true);
-    window.removeEventListener('resize', this.closeOnScroll);
     this.open.set(false);
     this.typed.set(null);
     this.active.set(0);

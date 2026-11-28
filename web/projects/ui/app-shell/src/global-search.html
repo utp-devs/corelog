@@ -9,7 +9,7 @@
     <app-shell-icon name="search" />
   </button>
 } @else {
-  <div class="global-search__field">
+  <div class="global-search__field" cdkOverlayOrigin #origin="cdkOverlayOrigin">
     <app-shell-icon class="global-search__icon" name="search" />
     <input
       type="search"
@@ -23,7 +23,16 @@
     />
     <kbd class="global-search__hint" aria-hidden="true">{{ shortcutHint }}</kbd>
 
-    @if (panelOpen()) {
+    <ng-template
+      cdkConnectedOverlay
+      [cdkConnectedOverlayOrigin]="origin"
+      [cdkConnectedOverlayOpen]="panelOpen()"
+      [cdkConnectedOverlayPositions]="positions"
+      [cdkConnectedOverlayScrollStrategy]="scrollStrategy"
+      [cdkConnectedOverlayPush]="true"
+      [cdkConnectedOverlayViewportMargin]="8"
+      (detach)="onPanelDetach()"
+    >
       <div class="global-search__panel">
         <div class="global-search__results" role="region" aria-label="Resultados de búsqueda">
           @if (message(); as text) {
@@ -66,7 +75,7 @@
           <span class="global-search__shortcut">{{ shortcutHint }}</span>
         </div>
       </div>
-    }
+    </ng-template>
   </div>
 }
 

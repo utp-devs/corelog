@@ -27,7 +27,7 @@
               icon="pi pi-sliders-h"
               (onClick)="chooser.toggle($event)"
             />
-            <p-popover #chooser>
+            <p-popover appendTo="body" #chooser>
               <div class="data-table__chooser" role="group" aria-label="Columnas visibles">
                 @for (column of columns(); track column.key) {
                   <label class="data-table__check">
@@ -89,6 +89,7 @@
       </span>
       <div class="data-table__pager">
         <p-select
+          appendTo="body"
           size="small"
           [options]="pageSizeOptions()"
           optionLabel="label"
@@ -254,7 +255,13 @@
       [class.data-table__viewport--edge-start]="edgeStart()"
       [class.data-table__viewport--edge-end]="edgeEnd()"
     >
-      <div #scroller class="data-table__scroll" data-scroll-x (scroll)="updateEdges(scroller)">
+      <div
+        #scroller
+        class="data-table__scroll"
+        data-scroll-x
+        [attr.tabindex]="overflowing() ? 0 : null"
+        (scroll)="updateEdges(scroller)"
+      >
         <p-table [value]="rows()">
           <ng-template pTemplate="header">
             <tr>

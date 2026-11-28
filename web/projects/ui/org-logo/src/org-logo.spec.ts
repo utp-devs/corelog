@@ -36,7 +36,7 @@ describe('OrgLogo', () => {
     const http = TestBed.inject(HttpTestingController);
     const fixture = create({ hasLogo: false });
     const fallback = fixture.nativeElement.querySelector('[data-testid="org-logo-fallback"]');
-    expect(fallback.textContent.trim()).toBe('AC');
+    expect(fallback.getAttribute('data-initials')).toBe('AC');
     http.expectNone(() => true);
   });
 
@@ -46,7 +46,9 @@ describe('OrgLogo', () => {
     http.expectOne(LOGO_URL).flush(null, { status: 404, statusText: 'Not Found' });
     fixture.detectChanges();
     expect(
-      fixture.nativeElement.querySelector('[data-testid="org-logo-fallback"]').textContent.trim(),
+      fixture.nativeElement
+        .querySelector('[data-testid="org-logo-fallback"]')
+        .getAttribute('data-initials'),
     ).toBe('AC');
     expect(fixture.nativeElement.querySelector('[data-testid="org-logo"]')).toBeNull();
   });

@@ -1,4 +1,10 @@
 import {
+  CdkConnectedOverlay,
+  CdkOverlayOrigin,
+  Overlay,
+  type ConnectedPosition,
+} from '@angular/cdk/overlay';
+import {
   ChangeDetectionStrategy,
   Component,
   DestroyRef,
@@ -115,13 +121,29 @@ const TOOL_GROUPS: readonly ToolGroup[] = [
 let nextEditorId = 0;
 
 /**
+ * Picker under the first line of the text, or above the text when there is no room below. The pixel
+ * offsets match the inset the list always had inside the editor.
+ */
+const LIST_POSITIONS: ConnectedPosition[] = [
+  {
+    originX: 'start',
+    originY: 'top',
+    overlayX: 'start',
+    overlayY: 'top',
+    offsetX: 12,
+    offsetY: 32,
+  },
+  { originX: 'start', originY: 'top', overlayX: 'start', overlayY: 'bottom', offsetX: 12 },
+];
+
+/**
  * Markdown editor with a formatting toolbar, write and preview tabs, @ and # pickers,
  * image upload (paste, drop or button), draft autosave and Ctrl+Enter submit.
  * Bound with ngModel or a reactive form control.
  */
 @Component({
   selector: 'app-rich-text-editor',
-  imports: [RichTextView, Avatar, AppTooltip],
+  imports: [RichTextView, Avatar, AppTooltip, CdkConnectedOverlay, CdkOverlayOrigin],
   templateUrl: './rich-text-editor.html',
   styleUrl: './rich-text-editor.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -164,6 +186,9 @@ export class RichTextEditor implements ControlValueAccessor, OnInit {
   protected readonly acceptedTypes = ACCEPTED_IMAGE_TYPES.join(',');
   protected readonly id = `rich-text-editor-${nextEditorId++}`;
   protected readonly listboxId = `${this.id}-listbox`;
+  protected readonly listPositions = LIST_POSITIONS;
+  /** The list closes when the page scrolls under it, so it never floats away from the text. */
+  protected readonly scrollStrategy = inject(Overlay).scrollStrategies.close();
 
   protected readonly value = signal('');
   /** Disabled state written by the form control (ControlValueAccessor). */
@@ -288,6 +313,11 @@ export class RichTextEditor implements ControlValueAccessor, OnInit {
     if (Math.abs(el.offsetHeight - this.autoHeight) > 2) {
       this.manualHeight = el.offsetHeight;
     }
+  }
+
+  /** The overlay detached while the list was still wanted: the page scrolled, so the picker closes. */
+  protected onListDetach(): void {
+    if (this.showListbox()) this.popup.set(null);
   }
 
   protected onBlur(): void {

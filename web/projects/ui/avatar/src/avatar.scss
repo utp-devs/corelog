@@ -17,6 +17,11 @@
   object-fit: cover;
   user-select: none;
 
+  /* Initials are drawn from the attribute: the accessible name comes from the label, never from this text. */
+  &[data-initials]::before {
+    content: attr(data-initials);
+  }
+
   &--size-16 {
     width: var(--cl-space-4);
     height: var(--cl-space-4);

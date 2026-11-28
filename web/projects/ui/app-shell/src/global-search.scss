@@ -104,19 +104,16 @@
 
   &__panel {
     @include menu.panel;
-    position: absolute;
-    top: calc(100% + var(--cl-space-1));
-    right: 0;
-    z-index: var(--cl-z-dropdown);
     display: grid;
     width: var(--cl-popover-w);
+    max-width: calc(100vw - var(--cl-space-4));
     max-height: none;
     overflow: visible;
   }
 
   &__results {
     @include m.flex-column(2);
-    max-height: 22.5rem;
+    max-height: min(22.5rem, calc(100vh - 10rem));
     overflow-y: auto;
   }
 

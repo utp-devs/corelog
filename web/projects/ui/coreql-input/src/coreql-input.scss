@@ -76,13 +76,9 @@ $padding-x: var(--cl-space-3);
   }
 
   &__list {
-    position: absolute;
-    top: calc(var(--cl-control-h-md) + var(--cl-space-1));
-    left: 0;
-    z-index: var(--cl-z-dropdown);
     box-sizing: border-box;
     width: min(100%, var(--cl-popover-w, 24rem));
-    max-height: 16rem;
+    max-height: min(16rem, calc(100vh - var(--cl-space-4)));
     margin: 0;
     padding: var(--cl-space-1);
     overflow-y: auto;

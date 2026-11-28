@@ -34,6 +34,9 @@
   &__image {
     width: min(100%, 16rem);
     height: auto;
+    aspect-ratio: 3 / 2;
+    object-fit: cover;
+    background: var(--cl-media-fallback);
     border-radius: var(--cl-radius-lg);
   }
 

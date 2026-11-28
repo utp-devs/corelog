@@ -99,9 +99,9 @@
 
     @for (group of groups; track group.id) {
       <section class="scheme-editor__group" [attr.aria-labelledby]="'scheme-group-' + group.id">
-        <h3 class="scheme-editor__group-title" [id]="'scheme-group-' + group.id">
+        <h2 class="scheme-editor__group-title" [id]="'scheme-group-' + group.id">
           {{ group.title }}
-        </h3>
+        </h2>
         <ul class="scheme-editor__rows">
           @for (info of group.events; track info.event) {
             @let row = rule(info.event);

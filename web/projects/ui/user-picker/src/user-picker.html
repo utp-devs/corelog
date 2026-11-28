@@ -1,5 +1,7 @@
 <div
   class="user-picker"
+  cdkOverlayOrigin
+  #origin="cdkOverlayOrigin"
   [class.user-picker--open]="open()"
   [class.user-picker--disabled]="disabled()"
   [attr.title]="disabled() ? disabledReason() : null"
@@ -58,14 +60,19 @@
     <i class="pi pi-chevron-down user-picker__chevron" aria-hidden="true"></i>
   </button>
 
-  @if (open()) {
-    <div
-      class="user-picker__panel"
-      [style.--user-picker-left.px]="anchor()?.left"
-      [style.--user-picker-width.px]="anchor()?.width"
-      [style.--user-picker-top.px]="anchor()?.top"
-      [style.--user-picker-bottom.px]="anchor()?.bottom"
-    >
+  <ng-template
+    cdkConnectedOverlay
+    [cdkConnectedOverlayOrigin]="origin"
+    [cdkConnectedOverlayOpen]="open()"
+    [cdkConnectedOverlayPositions]="positions"
+    [cdkConnectedOverlayScrollStrategy]="scrollStrategy"
+    [cdkConnectedOverlayWidth]="panelWidth()"
+    [cdkConnectedOverlayPush]="true"
+    [cdkConnectedOverlayViewportMargin]="8"
+    (overlayOutsideClick)="onOutsideClick($event)"
+    (detach)="onDetach()"
+  >
+    <div class="user-picker__panel">
       @if (loading()) {
         <p class="user-picker__status" role="status">
           <span class="user-picker__spinner" aria-hidden="true"></span>
@@ -113,5 +120,5 @@
         </p>
       }
     </div>
-  }
+  </ng-template>
 </div>

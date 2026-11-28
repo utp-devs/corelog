@@ -1,4 +1,10 @@
 import {
+  CdkConnectedOverlay,
+  CdkOverlayOrigin,
+  Overlay,
+  type ConnectedPosition,
+} from '@angular/cdk/overlay';
+import {
   ChangeDetectionStrategy,
   Component,
   DestroyRef,
@@ -53,12 +59,22 @@ const KIND_LABELS: Readonly<Record<string, string>> = {
 
 let nextId = 0;
 
+/** Gap in px between the editor and its suggestions. */
+const LIST_GAP = 4;
+
+/** Suggestions below the editor, or above it when there is no room below. */
+const LIST_POSITIONS: ConnectedPosition[] = [
+  { originX: 'start', originY: 'bottom', overlayX: 'start', overlayY: 'top', offsetY: LIST_GAP },
+  { originX: 'start', originY: 'top', overlayX: 'start', overlayY: 'bottom', offsetY: -LIST_GAP },
+];
+
 /**
  * Editor of CoreQL text: underlines the problems the server reported, lists them with their suggested fixes
  * and offers autocomplete (fields, operators, values) as a listbox under the text. Ctrl+Enter runs the query.
  */
 @Component({
   selector: 'app-coreql-input',
+  imports: [CdkConnectedOverlay, CdkOverlayOrigin],
   templateUrl: './coreql-input.html',
   styleUrl: './coreql-input.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -81,6 +97,11 @@ export class CoreqlInput {
 
   protected readonly suggestions = signal<readonly CoreqlSuggestion[]>([]);
   protected readonly open = signal(false);
+  protected readonly positions = LIST_POSITIONS;
+  /** The list closes when the page scrolls under it, so it never floats away from the text. */
+  protected readonly scrollStrategy = inject(Overlay).scrollStrategies.close();
+  /** Width of the editor in px: the list is as wide as the text it completes. */
+  protected readonly listWidth = signal(0);
   protected readonly active = signal(0);
   private context: CoreqlCursorContext | null = null;
 
@@ -196,9 +217,15 @@ export class CoreqlInput {
     const typed = this.context?.prefix.toLowerCase() ?? '';
     // A single suggestion that is exactly what is typed has nothing left to offer.
     const useful = items.filter((item) => item.insert.toLowerCase() !== typed || items.length > 1);
+    this.listWidth.set(this.field().nativeElement.parentElement?.offsetWidth ?? 0);
     this.suggestions.set(useful);
     this.active.set(0);
     this.open.set(useful.length > 0 && document.activeElement === this.field().nativeElement);
+  }
+
+  /** Closes the list when the overlay detaches itself (the page scrolled). */
+  protected onDetach(): void {
+    this.close();
   }
 
   private close(): void {

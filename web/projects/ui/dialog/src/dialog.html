@@ -17,7 +17,7 @@
       [attr.aria-labelledby]="titleId"
       (keydown)="onKeydown($event)"
     >
-      <header class="dialog__header">
+      <div class="dialog__header">
         <div class="dialog__heading">
           <h2 class="dialog__title" [id]="titleId">{{ heading() }}</h2>
           @if (subtitle(); as text) {
@@ -31,15 +31,15 @@
             </svg>
           </button>
         }
-      </header>
+      </div>
 
-      <div class="dialog__body">
+      <div class="dialog__body" [attr.tabindex]="bodyScrollable() ? 0 : null">
         <ng-content />
       </div>
 
-      <footer class="dialog__footer">
+      <div class="dialog__footer">
         <ng-content select="[dialogFooter]" />
-      </footer>
+      </div>
     </div>
   </div>
 }

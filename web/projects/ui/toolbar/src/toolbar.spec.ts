@@ -53,9 +53,11 @@ function create(): { fixture: ComponentFixture<Host>; el: HTMLElement } {
   return { fixture, el: fixture.nativeElement as HTMLElement };
 }
 
-function buttonByText(el: HTMLElement, text: string): HTMLButtonElement | null {
+/** Searches the whole document: the overflow menu lives in the overlay container. */
+function buttonByText(_el: HTMLElement, text: string): HTMLButtonElement | null {
   return (
-    Array.from(el.querySelectorAll('button')).find((b) => b.textContent?.trim() === text) ?? null
+    Array.from(document.querySelectorAll('button')).find((b) => b.textContent?.trim() === text) ??
+    null
   );
 }
 
@@ -100,6 +102,9 @@ describe('Toolbar', () => {
     more?.click();
     fixture.detectChanges();
     expect(buttonByText(el, 'Exportar')).not.toBeNull();
+    expect(buttonByText(el, 'Exportar')?.closest('.cdk-overlay-container')).not.toBeNull();
+    expect(more?.getAttribute('aria-expanded')).toBe('true');
+    expect(document.getElementById(more?.getAttribute('aria-controls') ?? '')).not.toBeNull();
   });
 
   it('keeps primary actions visible when the overflow menu is used', () => {

@@ -173,13 +173,9 @@
     display: flex;
   }
 
-  // The hint floats under the editor so opening it does not push the content below.
+  // The hint floats under the editor (in the overlay container) so opening it does not push the content below.
   &__hint {
-    position: absolute;
-    top: 100%;
-    left: 0;
-    z-index: var(--cl-z-dropdown);
-    margin: var(--cl-space-1) 0 0;
+    margin: 0;
     padding: var(--cl-space-1) var(--cl-space-2);
     border-radius: var(--cl-radius-sm);
     background: var(--cl-bg-elevated);

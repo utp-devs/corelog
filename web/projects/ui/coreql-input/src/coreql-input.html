@@ -1,5 +1,5 @@
 <div class="coreql-input" [class.coreql-input--invalid]="problems().length > 0">
-  <div class="coreql-input__editor">
+  <div class="coreql-input__editor" cdkOverlayOrigin #origin="cdkOverlayOrigin">
     <pre
       class="coreql-input__mirror"
       aria-hidden="true"
@@ -7,15 +7,13 @@
     <textarea
       #field
       class="coreql-input__field"
-      role="combobox"
       aria-autocomplete="list"
       rows="1"
       spellcheck="false"
       autocomplete="off"
       autocapitalize="none"
       [attr.aria-label]="ariaLabel()"
-      [attr.aria-expanded]="open()"
-      [attr.aria-controls]="id + '-list'"
+      [attr.aria-controls]="open() ? id + '-list' : null"
       [attr.aria-activedescendant]="activeId()"
       [attr.aria-invalid]="problems().length > 0"
       [attr.aria-describedby]="problems().length > 0 ? id + '-problems' : null"
@@ -27,7 +25,17 @@
     ></textarea>
   </div>
 
-  @if (open() && suggestions().length > 0) {
+  <ng-template
+    cdkConnectedOverlay
+    [cdkConnectedOverlayOrigin]="origin"
+    [cdkConnectedOverlayOpen]="open() && suggestions().length > 0"
+    [cdkConnectedOverlayPositions]="positions"
+    [cdkConnectedOverlayScrollStrategy]="scrollStrategy"
+    [cdkConnectedOverlayWidth]="listWidth()"
+    [cdkConnectedOverlayPush]="true"
+    [cdkConnectedOverlayViewportMargin]="8"
+    (detach)="onDetach()"
+  >
     <ul class="coreql-input__list" role="listbox" [id]="id + '-list'" aria-label="Sugerencias">
       @for (item of suggestions(); track item.label + item.kind; let index = $index) {
         <li
@@ -43,7 +51,7 @@
         </li>
       }
     </ul>
-  }
+  </ng-template>
 
   @if (problems().length > 0) {
     <ul

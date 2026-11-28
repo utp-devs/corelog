@@ -21,7 +21,7 @@ describe('Avatar', () => {
     const el = create({ id: 'u1', name: 'Ana Pérez' });
     const avatar = el.querySelector('[role="img"]');
     expect(avatar?.getAttribute('aria-label')).toBe('Ana Pérez');
-    expect(avatar?.textContent).toContain('AP');
+    expect(avatar?.getAttribute('data-initials')).toBe('AP');
   });
 
   it('renders the photo with the name as alt text when src is given', () => {
@@ -43,7 +43,7 @@ describe('Avatar', () => {
     img?.dispatchEvent(new Event('error'));
     fixture.detectChanges();
     const avatar = (fixture.nativeElement as HTMLElement).querySelector('[role="img"]');
-    expect(avatar?.textContent).toContain('AP');
+    expect(avatar?.getAttribute('data-initials')).toBe('AP');
     expect((fixture.nativeElement as HTMLElement).querySelector('img')).toBeNull();
   });
 

@@ -23,7 +23,7 @@ function create(value: AvatarUser[], max?: number): HTMLElement {
 
 function avatarTexts(root: HTMLElement): string[] {
   return Array.from(root.querySelectorAll('.avatar, .avatar-group__more')).map(
-    (node) => node.textContent?.trim() ?? '',
+    (node) => node.getAttribute('data-initials') ?? node.textContent?.trim() ?? '',
   );
 }
 

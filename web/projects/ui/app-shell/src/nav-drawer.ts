@@ -51,6 +51,7 @@ export class NavDrawer {
   readonly showOrgSwitcher = input(false);
   readonly orgSwitcher = input<TemplateRef<unknown> | null>(null);
 
+  private readonly panel = viewChild<ElementRef<HTMLElement>>('panel');
   private readonly closeButton = viewChild<ElementRef<HTMLButtonElement>>('closeButton');
   private opener: HTMLElement | null = null;
   private wasOpen = false;
@@ -97,6 +98,29 @@ export class NavDrawer {
   @HostListener('document:keydown.escape')
   protected onEscape(): void {
     if (this.open()) this.close();
+  }
+
+  /** Keeps Tab and Shift+Tab cycling inside the open drawer. */
+  protected onPanelKeydown(event: KeyboardEvent): void {
+    if (event.key !== 'Tab') return;
+    const panel = this.panel()?.nativeElement;
+    if (!panel) return;
+    const focusable = Array.from(
+      panel.querySelectorAll<HTMLElement>(
+        'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])',
+      ),
+    ).filter((element) => element.getClientRects().length > 0);
+    if (focusable.length === 0) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    const active = this.document.activeElement;
+    if (event.shiftKey && active === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && active === last) {
+      event.preventDefault();
+      first.focus();
+    }
   }
 
   private onVisibleChange(open: boolean): void {

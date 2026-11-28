@@ -33,7 +33,7 @@ describe('CalendarMonth', () => {
     expect(headers[0]).toBe('Lun');
     expect(headers[6]).toBe('Dom');
     expect(el.querySelectorAll('[role="gridcell"]').length % 7).toBe(0);
-    expect(el.querySelector('[data-day="2026-11-25"]')?.getAttribute('aria-label')).toContain(
+    expect(el.querySelector('[data-day="2026-11-25"]')?.getAttribute('aria-description')).toContain(
       'miércoles, 25 de noviembre de 2026',
     );
   });

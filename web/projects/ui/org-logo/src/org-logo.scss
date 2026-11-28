@@ -15,6 +15,10 @@
     line-height: 1;
     user-select: none;
 
+    &::before {
+      content: attr(data-initials);
+    }
+
     &--sm {
       width: var(--cl-space-6);
       height: var(--cl-space-6);

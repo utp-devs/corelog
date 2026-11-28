@@ -21,7 +21,7 @@
             [class.calendar-month__day--today]="day.iso === today"
             [attr.data-day]="day.iso"
             [attr.tabindex]="day.iso === tabStop() ? 0 : -1"
-            [attr.aria-label]="dayLabel(day.date, items.length)"
+            [attr.aria-description]="dayLabel(day.date, items.length)"
             [attr.aria-current]="day.iso === today ? 'date' : null"
             (keydown)="onKeydown($event, day.date)"
             (click)="onCellClick($event, day.date)"

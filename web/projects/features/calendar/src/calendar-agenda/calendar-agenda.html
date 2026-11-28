@@ -17,7 +17,6 @@
             <button
               type="button"
               class="calendar-agenda__item"
-              [attr.aria-label]="label(item)"
               [style.--chip-color]="color(item)"
               (click)="itemSelected.emit(item)"
             >

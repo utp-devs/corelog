@@ -11,7 +11,7 @@
   </button>
 </p-overlaybadge>
 
-<p-popover #panel (onShow)="onShow()">
+<p-popover #panel appendTo="body" (onShow)="onShow()">
   <div class="notifications-bell__panel">
     <div class="notifications-bell__header">
       <span class="notifications-bell__heading">Notificaciones</span>

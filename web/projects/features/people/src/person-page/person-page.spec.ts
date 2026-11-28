@@ -89,7 +89,7 @@ describe('PersonPage', () => {
 
     await vi.waitFor(() => {
       harness.detectChanges();
-      expect(harness.fixture.nativeElement.querySelector('h2')?.textContent?.trim()).toBe(
+      expect(harness.fixture.nativeElement.querySelector('h1')?.textContent?.trim()).toBe(
         'Luis P.',
       );
     });

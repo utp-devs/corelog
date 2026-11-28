@@ -77,12 +77,10 @@
 
   &__menu {
     @include m.flex-column(1);
-    position: absolute;
-    top: calc(100% + var(--cl-space-1));
-    right: 0;
-    z-index: var(--cl-z-dropdown);
     min-width: var(--cl-menu-w-min);
-    max-width: var(--cl-menu-w);
+    max-width: min(var(--cl-menu-w), calc(100vw - var(--cl-space-4)));
+    max-height: calc(100vh - var(--cl-space-4));
+    overflow-y: auto;
     padding: var(--cl-space-2);
     border: 1px solid var(--cl-divider);
     border-radius: var(--cl-radius-md);

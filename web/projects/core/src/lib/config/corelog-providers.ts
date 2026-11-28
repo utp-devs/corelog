@@ -98,6 +98,9 @@ export function provideCorelog(options: CorelogOptions): EnvironmentProviders {
     ),
     providePrimeNG({
       ripple: true,
+      // Every PrimeNG panel (select, multiselect, datepicker, popover, menu) opens in the body, so no dialog,
+      // scrolling column or overflow:hidden ancestor can clip it.
+      overlayAppendTo: 'body',
       zIndex: {
         modal: CL_Z_INDEX.modal,
         overlay: CL_Z_INDEX.overlay,

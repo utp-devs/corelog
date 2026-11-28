@@ -48,8 +48,9 @@ function typeText(fixture: ComponentFixture<UserPicker>, text: string): void {
   fixture.detectChanges();
 }
 
-function options(el: HTMLElement): HTMLElement[] {
-  return Array.from(el.querySelectorAll<HTMLElement>('[role="option"]'));
+// The list lives in the overlay container, so the whole document is the search root.
+function options(_el: HTMLElement): HTMLElement[] {
+  return Array.from(document.querySelectorAll<HTMLElement>('[role="option"]'));
 }
 
 describe('UserPicker', () => {
@@ -132,7 +133,7 @@ describe('UserPicker', () => {
   it('does not select typed text without a matching option', () => {
     const { fixture, el } = create({ value: 'u1' });
     typeText(fixture, 'zzz');
-    expect(el.textContent).toContain('Sin resultados');
+    expect(document.body.textContent).toContain('Sin resultados');
     press(fixture, 'Enter');
     expect(fixture.componentInstance.value()).toBe('u1');
     press(fixture, 'Tab');
@@ -142,7 +143,7 @@ describe('UserPicker', () => {
   it('shows a loading state while the parent searches', () => {
     const { fixture, el } = create({ loading: true });
     press(fixture, 'ArrowDown');
-    expect(el.querySelector('[role="status"]')?.textContent).toContain('Buscando personas');
+    expect(document.querySelector('[role="status"]')?.textContent).toContain('Buscando personas');
     expect(field(el).getAttribute('aria-busy')).toBe('true');
   });
 

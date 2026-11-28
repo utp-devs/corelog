@@ -43,7 +43,7 @@ describe('UserAvatar', () => {
     const fixture = create({ id: 'u-1', name: 'Ana Torres', hasAvatar: false });
 
     const avatar = fixture.nativeElement.querySelector('[role="img"]') as HTMLElement;
-    expect(avatar.textContent).toContain('AT');
+    expect(avatar.getAttribute('data-initials')).toBe('AT');
     expect(getAvatarSpy).not.toHaveBeenCalled();
   });
 
@@ -70,7 +70,9 @@ describe('UserAvatar', () => {
       expect(fixture.nativeElement.querySelector('[role="img"]')).not.toBeNull();
     });
     expect(fixture.nativeElement.querySelector('img')).toBeNull();
-    expect(fixture.nativeElement.textContent).toContain('MR');
+    expect(
+      fixture.nativeElement.querySelector('[data-initials]').getAttribute('data-initials'),
+    ).toBe('MR');
   });
 
   it('uses the avatar key as the photo presence when hasAvatar is not given', () => {

@@ -1,4 +1,10 @@
 import {
+  CdkConnectedOverlay,
+  CdkOverlayOrigin,
+  Overlay,
+  type ConnectedPosition,
+} from '@angular/cdk/overlay';
+import {
   ChangeDetectionStrategy,
   Component,
   ElementRef,
@@ -13,6 +19,15 @@ import { IssueTransition, WorkflowStatusRef, workflowCategoryVisual } from '@cor
 
 let nextTransitionButtonId = 0;
 
+/** Gap in px between the button and its menu. */
+const PANEL_GAP = 4;
+
+/** Menu below the button, or above it when there is no room below. */
+const PANEL_POSITIONS: ConnectedPosition[] = [
+  { originX: 'start', originY: 'bottom', overlayX: 'start', overlayY: 'top', offsetY: PANEL_GAP },
+  { originX: 'start', originY: 'top', overlayX: 'start', overlayY: 'bottom', offsetY: -PANEL_GAP },
+];
+
 /**
  * Shows the current workflow status of an issue and, as a menu, the transitions the person can run from
  * it. Each option names the target status with the color of its category. States: loading, error with
@@ -20,13 +35,11 @@ let nextTransitionButtonId = 0;
  */
 @Component({
   selector: 'app-transition-button',
+  imports: [CdkConnectedOverlay, CdkOverlayOrigin],
   templateUrl: './transition-button.html',
   styleUrl: './transition-button.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  host: {
-    '(document:pointerdown)': 'onDocumentPointerDown($event)',
-    '(keydown.escape)': 'close(true)',
-  },
+  host: { '(keydown.escape)': 'close(true)' },
 })
 export class TransitionButton {
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
@@ -49,6 +62,9 @@ export class TransitionButton {
   protected readonly id = `cl-transition-${nextTransitionButtonId++}`;
   protected readonly menuId = `${this.id}-menu`;
   protected readonly open = signal(false);
+  protected readonly positions = PANEL_POSITIONS;
+  /** The menu closes when the page scrolls under it, so it never floats away from its button. */
+  protected readonly scrollStrategy = inject(Overlay).scrollStrategies.close();
 
   protected readonly category = computed(() => workflowCategoryVisual(this.current().category));
   protected readonly empty = computed(
@@ -106,7 +122,16 @@ export class TransitionButton {
     }
   }
 
-  protected onDocumentPointerDown(event: Event): void {
-    if (this.open() && !this.host.nativeElement.contains(event.target as Node)) this.close();
+  /** A press outside the menu closes it; the button itself toggles. */
+  protected onOutsideClick(event: MouseEvent): void {
+    if (event.target instanceof Node && this.host.nativeElement.contains(event.target)) return;
+    this.close();
+  }
+
+  /** Escape pressed while focus is inside the menu (it lives in the overlay container). */
+  protected onOverlayKeydown(event: KeyboardEvent): void {
+    if (event.key !== 'Escape') return;
+    event.preventDefault();
+    this.close(true);
   }
 }

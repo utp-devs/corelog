@@ -99,10 +99,26 @@ describe('CommentThread', () => {
     const { el, events } = mount({ ...comment(), replies: [] });
     el.querySelector<HTMLButtonElement>('[aria-label="Añadir reacción"]')?.click();
     TestBed.tick();
-    const choice = el.querySelector<HTMLButtonElement>('[aria-label="Me gusta"]');
+    // The picker lives in the overlay container, so the whole document is the search root.
+    const choice = document.querySelector<HTMLButtonElement>('[aria-label="Me gusta"]');
     expect(choice).not.toBeNull();
+    expect(el.querySelector('[aria-label="Me gusta"]')).toBeNull();
     choice?.click();
     expect(events['react']).toEqual([{ commentId: 'c1', key: 'thumbs_up' }]);
+    TestBed.tick();
+    expect(document.querySelector('[aria-label="Me gusta"]')).toBeNull();
+  });
+
+  it('closes the picker with Escape and returns the focus to its button', () => {
+    const { el } = mount({ ...comment(), replies: [] });
+    const trigger = el.querySelector<HTMLButtonElement>('[aria-label="Añadir reacción"]');
+    trigger?.click();
+    TestBed.tick();
+    const group = document.querySelector('[aria-label="Reacciones"]');
+    group?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    TestBed.tick();
+    expect(document.querySelector('[aria-label="Reacciones"]')).toBeNull();
+    expect(document.activeElement).toBe(trigger);
   });
 
   it('asks to reply only on root comments', () => {

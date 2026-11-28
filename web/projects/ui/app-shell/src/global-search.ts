@@ -1,4 +1,10 @@
 import {
+  CdkConnectedOverlay,
+  CdkOverlayOrigin,
+  Overlay,
+  type ConnectedPosition,
+} from '@angular/cdk/overlay';
+import {
   ChangeDetectionStrategy,
   Component,
   DestroyRef,
@@ -29,6 +35,15 @@ import { ShellIcon } from './shell-icon';
 /** Pause after the last keystroke before the header search queries the server. */
 export const HEADER_SEARCH_DEBOUNCE_MS = 300;
 
+/** Gap in px between the field and its results. */
+const PANEL_GAP = 4;
+
+/** Results below the field lined up with its right edge, or above it when there is no room below. */
+const PANEL_POSITIONS: ConnectedPosition[] = [
+  { originX: 'end', originY: 'bottom', overlayX: 'end', overlayY: 'top', offsetY: PANEL_GAP },
+  { originX: 'end', originY: 'top', overlayX: 'end', overlayY: 'bottom', offsetY: -PANEL_GAP },
+];
+
 interface HitSection {
   readonly name: string;
   readonly items: readonly SearchHit[];
@@ -58,7 +73,7 @@ function sectionsOf(hits: readonly SearchHit[]): HitSection[] {
  */
 @Component({
   selector: 'app-global-search',
-  imports: [AppTooltip, CommandPalette, MarkText, ShellIcon],
+  imports: [AppTooltip, CommandPalette, MarkText, ShellIcon, CdkConnectedOverlay, CdkOverlayOrigin],
   templateUrl: './global-search.html',
   styleUrl: './global-search.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -80,6 +95,10 @@ export class GlobalSearch {
   protected readonly shortcutHint = /Mac|iPhone|iPad/i.test(globalThis.navigator?.platform ?? '')
     ? '⌘ K'
     : 'Ctrl K';
+
+  protected readonly positions = PANEL_POSITIONS;
+  /** The results close when the page scrolls under them, so they never float away from the field. */
+  protected readonly scrollStrategy = inject(Overlay).scrollStrategies.close();
 
   protected readonly query = signal('');
   private readonly panelRequested = signal(false);
@@ -192,9 +211,17 @@ export class GlobalSearch {
   /** Closes the results panel when the pointer goes down outside the search control. */
   @HostListener('document:mousedown', ['$event'])
   protected onDocumentMouseDown(event: MouseEvent): void {
-    if (!this.host.nativeElement.contains(event.target as Node | null)) {
-      this.panelRequested.set(false);
-    }
+    const target = event.target as Node | null;
+    // The results live in the overlay container, outside the host element.
+    const inside =
+      this.host.nativeElement.contains(target) ||
+      (target instanceof Element && target.closest('.global-search__panel') !== null);
+    if (!inside) this.panelRequested.set(false);
+  }
+
+  /** The overlay detached while the results were still wanted: the page scrolled, so they close. */
+  protected onPanelDetach(): void {
+    if (this.panelOpen()) this.panelRequested.set(false);
   }
 
   /** Waits for a pause in typing before searching. Shorter queries clear the results and send nothing. */

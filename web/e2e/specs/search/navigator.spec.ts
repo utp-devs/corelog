@@ -17,7 +17,7 @@ test.describe('navegador de incidencias', () => {
     await page.goto(appPath('/issues'));
     await page.getByRole('button', { name: 'Avanzado' }).click();
 
-    const editor = page.getByRole('combobox', { name: 'Consulta avanzada' });
+    const editor = page.getByRole('textbox', { name: 'Consulta avanzada' });
     await editor.fill('statu = todo');
     // The validation runs while typing: the problem is listed with its position and a suggested fix.
     const problems = page.getByTestId('coreql-problems');
@@ -34,7 +34,7 @@ test.describe('navegador de incidencias', () => {
 
     // The search survives a reload.
     await page.reload();
-    await expect(page.getByRole('combobox', { name: 'Consulta avanzada' })).toHaveValue(
+    await expect(page.getByRole('textbox', { name: 'Consulta avanzada' })).toHaveValue(
       'statusCategory = todo ORDER BY created DESC',
     );
   });
@@ -98,7 +98,7 @@ test.describe('navegador de incidencias', () => {
   test('pasa la auditoría de maquetación en modo avanzado', async ({ as, audit }) => {
     const page = await as('member');
     await page.goto(appPath('/issues?jql=statusCategory%20%3D%20todo'));
-    await expect(page.getByRole('combobox', { name: 'Consulta avanzada' })).toBeVisible();
+    await expect(page.getByRole('textbox', { name: 'Consulta avanzada' })).toBeVisible();
     await audit(page, { template: 'wide', name: 'issues-navigator-advanced' });
   });
 });

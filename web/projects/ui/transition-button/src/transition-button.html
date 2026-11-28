@@ -1,6 +1,8 @@
 <div class="transition-button">
   <button
     type="button"
+    cdkOverlayOrigin
+    #origin="cdkOverlayOrigin"
     class="transition-button__trigger touch-target"
     aria-haspopup="menu"
     data-testid="transition-button"
@@ -23,7 +25,18 @@
     }
   </button>
 
-  @if (open()) {
+  <ng-template
+    cdkConnectedOverlay
+    [cdkConnectedOverlayOrigin]="origin"
+    [cdkConnectedOverlayOpen]="open()"
+    [cdkConnectedOverlayPositions]="positions"
+    [cdkConnectedOverlayScrollStrategy]="scrollStrategy"
+    [cdkConnectedOverlayPush]="true"
+    [cdkConnectedOverlayViewportMargin]="8"
+    (overlayOutsideClick)="onOutsideClick($event)"
+    (overlayKeydown)="onOverlayKeydown($event)"
+    (detach)="close()"
+  >
     <div class="transition-button__panel">
       @if (error(); as message) {
         <div class="transition-button__state" role="alert">
@@ -66,5 +79,5 @@
         </ul>
       }
     </div>
-  }
+  </ng-template>
 </div>

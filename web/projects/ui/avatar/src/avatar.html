@@ -13,8 +13,7 @@
     role="img"
     [class]="sizeClass() + ' ' + toneClass()"
     [attr.aria-label]="name()"
+    [attr.data-initials]="initials()"
     [attr.data-testid]="dataTestId()"
-  >
-    <span aria-hidden="true">{{ initials() }}</span>
-  </span>
+  ></span>
 }

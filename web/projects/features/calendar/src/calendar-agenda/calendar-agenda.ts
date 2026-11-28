@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
 import { isoDate, parseIsoDate, type CalendarItem } from '@corelog/core';
 
-import { KIND_META, itemAriaLabel, itemColor, timeLabel } from '../calendar-meta';
+import { KIND_META, itemColor, timeLabel } from '../calendar-meta';
 
 /** Items of the visible month as a list grouped by day: the view for phones and for scanning what is next. */
 @Component({
@@ -40,10 +40,6 @@ export class CalendarAgenda {
 
   protected color(item: CalendarItem): string {
     return itemColor(item);
-  }
-
-  protected label(item: CalendarItem): string {
-    return itemAriaLabel(item);
   }
 
   protected time(item: CalendarItem): string {

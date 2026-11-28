@@ -298,7 +298,21 @@ export class ProjectBoardPage {
   protected shift(card: BoardViewCard, columnId: string, direction: -1 | 1): void {
     const mapped = this.headers().filter((header) => !header.implicit);
     const target = adjacentColumnId(mapped, columnId, direction);
-    if (target) this.store.move(card.id, target);
+    if (target) {
+      this.store.move(card.id, target);
+      this.keepFocusOn(card);
+    }
+  }
+
+  /** The moved card is drawn again in its new column: focus goes back to it so the keyboard can keep moving it. */
+  private keepFocusOn(card: BoardViewCard): void {
+    afterNextRender(
+      () =>
+        this.document
+          .querySelector<HTMLElement>(`[data-testid="kanban-card-${card.key}"] a`)
+          ?.focus(),
+      { injector: this.injector },
+    );
   }
 
   /** The card dropped into the unmapped column is refused: it only holds what has no column. */

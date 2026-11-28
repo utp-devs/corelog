@@ -54,7 +54,10 @@
             <span class="comment-thread__picker-anchor">
               <button
                 type="button"
+                cdkOverlayOrigin
+                #origin="cdkOverlayOrigin"
                 class="comment-thread__action"
+                [attr.data-picker-trigger]="comment.id"
                 aria-label="Añadir reacción"
                 aria-haspopup="true"
                 [attr.aria-expanded]="pickerFor() === comment.id ? 'true' : 'false'"
@@ -62,8 +65,25 @@
               >
                 <i class="pi pi-face-smile" aria-hidden="true"></i>
               </button>
-              @if (pickerFor() === comment.id) {
-                <span class="comment-thread__picker" role="group" aria-label="Reacciones">
+              <ng-template
+                cdkConnectedOverlay
+                #overlay="cdkConnectedOverlay"
+                [cdkConnectedOverlayOrigin]="origin"
+                [cdkConnectedOverlayOpen]="pickerFor() === comment.id"
+                [cdkConnectedOverlayPositions]="positions"
+                [cdkConnectedOverlayScrollStrategy]="scrollStrategy"
+                [cdkConnectedOverlayPush]="true"
+                [cdkConnectedOverlayViewportMargin]="8"
+                (overlayOutsideClick)="onOutsideClick($event)"
+                (attach)="focusFirst(overlay)"
+                (detach)="closePicker(false)"
+              >
+                <span
+                  class="comment-thread__picker"
+                  role="group"
+                  aria-label="Reacciones"
+                  (keydown)="onPickerKeydown($event)"
+                >
                   @for (choice of reactionChoices(); track choice.key) {
                     <button
                       type="button"
@@ -76,7 +96,7 @@
                     </button>
                   }
                 </span>
-              }
+              </ng-template>
             </span>
           }
           @if (!isReply && canReply()) {
