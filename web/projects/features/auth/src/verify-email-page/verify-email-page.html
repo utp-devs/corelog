@@ -1,0 +1,53 @@
+<app-auth-layout
+  variant="security"
+  [title]="
+    state() === 'success'
+      ? 'Correo verificado'
+      : state() === 'error'
+        ? 'No pudimos verificar tu correo'
+        : 'Verificando tu correo'
+  "
+>
+  @switch (state()) {
+    @case ('success') {
+      <div class="verify-email-page__body" data-testid="verify-success">
+        <app-auth-alert tone="info">
+          Tu correo quedó verificado. Ya puedes usar todas las funciones de tu cuenta.
+        </app-auth-alert>
+        <a class="verify-email-page__button" routerLink="/login">Continuar</a>
+      </div>
+    }
+    @case ('error') {
+      <div class="verify-email-page__body" data-testid="verify-error">
+        <app-auth-alert tone="warning">
+          El enlace ya se usó, caducó o no es correcto.
+          @if (auth.isAuthenticated()) {
+            Puedes pedir un correo nuevo.
+          } @else {
+            Inicia sesión para pedir un correo nuevo.
+          }
+        </app-auth-alert>
+        @if (resendMessage(); as message) {
+          <app-auth-alert tone="info">{{ message }}</app-auth-alert>
+        }
+        @if (auth.isAuthenticated()) {
+          <p-button
+            class="verify-email-page__submit"
+            label="Reenviar correo de verificación"
+            data-testid="verify-resend"
+            [fluid]="true"
+            [loading]="resending()"
+            (onClick)="resend()"
+          />
+        } @else {
+          <a class="verify-email-page__button" routerLink="/login">Iniciar sesión</a>
+        }
+      </div>
+    }
+    @default {
+      <div class="verify-email-page__loading" role="status" aria-live="polite">
+        <p-progressspinner ariaLabel="Verificando tu correo" strokeWidth="4" />
+      </div>
+    }
+  }
+</app-auth-layout>

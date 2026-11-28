@@ -45,4 +45,13 @@ describe('authErrorMessage', () => {
       'desactivada',
     );
   });
+
+  it('tells the wait of a rate limit, a lockout and an unverified email', () => {
+    const limited = api({ status: 429, code: 'auth.rate_limited', retryAfterSeconds: 90 });
+    expect(authErrorMessage(limited, 'login')).toContain('2 minutos');
+    const locked = api({ status: 423, code: 'auth.account_locked', retryAfterSeconds: 30 });
+    expect(authErrorMessage(locked, 'login')).toContain('bloqueada');
+    const unverified = api({ status: 403, code: 'auth.email_not_verified', message: 'x' });
+    expect(authErrorMessage(unverified, 'login')).toContain('no está verificado');
+  });
 });

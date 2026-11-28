@@ -1,0 +1,38 @@
+@use '../../../../ui/styles/mixins' as m;
+@use '../shared/auth-page' as a;
+
+.verify-email-page {
+  &__body {
+    @include a.form;
+  }
+
+  &__loading {
+    @include m.flex-row(0, center, center);
+    min-height: 10rem;
+  }
+
+  &__submit {
+    @include a.submit;
+  }
+
+  &__button {
+    @include a.submit;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: var(--cl-auth-button-h);
+    background: var(--cl-auth-button);
+    color: var(--cl-auth-on-button);
+    font-weight: var(--cl-weight-semibold);
+    text-decoration: none;
+
+    &:hover {
+      background: var(--cl-auth-button-hover);
+    }
+
+    &:focus-visible {
+      box-shadow: var(--cl-shadow-focus);
+      outline: none;
+    }
+  }
+}

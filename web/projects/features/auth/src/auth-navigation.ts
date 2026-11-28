@@ -1,7 +1,13 @@
 import type { Router } from '@angular/router';
 
 /** Paths of the public sign-in area. Targets under these stay inside the portal app. */
-const PORTAL_PATHS: readonly string[] = ['/login', '/register'];
+const PORTAL_PATHS: readonly string[] = [
+  '/login',
+  '/register',
+  '/forgot-password',
+  '/reset-password',
+  '/verify-email',
+];
 const PORTAL_PREFIXES: readonly string[] = ['/invite/'];
 
 /**

@@ -27,6 +27,25 @@
     }
   }
 
+  &__forgot {
+    display: inline-flex;
+    align-items: center;
+    align-self: flex-end;
+    min-height: var(--cl-control-h-md);
+    color: var(--cl-brand);
+    font-size: var(--cl-font-body);
+    text-decoration: none;
+
+    &:hover {
+      text-decoration: underline;
+    }
+
+    &:focus-visible {
+      box-shadow: var(--cl-shadow-focus);
+      outline: none;
+    }
+  }
+
   &__submit {
     @include a.submit;
   }

@@ -72,33 +72,41 @@
       }
 
       <section class="auth-layout__panel" [attr.aria-labelledby]="titleId">
-        <div class="auth-layout__card">
+        <div class="auth-layout__card" [class.auth-layout__card--fill]="fill()">
           <header class="auth-layout__heading">
             <h1 class="auth-layout__title" [attr.id]="titleId">{{ title() }}</h1>
             @if (subtitle(); as text) {
               <p class="auth-layout__subtitle">{{ text }}</p>
             }
           </header>
-          <ng-content />
-          @if (switchPath(); as path) {
-            <p class="auth-layout__switch">
-              {{ switchText() }}
-              <a class="auth-layout__switch-link" [routerLink]="path" [queryParams]="switchQuery()">
-                {{ switchLabel() }}
-              </a>
-            </p>
-          }
-          <nav class="auth-layout__legal" aria-label="Documentos legales">
-            @for (link of legalLinks; track link.slug) {
-              <button
-                type="button"
-                class="auth-layout__legal-link"
-                (click)="reading.set(link.slug)"
-              >
-                {{ link.label }}
-              </button>
+          <div class="auth-layout__content" [class.auth-layout__content--fill]="fill()">
+            <ng-content />
+          </div>
+          <footer class="auth-layout__footer">
+            @if (switchPath(); as path) {
+              <p class="auth-layout__switch">
+                {{ switchText() }}
+                <a
+                  class="auth-layout__switch-link"
+                  [routerLink]="path"
+                  [queryParams]="switchQuery()"
+                >
+                  {{ switchLabel() }}
+                </a>
+              </p>
             }
-          </nav>
+            <nav class="auth-layout__legal" aria-label="Documentos legales">
+              @for (link of legalLinks; track link.slug) {
+                <button
+                  type="button"
+                  class="auth-layout__legal-link"
+                  (click)="reading.set(link.slug)"
+                >
+                  {{ link.label }}
+                </button>
+              }
+            </nav>
+          </footer>
         </div>
       </section>
     </div>

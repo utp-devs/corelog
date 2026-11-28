@@ -186,9 +186,12 @@ describe('LoginPage form behaviour', () => {
     await settle(fixture);
   });
 
-  it('does not offer a password recovery link or a remember-me option', () => {
+  it('offers the password recovery link but no remember-me option', () => {
     const { el } = setup();
-    expect(el.textContent).not.toMatch(/olvid|recordarme/i);
+    const link = el.querySelector<HTMLAnchorElement>('[data-testid="login-forgot"]');
+    expect(link?.textContent).toContain('¿Olvidaste tu contraseña?');
+    expect(link?.getAttribute('href')).toBe('/forgot-password');
+    expect(el.textContent).not.toMatch(/recordarme/i);
   });
 
   it('moves focus to the first invalid field after an empty submit', async () => {

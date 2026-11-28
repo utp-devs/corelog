@@ -1,15 +1,54 @@
 @use '../shared/auth-page' as a;
+@use '../../../../ui/styles/mixins' as m;
 
 .register-page {
+  // The form fills the card under the heading: stepper on top, the step in the middle (it scrolls inside only on
+  // very short viewports) and the pinned actions at the bottom.
   &__form {
-    @include a.form;
+    @include m.flex-column(3);
+    flex: 1 1 auto;
+    width: 100%;
+    min-width: 0;
+    min-height: 0;
+  }
+
+  // Announces step changes to screen readers.
+  &__live {
+    @include m.visually-hidden;
+  }
+
+  &__body {
+    @include m.flex-column(3);
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    // Room for the focus rings of the controls that touch the edge of the scroll area.
+    margin: calc(var(--cl-space-1) * -1);
+    padding: var(--cl-space-1);
+  }
+
+  &__step {
+    @include m.flex-column(3);
+    animation: register-page-step-in 180ms var(--cl-ease) both;
+
+    &[hidden] {
+      display: none;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      animation: none;
+    }
+  }
+
+  &__form[data-direction='back'] &__step {
+    animation-name: register-page-step-in-back;
   }
 
   // Given names and surnames side by side while there is room; stacked on narrow screens.
   &__names {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
-    gap: var(--cl-space-4);
+    gap: var(--cl-space-3);
   }
 
   &__input {
@@ -21,7 +60,37 @@
     font-size: var(--cl-font-body-strong);
   }
 
-  &__submit {
-    @include a.submit;
+  // Pinned under the step: it never scrolls away.
+  &__actions {
+    @include m.flex-row(3, center, space-between);
+    flex: none;
+    padding-bottom: var(--cl-space-2);
+  }
+
+  &__back,
+  &__next {
+    --cl-control-h-md: var(--cl-auth-button-h);
+    --cl-control-h-lg: var(--cl-auth-button-h);
+    border-radius: var(--cl-radius-full);
+  }
+
+  &__next {
+    flex: 1 1 auto;
+    box-shadow: 0 var(--cl-space-2) var(--cl-space-6) calc(var(--cl-space-4) * -1)
+      var(--cl-auth-halo);
+  }
+}
+
+@keyframes register-page-step-in {
+  from {
+    opacity: 0;
+    transform: translateX(var(--cl-space-4));
+  }
+}
+
+@keyframes register-page-step-in-back {
+  from {
+    opacity: 0;
+    transform: translateX(calc(var(--cl-space-4) * -1));
   }
 }

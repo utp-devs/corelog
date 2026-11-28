@@ -1,0 +1,46 @@
+<nav class="auth-stepper" [attr.aria-label]="label()">
+  <p class="auth-stepper__summary">
+    <span class="auth-stepper__count">Paso {{ current() + 1 }} de {{ total() }}</span>
+    <span class="auth-stepper__name">{{ steps()[current()].label }}</span>
+  </p>
+  <div class="auth-stepper__bar" aria-hidden="true">
+    <span class="auth-stepper__bar-fill" [style.--auth-stepper-progress]="progress()"></span>
+  </div>
+
+  <ol class="auth-stepper__list">
+    @for (step of steps(); track step.label; let i = $index) {
+      <li
+        class="auth-stepper__item"
+        [class.auth-stepper__item--done]="i < current()"
+        [class.auth-stepper__item--current]="i === current()"
+      >
+        @if (i < current()) {
+          <button
+            type="button"
+            class="auth-stepper__step"
+            [attr.data-testid]="'register-step-link-' + (i + 1)"
+            (click)="select.emit(i)"
+          >
+            <span class="auth-stepper__dot" aria-hidden="true">
+              <i class="pi pi-check auth-stepper__check"></i>
+            </span>
+            <span class="auth-stepper__label">
+              <span class="auth-stepper__sr">Paso {{ i + 1 }} completado: volver a </span
+              >{{ step.label }}
+            </span>
+          </button>
+        } @else {
+          <span class="auth-stepper__step" [attr.aria-current]="i === current() ? 'step' : null">
+            <span class="auth-stepper__dot" aria-hidden="true">{{ i + 1 }}</span>
+            <span class="auth-stepper__label">
+              @if (i === current()) {
+                <span class="auth-stepper__sr">Paso {{ i + 1 }} de {{ total() }}: </span>
+              }
+              {{ step.label }}
+            </span>
+          </span>
+        }
+      </li>
+    }
+  </ol>
+</nav>

@@ -16,6 +16,24 @@ export const AUTH_ROUTES: Routes = [
     loadComponent: () => import('./register-page/register-page').then((m) => m.RegisterPage),
   },
   {
+    path: 'forgot-password',
+    title: 'Recuperar contraseña',
+    loadComponent: () =>
+      import('./forgot-password-page/forgot-password-page').then((m) => m.ForgotPasswordPage),
+  },
+  {
+    path: 'reset-password',
+    title: 'Nueva contraseña',
+    loadComponent: () =>
+      import('./reset-password-page/reset-password-page').then((m) => m.ResetPasswordPage),
+  },
+  {
+    path: 'verify-email',
+    title: 'Verificar correo',
+    loadComponent: () =>
+      import('./verify-email-page/verify-email-page').then((m) => m.VerifyEmailPage),
+  },
+  {
     path: 'invite/:token',
     title: 'Invitación',
     loadComponent: () =>

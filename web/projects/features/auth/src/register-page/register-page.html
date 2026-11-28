@@ -1,7 +1,8 @@
 <app-auth-layout
   variant="register"
   title="Crear cuenta"
-  subtitle="Regístrate para empezar a trabajar en CoreLog."
+  [subtitle]="subtitle()"
+  [fill]="true"
   switchText="¿Ya tienes cuenta?"
   switchLabel="Iniciar sesión"
   switchPath="/login"
@@ -12,146 +13,183 @@
     novalidate
     [formGroup]="form"
     [attr.aria-busy]="submitting()"
+    [attr.data-direction]="direction()"
     (ngSubmit)="onSubmit()"
   >
-    @if (formError(); as message) {
-      <app-auth-alert tone="error">{{ message }}</app-auth-alert>
-    }
+    <app-auth-stepper [steps]="steps" [current]="step()" (select)="goTo($event)" />
+    <p class="register-page__live" aria-live="polite">{{ announcement() }}</p>
 
-    <div class="register-page__names">
-      <app-auth-field
-        label="Nombres"
-        icon="pi-user"
-        [required]="true"
-        [control]="form.controls.firstName"
-        [messages]="firstNameMessages"
-        [submitted]="submitted()"
-        [error]="serverError(form.controls.firstName)"
-      >
-        <input
-          appAuthControl
-          class="register-page__input"
-          formControlName="firstName"
-          type="text"
-          autocomplete="given-name"
-        />
-      </app-auth-field>
+    <div class="register-page__body">
+      @if (formError(); as message) {
+        <app-auth-alert tone="error">{{ message }}</app-auth-alert>
+      }
 
-      <app-auth-field
-        label="Apellidos"
-        [required]="true"
-        [control]="form.controls.lastName"
-        [messages]="lastNameMessages"
-        [submitted]="submitted()"
-        [error]="serverError(form.controls.lastName)"
-      >
-        <input
-          appAuthControl
-          class="register-page__input"
-          formControlName="lastName"
-          type="text"
-          autocomplete="family-name"
+      <section class="register-page__step" data-testid="register-step-1" [hidden]="step() !== 0">
+        <div class="register-page__names">
+          <app-auth-field
+            label="Nombres"
+            icon="pi-user"
+            [required]="true"
+            [control]="form.controls.firstName"
+            [messages]="firstNameMessages"
+            [submitted]="attempted()[0]"
+            [error]="serverError(form.controls.firstName)"
+          >
+            <input
+              appAuthControl
+              class="register-page__input"
+              formControlName="firstName"
+              type="text"
+              autocomplete="given-name"
+            />
+          </app-auth-field>
+
+          <app-auth-field
+            label="Apellidos"
+            [required]="true"
+            [control]="form.controls.lastName"
+            [messages]="lastNameMessages"
+            [submitted]="attempted()[0]"
+            [error]="serverError(form.controls.lastName)"
+          >
+            <input
+              appAuthControl
+              class="register-page__input"
+              formControlName="lastName"
+              type="text"
+              autocomplete="family-name"
+            />
+          </app-auth-field>
+        </div>
+        <app-auth-field
+          #phoneRow
+          label="Teléfono"
+          [inset]="true"
+          [required]="true"
+          [control]="form.controls.phone"
+          [messages]="phoneMessages"
+          [submitted]="attempted()[0]"
+          [error]="serverError(form.controls.phone)"
+        >
+          <app-phone-input
+            class="register-page__phone"
+            size="lg"
+            formControlName="phone"
+            [inputId]="phoneRow.controlId"
+            [required]="true"
+            [invalid]="phoneRow.invalid()"
+            [describedBy]="phoneRow.describedBy()"
+          />
+        </app-auth-field>
+      </section>
+
+      <section class="register-page__step" data-testid="register-step-2" [hidden]="step() !== 1">
+        <app-auth-field
+          label="Correo electrónico"
+          icon="pi-envelope"
+          [required]="true"
+          [control]="form.controls.email"
+          [messages]="emailMessages"
+          [submitted]="attempted()[1]"
+          [error]="serverError(form.controls.email)"
+        >
+          <input
+            appAuthControl
+            class="register-page__input"
+            formControlName="email"
+            type="email"
+            autocomplete="email"
+            inputmode="email"
+            autocapitalize="none"
+            spellcheck="false"
+          />
+        </app-auth-field>
+        <app-auth-field
+          #passwordRow
+          label="Contraseña"
+          [required]="true"
+          [helper]="passwordHelper"
+          [control]="form.controls.password"
+          [messages]="passwordMessages"
+          [submitted]="attempted()[1]"
+          [error]="serverError(form.controls.password)"
+        >
+          <app-password-input
+            size="lg"
+            formControlName="password"
+            autocomplete="new-password"
+            [inputId]="passwordRow.controlId"
+            [required]="true"
+            [invalid]="passwordRow.invalid()"
+            [describedBy]="passwordRow.describedBy()"
+          />
+          @if (password()) {
+            <app-password-strength [password]="password()" [compact]="true" />
+          }
+        </app-auth-field>
+        <app-auth-field
+          #confirmationRow
+          label="Confirmar contraseña"
+          [required]="true"
+          [control]="form.controls.passwordConfirmation"
+          [messages]="confirmationMessages"
+          [submitted]="attempted()[1]"
+          [error]="serverError(form.controls.passwordConfirmation)"
+        >
+          <app-password-input
+            size="lg"
+            formControlName="passwordConfirmation"
+            autocomplete="new-password"
+            [inputId]="confirmationRow.controlId"
+            [required]="true"
+            [invalid]="confirmationRow.invalid()"
+            [describedBy]="confirmationRow.describedBy()"
+          />
+        </app-auth-field>
+      </section>
+
+      <section class="register-page__step" data-testid="register-step-3" [hidden]="step() !== 2">
+        <app-legal-consent-group
+          formControlName="consents"
+          [showErrors]="attempted()[2]"
+          [serverMissing]="missingConsents()"
         />
-      </app-auth-field>
+      </section>
     </div>
 
-    <app-auth-field
-      #phoneRow
-      label="Teléfono"
-      [inset]="true"
-      [required]="true"
-      [control]="form.controls.phone"
-      [messages]="phoneMessages"
-      [submitted]="submitted()"
-      [error]="serverError(form.controls.phone)"
-    >
-      <app-phone-input
-        class="register-page__phone"
-        size="lg"
-        formControlName="phone"
-        [inputId]="phoneRow.controlId"
-        [required]="true"
-        [invalid]="phoneRow.invalid()"
-        [describedBy]="phoneRow.describedBy()"
-      />
-    </app-auth-field>
-
-    <app-auth-field
-      label="Correo electrónico"
-      icon="pi-envelope"
-      [required]="true"
-      [control]="form.controls.email"
-      [messages]="emailMessages"
-      [submitted]="submitted()"
-      [error]="serverError(form.controls.email)"
-    >
-      <input
-        appAuthControl
-        class="register-page__input"
-        formControlName="email"
-        type="email"
-        autocomplete="email"
-        inputmode="email"
-        autocapitalize="none"
-        spellcheck="false"
-      />
-    </app-auth-field>
-
-    <app-auth-field
-      #passwordRow
-      label="Contraseña"
-      [required]="true"
-      [helper]="passwordHelper"
-      [control]="form.controls.password"
-      [messages]="passwordMessages"
-      [submitted]="submitted()"
-      [error]="serverError(form.controls.password)"
-    >
-      <app-password-input
-        size="lg"
-        formControlName="password"
-        autocomplete="new-password"
-        [inputId]="passwordRow.controlId"
-        [required]="true"
-        [invalid]="passwordRow.invalid()"
-        [describedBy]="passwordRow.describedBy()"
-      />
-      <app-password-strength [password]="password()" />
-    </app-auth-field>
-
-    <app-auth-field
-      #confirmationRow
-      label="Confirmar contraseña"
-      [required]="true"
-      [control]="form.controls.passwordConfirmation"
-      [messages]="confirmationMessages"
-      [submitted]="submitted()"
-      [error]="serverError(form.controls.passwordConfirmation)"
-    >
-      <app-password-input
-        size="lg"
-        formControlName="passwordConfirmation"
-        autocomplete="new-password"
-        [inputId]="confirmationRow.controlId"
-        [required]="true"
-        [invalid]="confirmationRow.invalid()"
-        [describedBy]="confirmationRow.describedBy()"
-      />
-    </app-auth-field>
-
-    <app-legal-consent-group
-      formControlName="consents"
-      [showErrors]="submitted()"
-      [serverMissing]="missingConsents()"
-    />
-
-    <p-button
-      class="register-page__submit"
-      type="submit"
-      label="Crear cuenta"
-      [fluid]="true"
-      [loading]="submitting()"
-      [disabled]="form.invalid"
-    />
+    <div class="register-page__actions">
+      @if (step() > 0) {
+        <p-button
+          class="register-page__back"
+          type="button"
+          label="Atrás"
+          severity="secondary"
+          [outlined]="true"
+          data-testid="register-back"
+          (onClick)="back()"
+        />
+      }
+      @if (step() < lastStep) {
+        <p-button
+          class="register-page__next"
+          type="submit"
+          [fluid]="true"
+          label="Siguiente"
+          icon="pi pi-arrow-right"
+          iconPos="right"
+          data-testid="register-next"
+        />
+      } @else {
+        <p-button
+          class="register-page__next"
+          type="submit"
+          [fluid]="true"
+          label="Crear cuenta"
+          data-testid="register-submit"
+          [loading]="submitting()"
+          [disabled]="form.invalid"
+        />
+      }
+    </div>
   </form>
 </app-auth-layout>

@@ -14,7 +14,7 @@ import {
   ReactiveFormsModule,
   Validators,
 } from '@angular/forms';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import {
   AuthStore,
   HOME_URL,
@@ -46,6 +46,7 @@ const PASSWORD_MESSAGE = 'La contraseña es obligatoria';
     AuthControl,
     PasswordInput,
     Button,
+    RouterLink,
   ],
   templateUrl: './login-page.html',
   styleUrl: './login-page.scss',

@@ -128,17 +128,49 @@ function tick(el: HTMLElement, slug: string): void {
   box.dispatchEvent(new Event('change'));
 }
 
-async function fillValid(s: Setup): Promise<void> {
+async function fillAccount(s: Setup): Promise<void> {
   type(s.el, 'Nombres', 'Ana María');
   type(s.el, 'Apellidos', 'Torres');
   type(s.el, 'Teléfono', '912345678');
   type(s.el, 'Correo electrónico', 'ana@corelog.test');
   type(s.el, 'Contraseña', 'Secreta123');
   type(s.el, 'Confirmar contraseña', 'Secreta123');
+  await settle(s.fixture);
+}
+
+async function fillValid(s: Setup): Promise<void> {
+  await fillAccount(s);
   tick(s.el, 'privacy_policy');
   tick(s.el, 'data_processing');
   tick(s.el, 'terms_of_use');
   await settle(s.fixture);
+}
+
+/** Number (1-3) of the step that is showing. */
+function currentStep(el: HTMLElement): number {
+  const steps = Array.from(
+    el.querySelectorAll<HTMLElement>(
+      '[data-testid^="register-step-"][class*="register-page__step"]',
+    ),
+  );
+  return steps.findIndex((section) => !section.hidden) + 1;
+}
+
+function nextButton(el: HTMLElement): HTMLButtonElement {
+  return el.querySelector<HTMLButtonElement>(
+    '[data-testid="register-next"] button',
+  ) as HTMLButtonElement;
+}
+
+async function pressNext(s: Setup): Promise<void> {
+  nextButton(s.el).click();
+  await settle(s.fixture);
+}
+
+/** Moves from the first step to the last one; the data must be valid. */
+async function toLastStep(s: Setup): Promise<void> {
+  await pressNext(s);
+  await pressNext(s);
 }
 
 describe('RegisterPage', () => {
@@ -181,6 +213,7 @@ describe('RegisterPage', () => {
     type(s.el, 'Contraseña', 'Secreta123');
     type(s.el, 'Confirmar contraseña', 'Secreta123');
     await settle(s.fixture);
+    await toLastStep(s);
     expect(submitButton(s.el).disabled).toBe(true);
 
     tick(s.el, 'privacy_policy');
@@ -197,7 +230,7 @@ describe('RegisterPage', () => {
     const s = await setup();
     await fillValid(s);
     tick(s.el, 'communications');
-    await settle(s.fixture);
+    await toLastStep(s);
     submit(s.el);
     await settle(s.fixture);
     expect(s.register).toHaveBeenCalledWith({
@@ -220,6 +253,7 @@ describe('RegisterPage', () => {
   it('does not tick the optional communications box by itself', async () => {
     const s = await setup();
     await fillValid(s);
+    await toLastStep(s);
     submit(s.el);
     await settle(s.fixture);
     const sent = s.register.mock.calls[0][0];
@@ -230,7 +264,9 @@ describe('RegisterPage', () => {
 describe('RegisterPage legal documents', () => {
   it('opens the document in a modal and ticks the box when it is accepted there', async () => {
     const s = await setup();
-    const link = Array.from(s.el.querySelectorAll<HTMLButtonElement>('button')).find(
+    await fillAccount(s);
+    await toLastStep(s);
+    const link = Array.from(s.el.querySelectorAll<HTMLElement>('[role="button"]')).find(
       (b) => b.textContent?.trim() === 'Política de privacidad',
     );
     link?.click();
@@ -250,7 +286,9 @@ describe('RegisterPage legal documents', () => {
 
   it('closes the modal without ticking when it is only closed', async () => {
     const s = await setup();
-    const link = Array.from(s.el.querySelectorAll<HTMLButtonElement>('button')).find(
+    await fillAccount(s);
+    await toLastStep(s);
+    const link = Array.from(s.el.querySelectorAll<HTMLElement>('[role="button"]')).find(
       (b) => b.textContent?.trim() === 'Términos de uso',
     );
     link?.click();
@@ -302,6 +340,105 @@ describe('RegisterPage form behaviour', () => {
   });
 });
 
+describe('RegisterPage steps', () => {
+  it('starts on the first step with the stepper showing it', async () => {
+    const { el } = await setup();
+    expect(currentStep(el)).toBe(1);
+    expect(el.querySelector('[aria-current="step"]')?.textContent?.replace(/\s+/g, ' ')).toContain(
+      'Paso 1 de 3: Tus datos',
+    );
+    expect(el.querySelector('[data-testid="register-back"]')).toBeNull();
+  });
+
+  it('does not advance while the fields of the step are invalid and shows their messages', async () => {
+    const s = await setup();
+    await pressNext(s);
+    expect(currentStep(s.el)).toBe(1);
+    expect(s.el.textContent).toContain('Escribe tus nombres');
+    expect(s.el.textContent).toContain('Escribe tus apellidos');
+    expect(s.el.textContent).toContain('Introduce tu teléfono');
+    expect(controlOf(s.el, 'Nombres')?.getAttribute('aria-invalid')).toBe('true');
+    expect(document.activeElement).toBe(controlOf(s.el, 'Nombres'));
+  });
+
+  it('validates only the current step: an invalid account step does not block the first', async () => {
+    const s = await setup();
+    type(s.el, 'Nombres', 'Ana');
+    type(s.el, 'Apellidos', 'Torres');
+    type(s.el, 'Teléfono', '912345678');
+    await settle(s.fixture);
+    await pressNext(s);
+    expect(currentStep(s.el)).toBe(2);
+    // Nothing of the second step is flagged before the person tries to leave it.
+    expect(s.el.textContent).not.toContain('Confirma tu contraseña');
+    await pressNext(s);
+    expect(currentStep(s.el)).toBe(2);
+    expect(s.el.textContent).toContain('Confirma tu contraseña');
+    expect(s.el.textContent).toContain('Introduce un correo electrónico válido');
+  });
+
+  it('keeps the values when going back and forth and announces each step', async () => {
+    const s = await setup();
+    await fillValid(s);
+    await pressNext(s);
+    expect(currentStep(s.el)).toBe(2);
+    expect(s.el.querySelector('.register-page__live')?.textContent).toContain(
+      'Paso 2 de 3: Tu cuenta',
+    );
+    s.el.querySelector<HTMLButtonElement>('[data-testid="register-back"] button')?.click();
+    await settle(s.fixture);
+    expect(currentStep(s.el)).toBe(1);
+    expect(controlOf(s.el, 'Nombres')?.value).toBe('Ana María');
+    expect(controlOf(s.el, 'Correo electrónico')?.value).toBe('ana@corelog.test');
+  });
+
+  it('goes back through the completed steps of the stepper', async () => {
+    const s = await setup();
+    await fillValid(s);
+    await toLastStep(s);
+    expect(currentStep(s.el)).toBe(3);
+    s.el.querySelector<HTMLButtonElement>('[data-testid="register-step-link-1"]')?.click();
+    await settle(s.fixture);
+    expect(currentStep(s.el)).toBe(1);
+    // Steps that were not reached yet are not links.
+    expect(s.el.querySelector('[data-testid="register-step-link-3"]')).toBeNull();
+  });
+
+  it('advances with Enter on the first steps and creates the account only on the last', async () => {
+    const s = await setup();
+    await fillValid(s);
+    const form = s.el.querySelector('form') as HTMLFormElement;
+    form.dispatchEvent(new Event('submit'));
+    await settle(s.fixture);
+    expect(currentStep(s.el)).toBe(2);
+    expect(s.register).not.toHaveBeenCalled();
+    form.dispatchEvent(new Event('submit'));
+    await settle(s.fixture);
+    expect(currentStep(s.el)).toBe(3);
+    expect(s.register).not.toHaveBeenCalled();
+    form.dispatchEvent(new Event('submit'));
+    await settle(s.fixture);
+    expect(s.register).toHaveBeenCalledTimes(1);
+  });
+
+  it('jumps to the account step when the server rejects the password', async () => {
+    const s = await setup();
+    const weak: ApiError = {
+      status: 422,
+      code: 'validation.failed',
+      message: 'invalid',
+      details: [{ field: 'password', message: 'Contraseña demasiado débil' }],
+    };
+    s.register.mockRejectedValue(weak);
+    await fillValid(s);
+    await toLastStep(s);
+    submit(s.el);
+    await settle(s.fixture);
+    expect(currentStep(s.el)).toBe(2);
+    expect(s.el.textContent).toContain('Contraseña demasiado débil');
+  });
+});
+
 describe('RegisterPage errors and navigation', () => {
   it('shows a Spanish alert when the email is already registered', async () => {
     const s = await setup();
@@ -313,9 +450,11 @@ describe('RegisterPage errors and navigation', () => {
     };
     s.register.mockRejectedValue(taken);
     await fillValid(s);
+    await toLastStep(s);
     submit(s.el);
     await settle(s.fixture);
     expect(s.el.textContent).toContain('Ya existe una cuenta con este correo');
+    expect(currentStep(s.el)).toBe(2);
     expect(s.el.textContent).not.toContain('already registered');
   });
 
@@ -329,9 +468,11 @@ describe('RegisterPage errors and navigation', () => {
     };
     s.register.mockRejectedValue(rejected);
     await fillValid(s);
+    await toLastStep(s);
     submit(s.el);
     await settle(s.fixture);
     expect(s.el.textContent).toContain('Este teléfono ya está en uso en otra cuenta.');
+    expect(currentStep(s.el)).toBe(1);
     expect(controlOf(s.el, 'Teléfono')?.getAttribute('aria-invalid')).toBe('true');
   });
 
@@ -345,11 +486,13 @@ describe('RegisterPage errors and navigation', () => {
     };
     s.register.mockRejectedValue(missing);
     await fillValid(s);
+    await toLastStep(s);
     submit(s.el);
     await settle(s.fixture);
     expect(s.el.querySelector('[role="alert"]')?.textContent).toContain(
       'Acepta los documentos obligatorios',
     );
+    expect(currentStep(s.el)).toBe(3);
   });
 
   it('links back to the sign-in page', async () => {
@@ -365,6 +508,7 @@ describe('RegisterPage errors and navigation', () => {
     let release: () => void = () => undefined;
     s.register.mockReturnValue(new Promise<void>((resolve) => (release = resolve)));
     await fillValid(s);
+    await toLastStep(s);
     submit(s.el);
     s.fixture.detectChanges();
     expect(submitButton(s.el).disabled).toBe(true);

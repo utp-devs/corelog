@@ -133,8 +133,12 @@
     display: grid;
     grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
     overflow: hidden;
+    grid-template-rows: minmax(0, 1fr);
     width: min(100%, 80rem);
-    min-height: 44rem;
+    // Fixed base height: it never depends on what the form holds, so the login and every step of the registration
+    // share the same container. It shrinks only when the viewport is shorter than the base height.
+    height: min(var(--cl-auth-container-h), calc(100vh - var(--cl-space-8) * 2));
+    height: min(var(--cl-auth-container-h), calc(100dvh - var(--cl-space-8) * 2));
     border: 1px solid var(--cl-auth-card-border);
     border-radius: calc(var(--cl-radius-lg) * 3);
     background: var(--cl-auth-card);
@@ -212,18 +216,48 @@
     color: var(--cl-hero-text-subtle);
   }
 
+  // The panel clips: a form can never make the container taller. Anything longer scrolls inside the card.
   &__panel {
-    @include m.flex-row(0, center, center);
+    @include m.flex-row(0, stretch, center);
+    overflow: hidden;
     grid-column: 2;
     grid-row: 1;
     min-width: 0;
+    min-height: 0;
     padding: var(--cl-space-12) var(--cl-space-10);
     background: var(--cl-auth-panel);
   }
 
+  // Heading on top, the form (scrolls inside when the viewport is too short) and the pinned links below.
   &__card {
+    @include m.flex-column(0);
+    justify-content: center;
     width: min(28rem, 100%);
     min-width: 0;
+    min-height: 0;
+
+    // Multi-step forms start at the top so the heading and the stepper stay put from one step to the next.
+    &--fill {
+      justify-content: flex-start;
+    }
+  }
+
+  &__content {
+    @include m.flex-column(0);
+    flex: 0 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    // Room for the focus rings and halos of the controls that sit on the edge of the scroll area.
+    margin-inline: calc(var(--cl-space-1) * -1);
+    padding-inline: var(--cl-space-1);
+
+    &--fill {
+      flex: 1 1 auto;
+    }
+  }
+
+  &__footer {
+    flex: none;
   }
 
   &__title {
@@ -243,6 +277,7 @@
   }
 
   &__heading {
+    flex: none;
     margin-bottom: var(--cl-space-6);
   }
 
@@ -309,9 +344,10 @@
   @include m.respond-down(1024px) {
     &__shell {
       grid-template-columns: minmax(0, 1fr);
-      grid-template-rows: 15.75rem auto;
+      grid-template-rows: 15.75rem minmax(0, 1fr);
       width: min(100%, 44rem);
-      min-height: 0;
+      height: min(var(--cl-auth-container-h-tablet), calc(100vh - var(--cl-space-8) * 2));
+      height: min(var(--cl-auth-container-h-tablet), calc(100dvh - var(--cl-space-8) * 2));
     }
 
     &__hero,
@@ -321,7 +357,7 @@
 
     &__panel {
       grid-row: 2;
-      padding: var(--cl-space-8) var(--cl-space-8) var(--cl-space-10);
+      padding: var(--cl-space-8);
     }
 
     &__brand {
@@ -353,8 +389,8 @@
       display: flex;
       flex-direction: column;
       width: 100%;
-      min-height: 100vh;
-      min-height: 100dvh;
+      height: 100vh;
+      height: 100dvh;
       border: 0;
       border-radius: 0;
       background: transparent;
@@ -368,8 +404,7 @@
 
     &__panel {
       flex: 1 1 auto;
-      align-items: flex-start;
-      padding: var(--cl-space-8) var(--cl-gutter) var(--cl-space-10);
+      padding: var(--cl-space-6) var(--cl-gutter) var(--cl-space-4);
       border-radius: calc(var(--cl-radius-lg) * 3) calc(var(--cl-radius-lg) * 3) 0 0;
       background: var(--cl-auth-panel);
     }
@@ -383,8 +418,31 @@
       margin-bottom: var(--cl-space-12);
     }
 
+    &__switch {
+      margin-top: var(--cl-space-3);
+    }
+
+    &__heading {
+      margin-bottom: var(--cl-space-4);
+    }
+
     &__title {
       font-size: var(--cl-font-h1);
+    }
+  }
+
+  // Short viewports (a 720px-high laptop): tighter vertical rhythm so each step still fits without scrolling.
+  @media (max-height: 760px) and (min-width: 1025px) {
+    &__panel {
+      padding-block: var(--cl-space-6);
+    }
+
+    &__heading {
+      margin-bottom: var(--cl-space-4);
+    }
+
+    &__switch {
+      margin-top: var(--cl-space-3);
     }
   }
 }

@@ -1,0 +1,171 @@
+@use '../../../../ui/styles/mixins' as m;
+@use '../../../../ui/field-row/src/control' as c;
+
+:host {
+  display: block;
+  min-width: 0;
+}
+
+// Circle diameter and the line between circles.
+$dot: 1.75rem;
+
+.auth-stepper {
+  min-width: 0;
+
+  // The phone variant: text over a bar. Hidden where the circles fit.
+  &__summary,
+  &__bar {
+    display: none;
+  }
+
+  &__list {
+    display: flex;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  &__item {
+    position: relative;
+    flex: 1 1 0;
+    min-width: 0;
+
+    // Line from the previous circle to this one.
+    &:not(:first-child)::before {
+      content: '';
+      position: absolute;
+      top: calc(#{$dot} / 2 - 1px);
+      right: calc(50% + #{$dot} / 2 + var(--cl-space-1));
+      left: calc(-50% + #{$dot} / 2 + var(--cl-space-1));
+      height: 2px;
+      border-radius: var(--cl-radius-full);
+      background: var(--cl-auth-field-border);
+    }
+
+    &--done:not(:first-child)::before,
+    &--current:not(:first-child)::before {
+      background: var(--cl-auth-accent);
+    }
+  }
+
+  &__step {
+    @include m.flex-column(1, center);
+    width: 100%;
+    min-width: 0;
+    padding: 0;
+    border: 0;
+    border-radius: var(--cl-radius-md);
+    background: none;
+    color: inherit;
+    font: inherit;
+  }
+
+  &__step:is(button) {
+    cursor: pointer;
+
+    &:hover .auth-stepper__label {
+      color: var(--cl-auth-text);
+      text-decoration: underline;
+    }
+
+    &:focus-visible {
+      @include c.focus-ring;
+    }
+  }
+
+  &__dot {
+    @include m.flex-row(0, center, center);
+    width: $dot;
+    height: $dot;
+    border: 2px solid var(--cl-auth-field-border);
+    border-radius: var(--cl-radius-full);
+    background: var(--cl-auth-panel);
+    color: var(--cl-auth-text-subtle);
+    font-size: var(--cl-font-small);
+    font-weight: var(--cl-weight-semibold);
+    line-height: 1;
+    transition:
+      background-color var(--cl-motion-fast) var(--cl-ease),
+      border-color var(--cl-motion-fast) var(--cl-ease);
+
+    @media (prefers-reduced-motion: reduce) {
+      transition: none;
+    }
+  }
+
+  &__item--current &__dot {
+    border-color: var(--cl-auth-accent);
+    background: var(--cl-auth-accent);
+    color: var(--cl-auth-bg);
+  }
+
+  &__item--done &__dot {
+    border-color: var(--cl-auth-accent);
+    background: var(--cl-auth-panel);
+    color: var(--cl-auth-accent);
+  }
+
+  &__check {
+    font-size: var(--cl-font-caption);
+  }
+
+  &__label {
+    max-width: 100%;
+    @include m.truncate;
+    font-size: var(--cl-font-small);
+    line-height: var(--cl-lh-tight);
+    color: var(--cl-auth-text-subtle);
+  }
+
+  &__item--current &__label {
+    color: var(--cl-auth-text);
+    font-weight: var(--cl-weight-semibold);
+  }
+
+  &__sr {
+    @include m.visually-hidden;
+  }
+
+  // Phone: "Paso N de M" over a progress bar; the circles go away (the Atras button goes back).
+  @include m.respond-down(721px) {
+    &__list {
+      display: none;
+    }
+
+    &__summary {
+      @include m.flex-row(2, baseline, space-between);
+      margin: 0 0 var(--cl-space-2);
+      font-size: var(--cl-font-small);
+    }
+
+    &__count {
+      color: var(--cl-auth-accent);
+      font-weight: var(--cl-weight-semibold);
+    }
+
+    &__name {
+      color: var(--cl-auth-text-subtle);
+    }
+
+    &__bar {
+      display: block;
+      overflow: hidden;
+      height: var(--cl-space-1);
+      border-radius: var(--cl-radius-full);
+      background: var(--cl-auth-field);
+    }
+
+    &__bar-fill {
+      display: block;
+      width: var(--auth-stepper-progress);
+      height: 100%;
+      border-radius: var(--cl-radius-full);
+      background: var(--cl-auth-accent);
+      transition: width var(--cl-motion) var(--cl-ease);
+
+      @media (prefers-reduced-motion: reduce) {
+        transition: none;
+      }
+    }
+  }
+}

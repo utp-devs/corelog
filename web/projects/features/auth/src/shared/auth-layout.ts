@@ -60,6 +60,8 @@ export class AuthLayout {
   readonly switchText = input<string | null>(null);
   readonly switchLabel = input<string | null>(null);
   readonly switchPath = input<string | null>(null);
+  /** Multi-step forms: the form fills the card from the top instead of being centered. */
+  readonly fill = input(false);
   readonly switchQuery = input<Readonly<Record<string, string>>>({});
 
   protected readonly mainId = AUTH_MAIN_ID;

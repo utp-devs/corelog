@@ -1,4 +1,4 @@
-import { asApiError, toastCopyOf } from '@corelog/core';
+import { asApiError, isRateLimited, rateLimitMessage, toastCopyOf } from '@corelog/core';
 
 export type AuthContext = 'login' | 'register';
 
@@ -15,7 +15,8 @@ const EMAIL_TAKEN = 'Ya existe una cuenta con este correo. Inicia sesión o usa 
 const ACCOUNT_DISABLED =
   'Tu cuenta está desactivada. Pide a un administrador de tu organización que la reactive.';
 const WEAK_PASSWORD = 'La contraseña es demasiado débil. Usa al menos 8 caracteres.';
-const TOO_MANY = 'Demasiados intentos seguidos. Espera un momento e inténtalo de nuevo.';
+const EMAIL_NOT_VERIFIED =
+  'Tu correo todavía no está verificado. Abre el enlace del mensaje que te enviamos y vuelve a iniciar sesión.';
 
 /** Words and characters that only appear in Spanish text: such a message is already friendly. */
 const SPANISH_HINT =
@@ -38,7 +39,8 @@ export function authErrorMessage(error: unknown, context: AuthContext): string {
   if (api.code === 'auth.two_factor_invalid') return CODE_INVALID;
   if (api.code === 'auth.challenge_expired') return CHALLENGE_EXPIRED;
   if (api.code === 'auth.email_taken') return EMAIL_TAKEN;
-  if (api.status === 429) return TOO_MANY;
+  if (api.code === 'auth.email_not_verified') return EMAIL_NOT_VERIFIED;
+  if (isRateLimited(api)) return rateLimitMessage(api);
 
   if (
     /invalid (email|credentials|password)|incorrect|wrong password|bad credentials/i.test(message)
