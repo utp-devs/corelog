@@ -1,0 +1,94 @@
+@use '../../../../ui/styles/mixins' as m;
+@use '../../../../ui/field-row/src/control' as c;
+
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.org-custom-fields {
+  &__list {
+    @include m.flex-column(0);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  &__item {
+    @include m.cluster(3, flex-start, space-between);
+    padding: var(--cl-space-3) 0;
+    border-top: 1px solid var(--cl-border);
+  }
+
+  &__main {
+    @include m.flex-column(1);
+    min-width: 0;
+  }
+
+  &__name {
+    font-weight: var(--cl-weight-semibold);
+  }
+
+  &__type {
+    color: var(--cl-text-subtle);
+    font-size: var(--cl-font-small);
+  }
+
+  &__muted {
+    margin: 0;
+    color: var(--cl-text-subtle);
+    font-size: var(--cl-font-small);
+    overflow-wrap: anywhere;
+  }
+
+  &__actions {
+    @include m.cluster(1);
+  }
+
+  &__form {
+    @include m.flex-column(4);
+  }
+
+  &__input {
+    @include c.control-box;
+  }
+
+  &__options {
+    @include m.flex-column(2, flex-start);
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+
+  &__legend {
+    margin-bottom: var(--cl-space-2);
+    padding: 0;
+    font-weight: var(--cl-weight-semibold);
+  }
+
+  &__option {
+    @include m.flex-row(2);
+    align-self: stretch;
+  }
+
+  &__limits {
+    @include m.grid-auto(10rem, 3);
+  }
+
+  &__context {
+    display: grid;
+    grid-template-columns: 1fr 1fr auto auto;
+    align-items: center;
+    gap: var(--cl-space-2);
+
+    @media (max-width: 767.98px) {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  &__check {
+    @include m.flex-row(2);
+    min-height: var(--cl-control-h-md);
+    cursor: pointer;
+  }
+}

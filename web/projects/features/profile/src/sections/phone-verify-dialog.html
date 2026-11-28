@@ -1,0 +1,70 @@
+<app-dialog size="sm" [open]="open()" [heading]="heading()" (closeRequested)="closed.emit()">
+  <div class="phone-verify" data-testid="phone-verify" [attr.data-step]="step()">
+    @switch (step()) {
+      @case ('sending') {
+        <p class="phone-verify__text" role="status">Enviando el código...</p>
+      }
+      @case ('code') {
+        <p class="phone-verify__text">
+          Enviamos un código de 6 dígitos a <strong>{{ destination() }}</strong
+          >. Escríbelo aquí para confirmar que el número es tuyo.
+        </p>
+        <label class="phone-verify__label" for="phone-verify-code">Código de verificación</label>
+        <input
+          id="phone-verify-code"
+          class="phone-verify__code"
+          type="text"
+          inputmode="numeric"
+          autocomplete="one-time-code"
+          maxlength="6"
+          data-autofocus
+          [attr.aria-invalid]="error() ? 'true' : null"
+          [attr.aria-describedby]="error() ? 'phone-verify-error' : null"
+          [value]="code()"
+          (input)="onCode($event)"
+          (keydown.enter)="verify()"
+        />
+        @if (error(); as message) {
+          <p id="phone-verify-error" class="phone-verify__error" role="alert">{{ message }}</p>
+        }
+        <p class="phone-verify__resend">
+          @if (canResend()) {
+            ¿No te llegó?
+            <button type="button" class="phone-verify__link" (click)="request()">
+              Enviar otro código
+            </button>
+          } @else if (wait() > 0) {
+            Podrás pedir otro código en {{ wait() }} s.
+          }
+        </p>
+      }
+      @case ('done') {
+        <p class="phone-verify__text phone-verify__text--success" role="status">
+          Listo, tu teléfono quedó verificado.
+        </p>
+      }
+      @case ('failed') {
+        <p class="phone-verify__error" role="alert">{{ error() }}</p>
+      }
+    }
+  </div>
+
+  @if (step() === 'done') {
+    <p-button dialogFooter label="Cerrar" (onClick)="closed.emit()" />
+  }
+  @if (step() !== 'done') {
+    <p-button dialogFooter label="Cancelar" severity="secondary" (onClick)="closed.emit()" />
+  }
+  @if (step() === 'code') {
+    <p-button
+      dialogFooter
+      label="Verificar"
+      [disabled]="!canVerify()"
+      [loading]="working()"
+      (onClick)="verify()"
+    />
+  }
+  @if (step() === 'failed') {
+    <p-button dialogFooter label="Reintentar" (onClick)="request()" />
+  }
+</app-dialog>

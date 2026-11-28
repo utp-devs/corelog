@@ -72,6 +72,10 @@
     line-height: var(--cl-lh-tight);
   }
 
+  &--inset &__label {
+    left: calc(var(--cl-space-16) + var(--cl-space-6) + var(--cl-space-3) + 1px);
+  }
+
   &--invalid &__label {
     color: var(--cl-danger-text);
   }

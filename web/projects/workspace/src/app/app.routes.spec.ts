@@ -52,6 +52,8 @@ describe('workspace routes', () => {
       '',
       'issues',
       'browse',
+      'timesheet',
+      'filters',
       'profile',
       'people',
       'projects',

@@ -1,6 +1,6 @@
-<div class="auth-field" [class.auth-field--invalid]="invalid()">
+<div class="auth-field" [class.auth-field--invalid]="invalid()" [class.auth-field--inset]="inset()">
   <div class="auth-field__box">
-    <ng-content select="input, app-password-input" />
+    <ng-content select="input, app-password-input, app-phone-input" />
     <label class="auth-field__label" [attr.for]="controlId">
       <span>{{ label() }}</span>
       @if (required()) {

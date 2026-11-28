@@ -1,6 +1,7 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  DestroyRef,
   ElementRef,
   Injector,
   afterNextRender,
@@ -18,14 +19,26 @@ import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import {
   AuthStore,
+  FIRST_NAME_MAX,
   HOME_URL,
+  LAST_NAME_MAX,
   LOCATION_ASSIGN,
-  applyServerErrors,
   asApiError,
+  identityFieldErrors,
+  missingConsentSlugs,
+  normalizeName,
+  passwordMatchValidator,
+  personNameValidator,
+  revalidateOnPasswordChange,
   safeRedirect,
+  type ConsentRef,
+  type IdentityField,
+  type PhoneValue,
 } from '@corelog/core';
+import { LegalConsentGroup } from '@corelog/ui/legal-consent-checkbox';
 import { PasswordInput } from '@corelog/ui/password-input';
 import { PasswordStrength } from '@corelog/ui/password-strength';
+import { PhoneInput } from '@corelog/ui/phone-input';
 import { Button } from 'primeng/button';
 
 import { authErrorMessage } from '../auth-messages';
@@ -34,10 +47,11 @@ import { AuthAlert } from '../shared/auth-alert';
 import { AuthControl, AuthField } from '../shared/auth-field';
 import { AuthLayout } from '../shared/auth-layout';
 
-const NAME_MESSAGE = 'El nombre debe tener al menos 2 caracteres';
+const NAME_PATTERN_MESSAGE = 'Usa solo letras, espacios, guiones y apóstrofes';
 const PASSWORD_HELPER = 'Mínimo 8 caracteres.';
 const EMAIL_MESSAGE = 'Introduce un correo electrónico válido';
 const PASSWORD_MESSAGE = 'La contraseña debe tener al menos 8 caracteres';
+const CONSENTS_FAILED = 'Acepta los documentos obligatorios para crear la cuenta.';
 
 /** Account creation screen. Signs the new account in on success. */
 @Component({
@@ -48,8 +62,10 @@ const PASSWORD_MESSAGE = 'La contraseña debe tener al menos 8 caracteres';
     AuthAlert,
     AuthField,
     AuthControl,
+    LegalConsentGroup,
     PasswordInput,
     PasswordStrength,
+    PhoneInput,
     Button,
   ],
   templateUrl: './register-page.html',
@@ -63,22 +79,45 @@ export class RegisterPage {
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly home = inject(HOME_URL);
   private readonly assign = inject(LOCATION_ASSIGN);
+  private readonly destroyRef = inject(DestroyRef);
 
   protected readonly returnUrl = inject(ActivatedRoute).snapshot.queryParamMap.get('returnUrl');
   protected readonly loginQuery: Readonly<Record<string, string>> = this.returnUrl
     ? { returnUrl: this.returnUrl }
     : {};
 
+  protected readonly firstNameMessages = {
+    required: 'Escribe tus nombres',
+    maxlength: `Máximo ${FIRST_NAME_MAX} caracteres`,
+    pattern: NAME_PATTERN_MESSAGE,
+  };
+  protected readonly lastNameMessages = {
+    required: 'Escribe tus apellidos',
+    maxlength: `Máximo ${LAST_NAME_MAX} caracteres`,
+    pattern: NAME_PATTERN_MESSAGE,
+  };
+  protected readonly phoneMessages = {
+    required: 'Introduce tu teléfono',
+    phone: 'El teléfono no es válido para el país elegido',
+  };
   protected readonly emailMessages = { required: EMAIL_MESSAGE, email: EMAIL_MESSAGE };
-  protected readonly nameMessages = { required: NAME_MESSAGE, minlength: NAME_MESSAGE };
   protected readonly passwordMessages = { required: PASSWORD_MESSAGE, minlength: PASSWORD_MESSAGE };
+  protected readonly confirmationMessages = {
+    required: 'Confirma tu contraseña',
+    mismatch: 'Las contraseñas no coinciden',
+  };
   protected readonly passwordHelper = PASSWORD_HELPER;
 
   protected readonly form = new FormGroup({
-    name: new FormControl('', {
+    firstName: new FormControl('', {
       nonNullable: true,
-      validators: [Validators.required, Validators.minLength(2)],
+      validators: [personNameValidator(FIRST_NAME_MAX)],
     }),
+    lastName: new FormControl('', {
+      nonNullable: true,
+      validators: [personNameValidator(LAST_NAME_MAX)],
+    }),
+    phone: new FormControl<PhoneValue | null>(null, { validators: [Validators.required] }),
     email: new FormControl('', {
       nonNullable: true,
       validators: [Validators.required, Validators.email],
@@ -87,6 +126,11 @@ export class RegisterPage {
       nonNullable: true,
       validators: [Validators.required, Validators.minLength(8)],
     }),
+    passwordConfirmation: new FormControl('', {
+      nonNullable: true,
+      validators: [Validators.required, passwordMatchValidator('password')],
+    }),
+    consents: new FormControl<ConsentRef[]>([], { nonNullable: true }),
   });
 
   /** Live password value for the strength meter. */
@@ -98,6 +142,11 @@ export class RegisterPage {
   protected readonly submitted = signal(false);
   protected readonly submitting = signal(false);
   protected readonly formError = signal<string | null>(null);
+  protected readonly missingConsents = signal<readonly string[]>([]);
+
+  constructor() {
+    revalidateOnPasswordChange(this.form, 'password', 'passwordConfirmation', this.destroyRef);
+  }
 
   /** Detail the server attached to the field, if any. */
   protected serverError(control: AbstractControl): string | undefined {
@@ -108,6 +157,7 @@ export class RegisterPage {
     if (this.submitting()) return;
     this.submitted.set(true);
     this.formError.set(null);
+    this.missingConsents.set([]);
     // Drops server errors from the previous attempt so they do not block the next submit.
     Object.values(this.form.controls).forEach((control) => control.updateValueAndValidity());
     if (this.form.invalid) {
@@ -118,15 +168,42 @@ export class RegisterPage {
     }
 
     this.submitting.set(true);
+    const value = this.form.getRawValue();
     try {
-      await this.auth.register(this.form.getRawValue());
+      await this.auth.register({
+        firstName: normalizeName(value.firstName),
+        lastName: normalizeName(value.lastName),
+        phone: value.phone as PhoneValue,
+        email: value.email.trim(),
+        password: value.password,
+        passwordConfirmation: value.passwordConfirmation,
+        locale: 'es',
+        consents: value.consents,
+      });
       goAfterAuth(safeRedirect(this.returnUrl, this.home), this.router, this.assign);
     } catch (error) {
-      if (!applyServerErrors(this.form, asApiError(error))) {
-        this.formError.set(authErrorMessage(error, 'register'));
-      }
+      this.showFailure(error);
     } finally {
       this.submitting.set(false);
+    }
+  }
+
+  private showFailure(error: unknown): void {
+    const missing = missingConsentSlugs(error);
+    if (missing.length > 0) {
+      this.missingConsents.set(missing);
+      this.formError.set(CONSENTS_FAILED);
+      return;
+    }
+    const fields = identityFieldErrors(error);
+    const names = Object.keys(fields) as IdentityField[];
+    for (const field of names) {
+      const control = this.form.get(field);
+      control?.setErrors({ ...control.errors, server: fields[field] });
+      control?.markAsTouched();
+    }
+    if (names.length === 0) {
+      this.formError.set(authErrorMessage(asApiError(error), 'register'));
     }
   }
 }

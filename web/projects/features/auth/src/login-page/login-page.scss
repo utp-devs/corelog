@@ -9,6 +9,24 @@
     @include a.input;
   }
 
+  &__link {
+    min-height: var(--cl-control-h-md);
+    border: 0;
+    background: transparent;
+    color: var(--cl-brand);
+    font: inherit;
+    cursor: pointer;
+
+    &:hover {
+      text-decoration: underline;
+    }
+
+    &:focus-visible {
+      box-shadow: var(--cl-shadow-focus);
+      outline: none;
+    }
+  }
+
   &__submit {
     @include a.submit;
   }

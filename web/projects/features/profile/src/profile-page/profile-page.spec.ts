@@ -7,6 +7,7 @@ import {
   ApiError,
   AuthStore,
   AvatarApiService,
+  CountryStore,
   NotificationApiService,
   PeopleApiService,
   ThemeService,
@@ -29,6 +30,8 @@ import { ProfilePage } from './profile-page';
 const user: User = {
   id: 'user-1',
   name: 'Ana Torres',
+  firstName: 'Ana',
+  lastName: 'Torres',
   email: 'ana@corelog.test',
   role: 'user',
   teamId: null,
@@ -154,6 +157,30 @@ function setup(): Mocks {
       { provide: AccountSecurityApiService, useValue: mocks.security },
       { provide: NotificationApiService, useValue: mocks.notifications },
       { provide: ThemeService, useValue: mocks.theme },
+      {
+        provide: CountryStore,
+        useValue: {
+          countries: signal([
+            { code: 'PE', name: 'Perú', dialCode: '+51', example: '912345678', areas: [] },
+          ]),
+          status: signal('ready'),
+          find: () => ({
+            code: 'PE',
+            name: 'Perú',
+            dialCode: '+51',
+            example: '912345678',
+            areas: [],
+          }),
+          defaultCountry: () => ({
+            code: 'PE',
+            name: 'Perú',
+            dialCode: '+51',
+            example: '912345678',
+            areas: [],
+          }),
+          load: () => Promise.resolve(),
+        },
+      },
     ],
   });
   return mocks;
@@ -229,7 +256,8 @@ describe('ProfilePage', () => {
         const harness = await render('/profile/general');
         await expectText(harness, 'Ana Torres');
 
-        expect(fieldLabelled(root(harness), /^Nombre\b(?! para)/).value).toBe('Ana Torres');
+        expect(fieldLabelled(root(harness), /^Nombres/).value).toBe('Ana');
+        expect(fieldLabelled(root(harness), /^Apellidos/).value).toBe('Torres');
         expect(fieldLabelled(root(harness), /^Cargo/).value).toBe('Analista');
         expect(fieldLabelled(root(harness), /^Correo electrónico/).disabled).toBe(true);
         expect(root(harness).textContent).toContain('America/Bogota');
@@ -250,7 +278,8 @@ describe('ProfilePage', () => {
       await vi.waitFor(() =>
         expect(mocks.people.updateMe).toHaveBeenCalledWith(
           expect.objectContaining({
-            name: 'Ana Torres',
+            firstName: 'Ana',
+            lastName: 'Torres',
             displayName: 'Ana T.',
             jobTitle: 'Analista',
             timezone: 'America/Bogota',
@@ -258,6 +287,58 @@ describe('ProfilePage', () => {
         ),
       );
       await expectText(harness, 'Ana T.');
+    });
+
+    it('shows the saved phone as unverified with the verification action and sends it only when edited', async () => {
+      const mocks = setup();
+      mocks.auth.user.set({
+        ...user,
+        phone: { country: 'PE', number: '912345678', e164: '+51912345678', verified: false },
+      });
+      const harness = await render('/profile/general');
+      await expectText(harness, 'Ana Torres');
+
+      const phone = fieldLabelled(root(harness), /^Teléfono/);
+      expect(phone.value).toBe('912 345 678');
+      expect(root(harness).textContent).toContain('Sin verificar');
+      expect(buttonNamed(harness, 'Verificar teléfono')).toBeDefined();
+
+      typeInto(harness, /^Cargo/, 'Otro cargo');
+      buttonNamed(harness, 'Guardar cambios')?.click();
+      await vi.waitFor(() => expect(mocks.people.updateMe).toHaveBeenCalled());
+      expect(mocks.people.updateMe.mock.calls[0][0]).not.toHaveProperty('phone');
+    });
+
+    it('sends a new phone as country and national digits', async () => {
+      const mocks = setup();
+      const harness = await render('/profile/general');
+      await expectText(harness, 'Ana Torres');
+
+      typeInto(harness, /^Teléfono/, '987654321');
+      buttonNamed(harness, 'Guardar cambios')?.click();
+      await vi.waitFor(() =>
+        expect(mocks.people.updateMe).toHaveBeenCalledWith(
+          expect.objectContaining({ phone: { country: 'PE', number: '987654321' } }),
+        ),
+      );
+    });
+
+    it('maps a phone rejected by the server to the phone field', async () => {
+      const mocks = setup();
+      mocks.people.updateMe.mockReturnValueOnce(
+        throwError((): ApiError => ({
+          status: 409,
+          code: 'user.phone_taken',
+          message: 'taken',
+          details: [],
+        })),
+      );
+      const harness = await render('/profile/general');
+      await expectText(harness, 'Ana Torres');
+
+      typeInto(harness, /^Teléfono/, '987654321');
+      buttonNamed(harness, 'Guardar cambios')?.click();
+      await expectText(harness, 'Este teléfono ya está en uso en otra cuenta.');
     });
 
     it('maps server field errors to the matching field', async () => {

@@ -75,6 +75,14 @@ export class LoginPage {
     password: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
   });
 
+  protected readonly challenge = this.auth.twoFactorChallenge;
+  /** The second step asks for a recovery code instead of the six digits of the app. */
+  protected readonly useRecovery = signal(false);
+  protected readonly codeMessages = { required: 'Introduce el código' };
+  protected readonly codeForm = new FormGroup({
+    code: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
+  });
+
   protected readonly submitted = signal(false);
   protected readonly submitting = signal(false);
   protected readonly formError = signal<string | null>(null);
@@ -100,6 +108,13 @@ export class LoginPage {
     this.submitting.set(true);
     try {
       await this.auth.login(this.form.getRawValue());
+      if (this.challenge()) {
+        // The account asks for a second step: show it with a fresh form.
+        this.submitted.set(false);
+        this.codeForm.reset();
+        this.focusCode();
+        return;
+      }
       goAfterAuth(safeRedirect(this.returnUrl, this.home), this.router, this.assign);
     } catch (error) {
       if (!applyServerErrors(this.form, asApiError(error))) {
@@ -108,5 +123,61 @@ export class LoginPage {
     } finally {
       this.submitting.set(false);
     }
+  }
+
+  /** Second step: sends the code (or the recovery code) with the challenge of the first step. */
+  protected async onVerify(): Promise<void> {
+    if (this.submitting()) return;
+    this.submitted.set(true);
+    this.formError.set(null);
+    const value = this.codeForm.controls.code.value.trim();
+    if (value === '') {
+      this.focusCode();
+      return;
+    }
+    this.submitting.set(true);
+    try {
+      await this.auth.completeTwoFactor(
+        this.useRecovery() ? { recoveryCode: value } : { code: value },
+      );
+      goAfterAuth(safeRedirect(this.returnUrl, this.home), this.router, this.assign);
+    } catch (error) {
+      this.formError.set(authErrorMessage(error, 'login'));
+      if (!this.challenge()) {
+        // The challenge expired: back to the credentials with the reason shown.
+        this.submitted.set(false);
+        this.codeForm.reset();
+      } else {
+        this.codeForm.reset();
+        this.focusCode();
+      }
+    } finally {
+      this.submitting.set(false);
+    }
+  }
+
+  protected toggleRecovery(): void {
+    this.useRecovery.update((value) => !value);
+    this.codeForm.reset();
+    this.formError.set(null);
+    this.focusCode();
+  }
+
+  protected backToCredentials(): void {
+    this.auth.cancelTwoFactor();
+    this.codeForm.reset();
+    this.useRecovery.set(false);
+    this.formError.set(null);
+    this.submitted.set(false);
+  }
+
+  private focusCode(): void {
+    afterNextRender(
+      () =>
+        this.host.nativeElement
+          .querySelector<HTMLInputElement>('[data-testid="two-factor-code"]')
+          ?.focus(),
+      { injector: this.injector },
+    );
   }
 }

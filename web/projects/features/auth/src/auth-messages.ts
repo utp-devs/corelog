@@ -9,6 +9,8 @@ const FALLBACKS: Readonly<Record<AuthContext, string>> = {
 
 const BAD_CREDENTIALS =
   'El correo o la contraseña no son correctos. Revísalos e inténtalo de nuevo.';
+const CODE_INVALID = 'El código no es válido o ya se usó. Revísalo e inténtalo de nuevo.';
+const CHALLENGE_EXPIRED = 'La verificación caducó. Inicia sesión de nuevo.';
 const EMAIL_TAKEN = 'Ya existe una cuenta con este correo. Inicia sesión o usa otro correo.';
 const ACCOUNT_DISABLED =
   'Tu cuenta está desactivada. Pide a un administrador de tu organización que la reactive.';
@@ -33,6 +35,8 @@ export function authErrorMessage(error: unknown, context: AuthContext): string {
   const message = api.message.trim();
 
   if (api.code === 'auth.invalid_credentials') return BAD_CREDENTIALS;
+  if (api.code === 'auth.two_factor_invalid') return CODE_INVALID;
+  if (api.code === 'auth.challenge_expired') return CHALLENGE_EXPIRED;
   if (api.code === 'auth.email_taken') return EMAIL_TAKEN;
   if (api.status === 429) return TOO_MANY;
 

@@ -1,0 +1,60 @@
+@use '../../../../ui/styles/mixins' as m;
+@use '../../../../ui/field-row/src/control' as c;
+
+.phone-verify {
+  @include m.flex-column(3);
+
+  &__text,
+  &__resend {
+    margin: 0;
+    color: var(--cl-text);
+    font-size: var(--cl-font-body);
+
+    &--success {
+      color: var(--cl-success-text);
+    }
+  }
+
+  &__resend {
+    color: var(--cl-text-subtle);
+    font-size: var(--cl-font-small);
+  }
+
+  &__label {
+    font-size: var(--cl-font-body);
+    font-weight: var(--cl-weight-semibold);
+  }
+
+  &__code {
+    @include c.control-box(var(--cl-control-h-lg));
+    letter-spacing: var(--cl-space-2);
+    text-align: center;
+    font-size: var(--cl-font-h2);
+    font-variant-numeric: tabular-nums;
+  }
+
+  &__error {
+    margin: 0;
+    color: var(--cl-danger-text);
+    font-size: var(--cl-font-small);
+  }
+
+  &__link {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--cl-control-h-md);
+    min-width: 0;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--cl-brand);
+    font: inherit;
+    font-weight: var(--cl-weight-semibold);
+    text-decoration: underline;
+    cursor: pointer;
+
+    &:focus-visible {
+      @include c.focus-ring;
+    }
+  }
+}

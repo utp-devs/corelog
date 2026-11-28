@@ -1,3 +1,4 @@
+import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, Router, convertToParamMap, provideRouter } from '@angular/router';
 import { ApiError, AuthStore, HOME_URL, LOCATION_ASSIGN, LoginPayload } from '@corelog/core';
@@ -34,7 +35,7 @@ function setup(query: Record<string, string> = {}): Setup {
         provide: ActivatedRoute,
         useValue: { snapshot: { queryParamMap: convertToParamMap(query) } },
       },
-      { provide: AuthStore, useValue: { login } },
+      { provide: AuthStore, useValue: { login, twoFactorChallenge: signal<string | null>(null) } },
       { provide: LOCATION_ASSIGN, useValue: assign },
       { provide: HOME_URL, useValue: '/workspace/' },
     ],

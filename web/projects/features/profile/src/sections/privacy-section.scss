@@ -1,0 +1,77 @@
+@use '../../../../ui/styles/mixins' as m;
+@use '../../../../ui/field-row/src/control' as c;
+
+:host {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.privacy-section {
+  // Documents beside the communications card; one column on narrow screens.
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(var(--cl-dialog-w-sm), 100%), 1fr));
+  flex: 1 1 auto;
+  gap: var(--cl-space-6);
+  align-items: stretch;
+
+  &__list {
+    @include m.flex-column(0);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  &__row {
+    @include m.flex-row(4, center, space-between);
+    flex-wrap: wrap;
+    min-width: 0;
+    padding-block: var(--cl-space-3);
+
+    & + & {
+      border-top: 1px solid var(--cl-divider);
+    }
+  }
+
+  &__text {
+    @include m.flex-column(1);
+    flex: 1 1 16rem;
+    min-width: 0;
+  }
+
+  &__title {
+    font-weight: var(--cl-weight-semibold);
+  }
+
+  &__hint {
+    margin: 0;
+    color: var(--cl-text-subtle);
+    font-size: var(--cl-font-small);
+  }
+
+  &__link {
+    display: inline-flex;
+    align-items: center;
+    align-self: flex-start;
+    min-height: var(--cl-control-h-md);
+    min-width: 0;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--cl-brand);
+    font: inherit;
+    text-decoration: underline;
+    cursor: pointer;
+
+    &:focus-visible {
+      @include c.focus-ring;
+    }
+  }
+
+  &__error {
+    margin: var(--cl-space-3) 0 0;
+    color: var(--cl-danger-text);
+    font-size: var(--cl-font-small);
+  }
+}

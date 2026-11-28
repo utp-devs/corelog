@@ -66,8 +66,10 @@ describe('admin routes', () => {
       'settings',
       'members',
       'catalogs',
+      'custom-fields',
       'statuses',
       'invitations',
+      'legal',
     ]);
   });
 
@@ -89,6 +91,7 @@ describe('admin routes', () => {
         '/organization/settings',
         '/organization/members',
         '/organization/catalogs',
+        '/organization/custom-fields',
         '/organization/statuses',
         '/organization/invitations',
       ]) {

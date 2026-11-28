@@ -12,7 +12,10 @@ export const WORKSPACE_NAV: ShellNavConfig = {
       key: 'dashboards',
       label: 'Paneles',
       path: '/dashboard',
-      extras: [{ key: 'notes', label: 'Mis apuntes', path: '/notes' }],
+      extras: [
+        { key: 'notes', label: 'Mis apuntes', path: '/notes' },
+        { key: 'timesheet', label: 'Mi hoja de horas', path: '/timesheet' },
+      ],
     },
     {
       key: 'teams',
@@ -49,6 +52,13 @@ export const WORKSPACE_NAV: ShellNavConfig = {
         icon: 'invitations',
         permission: 'org.admin',
       },
+      {
+        key: 'org-legal',
+        label: 'Documentos legales',
+        path: '/admin/organization/legal',
+        icon: 'security',
+        permission: 'platform.admin',
+      },
     ],
     profile: [
       { key: 'profile', label: 'General', path: '/profile', icon: 'profile', exact: true },
@@ -60,6 +70,7 @@ export const WORKSPACE_NAV: ShellNavConfig = {
         icon: 'bell',
       },
       { key: 'appearance', label: 'Apariencia', path: '/profile/appearance', icon: 'appearance' },
+      { key: 'privacy', label: 'Privacidad', path: '/profile/privacy', icon: 'security' },
     ],
   },
   sidebarTitles: {

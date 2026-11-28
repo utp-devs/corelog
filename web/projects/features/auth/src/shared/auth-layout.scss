@@ -251,6 +251,33 @@
     color: var(--cl-auth-text-subtle);
   }
 
+  &__legal {
+    @include m.flex-row(1, center, center);
+    flex-wrap: wrap;
+    margin-top: var(--cl-space-2);
+  }
+
+  &__legal-link {
+    min-height: var(--cl-control-h-md);
+    padding: 0 var(--cl-space-2);
+    border: 0;
+    border-radius: var(--cl-radius-sm);
+    background: none;
+    color: var(--cl-auth-text-subtle);
+    font: inherit;
+    font-size: var(--cl-font-small);
+    cursor: pointer;
+
+    &:hover {
+      color: var(--cl-auth-text);
+      text-decoration: underline;
+    }
+
+    &:focus-visible {
+      @include c.focus-ring;
+    }
+  }
+
   &__switch {
     margin: var(--cl-space-6) 0 0;
     text-align: center;
@@ -349,6 +376,11 @@
 
     &__card {
       width: 100%;
+    }
+
+    // Keeps the legal links clear of the floating theme button.
+    &__legal {
+      margin-bottom: var(--cl-space-12);
     }
 
     &__title {

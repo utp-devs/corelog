@@ -1,0 +1,198 @@
+<app-page-container variant="wide" pageName="org-legal" [ready]="!loading()" [fill]="true">
+  <app-page-header
+    banner="settings"
+    title="Documentos legales"
+    subtitle="Publica nuevas versiones de la política de privacidad, el tratamiento de datos y los términos, y revisa quién los aceptó."
+  />
+
+  <app-section
+    title="Documentos publicados"
+    description="Versión vigente de cada documento. Publicar una versión nueva de un documento obligatorio pide a todas las personas que la acepten de nuevo."
+  >
+    <p-button
+      appSectionActions
+      label="Publicar nueva versión"
+      icon="pi pi-upload"
+      (onClick)="openPublisher()"
+    />
+    <app-data-table
+      tableKey="legal-documents"
+      rowKey="slug"
+      [columns]="documentColumns"
+      [data]="rows().slice()"
+      [loading]="loading()"
+      [error]="loadError()"
+      [rowActions]="rowActionsFor"
+      (retry)="load()"
+    />
+  </app-section>
+
+  <app-section
+    title="Auditoría de consentimientos"
+    description="Aceptaciones registradas, de la más reciente a la más antigua. Filtra por el identificador de una persona."
+  >
+    <form
+      class="org-legal-page__filter"
+      aria-label="Filtrar consentimientos"
+      (ngSubmit)="loadConsents()"
+    >
+      <app-field-row
+        class="org-legal-page__filter-field"
+        label="Identificador de usuario"
+        [optional]="true"
+      >
+        <input
+          pInputText
+          appFieldControl
+          type="text"
+          autocomplete="off"
+          spellcheck="false"
+          placeholder="00000000-0000-0000-0000-000000000000"
+          [formControl]="userFilter"
+        />
+      </app-field-row>
+      <div class="org-legal-page__filter-actions">
+        <p-button
+          type="submit"
+          label="Filtrar"
+          severity="secondary"
+          [loading]="consentsLoading()"
+        />
+        <p-button
+          type="button"
+          label="Quitar filtro"
+          severity="secondary"
+          [text]="true"
+          [disabled]="!userFilter.value"
+          (onClick)="clearFilter()"
+        />
+      </div>
+    </form>
+    <app-data-table
+      tableKey="legal-consents"
+      rowKey="id"
+      [columns]="consentColumns"
+      [data]="consentRows().slice()"
+      [loading]="consentsLoading()"
+      [error]="consentsError()"
+      (retry)="loadConsents()"
+    />
+  </app-section>
+</app-page-container>
+
+<app-dialog
+  size="lg"
+  heading="Publicar nueva versión"
+  [subtitle]="'Será la versión ' + nextVersion() + ' del documento.'"
+  [open]="publishing()"
+  (closeRequested)="closePublisher()"
+>
+  <div class="org-legal-page__publisher">
+    @if (formError(); as message) {
+      <p class="org-legal-page__error" role="alert">{{ message }}</p>
+    }
+
+    <app-field-row #slugRow label="Documento" [required]="true">
+      <app-select-field
+        [inputId]="slugRow.controlId"
+        [ariaLabelledBy]="slugRow.labelId"
+        filter="off"
+        [options]="slugOptions"
+        [disabled]="slugLocked()"
+        [ngModel]="slug()"
+        (ngModelChange)="onSlug($event)"
+      />
+    </app-field-row>
+
+    <app-field-row label="Título" [required]="true">
+      <input
+        pInputText
+        appFieldControl
+        type="text"
+        maxlength="200"
+        [value]="title()"
+        (input)="title.set(value($event))"
+      />
+    </app-field-row>
+
+    <app-field-row
+      label="Resumen"
+      [optional]="true"
+      helper="Una o dos frases que describen el documento."
+    >
+      <input
+        pInputText
+        appFieldControl
+        type="text"
+        maxlength="1000"
+        [value]="summary()"
+        (input)="summary.set(value($event))"
+      />
+    </app-field-row>
+
+    <div class="org-legal-page__body">
+      <div class="org-legal-page__body-head">
+        <span class="org-legal-page__label" id="legal-body-label">Texto (Markdown)</span>
+        <p-selectbutton
+          ariaLabelledBy="legal-body-label"
+          optionLabel="label"
+          optionValue="value"
+          [allowEmpty]="false"
+          [options]="viewOptions.slice()"
+          [ngModel]="view()"
+          (ngModelChange)="view.set($event)"
+        />
+      </div>
+      @if (preparing()) {
+        <p class="org-legal-page__hint" role="status">Cargando el texto vigente...</p>
+      } @else if (view() === 'edit') {
+        <textarea
+          class="org-legal-page__textarea"
+          aria-labelledby="legal-body-label"
+          spellcheck="true"
+          rows="14"
+          [value]="body()"
+          (input)="body.set(value($event))"
+        ></textarea>
+      } @else {
+        <div class="org-legal-page__preview" data-testid="legal-preview">
+          @if (body().trim()) {
+            <app-rich-text-view [value]="body()" />
+          } @else {
+            <p class="org-legal-page__hint">Aún no hay texto para mostrar.</p>
+          }
+        </div>
+      }
+    </div>
+
+    <div class="org-legal-page__required">
+      <p-toggleswitch
+        inputId="legal-required"
+        [disabled]="requiredLocked()"
+        [ngModel]="required() && !requiredLocked()"
+        (ngModelChange)="required.set($event)"
+      />
+      <label for="legal-required"
+        >Obligatorio: las personas deben aceptarlo para usar la cuenta</label
+      >
+    </div>
+  </div>
+
+  <p-button dialogFooter label="Cancelar" severity="secondary" (onClick)="closePublisher()" />
+  <p-button
+    dialogFooter
+    label="Publicar"
+    [disabled]="!canPublish() || preparing()"
+    (onClick)="confirming.set(true)"
+  />
+</app-dialog>
+
+<app-confirm-modal
+  title="¿Publicar esta versión?"
+  confirmText="Publicar"
+  [description]="confirmText()"
+  [open]="confirming()"
+  [loading]="busy()"
+  (confirmed)="publish()"
+  (cancelled)="confirming.set(false)"
+/>

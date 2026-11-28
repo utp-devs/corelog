@@ -40,6 +40,8 @@ export class AuthField {
   readonly messages = input<Readonly<Record<string, string>>>({});
   /** True after the owning form was submitted: errors of untouched controls become visible. */
   readonly submitted = input(false);
+  /** Moves the caption past a control that has its own prefix (the country button of the phone input). */
+  readonly inset = input(false);
 
   readonly controlId = `corelog-auth-field-${nextAuthFieldId++}`;
   protected readonly helperId = `${this.controlId}-helper`;

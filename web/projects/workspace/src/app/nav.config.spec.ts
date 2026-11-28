@@ -55,6 +55,7 @@ describe('workspace navigation', () => {
       expect([...permissionsFor(platformAdmin, 'member')]).toEqual([
         'org.admin',
         'project.permissions',
+        'platform.admin',
       ]);
       expect(permissionsFor(member, 'owner').has('org.admin')).toBe(true);
       expect(permissionsFor(member, 'admin').has('org.admin')).toBe(true);
@@ -124,6 +125,7 @@ describe('workspace navigation', () => {
         ['Seguridad', '/profile/security'],
         ['Notificaciones', '/profile/notifications'],
         ['Apariencia', '/profile/appearance'],
+        ['Privacidad', '/profile/privacy'],
       ]);
       expect(items[0].exact).toBe(true);
       expect(sidebarTitleOf({ kind: 'profile' }, WORKSPACE_NAV)).toBe('Mi cuenta');

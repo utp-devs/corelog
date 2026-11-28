@@ -88,10 +88,24 @@
               </a>
             </p>
           }
+          <nav class="auth-layout__legal" aria-label="Documentos legales">
+            @for (link of legalLinks; track link.slug) {
+              <button
+                type="button"
+                class="auth-layout__legal-link"
+                (click)="reading.set(link.slug)"
+              >
+                {{ link.label }}
+              </button>
+            }
+          </nav>
         </div>
       </section>
     </div>
   </div>
 </main>
 
-<app-theme-toggle-fab />
+<app-legal-document-dialog [slug]="reading()" (closed)="reading.set(null)" />
+@if (!reading()) {
+  <app-theme-toggle-fab />
+}

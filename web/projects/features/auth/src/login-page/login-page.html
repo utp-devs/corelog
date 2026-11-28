@@ -1,71 +1,136 @@
 <app-auth-layout
   variant="login"
-  title="Iniciar sesión"
-  subtitle="Accede con tu cuenta para continuar con tu trabajo."
+  [title]="challenge() ? 'Verificación en dos pasos' : 'Iniciar sesión'"
+  [subtitle]="
+    challenge()
+      ? 'Confirma que eres tú con el código de tu aplicación de autenticación.'
+      : 'Accede con tu cuenta para continuar con tu trabajo.'
+  "
   switchText="¿No tienes cuenta?"
   switchLabel="Crear una"
   switchPath="/register"
   [switchQuery]="registerQuery"
 >
-  <form
-    class="login-page__form"
-    novalidate
-    [formGroup]="form"
-    [attr.aria-busy]="submitting()"
-    (ngSubmit)="onSubmit()"
-  >
-    @if (formError(); as message) {
-      <app-auth-alert tone="error">{{ message }}</app-auth-alert>
-    }
-
-    <app-auth-field
-      #emailRow
-      label="Correo electrónico"
-      icon="pi-envelope"
-      [required]="true"
-      [control]="form.controls.email"
-      [messages]="emailMessages"
-      [submitted]="submitted()"
-      [error]="serverError(form.controls.email)"
+  @if (challenge()) {
+    <form
+      class="login-page__form"
+      novalidate
+      data-testid="two-factor-step"
+      [formGroup]="codeForm"
+      [attr.aria-busy]="submitting()"
+      (ngSubmit)="onVerify()"
     >
-      <input
-        appAuthControl
-        class="login-page__input"
-        formControlName="email"
-        type="email"
-        autocomplete="email"
-        inputmode="email"
-        autocapitalize="none"
-        spellcheck="false"
-      />
-    </app-auth-field>
+      @if (formError(); as message) {
+        <app-auth-alert tone="error">{{ message }}</app-auth-alert>
+      }
 
-    <app-auth-field
-      #passwordRow
-      label="Contraseña"
-      [required]="true"
-      [control]="form.controls.password"
-      [messages]="passwordMessages"
-      [submitted]="submitted()"
-      [error]="serverError(form.controls.password)"
-    >
-      <app-password-input
-        size="lg"
-        formControlName="password"
-        autocomplete="current-password"
-        [inputId]="passwordRow.controlId"
+      <app-auth-field
+        [label]="useRecovery() ? 'Código de recuperación' : 'Código de verificación'"
+        icon="pi-shield"
         [required]="true"
-        [invalid]="passwordRow.invalid()"
-        [describedBy]="passwordRow.describedBy()"
-      />
-    </app-auth-field>
+        [control]="codeForm.controls.code"
+        [messages]="codeMessages"
+        [submitted]="submitted()"
+        [helper]="
+          useRecovery()
+            ? 'Usa uno de los códigos de recuperación que guardaste. Cada uno sirve una sola vez.'
+            : 'Son 6 dígitos y cambian cada 30 segundos.'
+        "
+      >
+        <input
+          appAuthControl
+          class="login-page__input"
+          formControlName="code"
+          type="text"
+          data-testid="two-factor-code"
+          [attr.inputmode]="useRecovery() ? 'text' : 'numeric'"
+          autocomplete="one-time-code"
+          autocapitalize="none"
+          spellcheck="false"
+          [attr.maxlength]="useRecovery() ? 32 : 8"
+        />
+      </app-auth-field>
 
-    <p-button
-      class="login-page__submit"
-      type="submit"
-      label="Iniciar sesión"
-      [fluid]="true"
-      [loading]="submitting()"
-    />
-  </form>
+      <p-button
+        class="login-page__submit"
+        type="submit"
+        label="Verificar"
+        [fluid]="true"
+        [loading]="submitting()"
+      />
+      <button
+        type="button"
+        class="login-page__link"
+        data-testid="two-factor-toggle"
+        (click)="toggleRecovery()"
+      >
+        {{ useRecovery() ? 'Usar el código de mi aplicación' : 'Usar un código de recuperación' }}
+      </button>
+      <button type="button" class="login-page__link" (click)="backToCredentials()">
+        Volver al inicio de sesión
+      </button>
+    </form>
+  } @else {
+    <form
+      class="login-page__form"
+      novalidate
+      [formGroup]="form"
+      [attr.aria-busy]="submitting()"
+      (ngSubmit)="onSubmit()"
+    >
+      @if (formError(); as message) {
+        <app-auth-alert tone="error">{{ message }}</app-auth-alert>
+      }
+
+      <app-auth-field
+        #emailRow
+        label="Correo electrónico"
+        icon="pi-envelope"
+        [required]="true"
+        [control]="form.controls.email"
+        [messages]="emailMessages"
+        [submitted]="submitted()"
+        [error]="serverError(form.controls.email)"
+      >
+        <input
+          appAuthControl
+          class="login-page__input"
+          formControlName="email"
+          type="email"
+          autocomplete="email"
+          inputmode="email"
+          autocapitalize="none"
+          spellcheck="false"
+        />
+      </app-auth-field>
+
+      <app-auth-field
+        #passwordRow
+        label="Contraseña"
+        [required]="true"
+        [control]="form.controls.password"
+        [messages]="passwordMessages"
+        [submitted]="submitted()"
+        [error]="serverError(form.controls.password)"
+      >
+        <app-password-input
+          size="lg"
+          formControlName="password"
+          autocomplete="current-password"
+          [inputId]="passwordRow.controlId"
+          [required]="true"
+          [invalid]="passwordRow.invalid()"
+          [describedBy]="passwordRow.describedBy()"
+        />
+      </app-auth-field>
+
+      <p-button
+        class="login-page__submit"
+        type="submit"
+        label="Iniciar sesión"
+        [fluid]="true"
+        [loading]="submitting()"
+      />
+    </form>
+  }
 </app-auth-layout>

@@ -7,6 +7,7 @@ import {
   inject,
   input,
   model,
+  output,
   signal,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -17,30 +18,55 @@ import {
   ReactiveFormsModule,
   ValidationErrors,
 } from '@angular/forms';
-import { ProfileUpdate, profileFieldErrors, User } from '@corelog/core';
+import {
+  FIRST_NAME_MAX,
+  LAST_NAME_MAX,
+  ProfileUpdate,
+  identityFieldErrors,
+  normalizeName,
+  personNameValidator,
+  profileFieldErrors,
+  samePhone,
+  type PhoneValue,
+  User,
+} from '@corelog/core';
+import { PhoneInput } from '@corelog/ui/phone-input';
+import { ToneTag } from '@corelog/ui/tone-tag';
 import { FieldControl, FieldRow } from '@corelog/ui/field-row';
 import { SelectField, SelectFieldOption } from '@corelog/ui/select-field';
 import { Button } from 'primeng/button';
+
+import { PhoneVerifyDialog } from './phone-verify-dialog';
 import { InputText } from 'primeng/inputtext';
 
 const MAX_TEXT_LENGTH = 120;
-const NAME_MIN_LENGTH = 2;
 
-type FieldName = 'name' | 'displayName' | 'jobTitle' | 'department' | 'timezone';
+type FieldName =
+  'firstName' | 'lastName' | 'phone' | 'displayName' | 'jobTitle' | 'department' | 'timezone';
 
 interface ProfileValues {
-  readonly name: string;
+  readonly firstName: string;
+  readonly lastName: string;
+  readonly phone: PhoneValue | null;
   readonly displayName: string;
   readonly jobTitle: string;
   readonly department: string;
   readonly timezone: string;
 }
 
-/** Client-side messages; the server messages arrive as `server` errors after a failed save. */
-function nameLength(control: AbstractControl<string>): ValidationErrors | null {
-  return control.value.trim().length >= NAME_MIN_LENGTH
-    ? null
-    : { invalid: 'El nombre debe tener al menos 2 caracteres' };
+const NAME_MESSAGES = {
+  required: 'Escribe tu nombre',
+  maxlength: 'Es demasiado largo',
+  pattern: 'Usa solo letras, espacios, guiones y apóstrofes',
+} as const;
+
+/** Given names and surnames as the form edits them; an older account only has the full name. */
+function namesOf(user: User): { firstName: string; lastName: string } {
+  if (user.firstName || user.lastName) {
+    return { firstName: user.firstName ?? '', lastName: user.lastName ?? '' };
+  }
+  const [first = '', ...rest] = user.name.trim().split(/s+/);
+  return { firstName: first, lastName: rest.join(' ') };
 }
 
 function timezoneRequired(control: AbstractControl<string>): ValidationErrors | null {
@@ -49,7 +75,8 @@ function timezoneRequired(control: AbstractControl<string>): ValidationErrors | 
 
 function valuesOf(user: User): ProfileValues {
   return {
-    name: user.name,
+    ...namesOf(user),
+    phone: user.phone ? { country: user.phone.country, number: user.phone.number } : null,
     displayName: user.displayName,
     jobTitle: user.jobTitle,
     department: user.department,
@@ -60,7 +87,17 @@ function valuesOf(user: User): ProfileValues {
 /** Personal data form. Saves through the `save` callback and maps server field errors to the fields. */
 @Component({
   selector: 'app-profile-form',
-  imports: [Button, FieldControl, FieldRow, InputText, ReactiveFormsModule, SelectField],
+  imports: [
+    Button,
+    FieldControl,
+    FieldRow,
+    InputText,
+    PhoneInput,
+    PhoneVerifyDialog,
+    ReactiveFormsModule,
+    SelectField,
+    ToneTag,
+  ],
   templateUrl: './profile-form.html',
   styleUrl: './profile-form.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -75,9 +112,23 @@ export class ProfileForm {
   readonly save = input.required<(payload: ProfileUpdate) => Promise<void>>();
   /** True while the form has edits that are not saved. */
   readonly dirty = model(false);
+  /** Emits the account after the phone was verified. */
+  readonly verified = output<User>();
+
+  protected readonly verifyOpen = signal(false);
+  /** The saved phone is shown with its verification state only while the field still holds it. */
+  protected readonly savedPhone = computed(() => this.user().phone ?? null);
 
   protected readonly form = new FormGroup({
-    name: new FormControl('', { nonNullable: true, validators: [nameLength] }),
+    firstName: new FormControl('', {
+      nonNullable: true,
+      validators: [personNameValidator(FIRST_NAME_MAX)],
+    }),
+    lastName: new FormControl('', {
+      nonNullable: true,
+      validators: [personNameValidator(LAST_NAME_MAX)],
+    }),
+    phone: new FormControl<PhoneValue | null>(null),
     displayName: new FormControl('', { nonNullable: true }),
     jobTitle: new FormControl('', { nonNullable: true }),
     department: new FormControl('', { nonNullable: true }),
@@ -114,7 +165,16 @@ export class ProfileForm {
     if (typeof errors['server'] === 'string') return errors['server'];
     if (!this.submitted()) return undefined;
     if (typeof errors['invalid'] === 'string') return errors['invalid'];
-    if (errors['maxlength']) return `Máximo ${MAX_TEXT_LENGTH} caracteres`;
+    if (errors['maxlength']) {
+      return name === 'firstName' || name === 'lastName'
+        ? NAME_MESSAGES.maxlength
+        : `Máximo ${MAX_TEXT_LENGTH} caracteres`;
+    }
+    if (name === 'firstName' || name === 'lastName') {
+      if (errors['required']) return NAME_MESSAGES.required;
+      if (errors['pattern']) return NAME_MESSAGES.pattern;
+    }
+    if (name === 'phone' && errors['phone']) return 'El teléfono no es válido para el país elegido';
     return undefined;
   }
 
@@ -123,11 +183,21 @@ export class ProfileForm {
     this.form.updateValueAndValidity();
     if (this.form.invalid) return;
 
-    const values = this.form.getRawValue();
+    const { phone, firstName, lastName, ...rest } = this.form.getRawValue();
+    const payload: ProfileUpdate = {
+      ...rest,
+      firstName: normalizeName(firstName),
+      lastName: normalizeName(lastName),
+      // The phone is sent only when it changed: sending it again would drop its verification.
+      ...(samePhone(phone, this.user().phone) ? {} : { phone }),
+    };
     try {
-      await this.save()({ ...values, name: values.name.trim() });
+      await this.save()(payload);
     } catch (error) {
-      for (const [field, message] of Object.entries(profileFieldErrors(error))) {
+      for (const [field, message] of Object.entries({
+        ...profileFieldErrors(error),
+        ...identityFieldErrors(error),
+      })) {
         this.form.get(field)?.setErrors({ server: message });
       }
       this.changeDetector.markForCheck();

@@ -5,8 +5,59 @@
   novalidate
   aria-label="Datos personales"
 >
-  <app-field-row label="Nombre" [required]="true" [error]="errorOf('name')">
-    <input pInputText appFieldControl type="text" formControlName="name" maxlength="120" />
+  <app-field-row label="Nombres" [required]="true" [error]="errorOf('firstName')">
+    <input
+      pInputText
+      appFieldControl
+      type="text"
+      formControlName="firstName"
+      maxlength="80"
+      autocomplete="given-name"
+    />
+  </app-field-row>
+
+  <app-field-row label="Apellidos" [required]="true" [error]="errorOf('lastName')">
+    <input
+      pInputText
+      appFieldControl
+      type="text"
+      formControlName="lastName"
+      maxlength="120"
+      autocomplete="family-name"
+    />
+  </app-field-row>
+
+  <app-field-row
+    #phoneRow
+    class="profile-form__phone"
+    label="Teléfono"
+    [optional]="true"
+    [error]="errorOf('phone')"
+  >
+    <app-phone-input
+      [inputId]="phoneRow.controlId"
+      [invalid]="!!errorOf('phone')"
+      [describedBy]="phoneRow.describedBy()"
+      formControlName="phone"
+    />
+    @if (savedPhone(); as saved) {
+      @if (!form.controls.phone.dirty) {
+        <div class="profile-form__phone-state">
+          @if (saved.verified) {
+            <app-tone-tag label="Verificado" tone="green" />
+          } @else {
+            <app-tone-tag label="Sin verificar" tone="neutral" />
+            <p-button
+              label="Verificar teléfono"
+              severity="secondary"
+              size="small"
+              [outlined]="true"
+              (onClick)="verifyOpen.set(true)"
+            />
+          }
+        </div>
+      }
+    }
   </app-field-row>
 
   <app-field-row
@@ -55,3 +106,9 @@
     />
   </div>
 </form>
+
+<app-phone-verify-dialog
+  [open]="verifyOpen()"
+  (closed)="verifyOpen.set(false)"
+  (verified)="verified.emit($event)"
+/>

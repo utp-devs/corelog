@@ -11,12 +11,21 @@ import {
 import { RouterLink } from '@angular/router';
 import { ThemeService } from '@corelog/core';
 import { HeroCarousel } from '@corelog/ui/hero-carousel';
+import { LegalDocumentDialog } from '@corelog/ui/legal-document-dialog';
 import { ThemeToggleFab } from '@corelog/ui/theme-toggle-fab';
 
 import { AUTH_LOGO } from './auth-brand';
 import { AUTH_HERO, type AuthHeroVariant } from './auth-hero';
 
 let nextLayoutId = 0;
+
+/** Footer links; each opens the current version of the document in a modal without accepting anything. */
+const LEGAL_LINKS: readonly { readonly slug: string; readonly label: string }[] = [
+  { slug: 'privacy_policy', label: 'Privacidad' },
+  { slug: 'data_processing', label: 'Datos personales' },
+  { slug: 'terms_of_use', label: 'Términos' },
+  { slug: 'cookies', label: 'Cookies' },
+];
 
 /** Id of the main landmark; the skip link points here. */
 export const AUTH_MAIN_ID = 'auth-main';
@@ -36,7 +45,7 @@ export const AUTH_MOBILE_BACKGROUND = '/images/auth/auth-mobile-bg.webp';
  */
 @Component({
   selector: 'app-auth-layout',
-  imports: [RouterLink, HeroCarousel, ThemeToggleFab],
+  imports: [RouterLink, HeroCarousel, LegalDocumentDialog, ThemeToggleFab],
   host: { '[attr.data-auth-theme]': 'authTheme()' },
   templateUrl: './auth-layout.html',
   styleUrl: './auth-layout.scss',
@@ -64,6 +73,9 @@ export class AuthLayout {
     this.theme.hasPreference() && this.theme.resolved() === 'light' ? 'light' : 'dark',
   );
   protected readonly phone = signal(false);
+  protected readonly legalLinks = LEGAL_LINKS;
+  /** Slug of the legal document open in the modal; null while closed. */
+  protected readonly reading = signal<string | null>(null);
   /** Slide shown by the carousel; the blurred backdrop shows the same photograph. */
   protected readonly activeSlide = signal(0);
 

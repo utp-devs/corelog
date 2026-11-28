@@ -1,0 +1,302 @@
+<app-page-container variant="wide" pageName="org-custom-fields" [ready]="!loading()">
+  <app-page-header
+    banner="settings"
+    title="Campos personalizados"
+    subtitle="Datos adicionales que tus incidencias pueden pedir según el proyecto y el tipo."
+  >
+    @if (canManage() && !loadError()) {
+      <div appPageHeaderActions>
+        <p-button
+          icon="pi pi-plus"
+          label="Crear campo"
+          data-testid="custom-field-create"
+          (onClick)="openCreate()"
+        />
+      </div>
+    }
+  </app-page-header>
+
+  @if (!canManage()) {
+    <p-message severity="info" [closable]="false">
+      <strong>Solo lectura.</strong> Solo los administradores pueden cambiar los campos.
+    </p-message>
+  }
+
+  @if (loadError()) {
+    <app-error-state [canRetry]="true" (retry)="reload()" />
+  } @else if (loading()) {
+    <app-loading-skeleton variant="card" />
+  } @else if (fields().length === 0) {
+    <app-empty-state
+      title="Aún no hay campos personalizados"
+      description="Crea un campo y define en qué proyectos y tipos de incidencia se usa."
+    />
+  } @else {
+    <app-section title="Campos">
+      <ul class="org-custom-fields__list">
+        @for (field of fields(); track field.id) {
+          <li class="org-custom-fields__item" data-testid="custom-field-item">
+            <div class="org-custom-fields__main">
+              <span class="org-custom-fields__name">{{ field.name }}</span>
+              <span class="org-custom-fields__type">{{ typeLabels[field.type] }}</span>
+              @if (field.description) {
+                <p class="org-custom-fields__muted">{{ field.description }}</p>
+              }
+              <p class="org-custom-fields__muted">{{ summaryOf(field) }}</p>
+            </div>
+            @if (canManage()) {
+              <div class="org-custom-fields__actions">
+                <p-button
+                  label="Contextos"
+                  severity="secondary"
+                  [outlined]="true"
+                  class="touch-target"
+                  (onClick)="openContexts(field)"
+                />
+                <p-button
+                  icon="pi pi-pencil"
+                  severity="secondary"
+                  [text]="true"
+                  class="touch-target"
+                  [ariaLabel]="'Editar ' + field.name"
+                  (onClick)="openEdit(field)"
+                />
+                <p-button
+                  icon="pi pi-trash"
+                  severity="danger"
+                  [text]="true"
+                  class="touch-target"
+                  [ariaLabel]="'Eliminar ' + field.name"
+                  (onClick)="deleting.set(field)"
+                />
+              </div>
+            }
+          </li>
+        }
+      </ul>
+    </app-section>
+  }
+</app-page-container>
+
+<app-dialog
+  size="md"
+  [heading]="editing() ? 'Editar campo' : 'Crear campo'"
+  [open]="formOpen()"
+  (closeRequested)="closeForm()"
+>
+  <form class="org-custom-fields__form" (submit)="$event.preventDefault(); submit()" novalidate>
+    @if (formError(); as message) {
+      <p-message severity="error" [closable]="false" role="alert">{{ message }}</p-message>
+    }
+    <app-field-row #nameRow label="Nombre" [required]="true">
+      <input
+        data-autofocus
+        class="org-custom-fields__input"
+        type="text"
+        name="name"
+        maxlength="60"
+        [id]="nameRow.controlId"
+        [ngModel]="name()"
+        (ngModelChange)="name.set($event)"
+      />
+    </app-field-row>
+    <app-field-row #descRow label="Descripción" [optional]="true">
+      <input
+        class="org-custom-fields__input"
+        type="text"
+        name="description"
+        maxlength="500"
+        [id]="descRow.controlId"
+        [ngModel]="description()"
+        (ngModelChange)="description.set($event)"
+      />
+    </app-field-row>
+    <app-field-row #typeRow label="Tipo de campo" [required]="true">
+      <app-select-field
+        [inputId]="typeRow.controlId"
+        ariaLabel="Tipo de campo"
+        [options]="typeOptions"
+        [disabled]="editing() !== null"
+        disabledReason="El tipo no se puede cambiar una vez creado el campo."
+        [ngModel]="type()"
+        [ngModelOptions]="{ standalone: true }"
+        (ngModelChange)="type.set($event)"
+      />
+    </app-field-row>
+
+    @if (hasOptions()) {
+      <fieldset class="org-custom-fields__options">
+        <legend class="org-custom-fields__legend">Opciones</legend>
+        @for (row of options(); track $index; let i = $index) {
+          <div class="org-custom-fields__option">
+            <input
+              class="org-custom-fields__input"
+              type="text"
+              maxlength="60"
+              [attr.aria-label]="'Opción ' + (i + 1)"
+              [name]="'option-' + i"
+              [ngModel]="row.label"
+              (ngModelChange)="setOptionLabel(i, $event)"
+            />
+            @if (row.id) {
+              <p-button
+                [label]="row.archived ? 'Restaurar' : 'Archivar'"
+                severity="secondary"
+                [text]="true"
+                class="touch-target"
+                (onClick)="toggleArchived(i)"
+              />
+            } @else {
+              <p-button
+                icon="pi pi-times"
+                severity="secondary"
+                [text]="true"
+                class="touch-target"
+                [ariaLabel]="'Quitar la opción ' + (i + 1)"
+                (onClick)="removeOption(i)"
+              />
+            }
+          </div>
+        }
+        <p-button
+          label="Añadir opción"
+          icon="pi pi-plus"
+          severity="secondary"
+          [outlined]="true"
+          class="touch-target"
+          data-testid="custom-field-add-option"
+          (onClick)="addOption()"
+        />
+      </fieldset>
+    }
+
+    @if (type() === 'number') {
+      <div class="org-custom-fields__limits">
+        <app-field-row #minRow label="Mínimo" [optional]="true">
+          <input
+            class="org-custom-fields__input"
+            type="number"
+            name="min"
+            [id]="minRow.controlId"
+            [ngModel]="min()"
+            (ngModelChange)="min.set($event)"
+          />
+        </app-field-row>
+        <app-field-row #maxRow label="Máximo" [optional]="true">
+          <input
+            class="org-custom-fields__input"
+            type="number"
+            name="max"
+            [id]="maxRow.controlId"
+            [ngModel]="max()"
+            (ngModelChange)="max.set($event)"
+          />
+        </app-field-row>
+      </div>
+    }
+  </form>
+  <p-button
+    dialogFooter
+    label="Cancelar"
+    severity="secondary"
+    [text]="true"
+    class="touch-target"
+    [disabled]="saving()"
+    (onClick)="closeForm()"
+  />
+  <p-button
+    dialogFooter
+    [label]="editing() ? 'Guardar' : 'Crear'"
+    class="touch-target"
+    data-testid="custom-field-submit"
+    [loading]="saving()"
+    (onClick)="submit()"
+  />
+</app-dialog>
+
+<app-dialog
+  size="lg"
+  [heading]="'Contextos de ' + (contextField()?.name ?? '')"
+  subtitle="Dónde se usa el campo y si es obligatorio."
+  [open]="contextField() !== null"
+  (closeRequested)="closeContexts()"
+>
+  <div class="org-custom-fields__form">
+    @if (contextError(); as message) {
+      <p-message severity="error" [closable]="false" role="alert">{{ message }}</p-message>
+    }
+    @for (row of contexts(); track $index; let i = $index) {
+      <div class="org-custom-fields__context" data-testid="custom-field-context">
+        <app-select-field
+          [ariaLabel]="'Proyecto del contexto ' + (i + 1)"
+          [options]="projectOptions()"
+          [ngModel]="row.projectId"
+          [ngModelOptions]="{ standalone: true }"
+          (ngModelChange)="patchContext(i, { projectId: $event ?? '' })"
+        />
+        <app-select-field
+          [ariaLabel]="'Tipo del contexto ' + (i + 1)"
+          [options]="issueTypeOptions()"
+          [ngModel]="row.issueTypeId"
+          [ngModelOptions]="{ standalone: true }"
+          (ngModelChange)="patchContext(i, { issueTypeId: $event ?? '' })"
+        />
+        <label class="org-custom-fields__check">
+          <input
+            type="checkbox"
+            [checked]="row.required"
+            (change)="patchContext(i, { required: $any($event.target).checked })"
+          />
+          <span>Obligatorio</span>
+        </label>
+        <p-button
+          icon="pi pi-times"
+          severity="secondary"
+          [text]="true"
+          class="touch-target"
+          [ariaLabel]="'Quitar el contexto ' + (i + 1)"
+          (onClick)="removeContext(i)"
+        />
+      </div>
+    }
+    <p-button
+      label="Añadir contexto"
+      icon="pi pi-plus"
+      severity="secondary"
+      [outlined]="true"
+      class="touch-target"
+      data-testid="custom-field-add-context"
+      (onClick)="addContext()"
+    />
+  </div>
+  <p-button
+    dialogFooter
+    label="Cancelar"
+    severity="secondary"
+    [text]="true"
+    class="touch-target"
+    [disabled]="saving()"
+    (onClick)="closeContexts()"
+  />
+  <p-button
+    dialogFooter
+    label="Guardar"
+    class="touch-target"
+    data-testid="custom-field-contexts-save"
+    [loading]="saving()"
+    (onClick)="saveContexts()"
+  />
+</app-dialog>
+
+<app-confirm-modal
+  title="Eliminar el campo"
+  [description]="
+    'Se borrará «' + (deleting()?.name ?? '') + '» y sus valores en todas las incidencias.'
+  "
+  confirmText="Eliminar"
+  [danger]="true"
+  [open]="deleting() !== null"
+  [loading]="saving()"
+  (confirmed)="confirmDelete()"
+  (cancelled)="deleting.set(null)"
+/>

@@ -1,0 +1,76 @@
+@use '../../../../ui/styles/mixins' as m;
+@use '../../../../ui/field-row/src/control' as c;
+
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.org-legal-page {
+  &__filter {
+    @include m.flex-row(3, flex-end);
+    flex-wrap: wrap;
+    margin-block-end: var(--cl-space-4);
+  }
+
+  &__filter-field {
+    flex: 1 1 18rem;
+    max-width: var(--cl-dialog-w-md);
+  }
+
+  &__filter-actions {
+    @include m.flex-row(2);
+  }
+
+  &__publisher {
+    @include m.flex-column(4);
+    min-width: 0;
+  }
+
+  &__error {
+    margin: 0;
+    color: var(--cl-danger-text);
+    font-size: var(--cl-font-small);
+  }
+
+  &__body {
+    @include m.flex-column(2);
+  }
+
+  &__body-head {
+    @include m.flex-row(3, center, space-between);
+    flex-wrap: wrap;
+  }
+
+  &__label {
+    font-weight: var(--cl-weight-semibold);
+  }
+
+  &__textarea {
+    @include c.control-box;
+    min-height: calc(var(--cl-control-h-lg) * 6);
+    padding-block: var(--cl-space-3);
+    font-family: var(--cl-font-mono, monospace);
+    font-size: var(--cl-font-small);
+    resize: vertical;
+  }
+
+  &__preview {
+    min-height: calc(var(--cl-control-h-lg) * 6);
+    max-height: calc(var(--cl-control-h-lg) * 10);
+    padding: var(--cl-space-3);
+    overflow-y: auto;
+    border: 1px solid var(--cl-border);
+    border-radius: var(--cl-radius-md);
+  }
+
+  &__hint {
+    margin: 0;
+    color: var(--cl-text-subtle);
+    font-size: var(--cl-font-small);
+  }
+
+  &__required {
+    @include m.flex-row(3);
+  }
+}

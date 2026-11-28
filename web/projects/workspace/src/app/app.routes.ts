@@ -2,13 +2,14 @@ import { Routes } from '@angular/router';
 
 import { authGuard, externalPath, requireOrgGuard, sameUrl } from '@corelog/core';
 import { DASHBOARD_ROUTES } from '@corelog/features/dashboard';
+import { FILTERS_ROUTES } from '@corelog/features/filters';
 import { NOTES_ROUTES } from '@corelog/features/notes';
 import { PEOPLE_ROUTES } from '@corelog/features/people';
 import { PROFILE_ROUTES } from '@corelog/features/profile';
 import { PROJECT_PLANNING_ROUTES } from '@corelog/features/project-planning';
 import { PROJECTS_ROUTES, PROJECT_DETAIL_CHILDREN } from '@corelog/features/projects';
 import { TEAMS_ROUTES } from '@corelog/features/teams';
-import { ISSUE_BROWSE_ROUTES, ISSUES_ROUTES } from '@corelog/features/issues';
+import { ISSUE_BROWSE_ROUTES, ISSUES_ROUTES, TIMESHEET_ROUTES } from '@corelog/features/issues';
 
 const [projectList, projectNew, projectDetail] = PROJECTS_ROUTES;
 
@@ -46,6 +47,8 @@ export const routes: Routes = [
       { path: '', pathMatch: 'full', redirectTo: 'issues' },
       { path: 'issues', children: ISSUES_ROUTES },
       { path: 'browse', children: ISSUE_BROWSE_ROUTES },
+      { path: 'timesheet', children: TIMESHEET_ROUTES },
+      { path: 'filters', children: FILTERS_ROUTES },
       { path: 'profile', children: PROFILE_ROUTES },
       { path: 'people', children: PEOPLE_ROUTES },
       { path: 'projects', children: PROJECT_ROUTES },

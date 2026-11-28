@@ -1,0 +1,81 @@
+<div class="privacy-section">
+  <app-section
+    title="Documentos legales"
+    [fill]="true"
+    description="Las versiones que aceptaste. Los documentos obligatorios no se pueden revocar mientras uses la cuenta."
+  >
+    @if (!ready()) {
+      <p class="privacy-section__hint" role="status">Cargando tus consentimientos...</p>
+    } @else {
+      <ul class="privacy-section__list" data-testid="consent-documents">
+        @for (row of rows(); track row.document.slug) {
+          <li class="privacy-section__row">
+            <div class="privacy-section__text">
+              <span class="privacy-section__title">{{ row.document.title }}</span>
+              <p class="privacy-section__hint">
+                @if (row.accepted; as accepted) {
+                  Aceptaste la versión {{ accepted.version }} el
+                  {{ accepted.acceptedAt | date: 'dd/MM/yyyy' }}.
+                  @if (outdated(row)) {
+                    Hay una versión más reciente ({{ row.document.version }}).
+                  }
+                } @else if (row.document.required) {
+                  Pendiente de aceptar.
+                } @else {
+                  Documento informativo, no requiere aceptación.
+                }
+              </p>
+            </div>
+            @if (row.document.required) {
+              <app-tone-tag label="Obligatorio" tone="blue" />
+            }
+            <p-button
+              label="Leer"
+              severity="secondary"
+              [outlined]="true"
+              [ariaLabel]="'Leer ' + row.document.title"
+              (onClick)="reading.set(row.document.slug)"
+            />
+          </li>
+        }
+      </ul>
+    }
+  </app-section>
+
+  @if (communications(); as document) {
+    <app-section
+      title="Comunicaciones"
+      [fill]="true"
+      description="Tú decides si quieres recibir novedades del producto. Puedes cambiarlo cuando quieras."
+    >
+      <div class="privacy-section__row">
+        <div class="privacy-section__text">
+          <span class="privacy-section__title" id="privacy-communications-label">
+            Novedades y comunicaciones del producto
+          </span>
+          <p class="privacy-section__hint">
+            {{ document.summary }}
+          </p>
+          <button type="button" class="privacy-section__link" (click)="reading.set(document.slug)">
+            Leer la autorización
+          </button>
+        </div>
+        <p-toggleswitch
+          ariaLabel="Recibir comunicaciones y novedades del producto"
+          [ngModel]="communicationsOn()"
+          [disabled]="loading() || !ready()"
+          (onChange)="toggleCommunications($event.checked)"
+        />
+      </div>
+      @if (failure(); as message) {
+        <p class="privacy-section__error" role="alert">{{ message }}</p>
+      }
+    </app-section>
+  }
+</div>
+
+<app-legal-document-dialog
+  [slug]="reading()"
+  [version]="readingVersion()"
+  (closed)="reading.set(null)"
+/>

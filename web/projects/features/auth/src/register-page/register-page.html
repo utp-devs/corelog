@@ -18,21 +18,61 @@
       <app-auth-alert tone="error">{{ message }}</app-auth-alert>
     }
 
+    <div class="register-page__names">
+      <app-auth-field
+        label="Nombres"
+        icon="pi-user"
+        [required]="true"
+        [control]="form.controls.firstName"
+        [messages]="firstNameMessages"
+        [submitted]="submitted()"
+        [error]="serverError(form.controls.firstName)"
+      >
+        <input
+          appAuthControl
+          class="register-page__input"
+          formControlName="firstName"
+          type="text"
+          autocomplete="given-name"
+        />
+      </app-auth-field>
+
+      <app-auth-field
+        label="Apellidos"
+        [required]="true"
+        [control]="form.controls.lastName"
+        [messages]="lastNameMessages"
+        [submitted]="submitted()"
+        [error]="serverError(form.controls.lastName)"
+      >
+        <input
+          appAuthControl
+          class="register-page__input"
+          formControlName="lastName"
+          type="text"
+          autocomplete="family-name"
+        />
+      </app-auth-field>
+    </div>
+
     <app-auth-field
-      label="Nombre"
-      icon="pi-user"
+      #phoneRow
+      label="Teléfono"
+      [inset]="true"
       [required]="true"
-      [control]="form.controls.name"
-      [messages]="nameMessages"
+      [control]="form.controls.phone"
+      [messages]="phoneMessages"
       [submitted]="submitted()"
-      [error]="serverError(form.controls.name)"
+      [error]="serverError(form.controls.phone)"
     >
-      <input
-        appAuthControl
-        class="register-page__input"
-        formControlName="name"
-        type="text"
-        autocomplete="name"
+      <app-phone-input
+        class="register-page__phone"
+        size="lg"
+        formControlName="phone"
+        [inputId]="phoneRow.controlId"
+        [required]="true"
+        [invalid]="phoneRow.invalid()"
+        [describedBy]="phoneRow.describedBy()"
       />
     </app-auth-field>
 
@@ -79,9 +119,31 @@
       <app-password-strength [password]="password()" />
     </app-auth-field>
 
-    <p class="register-page__terms">
-      Al crear tu cuenta aceptas las condiciones de uso y la política de privacidad de CoreLog.
-    </p>
+    <app-auth-field
+      #confirmationRow
+      label="Confirmar contraseña"
+      [required]="true"
+      [control]="form.controls.passwordConfirmation"
+      [messages]="confirmationMessages"
+      [submitted]="submitted()"
+      [error]="serverError(form.controls.passwordConfirmation)"
+    >
+      <app-password-input
+        size="lg"
+        formControlName="passwordConfirmation"
+        autocomplete="new-password"
+        [inputId]="confirmationRow.controlId"
+        [required]="true"
+        [invalid]="confirmationRow.invalid()"
+        [describedBy]="confirmationRow.describedBy()"
+      />
+    </app-auth-field>
+
+    <app-legal-consent-group
+      formControlName="consents"
+      [showErrors]="submitted()"
+      [serverMissing]="missingConsents()"
+    />
 
     <p-button
       class="register-page__submit"
@@ -89,6 +151,7 @@
       label="Crear cuenta"
       [fluid]="true"
       [loading]="submitting()"
+      [disabled]="form.invalid"
     />
   </form>
 </app-auth-layout>

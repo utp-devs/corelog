@@ -85,6 +85,7 @@ describe('admin navigation', () => {
         ['Configuración', '/organization/settings'],
         ['Miembros', '/organization/members'],
         ['Incidencias', '/organization/catalogs'],
+        ['Campos', '/organization/custom-fields'],
         ['Estados', '/organization/statuses'],
         ['Invitaciones', '/organization/invitations'],
       ]);
@@ -109,6 +110,7 @@ describe('admin navigation', () => {
         '/workspace/profile/security',
         '/workspace/profile/notifications',
         '/workspace/profile/appearance',
+        '/workspace/profile/privacy',
       ]);
       expect(items.every((item) => item.external)).toBe(true);
     });

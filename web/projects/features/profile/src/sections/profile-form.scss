@@ -9,6 +9,12 @@
   @include m.grid-auto(16rem, 4);
   min-width: 0;
 
+  &__phone-state {
+    @include m.flex-row(2);
+    flex-wrap: wrap;
+    margin: 0;
+  }
+
   &__actions {
     @include m.flex-row(2, center, flex-end);
     grid-column: 1 / -1;

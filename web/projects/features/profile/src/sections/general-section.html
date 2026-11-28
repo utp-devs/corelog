@@ -28,6 +28,7 @@
       [timezones]="timezones()"
       [isSubmitting]="isSaving()"
       [save]="save"
+      (verified)="userChange.emit($event)"
       [(dirty)]="dirty"
     />
   </app-section>

@@ -63,6 +63,13 @@ export const ADMIN_NAV: ShellNavConfig = {
         permission: 'org.admin',
       },
       {
+        key: 'org-custom-fields',
+        label: 'Campos',
+        path: '/organization/custom-fields',
+        icon: 'issue',
+        permission: 'org.admin',
+      },
+      {
         key: 'org-statuses',
         label: 'Estados',
         path: '/organization/statuses',
@@ -75,6 +82,13 @@ export const ADMIN_NAV: ShellNavConfig = {
         path: '/organization/invitations',
         icon: 'invitations',
         permission: 'org.admin',
+      },
+      {
+        key: 'org-legal',
+        label: 'Documentos legales',
+        path: '/organization/legal',
+        icon: 'security',
+        permission: 'platform.admin',
       },
     ],
     profile: [
@@ -106,6 +120,13 @@ export const ADMIN_NAV: ShellNavConfig = {
         path: '/workspace/profile/appearance',
         external: true,
         icon: 'appearance',
+      },
+      {
+        key: 'privacy',
+        label: 'Privacidad',
+        path: '/workspace/profile/privacy',
+        external: true,
+        icon: 'security',
       },
     ],
   },

@@ -1,6 +1,6 @@
 import { Routes } from '@angular/router';
 
-import { unsavedChangesGuard } from '@corelog/core';
+import { requirePlatformAdminGuard, unsavedChangesGuard } from '@corelog/core';
 
 /**
  * Organization administration, mounted by the admin app under /admin/organization. The app guards the
@@ -24,6 +24,12 @@ export const ORG_ADMIN_ROUTES: Routes = [
     loadComponent: () => import('./catalogs/org-catalogs-page').then((m) => m.OrgCatalogsPage),
   },
   {
+    path: 'custom-fields',
+    title: 'Campos personalizados',
+    loadComponent: () =>
+      import('./custom-fields/org-custom-fields-page').then((m) => m.OrgCustomFieldsPage),
+  },
+  {
     path: 'statuses',
     title: 'Estados de incidencias',
     loadComponent: () => import('./statuses/org-statuses-page').then((m) => m.OrgStatusesPage),
@@ -33,6 +39,12 @@ export const ORG_ADMIN_ROUTES: Routes = [
     title: 'Invitaciones',
     loadComponent: () =>
       import('./invitations/org-invitations-page').then((m) => m.OrgInvitationsPage),
+  },
+  {
+    path: 'legal',
+    title: 'Documentos legales',
+    canActivate: [requirePlatformAdminGuard],
+    loadComponent: () => import('./legal/org-legal-page').then((m) => m.OrgLegalPage),
   },
 ];
 

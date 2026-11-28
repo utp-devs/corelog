@@ -1,12 +1,24 @@
-import { ChangeDetectionStrategy, Component, input, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  DestroyRef,
+  inject,
+  input,
+  signal,
+} from '@angular/core';
 import {
   AbstractControl,
+  Validators,
   FormControl,
   FormGroup,
   ReactiveFormsModule,
   ValidationErrors,
 } from '@angular/forms';
-import { ChangePasswordPayload } from '@corelog/core';
+import {
+  ChangePasswordPayload,
+  passwordMatchValidator,
+  revalidateOnPasswordChange,
+} from '@corelog/core';
 import { FieldRow } from '@corelog/ui/field-row';
 import { PasswordInput } from '@corelog/ui/password-input';
 import { PasswordStrength } from '@corelog/ui/password-strength';
@@ -40,7 +52,25 @@ export class ProfilePasswordForm {
   protected readonly form = new FormGroup({
     currentPassword: new FormControl('', { nonNullable: true, validators: [requiredCurrent] }),
     newPassword: new FormControl('', { nonNullable: true, validators: [minimumNew] }),
+    newPasswordConfirmation: new FormControl('', {
+      nonNullable: true,
+      validators: [Validators.required, passwordMatchValidator('newPassword')],
+    }),
   });
+
+  protected readonly confirmationMessages = {
+    required: 'Confirma la nueva contraseña',
+    mismatch: 'Las contraseñas no coinciden',
+  };
+
+  constructor() {
+    revalidateOnPasswordChange(
+      this.form,
+      'newPassword',
+      'newPasswordConfirmation',
+      inject(DestroyRef),
+    );
+  }
 
   /** True after the first submit: errors of untouched fields become visible. */
   protected readonly submitted = signal(false);
@@ -52,7 +82,7 @@ export class ProfilePasswordForm {
 
     try {
       await this.save()(this.form.getRawValue());
-      this.form.reset({ currentPassword: '', newPassword: '' });
+      this.form.reset({ currentPassword: '', newPassword: '', newPasswordConfirmation: '' });
       this.submitted.set(false);
     } catch {
       // The caller has reported the failure; the values stay for another try.

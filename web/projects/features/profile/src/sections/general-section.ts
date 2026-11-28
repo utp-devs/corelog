@@ -15,6 +15,7 @@ import {
   NotificationService,
   PeopleApiService,
   ProfileUpdate,
+  identityFieldErrors,
   profileFieldErrors,
   timezoneOptions,
   User,
@@ -72,7 +73,10 @@ export class ProfileGeneralSection {
       this.userChange.emit(saved);
       this.notifications.success('Perfil actualizado');
     } catch (error) {
-      if (Object.keys(profileFieldErrors(error)).length === 0) {
+      if (
+        Object.keys(profileFieldErrors(error)).length === 0 &&
+        Object.keys(identityFieldErrors(error)).length === 0
+      ) {
         this.notifications.error(messageOr(error, 'No se pudo actualizar el perfil'));
       }
       throw error;

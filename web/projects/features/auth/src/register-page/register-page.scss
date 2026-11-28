@@ -5,17 +5,23 @@
     @include a.form;
   }
 
+  // Given names and surnames side by side while there is room; stacked on narrow screens.
+  &__names {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+    gap: var(--cl-space-4);
+  }
+
   &__input {
     @include a.input;
   }
 
-  &__submit {
-    @include a.submit;
+  &__phone {
+    --phone-input-radius: var(--cl-radius-lg);
+    font-size: var(--cl-font-body-strong);
   }
 
-  &__terms {
-    margin: 0;
-    font-size: var(--cl-font-small);
-    color: var(--cl-text-subtle);
+  &__submit {
+    @include a.submit;
   }
 }

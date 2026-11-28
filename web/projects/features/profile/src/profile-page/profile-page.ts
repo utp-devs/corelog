@@ -9,9 +9,10 @@ import { map } from 'rxjs';
 import { ProfileAppearanceSection } from '../sections/appearance-section';
 import { ProfileGeneralSection } from '../sections/general-section';
 import { ProfileNotificationsSection } from '../sections/notifications-section';
+import { ProfilePrivacySection } from '../sections/privacy-section';
 import { ProfileSecuritySection } from '../sections/security-section';
 
-type SectionKey = 'general' | 'security' | 'notifications' | 'appearance';
+type SectionKey = 'general' | 'security' | 'notifications' | 'appearance' | 'privacy';
 
 interface SectionMeta {
   readonly title: string;
@@ -36,6 +37,10 @@ const SECTIONS: Readonly<Record<SectionKey, SectionMeta>> = {
     title: 'Apariencia',
     description: 'Tema y densidad de la interfaz en este navegador.',
   },
+  privacy: {
+    title: 'Privacidad y consentimientos',
+    description: 'Los documentos legales que aceptaste y tus autorizaciones opcionales.',
+  },
 };
 
 function sectionOf(value: string | null): SectionKey {
@@ -51,6 +56,7 @@ function sectionOf(value: string | null): SectionKey {
     ProfileAppearanceSection,
     ProfileGeneralSection,
     ProfileNotificationsSection,
+    ProfilePrivacySection,
     ProfileSecuritySection,
   ],
   templateUrl: './profile-page.html',
