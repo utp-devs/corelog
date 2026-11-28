@@ -208,6 +208,8 @@ describe('CurrentProjectStore', () => {
         'backlog',
         'sprints',
         'calendar',
+        'roadmap',
+        'reports',
         'settings',
       ]);
     });
@@ -221,7 +223,7 @@ describe('CurrentProjectStore', () => {
         .expectOne(`${BASE}/projects/${PROJECT_UUID}/permissions/me`)
         .flush({ role: 'viewer', permissions: ['browse_project'] });
 
-      expect(store.navItems().map((item) => item.key)).toEqual(['board', 'calendar']);
+      expect(store.navItems().map((item) => item.key)).toEqual(['board', 'calendar', 'roadmap']);
       expect(store.navItems()[0].path).toBe('/projects/CORE/board');
     });
 

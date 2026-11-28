@@ -35,4 +35,6 @@ export interface ApiError {
   readonly details: readonly ApiErrorDetail[];
   /** Statuses that need a target when a workflow save removes them. */
   readonly mappingRequired?: readonly ApiMappingRequirement[];
+  /** Seconds the server asks to wait before retrying (Retry-After header of a 429 or a lockout). */
+  readonly retryAfterSeconds?: number;
 }

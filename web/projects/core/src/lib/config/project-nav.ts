@@ -23,6 +23,8 @@ const PROJECT_NAV: readonly ProjectNavDefinition[] = [
   { key: 'backlog', label: 'Backlog', permission: 'browse_project', scrumOnly: true },
   { key: 'sprints', label: 'Sprints', permission: 'browse_project', scrumOnly: true },
   { key: 'calendar', label: 'Calendario', permission: 'browse_project' },
+  { key: 'roadmap', label: 'Hoja de ruta', permission: 'browse_project' },
+  { key: 'reports', label: 'Reportes', permission: 'view_reports' },
   { key: 'settings', label: 'Configuración', permission: 'edit_project' },
 ];
 

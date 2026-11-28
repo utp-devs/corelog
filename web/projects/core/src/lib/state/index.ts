@@ -29,3 +29,8 @@ export * from './filter.store';
 export * from './country.store';
 export * from './legal.store';
 export * from './consent.store';
+export * from './report.store';
+export * from './calendar-v2.store';
+export * from './audit.store';
+export * from './dashboard-v2.store';
+export * from './roadmap.store';

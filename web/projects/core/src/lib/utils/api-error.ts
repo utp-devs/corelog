@@ -80,6 +80,13 @@ function mappingRequirements(value: unknown): ApiMappingRequirement[] | undefine
   return result.length > 0 ? result : undefined;
 }
 
+/** Seconds of the Retry-After header when it is a plain number, or undefined. */
+function retryAfterOf(error: HttpErrorResponse): { retryAfterSeconds?: number } {
+  const raw = error.headers?.get('Retry-After');
+  const seconds = raw === null || raw === undefined ? NaN : Number(raw);
+  return Number.isFinite(seconds) && seconds >= 0 ? { retryAfterSeconds: Math.ceil(seconds) } : {};
+}
+
 function fromHttpError(error: HttpErrorResponse): ApiError {
   if (error.status === 0) {
     return { status: 0, code: 'network.unreachable', message: MESSAGE_NETWORK, details: [] };
@@ -91,6 +98,7 @@ function fromHttpError(error: HttpErrorResponse): ApiError {
       code: body.error.code ?? `http.${error.status}`,
       message: body.error.message,
       details: fieldDetails(body.error.details),
+      ...retryAfterOf(error),
       ...(mappingRequirements(body.error.mapping_required)
         ? { mappingRequired: mappingRequirements(body.error.mapping_required) }
         : {}),
@@ -101,6 +109,7 @@ function fromHttpError(error: HttpErrorResponse): ApiError {
     code: `http.${error.status}`,
     message: defaultMessageForStatus(error.status),
     details: [],
+    ...retryAfterOf(error),
   };
 }
 

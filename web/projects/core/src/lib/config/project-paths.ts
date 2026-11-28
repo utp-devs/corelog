@@ -5,7 +5,15 @@
 export const PROJECTS_PATH = '/projects';
 
 /** Sections of a project that have their own route. */
-export const PROJECT_SECTIONS = ['board', 'backlog', 'sprints', 'calendar', 'settings'] as const;
+export const PROJECT_SECTIONS = [
+  'board',
+  'backlog',
+  'sprints',
+  'calendar',
+  'roadmap',
+  'reports',
+  'settings',
+] as const;
 export type ProjectSection = (typeof PROJECT_SECTIONS)[number];
 
 /** What a project path needs: the key when known, the id otherwise. */
