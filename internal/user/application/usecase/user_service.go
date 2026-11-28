@@ -27,6 +27,22 @@ type UserService struct {
 	sms      port.SMSSender
 	// codeSource returns a numeric code of the given length; replaced in tests.
 	codeSource func(digits int) (string, error)
+	// requireVerifiedEmail blocks login until the email address is verified; verifier mails the link.
+	requireVerifiedEmail bool
+	verifier             EmailVerifier
+}
+
+// EmailVerifier sends the verification link of a new account.
+type EmailVerifier interface {
+	SendVerification(ctx context.Context, user *domain.User) error
+}
+
+// WithEmailVerification makes login require a verified address (required=true) and sends the verification
+// link to new accounts through verifier (nil disables the mail).
+func (s *UserService) WithEmailVerification(required bool, verifier EmailVerifier) *UserService {
+	s.requireVerifiedEmail = required
+	s.verifier = verifier
+	return s
 }
 
 func NewUserService(repo port.Repository, sessions port.SessionRepository) *UserService {
@@ -63,6 +79,9 @@ var _ port.Service = (*UserService)(nil)
 // added, must apply the same rule through domain.CheckPasswordConfirmation.
 func (s *UserService) Register(ctx context.Context, in port.RegisterInput) (*domain.User, error) {
 	if err := domain.CheckPasswordConfirmation(in.Password, in.PasswordConfirmation, "password_confirmation"); err != nil {
+		return nil, err
+	}
+	if err := domain.ValidatePassword(in.Password, in.Email, "password"); err != nil {
 		return nil, err
 	}
 	first, last, err := resolveNames(in.FirstName, in.LastName, in.Name)
@@ -124,6 +143,10 @@ func (s *UserService) Register(ctx context.Context, in port.RegisterInput) (*dom
 	if err := s.saveWithConsents(ctx, user, in); err != nil {
 		return nil, err
 	}
+	if s.requireVerifiedEmail && s.verifier != nil {
+		// Best effort: the user can ask for another link, so a mail failure must not undo the account.
+		_ = s.verifier.SendVerification(ctx, user)
+	}
 
 	return user, nil
 }
@@ -157,6 +180,9 @@ func (s *UserService) Authenticate(ctx context.Context, in port.AuthenticateInpu
 	// Una cuenta desactivada responde igual que una contrasena incorrecta: no revela que existio.
 	if !user.IsActive() {
 		return nil, domain.ErrInvalidCredentials
+	}
+	if s.requireVerifiedEmail && user.EmailVerifiedAt == nil {
+		return nil, domain.ErrEmailNotVerified
 	}
 
 	now := s.clock.Now()
@@ -214,6 +240,9 @@ func (s *UserService) UpdateProfile(ctx context.Context, userID uuid.UUID, in po
 		}
 		user.SetNames(first, last)
 	}
+	if email != user.Email {
+		user.EmailVerifiedAt = nil // a new address has to be verified again
+	}
 	user.Email = email
 	user.UpdatedAt = s.clock.Now()
 	if in.Phone != nil {
@@ -267,6 +296,9 @@ func (s *UserService) ChangePassword(ctx context.Context, userID uuid.UUID, in p
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(in.CurrentPassword)); err != nil {
 		return domain.ErrIncorrectPassword
+	}
+	if err := domain.ValidatePassword(in.NewPassword, user.Email, "new_password"); err != nil {
+		return err
 	}
 
 	hash, err := bcrypt.GenerateFromPassword([]byte(in.NewPassword), bcrypt.DefaultCost)

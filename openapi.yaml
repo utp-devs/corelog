@@ -7,6 +7,12 @@ servers:
   - url: http://localhost:8080/api/v1
     description: Local development server
 tags:
+  - name: dashboards
+    description: Paneles con gadgets, comparticion y datos por gadget
+  - name: roadmap
+    description: Hoja de ruta de epicas, versiones y sprints
+  - name: calendar
+    description: Eventos con recurrencia, calendario combinado y suscripcion ICS
   - name: releases
     description: Versiones de proyecto, publicacion y notas de version
   - name: auth
@@ -31,8 +37,12 @@ tags:
     description: Flujo de trabajo por proyecto, plantillas y catalogo de estados de la organizacion
   - name: worklogs
     description: Registro de tiempo, estimaciones de incidencias, hoja de tiempo personal y resumen de tiempo por proyecto
+  - name: reports
+    description: Informes de proyecto (burndown, velocidad, flujo, tiempo, carga y versiones) y su exportacion CSV
   - name: legal
     description: Documentos legales versionados y consentimiento de cada usuario
+  - name: audit
+    description: Registro de auditoria inmutable y recuperacion de contrasena
   - name: health
     description: Service liveness
 paths:
@@ -96,6 +106,10 @@ paths:
     post:
       tags: [auth]
       summary: Authenticate and receive an access token
+      description: >-
+        Limitado por IP y por cuenta: responde 429 con auth.rate_limited (demasiadas solicitudes) o auth.account_locked
+        (5 fallos seguidos bloquean la cuenta 15 minutos, con espera creciente) y la cabecera Retry-After. Con
+        REQUIRE_EMAIL_VERIFICATION activo y el correo sin verificar responde 403 auth.email_not_verified.
       operationId: loginUser
       security: []
       requestBody:
@@ -3314,6 +3328,72 @@ paths:
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '422': {$ref: '#/components/responses/ValidationError'}
+  /projects/{project}/reports:
+    get:
+      tags: [reports]
+      operationId: listProjectReports
+      summary: Informes disponibles de un proyecto
+      description: Lista los tipos de informe con su descripcion en espanol y los parametros que acepta cada uno. Requiere view_reports; un proyecto oculto responde 404.
+      security:
+        - bearerAuth: []
+      parameters:
+        - {name: project, in: path, required: true, schema: {type: string, format: uuid}}
+      responses:
+        '200':
+          description: Catalogo de informes
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: {$ref: '#/components/schemas/ReportDescriptor'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+  /projects/{project}/reports/{kind}:
+    get:
+      tags: [reports]
+      operationId: getProjectReport
+      summary: Ejecuta un informe del proyecto
+      description: >-
+        Devuelve un informe con forma uniforme (series, tabla y resumen). kind es uno de burndown, burnup, velocity,
+        cumulative-flow, control, created-vs-resolved, resolution-time, time-tracking, workload, version y sprint-report.
+        Con el sufijo .csv (por ejemplo burndown.csv) devuelve la tabla como CSV UTF-8 con BOM, cabeceras en espanol y las
+        celdas de texto que empiezan por = + - o @ precedidas de un apostrofo. Las fechas se calculan en la zona horaria de la
+        organizacion y los rangos son inclusivos (maximo 366 dias). filter acepta CoreQL y limita las incidencias consideradas.
+        Requiere view_reports; un proyecto oculto responde 404. La respuesta se puede cachear 30 segundos en el navegador.
+      security:
+        - bearerAuth: []
+      parameters:
+        - {name: project, in: path, required: true, schema: {type: string, format: uuid}}
+        - {name: kind, in: path, required: true, description: Tipo de informe, con el sufijo .csv opcional, schema: {type: string}}
+        - {name: from, in: query, required: false, description: Inicio del rango (por defecto 29 dias antes de to), schema: {type: string, format: date}}
+        - {name: to, in: query, required: false, description: Fin del rango, inclusivo (por defecto hoy), schema: {type: string, format: date}}
+        - {name: group_by, in: query, required: false, description: 'burndown y burnup: points o issues; time-tracking: issue o user; resolution-time: type o priority', schema: {type: string}}
+        - {name: filter, in: query, required: false, description: Texto CoreQL (maximo 2000 caracteres), schema: {type: string}}
+        - {name: sprint, in: query, required: false, description: Sprint del informe; sin valor se usa el activo o el ultimo iniciado, schema: {type: string, format: uuid}}
+        - {name: version, in: query, required: false, description: Version (obligatorio en el informe version), schema: {type: string, format: uuid}}
+        - {name: interval, in: query, required: false, description: Periodo de created-vs-resolved, schema: {type: string, enum: [day, week, month], default: day}}
+        - {name: limit, in: query, required: false, description: Sprints de velocity (1 a 20), schema: {type: integer, minimum: 1, maximum: 20, default: 6}}
+      responses:
+        '200':
+          description: Informe (JSON) o su tabla (CSV)
+          headers:
+            Cache-Control: {schema: {type: string}, description: private, max-age=30}
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: {$ref: '#/components/schemas/Report'}
+            text/csv:
+              schema: {type: string}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
   /notifications:
     get:
       tags: [issues]
@@ -3450,6 +3530,30 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           description: Sin permiso para ver el proyecto
+        '422':
+          $ref: '#/components/responses/ValidationError'
+    post:
+      tags: [calendar]
+      operationId: createCalendarEvent
+      summary: Crear un evento
+      description: Los eventos de dia completo usan medianoche UTC y un fin exclusivo (tambien se acepta AAAA-MM-DD). recurrence_rule admite FREQ (DAILY, WEEKLY, MONTHLY, YEARLY), INTERVAL, BYDAY, COUNT y UNTIL (calendar.invalid_recurrence). visibility project exige project_id y editar incidencias; organization exige administrar la organizacion. Los invitados deben ser miembros de la organizacion. Codigo calendar.invalid_event.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CalendarEventCreate'
+      responses:
+        '201':
+          description: Evento creado
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
         '422':
           $ref: '#/components/responses/ValidationError'
   /search:
@@ -3927,6 +4031,471 @@ paths:
           description: Resumen personal
         '401':
           $ref: '#/components/responses/Unauthorized'
+  /dashboards:
+    get:
+      tags: [dashboards]
+      operationId: listDashboards
+      summary: Paneles visibles para el usuario
+      description: Paneles propios, compartidos con el usuario (directamente, por equipo, por proyecto o por organizacion) y, para administradores de la organizacion, los de su organizacion (solo lectura). Cada elemento trae gadget_count en lugar de los gadgets.
+      security:
+        - bearerAuth: []
+      parameters:
+        - {name: scope, in: query, required: false, schema: {type: string, enum: [all, mine, shared]}}
+        - {name: q, in: query, required: false, schema: {type: string, maxLength: 120}}
+        - {name: page, in: query, required: false, schema: {type: integer, minimum: 1}}
+        - {name: page_size, in: query, required: false, schema: {type: integer, minimum: 1, maximum: 100}}
+      responses:
+        '200':
+          description: Pagina de paneles
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+    post:
+      tags: [dashboards]
+      operationId: createDashboard
+      summary: Crear un panel vacio
+      description: Codigos de error dashboard.invalid, dashboard.name_taken (409) y dashboard.no_organization.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DashboardCreateRequest'
+      responses:
+        '201':
+          description: Panel creado
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+  /dashboards/{id}:
+    parameters:
+      - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+    get:
+      tags: [dashboards]
+      operationId: getDashboard
+      summary: Panel con sus gadgets
+      description: Solo el propietario recibe shares. access es owner, edit o view.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Panel
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      tags: [dashboards]
+      operationId: updateDashboard
+      summary: Cambiar nombre, descripcion, diseno o panel principal
+      description: Requiere permiso de edicion; is_default solo lo cambia el propietario. Un diseno con menos columnas que las usadas por los gadgets se rechaza con dashboard.invalid.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DashboardUpdateRequest'
+      responses:
+        '200':
+          description: Panel actualizado
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+    delete:
+      tags: [dashboards]
+      operationId: deleteDashboard
+      summary: Borrar un panel (solo el propietario)
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: Panel borrado
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /dashboards/{id}/gadgets:
+    parameters:
+      - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+    put:
+      tags: [dashboards]
+      operationId: replaceDashboardGadgets
+      summary: Reemplazar diseno y gadgets de forma atomica
+      description: Valida cada gadget con la configuracion de su tipo (maximo 20). Los gadgets con id conservan su identidad; los demas se crean y los que faltan se borran. Los tipos son assigned_to_me, created_by_me, filter_results, issue_statistics, pie, two_dimensional, created_vs_resolved, sprint_burndown, activity_stream, recent_projects, favorites, text y calendar_upcoming. Codigos dashboard.invalid_gadget y dashboard.gadget_not_found.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DashboardGadgetsRequest'
+      responses:
+        '200':
+          description: Panel con los gadgets guardados
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+  /dashboards/{id}/shares:
+    parameters:
+      - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+    put:
+      tags: [dashboards]
+      operationId: setDashboardShares
+      summary: Reemplazar las comparticiones del panel (solo el propietario)
+      description: Cada destino debe existir en la organizacion del panel (dashboard.invalid_share). Un panel compartido nunca muestra incidencias que el espectador no pueda ver.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DashboardSharesRequest'
+      responses:
+        '200':
+          description: Panel con sus comparticiones
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+  /dashboards/{id}/duplicate:
+    parameters:
+      - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+    post:
+      tags: [dashboards]
+      operationId: duplicateDashboard
+      summary: Copiar un panel visible a un panel propio
+      description: Copia los gadgets, no las comparticiones. Sin nombre usa "Copia de ..." y un sufijo numerico si ya existe.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                name: {type: string, maxLength: 120}
+      responses:
+        '201':
+          description: Panel copiado
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+  /dashboards/{id}/gadgets/{gadgetId}/data:
+    parameters:
+      - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+      - {name: gadgetId, in: path, required: true, schema: {type: string, format: uuid}}
+    get:
+      tags: [dashboards]
+      operationId: getDashboardGadgetData
+      summary: Datos de un gadget calculados con los permisos de quien consulta
+      description: La respuesta es {gadget_id, type, generated_at, data}; la forma de data depende del tipo. Se reutiliza 15 segundos para el mismo espectador (Cache-Control private).
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Datos del gadget
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+  /me/dashboard:
+    get:
+      tags: [dashboards]
+      operationId: getMyDefaultDashboard
+      summary: Panel principal del usuario
+      description: Lo crea en el primer uso con los gadgets estandar (asignadas a mi, actividad, calendario, creadas frente a resueltas, proyectos recientes y favoritos).
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Panel principal
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+  /projects/{id}/roadmap:
+    parameters:
+      - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+    get:
+      tags: [roadmap]
+      operationId: getProjectRoadmap
+      summary: Hoja de ruta del proyecto
+      description: Barras de epicas (o versiones o sprints segun group_by) con fechas propias o derivadas de sus hijas, progreso por categoria de estado, banderas de version, bandas de sprint y dependencias blocks entre epicas. Las barras sin fechas llevan dated false y siempre se devuelven. Requiere ver el proyecto.
+      security:
+        - bearerAuth: []
+      parameters:
+        - {name: from, in: query, required: false, schema: {type: string, format: date}}
+        - {name: to, in: query, required: false, schema: {type: string, format: date}}
+        - {name: group_by, in: query, required: false, schema: {type: string, enum: [epic, version, sprint]}}
+        - {name: filter, in: query, required: false, schema: {type: string, enum: [all, open, done]}}
+        - {name: q, in: query, required: false, schema: {type: string, maxLength: 200}}
+      responses:
+        '200':
+          description: Hoja de ruta
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+  /projects/{id}/roadmap/dependencies:
+    parameters:
+      - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+    get:
+      tags: [roadmap]
+      operationId: getProjectRoadmapDependencies
+      summary: Dependencias blocks entre epicas del proyecto
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Lista de {from, to, kind}
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /projects/{id}/roadmap/rank:
+    parameters:
+      - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+    put:
+      tags: [roadmap]
+      operationId: rankProjectRoadmapEpics
+      summary: Orden manual de las epicas en la hoja de ruta
+      description: Las epicas indicadas van primero y en ese orden; las demas conservan su orden por defecto. Una lista vacia borra el orden. Requiere editar incidencias. Codigo roadmap.invalid_rank.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [epic_ids]
+              additionalProperties: false
+              properties:
+                epic_ids:
+                  type: array
+                  maxItems: 500
+                  items: {type: string, format: uuid}
+      responses:
+        '204':
+          description: Orden guardado
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+  /calendar:
+    get:
+      tags: [calendar]
+      operationId: getCalendar
+      summary: Calendario combinado de eventos y fechas derivadas
+      description: Ocurrencias de eventos (con recurrencia expandida, como maximo 1000 por serie y ventana) mas fechas de vencimiento e inicio de incidencias, inicio y fin de sprint y lanzamiento de versiones. Una fecha to sin hora es inclusiva. La ventana admite como maximo 366 dias. Sin projects, las fechas derivadas cubren los proyectos del usuario.
+      security:
+        - bearerAuth: []
+      parameters:
+        - {name: from, in: query, required: true, schema: {type: string}, description: Fecha AAAA-MM-DD o RFC 3339}
+        - {name: to, in: query, required: true, schema: {type: string}, description: Fecha AAAA-MM-DD (inclusiva) o RFC 3339 (exclusiva)}
+        - {name: projects, in: query, required: false, schema: {type: string}, description: Ids de proyecto separados por comas}
+        - {name: types, in: query, required: false, schema: {type: string}, description: Lista separada por comas de event, issue_due, issue_start, sprint_start, sprint_end, version_release o los grupos events, issues, sprints y versions}
+      responses:
+        '200':
+          description: Elementos ordenados por inicio
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+  /calendar/events/{id}:
+    parameters:
+      - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+    get:
+      tags: [calendar]
+      operationId: getCalendarEvent
+      summary: Evento con sus invitados y excepciones
+      description: Un evento que el usuario no puede ver responde 404 (calendar.event_not_found).
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Evento
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      tags: [calendar]
+      operationId: updateCalendarEvent
+      summary: Cambiar un evento o una sola ocurrencia
+      description: Con occurrence (instante original en RFC 3339) solo se cambian titulo, descripcion, lugar, color y horario de esa ocurrencia (calendar.invalid_occurrence si no pertenece a la serie). Cambiar la regla o el inicio descarta las excepciones. Editan el propietario, quien edite incidencias en un evento de proyecto y los administradores en uno de organizacion.
+      security:
+        - bearerAuth: []
+      parameters:
+        - {name: occurrence, in: query, required: false, schema: {type: string, format: date-time}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CalendarEventPatch'
+      responses:
+        '200':
+          description: Evento actualizado
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+    delete:
+      tags: [calendar]
+      operationId: deleteCalendarEvent
+      summary: Borrar un evento o cancelar una ocurrencia
+      security:
+        - bearerAuth: []
+      parameters:
+        - {name: occurrence, in: query, required: false, schema: {type: string, format: date-time}}
+      responses:
+        '204':
+          description: Evento borrado u ocurrencia cancelada
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+  /calendar/events/{id}/attendees/me:
+    parameters:
+      - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+    put:
+      tags: [calendar]
+      operationId: respondToCalendarEvent
+      summary: Responder a una invitacion
+      description: Solo los invitados pueden responder (403 calendar.not_attendee si el evento es visible pero no esta invitado).
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [response]
+              additionalProperties: false
+              properties:
+                response: {type: string, enum: [needs_action, accepted, declined, tentative]}
+      responses:
+        '200':
+          description: Respuesta guardada
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+  /calendar/export.ics:
+    get:
+      tags: [calendar]
+      operationId: exportCalendarICS
+      summary: Suscripcion ICS privada del calendario
+      description: Se autentica con el token privado de /me/calendar/feed (parametro token), sin sesion. Incluye los eventos visibles de los 30 dias pasados y los 90 siguientes en UTC, con RRULE en eventos UTC y ocurrencias expandidas en el resto. Admite If-None-Match y responde 404 a un token desconocido o revocado.
+      security: []
+      parameters:
+        - {name: token, in: query, required: true, schema: {type: string}}
+      responses:
+        '200':
+          description: Calendario en formato iCalendar
+          content:
+            text/calendar:
+              schema: {type: string}
+        '304':
+          description: Sin cambios
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /me/calendar/feed:
+    get:
+      tags: [calendar]
+      operationId: getMyCalendarFeed
+      summary: Estado de la suscripcion ICS
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: "{enabled, created_at}"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      tags: [calendar]
+      operationId: createMyCalendarFeed
+      summary: Crear o rotar el token de la suscripcion ICS
+      description: Devuelve token y url una sola vez; el token anterior deja de valer. Solo se guarda su hash.
+      security:
+        - bearerAuth: []
+      responses:
+        '201':
+          description: "{enabled, created_at, token, url}"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    delete:
+      tags: [calendar]
+      operationId: revokeMyCalendarFeed
+      summary: Revocar la suscripcion ICS
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: Suscripcion revocada
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /saved-filters:
     get:
       tags: [issues]
@@ -7638,6 +8207,218 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '422':
           $ref: '#/components/responses/ValidationError'
+  /auth/password/forgot:
+    post:
+      tags: [auth]
+      summary: Solicitar el enlace para restablecer la contrasena
+      description: >-
+        Responde siempre 202 con el mismo mensaje, exista o no la cuenta (no revela si el correo esta registrado).
+        Si existe, envia un correo con un enlace de un solo uso valido durante 1 hora; una solicitud nueva invalida
+        el enlace anterior. Limitado por direccion IP y por correo.
+      operationId: forgotPassword
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ForgotPasswordRequest'
+      responses:
+        '202':
+          description: Solicitud aceptada
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/MessageResponse'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+  /auth/password/reset:
+    post:
+      tags: [auth]
+      summary: Restablecer la contrasena con el enlace recibido por correo
+      description: >-
+        Aplica la politica de contrasenas y la confirmacion, revoca todas las sesiones, limpia el bloqueo de la cuenta
+        y registra el evento en la auditoria. El token es de un solo uso. Un token desconocido, vencido o usado
+        responde auth.reset_token_invalid; una contrasena debil (user.password_weak) no consume el token.
+      operationId: resetPassword
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResetPasswordRequest'
+      responses:
+        '204':
+          description: Contrasena actualizada
+        '422':
+          description: >-
+            Token invalido (auth.reset_token_invalid), contrasena debil (user.password_weak), confirmacion distinta
+            (user.password_mismatch) o datos invalidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+  /auth/email/verify/request:
+    post:
+      tags: [auth]
+      summary: Enviar el enlace de verificacion del correo del usuario actual
+      operationId: requestEmailVerification
+      security:
+        - bearerAuth: []
+      responses:
+        '202':
+          description: Enlace enviado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/MessageResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          description: El correo ya esta verificado (auth.email_already_verified) o el envio no esta disponible (auth.verification_unavailable)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+  /auth/email/verify:
+    post:
+      tags: [auth]
+      summary: Verificar el correo con el token recibido
+      description: Marca users.email_verified_at. El token es de un solo uso y vale 24 horas.
+      operationId: verifyEmail
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VerifyEmailRequest'
+      responses:
+        '204':
+          description: Correo verificado
+        '422':
+          description: Token invalido, vencido o usado (auth.verification_token_invalid) o datos invalidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+  /admin/audit:
+    get:
+      tags: [audit]
+      summary: Registro de auditoria de toda la plataforma
+      description: >-
+        Solo administradores de la plataforma. Entradas inmutables (solo lectura), las mas recientes primero, con
+        paginacion por cursor. La IP se guarda anonimizada.
+      operationId: adminListAudit
+      parameters:
+        - $ref: '#/components/parameters/AuditActor'
+        - $ref: '#/components/parameters/AuditEntityType'
+        - $ref: '#/components/parameters/AuditAction'
+        - $ref: '#/components/parameters/AuditFrom'
+        - $ref: '#/components/parameters/AuditTo'
+        - $ref: '#/components/parameters/AuditCursor'
+        - $ref: '#/components/parameters/AuditLimit'
+      responses:
+        '200':
+          $ref: '#/components/responses/AuditPage'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+  /admin/audit/export:
+    get:
+      tags: [audit]
+      summary: Exportar la auditoria de la plataforma como CSV
+      description: Solo administradores de la plataforma. Admite los mismos filtros que el listado (maximo 50000 filas).
+      operationId: adminExportAudit
+      parameters:
+        - $ref: '#/components/parameters/AuditActor'
+        - $ref: '#/components/parameters/AuditEntityType'
+        - $ref: '#/components/parameters/AuditAction'
+        - $ref: '#/components/parameters/AuditFrom'
+        - $ref: '#/components/parameters/AuditTo'
+      responses:
+        '200':
+          $ref: '#/components/responses/AuditCsv'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+  /organizations/{org}/audit:
+    get:
+      tags: [audit]
+      summary: Registro de auditoria de una organizacion
+      description: Propietarios y administradores de la organizacion. Solo ve las entradas de esa organizacion.
+      operationId: listOrganizationAudit
+      parameters:
+        - name: org
+          in: path
+          required: true
+          schema: {type: string, format: uuid}
+        - $ref: '#/components/parameters/AuditActor'
+        - $ref: '#/components/parameters/AuditEntityType'
+        - $ref: '#/components/parameters/AuditAction'
+        - $ref: '#/components/parameters/AuditFrom'
+        - $ref: '#/components/parameters/AuditTo'
+        - $ref: '#/components/parameters/AuditCursor'
+        - $ref: '#/components/parameters/AuditLimit'
+      responses:
+        '200':
+          $ref: '#/components/responses/AuditPage'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+  /organizations/{org}/audit/export:
+    get:
+      tags: [audit]
+      summary: Exportar la auditoria de una organizacion como CSV
+      description: Propietarios y administradores de la organizacion (maximo 50000 filas).
+      operationId: exportOrganizationAudit
+      parameters:
+        - name: org
+          in: path
+          required: true
+          schema: {type: string, format: uuid}
+        - $ref: '#/components/parameters/AuditActor'
+        - $ref: '#/components/parameters/AuditEntityType'
+        - $ref: '#/components/parameters/AuditAction'
+        - $ref: '#/components/parameters/AuditFrom'
+        - $ref: '#/components/parameters/AuditTo'
+      responses:
+        '200':
+          $ref: '#/components/responses/AuditCsv'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
   /health:
     get:
       tags: [health]
@@ -8051,6 +8832,45 @@ components:
       scheme: bearer
       bearerFormat: JWT
   parameters:
+    AuditActor:
+      name: actor
+      in: query
+      required: false
+      schema: {type: string, format: uuid}
+      description: Filtra por el usuario que hizo la accion.
+    AuditEntityType:
+      name: entity_type
+      in: query
+      required: false
+      schema: {type: string, maxLength: 64}
+    AuditAction:
+      name: action
+      in: query
+      required: false
+      schema: {type: string, maxLength: 64, example: org.updated}
+    AuditFrom:
+      name: from
+      in: query
+      required: false
+      schema: {type: string}
+      description: Desde (inclusive), AAAA-MM-DD o RFC 3339.
+    AuditTo:
+      name: to
+      in: query
+      required: false
+      schema: {type: string}
+      description: Hasta (una fecha sola incluye ese dia completo), AAAA-MM-DD o RFC 3339.
+    AuditCursor:
+      name: cursor
+      in: query
+      required: false
+      schema: {type: string}
+      description: Cursor opaco de meta.next_cursor.
+    AuditLimit:
+      name: limit
+      in: query
+      required: false
+      schema: {type: integer, minimum: 1, maximum: 200, default: 50}
     IssueRef:
       name: id
       in: path
@@ -8128,6 +8948,35 @@ components:
         type: string
         minLength: 1
   responses:
+    RateLimited:
+      description: Demasiadas solicitudes (auth.rate_limited) o cuenta bloqueada temporalmente (auth.account_locked). Incluye Retry-After en segundos.
+      headers:
+        Retry-After:
+          schema: {type: integer}
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    AuditPage:
+      description: Pagina de entradas de auditoria
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              data:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AuditEntry'
+              meta:
+                type: object
+                properties:
+                  next_cursor: {type: string, nullable: true}
+    AuditCsv:
+      description: CSV con columnas id, fecha, actor, accion, entidad, id_entidad, resumen, ip, id_peticion
+      content:
+        text/csv:
+          schema: {type: string}
     Unauthorized:
       description: The request is missing a valid access token
       content:
@@ -8171,6 +9020,150 @@ components:
           schema:
             $ref: '#/components/schemas/ErrorResponse'
   schemas:
+    DashboardCreateRequest:
+      type: object
+      required: [name]
+      additionalProperties: false
+      properties:
+        name: {type: string, maxLength: 120}
+        description: {type: string, maxLength: 500}
+        layout: {type: string, enum: ['1', '2', '3', 2-1, 1-2], description: Plantilla de columnas (por defecto 2)}
+        organization_id: {type: string, format: uuid}
+    DashboardUpdateRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        name: {type: string, maxLength: 120}
+        description: {type: string, maxLength: 500}
+        layout: {type: string, enum: ['1', '2', '3', 2-1, 1-2]}
+        is_default: {type: boolean}
+    DashboardGadgetInput:
+      type: object
+      required: [type]
+      additionalProperties: false
+      properties:
+        id: {type: string, format: uuid, description: Presente en los gadgets que ya existen}
+        type: {type: string, enum: [assigned_to_me, created_by_me, filter_results, issue_statistics, pie, two_dimensional, created_vs_resolved, sprint_burndown, activity_stream, recent_projects, favorites, text, calendar_upcoming]}
+        title: {type: string, maxLength: 120}
+        config:
+          type: object
+          description: Configuracion del tipo, con valores por defecto y claves desconocidas rechazadas
+        column_index: {type: integer, minimum: 0, maximum: 2}
+        position: {type: integer, minimum: 0}
+    DashboardGadgetsRequest:
+      type: object
+      required: [gadgets]
+      additionalProperties: false
+      properties:
+        layout: {type: string, enum: ['1', '2', '3', 2-1, 1-2]}
+        gadgets:
+          type: array
+          maxItems: 20
+          items:
+            $ref: '#/components/schemas/DashboardGadgetInput'
+    DashboardSharesRequest:
+      type: object
+      required: [shares]
+      additionalProperties: false
+      properties:
+        shares:
+          type: array
+          maxItems: 100
+          items:
+            type: object
+            required: [type, target_id]
+            additionalProperties: false
+            properties:
+              type: {type: string, enum: [user, team, project, organization]}
+              target_id: {type: string, format: uuid}
+              permission: {type: string, enum: [view, edit]}
+    CalendarEventCreate:
+      type: object
+      required: [title, starts_at, ends_at]
+      additionalProperties: false
+      properties:
+        title: {type: string, maxLength: 200}
+        description: {type: string, maxLength: 8000}
+        location: {type: string, maxLength: 300}
+        starts_at: {type: string, description: RFC 3339 o AAAA-MM-DD}
+        ends_at: {type: string, description: RFC 3339 o AAAA-MM-DD (exclusivo en eventos de dia completo)}
+        all_day: {type: boolean}
+        timezone: {type: string, example: Europe/Madrid, description: Zona IANA en la que se mantiene la hora de las repeticiones}
+        recurrence_rule: {type: string, nullable: true, example: 'FREQ=WEEKLY;BYDAY=MO,WE;COUNT=10'}
+        visibility: {type: string, enum: [private, project, organization]}
+        color: {type: string, enum: [gray, red, orange, amber, green, teal, blue, indigo, purple, pink]}
+        project_id: {type: string, format: uuid, nullable: true}
+        organization_id: {type: string, format: uuid, nullable: true}
+        attendees:
+          type: array
+          maxItems: 100
+          items: {type: string, format: uuid}
+    CalendarEventPatch:
+      type: object
+      additionalProperties: false
+      description: Los campos ausentes no cambian; recurrence_rule y project_id aceptan null para borrarlos.
+      properties:
+        title: {type: string, maxLength: 200}
+        description: {type: string, maxLength: 8000}
+        location: {type: string, maxLength: 300}
+        starts_at: {type: string}
+        ends_at: {type: string}
+        all_day: {type: boolean}
+        timezone: {type: string}
+        recurrence_rule: {type: string, nullable: true}
+        visibility: {type: string, enum: [private, project, organization]}
+        color: {type: string, enum: [gray, red, orange, amber, green, teal, blue, indigo, purple, pink]}
+        project_id: {type: string, format: uuid, nullable: true}
+        attendees:
+          type: array
+          maxItems: 100
+          items: {type: string, format: uuid}
+    MessageResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: Si el correo esta registrado, recibiras un mensaje con las instrucciones
+    ForgotPasswordRequest:
+      type: object
+      required: [email]
+      additionalProperties: false
+      properties:
+        email: {type: string, format: email, maxLength: 254}
+    ResetPasswordRequest:
+      type: object
+      required: [token, password, password_confirmation]
+      additionalProperties: false
+      properties:
+        token: {type: string, maxLength: 200, description: Token del enlace recibido por correo}
+        password:
+          type: string
+          description: Minimo 10 caracteres combinando al menos tres clases (o 14 o mas), sin el correo y fuera de las contrasenas comunes
+        password_confirmation: {type: string}
+    VerifyEmailRequest:
+      type: object
+      required: [token]
+      additionalProperties: false
+      properties:
+        token: {type: string, maxLength: 200}
+    AuditEntry:
+      type: object
+      properties:
+        id: {type: integer, format: int64}
+        organization_id: {type: string, format: uuid, nullable: true}
+        project_id: {type: string, format: uuid, nullable: true}
+        actor_id: {type: string, format: uuid, nullable: true}
+        actor_name: {type: string}
+        action: {type: string, example: member.role_changed}
+        entity_type: {type: string, example: member}
+        entity_id: {type: string, format: uuid, nullable: true}
+        summary: {type: string, description: Resumen en espanol}
+        before: {type: object, nullable: true, additionalProperties: true}
+        after: {type: object, nullable: true, additionalProperties: true}
+        ip: {type: string, description: Direccion anonimizada (IPv4 /24, IPv6 /48)}
+        user_agent: {type: string}
+        request_id: {type: string}
+        created_at: {type: string, format: date-time}
     Sprint:
       type: object
       required: [id, project_id, name, goal, status]
@@ -11163,6 +12156,50 @@ components:
         total_seconds: {type: integer}
         total: {type: string}
         count: {type: integer}
+    ReportDescriptor:
+      type: object
+      properties:
+        kind: {type: string}
+        title: {type: string}
+        description: {type: string}
+        params: {type: array, items: {type: string}}
+    Report:
+      type: object
+      description: Informe uniforme. Los codigos de error son report.kind_unknown, report.range_invalid, report.range_too_large, report.param_invalid, report.sprint_not_found, report.version_required, report.version_not_found, report.filter_invalid, report.filter_too_broad y report.too_many_issues.
+      properties:
+        kind: {type: string}
+        title: {type: string}
+        generated_at: {type: string, format: date-time}
+        params: {type: object, additionalProperties: true, description: Parametros usados, con la zona horaria aplicada}
+        series:
+          type: array
+          items:
+            type: object
+            properties:
+              name: {type: string}
+              points:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    x: {type: string, description: Fecha AAAA-MM-DD, periodo o etiqueta}
+                    y: {type: number}
+        table:
+          type: object
+          properties:
+            columns:
+              type: array
+              items:
+                type: object
+                properties:
+                  key: {type: string}
+                  label: {type: string}
+                  type: {type: string, enum: [text, number, percent, date]}
+            rows:
+              type: array
+              description: Cada fila tiene un valor por columna, en el mismo orden
+              items: {type: array, items: {}}
+        summary: {type: object, additionalProperties: true}
     LegalSlug:
       type: string
       enum: [privacy_policy, data_processing, terms_of_use, cookies, communications]

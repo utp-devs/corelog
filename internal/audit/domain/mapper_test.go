@@ -102,8 +102,8 @@ func TestMapperBeforeAfterAndRequestContext(t *testing.T) {
 	if !reflect.DeepEqual(entry.Before, before) || !reflect.DeepEqual(entry.After, after) {
 		t.Errorf("before/after = %v / %v", entry.Before, entry.After)
 	}
-	if entry.IP != "10.1.2.3" {
-		t.Errorf("IP = %q, want 10.1.2.3", entry.IP)
+	if entry.IP != "10.1.2.0" {
+		t.Errorf("IP = %q, want the anonymized 10.1.2.0", entry.IP)
 	}
 	if entry.UserAgent != "Mozilla/5.0" {
 		t.Errorf("UserAgent = %q", entry.UserAgent)
@@ -131,7 +131,7 @@ func TestMapperDropsInvalidIPAndNonObjectDiffs(t *testing.T) {
 func TestMapperIgnoresUnknownEventTypes(t *testing.T) {
 	t.Parallel()
 	m := NewMapper(DefaultRules)
-	for _, typ := range []string{"issue.created", "sprint.started", "", "org.CREATED"} {
+	for _, typ := range []string{"sprint.unknown", "", "org.CREATED", "board.column_resized"} {
 		if _, ok := m.Map(SourceEvent{ID: 3, Type: typ}); ok {
 			t.Errorf("Map(%q) ok = true, want false", typ)
 		}
@@ -145,5 +145,34 @@ func TestNewMapperCopiesRules(t *testing.T) {
 	delete(rules, "custom.thing")
 	if _, ok := m.Map(SourceEvent{Type: "custom.thing"}); !ok {
 		t.Fatal("mapper must keep its own copy of the rules")
+	}
+}
+
+func TestAnonymizeIP(t *testing.T) {
+	t.Parallel()
+	for in, want := range map[string]string{
+		"10.1.2.3":              "10.1.2.0",
+		"2001:db8:abcd:1234::1": "2001:db8:abcd::",
+		"::ffff:192.168.7.9":    "192.168.7.0",
+		"nope":                  "",
+		"":                      "",
+	} {
+		if got := AnonymizeIP(in); got != want {
+			t.Errorf("AnonymizeIP(%q) = %q, want %q", in, got, want)
+		}
+	}
+}
+
+func TestMapperKeepsRequestIDAndMapsNewEvents(t *testing.T) {
+	t.Parallel()
+	m := NewMapper(DefaultRules)
+	entry, ok := m.Map(SourceEvent{ID: 9, Type: "issue.created", Payload: map[string]any{"actor_name": "Ana", "key": "WEB-1", "request_id": "req-7"}})
+	if !ok || entry.Summary != "Ana creó la incidencia WEB-1" || entry.RequestID != "req-7" || entry.EntityType != "issue" {
+		t.Fatalf("entry = %+v ok=%v", entry, ok)
+	}
+	for _, typ := range []string{"auth.password_reset", "auth.password_reset_requested", "auth.email_verified", "auth.account_locked", "auth.login_failed", "user.two_factor_enabled", "legal.consent_recorded", "version.released", "comment.created"} {
+		if _, ok := m.Map(SourceEvent{ID: 1, Type: typ}); !ok {
+			t.Errorf("%s must be audited", typ)
+		}
 	}
 }

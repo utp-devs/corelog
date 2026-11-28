@@ -169,6 +169,7 @@ func buildDemo(passwordHash string) *dataset {
 	addDemoVotes(ds, rng, recs, org.users)
 	addDemoFilters(ds)
 	addDemoSearchFilters(ds, org.orgID)
+	addPlanningSeed(ds, org.orgID, org.users[0], userID("agent@corelog.local"), core.id)
 	addDemoNotifications(ds, recs)
 	return ds
 }

@@ -82,12 +82,12 @@ func TestUserService_DeactivatedAccountCannotAuthenticate(t *testing.T) {
 	sessions := newFakeSessionRepo()
 	svc := NewUserService(repo, sessions)
 	ctx := context.Background()
-	userID := registerUser(t, svc, "ana@example.com", "clave-segura-1")
+	userID := registerUser(t, svc, "ana@example.com", "clave-segura-Z9")
 
-	if err := svc.DeactivateAccount(ctx, userID, "clave-segura-1"); err != nil {
+	if err := svc.DeactivateAccount(ctx, userID, "clave-segura-Z9"); err != nil {
 		t.Fatalf("deactivate: %v", err)
 	}
-	_, err := svc.Authenticate(ctx, port.AuthenticateInput{Email: "ana@example.com", Password: "clave-segura-1"})
+	_, err := svc.Authenticate(ctx, port.AuthenticateInput{Email: "ana@example.com", Password: "clave-segura-Z9"})
 	if !errors.Is(err, domain.ErrInvalidCredentials) {
 		t.Fatalf("want invalid credentials for deactivated account, got %v", err)
 	}
@@ -98,7 +98,7 @@ func TestUserService_DeactivateRequiresPasswordAndRevokesSessions(t *testing.T) 
 	sessions := newFakeSessionRepo()
 	svc := NewUserService(repo, sessions)
 	ctx := context.Background()
-	userID := registerUser(t, svc, "ana@example.com", "clave-segura-1")
+	userID := registerUser(t, svc, "ana@example.com", "clave-segura-Z9")
 	if _, err := svc.OpenSession(ctx, userID, "navegador", time.Now().Add(time.Hour)); err != nil {
 		t.Fatalf("open session: %v", err)
 	}
@@ -110,7 +110,7 @@ func TestUserService_DeactivateRequiresPasswordAndRevokesSessions(t *testing.T) 
 		t.Fatal("account must stay active after a wrong password")
 	}
 
-	if err := svc.DeactivateAccount(ctx, userID, "clave-segura-1"); err != nil {
+	if err := svc.DeactivateAccount(ctx, userID, "clave-segura-Z9"); err != nil {
 		t.Fatalf("deactivate: %v", err)
 	}
 	active, _ := sessions.ListActive(ctx, userID, time.Now())
@@ -124,7 +124,7 @@ func TestUserService_RevokeOtherSessionsKeepsCurrent(t *testing.T) {
 	sessions := newFakeSessionRepo()
 	svc := NewUserService(repo, sessions)
 	ctx := context.Background()
-	userID := registerUser(t, svc, "ana@example.com", "clave-segura-1")
+	userID := registerUser(t, svc, "ana@example.com", "clave-segura-Z9")
 	expires := time.Now().Add(time.Hour)
 	current, _ := svc.OpenSession(ctx, userID, "portatil", expires)
 	other, _ := svc.OpenSession(ctx, userID, "movil", expires)
@@ -150,7 +150,7 @@ func TestUserService_RevokeSessionOfAnotherUserIsNotFound(t *testing.T) {
 	sessions := newFakeSessionRepo()
 	svc := NewUserService(repo, sessions)
 	ctx := context.Background()
-	owner := registerUser(t, svc, "ana@example.com", "clave-segura-1")
+	owner := registerUser(t, svc, "ana@example.com", "clave-segura-Z9")
 	intruder := registerUser(t, svc, "luis@example.com", "clave-segura-2")
 	sid, _ := svc.OpenSession(ctx, owner, "portatil", time.Now().Add(time.Hour))
 

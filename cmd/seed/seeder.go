@@ -68,6 +68,7 @@ var errNotEmpty = errors.New("la base de datos ya tiene usuarios; usa --force-re
 var appTables = []string{
 	"domain_events", "event_cursors", "favorites", "recent_items", "project_permissions", "project_team_roles",
 	"notification_preferences", "notifications", "user_sessions",
+	"dashboard_shares", "dashboard_gadgets", "dashboards", "roadmap_epic_ranks", "calendar_event_attendees", "calendar_events", "calendar_feed_tokens",
 	"comment_mentions", "comments", "activities", "watchers", "issue_links", "issue_votes", "attachments",
 	"issue_labels", "issue_components", "saved_filters", "filter_subscriptions", "filter_shares", "filters", "issue_status_history", "issues", "sprints",
 	"board_quick_filters", "board_swimlanes", "board_column_statuses", "board_columns", "boards", "workflows", "statuses",

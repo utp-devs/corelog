@@ -22,6 +22,9 @@ type Event struct {
 	Title    string
 	SourceID uuid.UUID
 	Link     string
+	// ProjectID and ProjectKey are filled by the multi-project reader.
+	ProjectID  uuid.UUID
+	ProjectKey string
 }
 
 // Repository lee los eventos del proyecto dentro de un rango de fechas (ambos extremos incluidos).

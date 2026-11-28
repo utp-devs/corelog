@@ -241,7 +241,7 @@ func (h *Handler) TwoFactorRegenerateRecoveryCodes(w http.ResponseWriter, r *htt
 // LoginSecondFactor completes a login that was answered with two_factor_required. It is public: the
 // challenge token is the proof that the password was already checked.
 func (h *Handler) LoginSecondFactor(w http.ResponseWriter, r *http.Request) {
-	if !h.requireTwoFactor(w) {
+	if !h.requireTwoFactor(w) || !h.allowIP(w, r, h.limits().LoginTwoFact, "login2fa") {
 		return
 	}
 	var req twoFactorLoginRequest
@@ -267,6 +267,7 @@ func (h *Handler) LoginSecondFactor(w http.ResponseWriter, r *http.Request) {
 		httpresponse.Error(w, err)
 		return
 	}
+	h.recordLogin(r, user)
 	token, err := authtoken.GenerateWithSession(h.jwtSecret, h.jwtExpiration, user.ID, string(user.Role), sessionID)
 	if err != nil {
 		httpresponse.Error(w, apperror.Wrap(apperror.KindInternal, "failed to issue token", err))

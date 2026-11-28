@@ -23,7 +23,11 @@ type Entry struct {
 	IP             string
 	UserAgent      string
 	SourceEventID  *int64
-	CreatedAt      time.Time
+	// RequestID is the id of the HTTP request that caused the event.
+	RequestID string
+	// ActorName is read-only: it is joined from users when listing.
+	ActorName string
+	CreatedAt time.Time
 }
 
 // SourceEvent is the part of a domain event the audit mapper needs. It keeps

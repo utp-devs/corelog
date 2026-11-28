@@ -246,7 +246,7 @@ func TestDispatcherStoresAuditEntries(t *testing.T) {
 	for _, e := range []events.Event{
 		{OrgID: &org, ActorID: &actor, Type: "org.created", EntityType: "organization",
 			Payload: map[string]any{"actor_name": "Ana", "name": "Acme", "ip": "10.0.0.5", "user_agent": "ua"}},
-		{OrgID: &org, ActorID: &actor, Type: "issue.created", EntityType: "issue", Payload: map[string]any{}},
+		{OrgID: &org, ActorID: &actor, Type: "board.column_resized", EntityType: "board", Payload: map[string]any{}},
 		{OrgID: &org, ActorID: &actor, Type: "member.role_changed", EntityType: "member",
 			Payload: map[string]any{"member_name": "Luis", "role": "admin",
 				"before": map[string]any{"role": "viewer"}, "after": map[string]any{"role": "admin"}}},
@@ -277,14 +277,14 @@ func TestDispatcherStoresAuditEntries(t *testing.T) {
 		t.Fatal(err)
 	}
 	if len(page.Entries) != 2 {
-		t.Fatalf("audit entries = %d, want 2 (issue.created is not audited)", len(page.Entries))
+		t.Fatalf("audit entries = %d, want 2 (board.column_resized is not audited)", len(page.Entries))
 	}
 	byAction := map[string]domain.Entry{}
 	for _, e := range page.Entries {
 		byAction[e.Action] = e
 	}
 	created, ok := byAction["org.created"]
-	if !ok || created.Summary != "Ana creó la organización \"Acme\"" || created.IP != "10.0.0.5" || created.UserAgent != "ua" {
+	if !ok || created.Summary != "Ana creó la organización \"Acme\"" || created.IP != "10.0.0.0" || created.UserAgent != "ua" {
 		t.Fatalf("org.created entry = %+v", created)
 	}
 	changed, ok := byAction["member.role_changed"]

@@ -15,11 +15,11 @@ import (
 func TestUserService_RegisterDefaultsDisplayNameAndRole(t *testing.T) {
 	ctx := context.Background()
 	svc := NewUserService(newFakeUserRepo(), newFakeSessionRepo())
-	if _, err := svc.Register(ctx, port.RegisterInput{Name: "Admin", Email: "a@example.com", Password: "password", PasswordConfirmation: "password"}); err != nil {
+	if _, err := svc.Register(ctx, port.RegisterInput{Name: "Admin", Email: "a@example.com", Password: "Tr1cky-Pass9x", PasswordConfirmation: "Tr1cky-Pass9x"}); err != nil {
 		t.Fatal(err)
 	}
 
-	user, err := svc.Register(ctx, port.RegisterInput{Name: "Ana Prueba", Email: "ana@example.com", Password: "password", PasswordConfirmation: "password"})
+	user, err := svc.Register(ctx, port.RegisterInput{Name: "Ana Prueba", Email: "ana@example.com", Password: "Tr1cky-Pass9x", PasswordConfirmation: "Tr1cky-Pass9x"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -38,7 +38,7 @@ func TestUserService_UpdateProfileValidatesTimezone(t *testing.T) {
 	ctx := context.Background()
 	repo := newFakeUserRepo()
 	svc := NewUserService(repo, newFakeSessionRepo())
-	user, _ := svc.Register(ctx, port.RegisterInput{Name: "Luis", Email: "luis@example.com", Password: "password", PasswordConfirmation: "password"})
+	user, _ := svc.Register(ctx, port.RegisterInput{Name: "Luis", Email: "luis@example.com", Password: "Tr1cky-Pass9x", PasswordConfirmation: "Tr1cky-Pass9x"})
 
 	_, err := svc.UpdateProfile(ctx, user.ID, port.UpdateProfileInput{Timezone: strPtr("Mars/Olympus")})
 	if !errors.Is(err, domain.ErrInvalidTimezone) {
@@ -73,12 +73,12 @@ func TestUserService_AuthenticateRecordsLastLogin(t *testing.T) {
 	ctx := context.Background()
 	repo := newFakeUserRepo()
 	svc := NewUserService(repo, newFakeSessionRepo())
-	user, _ := svc.Register(ctx, port.RegisterInput{Name: "Eva", Email: "eva@example.com", Password: "password", PasswordConfirmation: "password"})
+	user, _ := svc.Register(ctx, port.RegisterInput{Name: "Eva", Email: "eva@example.com", Password: "Tr1cky-Pass9x", PasswordConfirmation: "Tr1cky-Pass9x"})
 
 	if _, ok := repo.logins[user.ID]; ok {
 		t.Fatal("no login recorded before authenticating")
 	}
-	authenticated, err := svc.Authenticate(ctx, port.AuthenticateInput{Email: "eva@example.com", Password: "password"})
+	authenticated, err := svc.Authenticate(ctx, port.AuthenticateInput{Email: "eva@example.com", Password: "Tr1cky-Pass9x"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -100,11 +100,11 @@ func TestUserService_SearchInOrganization(t *testing.T) {
 	svc := NewUserService(repo, newFakeSessionRepo())
 
 	org, other := uuid.New(), uuid.New()
-	owner, _ := svc.Register(ctx, port.RegisterInput{Name: "Owner Ana", Email: "owner@example.com", Password: "password", PasswordConfirmation: "password"})
-	member, _ := svc.Register(ctx, port.RegisterInput{Name: "Member Beto", Email: "member@example.com", Password: "password", PasswordConfirmation: "password"})
-	guest, _ := svc.Register(ctx, port.RegisterInput{Name: "Guest Carla", Email: "guest@example.com", Password: "password", PasswordConfirmation: "password"})
-	outsider, _ := svc.Register(ctx, port.RegisterInput{Name: "Outsider Dani", Email: "outsider@example.com", Password: "password", PasswordConfirmation: "password"})
-	elsewhere, _ := svc.Register(ctx, port.RegisterInput{Name: "Elsewhere Eli", Email: "eli@example.com", Password: "password", PasswordConfirmation: "password"})
+	owner, _ := svc.Register(ctx, port.RegisterInput{Name: "Owner Ana", Email: "owner@example.com", Password: "Tr1cky-Pass9x", PasswordConfirmation: "Tr1cky-Pass9x"})
+	member, _ := svc.Register(ctx, port.RegisterInput{Name: "Member Beto", Email: "member@example.com", Password: "Tr1cky-Pass9x", PasswordConfirmation: "Tr1cky-Pass9x"})
+	guest, _ := svc.Register(ctx, port.RegisterInput{Name: "Guest Carla", Email: "guest@example.com", Password: "Tr1cky-Pass9x", PasswordConfirmation: "Tr1cky-Pass9x"})
+	outsider, _ := svc.Register(ctx, port.RegisterInput{Name: "Outsider Dani", Email: "outsider@example.com", Password: "Tr1cky-Pass9x", PasswordConfirmation: "Tr1cky-Pass9x"})
+	elsewhere, _ := svc.Register(ctx, port.RegisterInput{Name: "Elsewhere Eli", Email: "eli@example.com", Password: "Tr1cky-Pass9x", PasswordConfirmation: "Tr1cky-Pass9x"})
 
 	repo.memberships[membershipKey{org, owner.ID}] = "owner"
 	repo.memberships[membershipKey{org, member.ID}] = "member"

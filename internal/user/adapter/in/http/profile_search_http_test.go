@@ -162,13 +162,13 @@ func TestUserHTTP_SearchIsScopedToOrganization(t *testing.T) {
 func TestUserHTTP_LoginRecordsLastLogin(t *testing.T) {
 	router, _, _ := setupUserRouter()
 
-	if rec := doJSON(t, router, http.MethodPost, "/auth/register", `{"name":"Eva Login","email":"eva@example.com","password":"password123","password_confirmation":"password123"}`, ""); rec.Code != http.StatusCreated {
+	if rec := doJSON(t, router, http.MethodPost, "/auth/register", `{"name":"Eva Login","email":"eva@example.com","password":"Tr1cky-Pass9x","password_confirmation":"Tr1cky-Pass9x"}`, ""); rec.Code != http.StatusCreated {
 		t.Fatalf("register: status %d: %s", rec.Code, rec.Body.String())
 	}
 	if rec := doJSON(t, router, http.MethodPost, "/auth/login", `{"email":"eva@example.com","password":"wrong-password"}`, ""); rec.Code == http.StatusOK {
 		t.Fatal("login with a wrong password must not succeed")
 	}
-	rec := doJSON(t, router, http.MethodPost, "/auth/login", `{"email":"eva@example.com","password":"password123"}`, "")
+	rec := doJSON(t, router, http.MethodPost, "/auth/login", `{"email":"eva@example.com","password":"Tr1cky-Pass9x"}`, "")
 	if rec.Code != http.StatusOK {
 		t.Fatalf("login: status %d: %s", rec.Code, rec.Body.String())
 	}

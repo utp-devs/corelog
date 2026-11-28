@@ -136,7 +136,7 @@ func (e *identityEnv) token(t *testing.T, id string) string {
 func TestIdentityHTTP_RegisterNames(t *testing.T) {
 	env := newIdentityEnv()
 
-	status, data := env.register(t, `{"first_name":"María José","last_name":"O'Brien-Pérez","email":"mj@example.com","password":"password123","password_confirmation":"password123"}`)
+	status, data := env.register(t, `{"first_name":"María José","last_name":"O'Brien-Pérez","email":"mj@example.com","password":"Tr1cky-Pass9x","password_confirmation":"Tr1cky-Pass9x"}`)
 	if status != http.StatusCreated {
 		t.Fatalf("status %d: %v", status, data)
 	}
@@ -145,24 +145,24 @@ func TestIdentityHTTP_RegisterNames(t *testing.T) {
 	}
 
 	t.Run("legacy name is split and returned", func(t *testing.T) {
-		status, data := env.register(t, `{"name":"Ana Perez Lopez","email":"ana@example.com","password":"password123","password_confirmation":"password123"}`)
+		status, data := env.register(t, `{"name":"Ana Perez Lopez","email":"ana@example.com","password":"Tr1cky-Pass9x","password_confirmation":"Tr1cky-Pass9x"}`)
 		if status != http.StatusCreated || data["first_name"] != "Ana" || data["last_name"] != "Perez Lopez" || data["name"] != "Ana Perez Lopez" {
 			t.Fatalf("status %d: %v", status, data)
 		}
 	})
 
 	t.Run("extra spaces are collapsed", func(t *testing.T) {
-		_, data := env.register(t, `{"first_name":"  Luis   Miguel ","last_name":" Gomez ","email":"lm@example.com","password":"password123","password_confirmation":"password123"}`)
+		_, data := env.register(t, `{"first_name":"  Luis   Miguel ","last_name":" Gomez ","email":"lm@example.com","password":"Tr1cky-Pass9x","password_confirmation":"Tr1cky-Pass9x"}`)
 		if data["first_name"] != "Luis Miguel" || data["last_name"] != "Gomez" {
 			t.Errorf("not normalized: %v", data)
 		}
 	})
 
 	for name, body := range map[string]string{
-		"digits in first name":  `{"first_name":"Ana2","last_name":"Perez","email":"x1@example.com","password":"password123","password_confirmation":"password123"}`,
-		"symbols in last name":  `{"first_name":"Ana","last_name":"Perez!","email":"x2@example.com","password":"password123","password_confirmation":"password123"}`,
-		"missing last name":     `{"first_name":"Ana","email":"x3@example.com","password":"password123","password_confirmation":"password123"}`,
-		"digits in legacy name": `{"name":"User 1","email":"x4@example.com","password":"password123","password_confirmation":"password123"}`,
+		"digits in first name":  `{"first_name":"Ana2","last_name":"Perez","email":"x1@example.com","password":"Tr1cky-Pass9x","password_confirmation":"Tr1cky-Pass9x"}`,
+		"symbols in last name":  `{"first_name":"Ana","last_name":"Perez!","email":"x2@example.com","password":"Tr1cky-Pass9x","password_confirmation":"Tr1cky-Pass9x"}`,
+		"missing last name":     `{"first_name":"Ana","email":"x3@example.com","password":"Tr1cky-Pass9x","password_confirmation":"Tr1cky-Pass9x"}`,
+		"digits in legacy name": `{"name":"User 1","email":"x4@example.com","password":"Tr1cky-Pass9x","password_confirmation":"Tr1cky-Pass9x"}`,
 	} {
 		t.Run("rejects "+name, func(t *testing.T) {
 			status, data := env.register(t, body)
@@ -173,7 +173,7 @@ func TestIdentityHTTP_RegisterNames(t *testing.T) {
 	}
 
 	t.Run("no name at all", func(t *testing.T) {
-		status, data := env.register(t, `{"email":"x5@example.com","password":"password123","password_confirmation":"password123"}`)
+		status, data := env.register(t, `{"email":"x5@example.com","password":"Tr1cky-Pass9x","password_confirmation":"Tr1cky-Pass9x"}`)
 		if status != http.StatusUnprocessableEntity || data["code"] != "user.name_required" {
 			t.Errorf("status %d: %v", status, data)
 		}
@@ -182,13 +182,13 @@ func TestIdentityHTTP_RegisterNames(t *testing.T) {
 
 func TestIdentityHTTP_RegisterPasswordConfirmation(t *testing.T) {
 	cases := map[string]string{
-		"mismatch":                `"password":"password123","password_confirmation":"password124"`,
-		"missing":                 `"password":"password123"`,
-		"whitespace counts":       `"password":"password123","password_confirmation":"password123 "`,
-		"leading whitespace":      `"password":"password123","password_confirmation":" password123"`,
-		"case counts":             `"password":"password123","password_confirmation":"Password123"`,
+		"mismatch":                `"password":"Tr1cky-Pass9x","password_confirmation":"password124"`,
+		"missing":                 `"password":"Tr1cky-Pass9x"`,
+		"whitespace counts":       `"password":"Tr1cky-Pass9x","password_confirmation":"Tr1cky-Pass9x "`,
+		"leading whitespace":      `"password":"Tr1cky-Pass9x","password_confirmation":" Tr1cky-Pass9x"`,
+		"case counts":             `"password":"Tr1cky-Pass9x","password_confirmation":"Password123"`,
 		"mismatch before policy":  `"password":"123","password_confirmation":"12"`,
-		"empty confirmation only": `"password":"password123","password_confirmation":""`,
+		"empty confirmation only": `"password":"Tr1cky-Pass9x","password_confirmation":""`,
 	}
 	for name, pw := range cases {
 		t.Run(name, func(t *testing.T) {
@@ -212,7 +212,7 @@ func TestIdentityHTTP_RegisterPasswordConfirmation(t *testing.T) {
 
 	t.Run("matching confirmation registers", func(t *testing.T) {
 		env := newIdentityEnv()
-		status, _ := env.register(t, `{"first_name":"Ana","last_name":"Perez","email":"ana@example.com","password":"password123","password_confirmation":"password123"}`)
+		status, _ := env.register(t, `{"first_name":"Ana","last_name":"Perez","email":"ana@example.com","password":"Tr1cky-Pass9x","password_confirmation":"Tr1cky-Pass9x"}`)
 		if status != http.StatusCreated {
 			t.Fatalf("status %d", status)
 		}
@@ -229,7 +229,7 @@ func TestIdentityHTTP_RegisterPasswordConfirmation(t *testing.T) {
 
 func TestIdentityHTTP_ChangePasswordConfirmation(t *testing.T) {
 	env := newIdentityEnv()
-	if status, _ := env.register(t, `{"first_name":"Ana","last_name":"Perez","email":"ana@example.com","password":"password123","password_confirmation":"password123"}`); status != http.StatusCreated {
+	if status, _ := env.register(t, `{"first_name":"Ana","last_name":"Perez","email":"ana@example.com","password":"Tr1cky-Pass9x","password_confirmation":"Tr1cky-Pass9x"}`); status != http.StatusCreated {
 		t.Fatal("register failed")
 	}
 	var id string
@@ -239,9 +239,9 @@ func TestIdentityHTTP_ChangePasswordConfirmation(t *testing.T) {
 	token := env.token(t, id)
 
 	for name, body := range map[string]string{
-		"mismatch": `{"current_password":"password123","new_password":"newpassword1","new_password_confirmation":"newpassword2"}`,
-		"missing":  `{"current_password":"password123","new_password":"newpassword1"}`,
-		"spaces":   `{"current_password":"password123","new_password":"newpassword1","new_password_confirmation":"newpassword1 "}`,
+		"mismatch": `{"current_password":"Tr1cky-Pass9x","new_password":"New-Pass-4567x","new_password_confirmation":"newpassword2"}`,
+		"missing":  `{"current_password":"Tr1cky-Pass9x","new_password":"New-Pass-4567x"}`,
+		"spaces":   `{"current_password":"Tr1cky-Pass9x","new_password":"New-Pass-4567x","new_password_confirmation":"New-Pass-4567x "}`,
 	} {
 		t.Run(name, func(t *testing.T) {
 			status, data := env.do(t, http.MethodPost, "/users/me/password", body, token)
@@ -252,18 +252,18 @@ func TestIdentityHTTP_ChangePasswordConfirmation(t *testing.T) {
 			if len(details) != 1 || details[0].(map[string]any)["field"] != "new_password_confirmation" {
 				t.Errorf("details %v", data["details"])
 			}
-			if status, _ := env.do(t, http.MethodPost, "/auth/login", `{"email":"ana@example.com","password":"password123"}`, ""); status != http.StatusOK {
+			if status, _ := env.do(t, http.MethodPost, "/auth/login", `{"email":"ana@example.com","password":"Tr1cky-Pass9x"}`, ""); status != http.StatusOK {
 				t.Errorf("old password no longer valid after a mismatch (status %d)", status)
 			}
 		})
 	}
 
 	t.Run("matching change works and the old password stops", func(t *testing.T) {
-		status, _ := env.do(t, http.MethodPost, "/users/me/password", `{"current_password":"password123","new_password":"newpassword1","new_password_confirmation":"newpassword1"}`, token)
+		status, _ := env.do(t, http.MethodPost, "/users/me/password", `{"current_password":"Tr1cky-Pass9x","new_password":"New-Pass-4567x","new_password_confirmation":"New-Pass-4567x"}`, token)
 		if status != http.StatusNoContent {
 			t.Fatalf("status %d", status)
 		}
-		if status, _ := env.do(t, http.MethodPost, "/auth/login", `{"email":"ana@example.com","password":"password123"}`, ""); status != http.StatusUnauthorized {
+		if status, _ := env.do(t, http.MethodPost, "/auth/login", `{"email":"ana@example.com","password":"Tr1cky-Pass9x"}`, ""); status != http.StatusUnauthorized {
 			t.Errorf("old password still valid: %d", status)
 		}
 	})
@@ -272,7 +272,7 @@ func TestIdentityHTTP_ChangePasswordConfirmation(t *testing.T) {
 func TestIdentityHTTP_Phone(t *testing.T) {
 	env := newIdentityEnv()
 
-	status, data := env.register(t, `{"first_name":"Rosa","last_name":"Diaz","email":"rosa@example.com","password":"password123","password_confirmation":"password123","phone":{"country":"PE","number":"0912 345-678"}}`)
+	status, data := env.register(t, `{"first_name":"Rosa","last_name":"Diaz","email":"rosa@example.com","password":"Tr1cky-Pass9x","password_confirmation":"Tr1cky-Pass9x","phone":{"country":"PE","number":"0912 345-678"}}`)
 	if status != http.StatusCreated {
 		t.Fatalf("status %d: %v", status, data)
 	}
@@ -283,9 +283,9 @@ func TestIdentityHTTP_Phone(t *testing.T) {
 
 	t.Run("invalid phones", func(t *testing.T) {
 		for name, body := range map[string]string{
-			"mismatched prefix": `{"first_name":"A","last_name":"B","email":"p1@example.com","password":"password123","password_confirmation":"password123","phone":{"country":"PE","number":"+52 5512345678"}}`,
-			"unknown country":   `{"first_name":"A","last_name":"B","email":"p2@example.com","password":"password123","password_confirmation":"password123","phone":{"country":"ZZ","number":"123456789"}}`,
-			"letters":           `{"first_name":"A","last_name":"B","email":"p3@example.com","password":"password123","password_confirmation":"password123","phone":{"country":"PE","number":"91234abcd"}}`,
+			"mismatched prefix": `{"first_name":"A","last_name":"B","email":"p1@example.com","password":"Tr1cky-Pass9x","password_confirmation":"Tr1cky-Pass9x","phone":{"country":"PE","number":"+52 5512345678"}}`,
+			"unknown country":   `{"first_name":"A","last_name":"B","email":"p2@example.com","password":"Tr1cky-Pass9x","password_confirmation":"Tr1cky-Pass9x","phone":{"country":"ZZ","number":"123456789"}}`,
+			"letters":           `{"first_name":"A","last_name":"B","email":"p3@example.com","password":"Tr1cky-Pass9x","password_confirmation":"Tr1cky-Pass9x","phone":{"country":"PE","number":"91234abcd"}}`,
 		} {
 			status, data := env.register(t, body)
 			if status != http.StatusUnprocessableEntity || data["code"] != "user.invalid_phone" {
@@ -370,7 +370,7 @@ func TestIdentityHTTP_Phone(t *testing.T) {
 func TestIdentityHTTP_PhoneVerificationLimits(t *testing.T) {
 	newUser := func() (*identityEnv, string) {
 		env := newIdentityEnv()
-		_, data := env.register(t, `{"first_name":"Rosa","last_name":"Diaz","email":"rosa@example.com","password":"password123","password_confirmation":"password123","phone":{"country":"MX","number":"5512345678"}}`)
+		_, data := env.register(t, `{"first_name":"Rosa","last_name":"Diaz","email":"rosa@example.com","password":"Tr1cky-Pass9x","password_confirmation":"Tr1cky-Pass9x","phone":{"country":"MX","number":"5512345678"}}`)
 		return env, env.token(t, data["id"].(string))
 	}
 
@@ -552,7 +552,7 @@ func TestIdentityHTTP_Countries(t *testing.T) {
 
 func TestIdentityHTTP_ProfileNames(t *testing.T) {
 	env := newIdentityEnv()
-	_, data := env.register(t, `{"first_name":"Ana","last_name":"Perez","email":"ana@example.com","password":"password123","password_confirmation":"password123"}`)
+	_, data := env.register(t, `{"first_name":"Ana","last_name":"Perez","email":"ana@example.com","password":"Tr1cky-Pass9x","password_confirmation":"Tr1cky-Pass9x"}`)
 	token := env.token(t, data["id"].(string))
 
 	status, data := env.do(t, http.MethodPatch, "/users/me", `{"first_name":"Ana María","last_name":"Pérez"}`, token)

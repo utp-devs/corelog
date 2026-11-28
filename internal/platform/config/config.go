@@ -13,15 +13,19 @@ type Config struct {
 	Database DatabaseConfig
 	Auth     AuthConfig
 	Legal    LegalConfig
+	Security SecurityConfig
+	Mail     MailConfig
 }
 
 type ServerConfig struct {
-	Port            string        `env:"SERVER_PORT" envDefault:"8080"`
-	Env             string        `env:"APP_ENV" envDefault:"development"`
-	AllowedOrigins  []string      `env:"CORS_ALLOWED_ORIGIN" envDefault:"http://localhost:5173" envSeparator:","`
-	ReadTimeout     time.Duration `env:"SERVER_READ_TIMEOUT" envDefault:"10s"`
-	WriteTimeout    time.Duration `env:"SERVER_WRITE_TIMEOUT" envDefault:"10s"`
-	ShutdownTimeout time.Duration `env:"SERVER_SHUTDOWN_TIMEOUT" envDefault:"15s"`
+	Port           string   `env:"SERVER_PORT" envDefault:"8080"`
+	Env            string   `env:"APP_ENV" envDefault:"development"`
+	AllowedOrigins []string `env:"CORS_ALLOWED_ORIGIN" envDefault:"http://localhost:5173" envSeparator:","`
+	// CorsAllowedOrigins (CORS_ALLOWED_ORIGINS) takes precedence over the legacy singular variable.
+	CorsAllowedOrigins []string      `env:"CORS_ALLOWED_ORIGINS" envSeparator:","`
+	ReadTimeout        time.Duration `env:"SERVER_READ_TIMEOUT" envDefault:"10s"`
+	WriteTimeout       time.Duration `env:"SERVER_WRITE_TIMEOUT" envDefault:"10s"`
+	ShutdownTimeout    time.Duration `env:"SERVER_SHUTDOWN_TIMEOUT" envDefault:"15s"`
 }
 
 type DatabaseConfig struct {

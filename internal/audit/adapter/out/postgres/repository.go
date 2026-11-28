@@ -7,6 +7,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
@@ -32,8 +33,10 @@ func NewRepository(db *sqlx.DB) *Repository {
 const insertSQL = `
 INSERT INTO audit_events (
     organization_id, project_id, actor_id, action, entity_type, entity_id, summary,
-    before, after, ip, user_agent, source_event_id, created_at
-) VALUES ($1, $2, $3, $4, $5, $6, $7, $8::jsonb, $9::jsonb, $10::inet, $11, $12, $13)
+    before, after, ip, user_agent, source_event_id, created_at, request_id
+) VALUES (
+    COALESCE($1, (SELECT p.organization_id FROM projects p WHERE p.id = $2)), $2, $3, $4, $5, $6, $7,
+    $8::jsonb, $9::jsonb, $10::inet, $11, $12, $13, $14)
 ON CONFLICT (source_event_id) DO NOTHING`
 
 // Save inserts the entry. A duplicate source_event_id is skipped silently.
@@ -60,7 +63,7 @@ func (r *Repository) Save(ctx context.Context, e domain.Entry) error {
 	if _, err := r.db.ExecContext(ctx, insertSQL,
 		nullUUID(e.OrganizationID), nullUUID(e.ProjectID), nullUUID(e.ActorID),
 		e.Action, e.EntityType, nullUUID(e.EntityID), e.Summary,
-		before, after, ip, userAgent, sourceID, e.CreatedAt,
+		before, after, ip, userAgent, sourceID, e.CreatedAt, nullString(e.RequestID),
 	); err != nil {
 		return fmt.Errorf("audit: insert entry: %w", err)
 	}
@@ -81,13 +84,17 @@ type entryRow struct {
 	IP             sql.NullString `db:"ip"`
 	UserAgent      sql.NullString `db:"user_agent"`
 	SourceEventID  sql.NullInt64  `db:"source_event_id"`
+	RequestID      sql.NullString `db:"request_id"`
+	ActorName      sql.NullString `db:"actor_name"`
 	CreatedAt      time.Time      `db:"created_at"`
 }
 
 const selectColumns = `
-SELECT id, organization_id, project_id, actor_id, action, entity_type, entity_id, summary,
-       before, after, host(ip) AS ip, user_agent, source_event_id, created_at
-FROM audit_events`
+SELECT a.id, a.organization_id, a.project_id, a.actor_id, a.action, a.entity_type, a.entity_id, a.summary,
+       a.before, a.after, host(a.ip) AS ip, a.user_agent, a.source_event_id, a.created_at, a.request_id,
+       u.name AS actor_name
+FROM audit_events a
+LEFT JOIN users u ON u.id = a.actor_id`
 
 // List returns one page of entries matching f, newest first.
 func (r *Repository) List(ctx context.Context, f port.ListFilter) (port.ListPage, error) {
@@ -106,33 +113,33 @@ func (r *Repository) List(ctx context.Context, f port.ListFilter) (port.ListPage
 		where = append(where, fmt.Sprintf(cond, len(args)))
 	}
 	if f.OrganizationID != nil {
-		add("organization_id = $%d", *f.OrganizationID)
+		add("a.organization_id = $%d", *f.OrganizationID)
 	}
 	if f.ActorID != nil {
-		add("actor_id = $%d", *f.ActorID)
+		add("a.actor_id = $%d", *f.ActorID)
 	}
 	if f.Action != "" {
-		add("action = $%d", f.Action)
+		add("a.action = $%d", f.Action)
 	}
 	if f.EntityType != "" {
-		add("entity_type = $%d", f.EntityType)
+		add("a.entity_type = $%d", f.EntityType)
 	}
 	if f.EntityID != nil {
-		add("entity_id = $%d", *f.EntityID)
+		add("a.entity_id = $%d", *f.EntityID)
 	}
 	if f.Since != nil {
-		add("created_at >= $%d", *f.Since)
+		add("a.created_at >= $%d", *f.Since)
 	}
 	if f.Until != nil {
-		add("created_at < $%d", *f.Until)
+		add("a.created_at < $%d", *f.Until)
 	}
 	if f.Cursor > 0 {
-		add("id < $%d", f.Cursor)
+		add("a.id < $%d", f.Cursor)
 	}
 	args = append(args, limit+1)
 
 	query := selectColumns + "\nWHERE " + joinAnd(where) +
-		fmt.Sprintf("\nORDER BY id DESC\nLIMIT $%d", len(args))
+		fmt.Sprintf("\nORDER BY a.id DESC\nLIMIT $%d", len(args))
 
 	var rows []entryRow
 	if err := r.db.SelectContext(ctx, &rows, query, args...); err != nil {
@@ -190,6 +197,8 @@ func (row entryRow) toDomain() (domain.Entry, error) {
 		IP:             row.IP.String,
 		UserAgent:      row.UserAgent.String,
 		CreatedAt:      row.CreatedAt,
+		RequestID:      row.RequestID.String,
+		ActorName:      row.ActorName.String,
 		OrganizationID: nullUUIDPtr(row.OrganizationID),
 		ProjectID:      nullUUIDPtr(row.ProjectID),
 		ActorID:        nullUUIDPtr(row.ActorID),
@@ -252,4 +261,24 @@ func joinAnd(parts []string) string {
 		out += " AND " + p
 	}
 	return out
+}
+
+func nullString(s string) any {
+	if s == "" {
+		return nil
+	}
+	return s
+}
+
+// ActorName returns the display name of a user, or an empty string when unknown.
+func (r *Repository) ActorName(ctx context.Context, id uuid.UUID) (string, error) {
+	var name string
+	err := r.db.GetContext(ctx, &name, "SELECT name FROM users WHERE id = $1", id)
+	if errors.Is(err, sql.ErrNoRows) {
+		return "", nil
+	}
+	if err != nil {
+		return "", fmt.Errorf("audit: actor name: %w", err)
+	}
+	return name, nil
 }

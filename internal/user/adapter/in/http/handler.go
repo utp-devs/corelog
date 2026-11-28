@@ -12,6 +12,7 @@ import (
 	"github.com/jhonsferg/corelog/internal/platform/authtoken"
 	"github.com/jhonsferg/corelog/internal/platform/httpresponse"
 	appmw "github.com/jhonsferg/corelog/internal/platform/middleware"
+	"github.com/jhonsferg/corelog/internal/platform/ratelimit"
 	"github.com/jhonsferg/corelog/internal/platform/validation"
 	"github.com/jhonsferg/corelog/internal/user/application/port"
 	"github.com/jhonsferg/corelog/internal/user/domain"
@@ -25,6 +26,8 @@ type Handler struct {
 	twoFactor port.TwoFactorService
 	// consents is nil when the legal module is not wired; registration then asks for no consents.
 	consents port.ConsentGate
+	// sec holds the optional recovery, rate limit and lockout collaborators.
+	sec Security
 }
 
 func NewHandler(service port.Service, jwtSecret string, jwtExpiration time.Duration) *Handler {
@@ -32,6 +35,9 @@ func NewHandler(service port.Service, jwtSecret string, jwtExpiration time.Durat
 }
 
 func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
+	if !h.allowIP(w, r, h.limits().Register, "register") {
+		return
+	}
 	var req registerRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		httpresponse.Error(w, apperror.New(apperror.KindValidation, "invalid request body"))
@@ -68,6 +74,9 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
+	if !h.allowIP(w, r, h.limits().Login, "login") {
+		return
+	}
 	var req loginRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		httpresponse.Error(w, apperror.New(apperror.KindValidation, "invalid request body"))
@@ -78,11 +87,29 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if h.sec.Guard != nil {
+		locked, wait, err := h.sec.Guard.Check(r.Context(), req.Email)
+		if err != nil {
+			httpresponse.Error(w, err)
+			return
+		}
+		if locked {
+			lockedResponse(w, wait)
+			return
+		}
+	}
+
 	user, err := h.service.Authenticate(r.Context(), port.AuthenticateInput{
 		Email:    req.Email,
 		Password: req.Password,
 	})
 	if err != nil {
+		if h.sec.Guard != nil && apperror.CodeOf(err) == domain.ErrInvalidCredentials.Code {
+			if locked, wait, gerr := h.sec.Guard.RecordFailure(r.Context(), req.Email); gerr == nil && locked {
+				lockedResponse(w, wait)
+				return
+			}
+		}
 		httpresponse.Error(w, err)
 		return
 	}
@@ -115,6 +142,7 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 		httpresponse.Error(w, err)
 		return
 	}
+	h.recordLogin(r, user)
 
 	token, err := authtoken.GenerateWithSession(h.jwtSecret, h.jwtExpiration, user.ID, string(user.Role), sessionID)
 	if err != nil {
@@ -428,6 +456,9 @@ func (h *Handler) RequestPhoneVerification(w http.ResponseWriter, r *http.Reques
 	userID, ok := appmw.UserIDFromContext(r.Context())
 	if !ok {
 		httpresponse.Error(w, apperror.New(apperror.KindUnauthorized, "not authenticated"))
+		return
+	}
+	if !ratelimit.Check(h.limits().Phone, w, "phone:"+userID.String()) {
 		return
 	}
 	receipt, err := h.service.RequestPhoneVerification(r.Context(), userID)

@@ -18,6 +18,8 @@ const dateLayout = "2006-01-02"
 type Handler struct {
 	service   port.Service
 	jwtSecret string
+	events    port.EventService
+	publicURL string
 }
 
 func NewHandler(service port.Service, jwtSecret string) *Handler {
@@ -26,9 +28,15 @@ func NewHandler(service port.Service, jwtSecret string) *Handler {
 
 func (h *Handler) RegisterRoutes(r chi.Router) {
 	r.Route("/calendar", func(r chi.Router) {
-		r.Use(appmw.Authenticate(h.jwtSecret))
-		r.Get("/events", h.Events)
+		if h.events != nil {
+			h.registerEventRoutes(r)
+		}
+		r.Group(func(r chi.Router) {
+			r.Use(appmw.Authenticate(h.jwtSecret))
+			r.Get("/events", h.Events)
+		})
 	})
+	h.RegisterMeRoutes(r)
 }
 
 type eventResponse struct {

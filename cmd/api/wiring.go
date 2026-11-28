@@ -45,6 +45,10 @@ import (
 	projectport "github.com/jhonsferg/corelog/internal/project/application/port"
 	"github.com/jhonsferg/corelog/internal/release"
 	releasepostgres "github.com/jhonsferg/corelog/internal/release/adapter/out/postgres"
+	"github.com/jhonsferg/corelog/internal/report"
+	reportpostgres "github.com/jhonsferg/corelog/internal/report/adapter/out/postgres"
+	"github.com/jhonsferg/corelog/internal/roadmap"
+	roadmappostgres "github.com/jhonsferg/corelog/internal/roadmap/adapter/out/postgres"
 	"github.com/jhonsferg/corelog/internal/search"
 	searchpostgres "github.com/jhonsferg/corelog/internal/search/adapter/out/postgres"
 	"github.com/jhonsferg/corelog/internal/sprint"
@@ -95,6 +99,8 @@ func buildRouter(cfg *config.Config, db *sqlx.DB, log *slog.Logger) (chi.Router,
 		clock.RealClock{})
 	userModule.Handler.WithTwoFactor(twoFactorService)
 	userModule.WithPhoneVerification(userpostgres.NewPhoneVerificationRepository(db), usersms.NewNoopSender(log, cfg.Server.Env == "development"))
+	wireUserSecurity(cfg, db, log, userModule, userRepo, sessionRepo, database.NewTxManager(db),
+		events.NewPostgresPublisher(func(ctx context.Context) sqlx.ExtContext { return database.Executor(ctx, db) }))
 	orgModule := organization.NewModule(
 		organizationpostgres.NewRepository(db),
 		database.NewTxManager(db),
@@ -144,6 +150,12 @@ func buildRouter(cfg *config.Config, db *sqlx.DB, log *slog.Logger) (chi.Router,
 	noteModule := note.NewModule(notepostgres.NewRepository(db), notepostgres.NewLinkAccess(db), cfg.Auth.JWTSecret)
 	wireSearch(searchModule, db, noteModule.Search)
 	calendarModule := calendar.NewModule(calendarpostgres.NewCalendarRepository(db), projectAuthorizer, cfg.Auth.JWTSecret)
+	calendarModule.WithEvents(calendarpostgres.NewCalendarRepository(db), projectAuthorizer, clock.RealClock{}, os.Getenv("PUBLIC_URL"))
+	dashboardModule.WithDashboards(dashboard.DashboardDeps{
+		Repository: dashboardpostgres.NewRepository(db), Data: dashboardpostgres.NewDataSource(db),
+		Issues: dashboardIssueRunner{search: searchModule}, Upcoming: dashboardUpcoming{events: calendarModule.Events}, Clock: clock.RealClock{},
+	})
+	roadmapModule := roadmap.NewModule(roadmappostgres.NewRepository(db), projectAuthorizer, cfg.Auth.JWTSecret)
 	sprintModule := sprint.NewModule(sprintpostgres.NewSprintRepository(db), projectAuthorizer, database.NewTxManager(db), clock.RealClock{}, cfg.Auth.JWTSecret)
 	worklogModule := worklog.NewModule(worklogpostgres.NewRepository(db), projectAuthorizer, database.NewTxManager(db),
 		events.NewPostgresPublisher(func(ctx context.Context) sqlx.ExtContext { return database.Executor(ctx, db) }),
@@ -185,7 +197,14 @@ func buildRouter(cfg *config.Config, db *sqlx.DB, log *slog.Logger) (chi.Router,
 	avatar := userhttp.NewAvatarHandler(userpostgres.NewAvatarRepository(db), avatarStorage, cfg.Auth.JWTSecret)
 	logo := organizationhttp.NewLogoHandler(organizationpostgres.NewLogoRepository(db), logoStorage, orgRoleChecker{svc: orgModule.Service}, cfg.Auth.JWTSecret)
 
-	router := httpserver.NewRouter(cfg.Server)
+	reportModule := report.NewModule(report.Dependencies{
+		Reader: reportpostgres.NewReader(db), Authorizer: projectAuthorizer, Filter: reportIssueFilter{search: searchModule.Issues},
+		Sprints: reportSprintSummarizer{sprints: sprintModule.Service}, Clock: clock.RealClock{}, JWTSecret: cfg.Auth.JWTSecret,
+	})
+
+	auditModule := newAuditModule(cfg, db, orgModule.Service)
+
+	router := httpserver.NewRouterWith(cfg.Server, routerOptions(cfg, log))
 	router.Route("/api/v1", func(r chi.Router) {
 		// In block mode, callers with pending legal consents are refused outside the consent endpoints.
 		r.Use(legalModule.Handler.Enforce)
@@ -194,6 +213,9 @@ func buildRouter(cfg *config.Config, db *sqlx.DB, log *slog.Logger) (chi.Router,
 		catalogModule.Handler.RegisterCatalogRoutes(r)
 		customFieldModule.Handler.RegisterCustomFieldRoutes(r)
 		httpserver.Mount(r, userModule.Handler, teamModule.Handler, projectModule.Handler, boardModule.Handler, issueModule.Handler, sprintModule.Handler, notificationModule.Handler, calendarModule.Handler, searchModule.Handler, dashboardModule.Handler, favoriteModule.Handler, noteModule.Handler, orgModule.Handler, workflowAdmin.Handler, releaseModule.Handler, worklogModule.Handler, legalModule.Handler)
+		reportModule.Handler.RegisterRoutes(r)
+		roadmapModule.Handler.RegisterRoutes(r)
+		auditModule.Handler.RegisterRoutes(r)
 	})
 	return router, nil
 }

@@ -29,7 +29,7 @@ func decodeErrorEnvelope(t *testing.T, body []byte) errorEnvelope {
 
 func TestUserHTTP_ErrorCodes(t *testing.T) {
 	router, _, _ := setupUserRouter()
-	const email, password = "codigos@example.com", "password123"
+	const email, password = "codigos@example.com", "Tr1cky-Pass9x"
 	register := `{"name":"Codigos","email":"` + email + `","password":"` + password + `","password_confirmation":"` + password + `"}`
 
 	if rec := doJSON(t, router, http.MethodPost, "/auth/register", register, ""); rec.Code != http.StatusCreated {

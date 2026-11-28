@@ -142,7 +142,7 @@ func TestUserHTTP_Register(t *testing.T) {
 	router, _, _ := setupUserRouter()
 
 	t.Run("returns 201 on valid registration", func(t *testing.T) {
-		body := `{"name":"Alice","email":"alice@example.com","password":"securepassword123","password_confirmation":"securepassword123"}`
+		body := `{"name":"Alice","email":"alice@example.com","password":"Secure-Pass-123x","password_confirmation":"Secure-Pass-123x"}`
 		req := httptest.NewRequest(http.MethodPost, "/auth/register", bytes.NewBufferString(body))
 		req.Header.Set("Content-Type", "application/json")
 		rec := httptest.NewRecorder()
@@ -168,7 +168,7 @@ func TestUserHTTP_Register(t *testing.T) {
 	})
 
 	t.Run("returns 409 on duplicate email", func(t *testing.T) {
-		body := `{"name":"Alice","email":"alice@example.com","password":"securepassword123","password_confirmation":"securepassword123"}`
+		body := `{"name":"Alice","email":"alice@example.com","password":"Secure-Pass-123x","password_confirmation":"Secure-Pass-123x"}`
 		req := httptest.NewRequest(http.MethodPost, "/auth/register", bytes.NewBufferString(body))
 		req.Header.Set("Content-Type", "application/json")
 		rec := httptest.NewRecorder()
@@ -185,13 +185,13 @@ func TestUserHTTP_Login(t *testing.T) {
 	router, _, _ := setupUserRouter()
 
 	// Seed user
-	regBody := `{"name":"Bob","email":"bob@example.com","password":"password123","password_confirmation":"password123"}`
+	regBody := `{"name":"Bob","email":"bob@example.com","password":"Tr1cky-Pass9x","password_confirmation":"Tr1cky-Pass9x"}`
 	regReq := httptest.NewRequest(http.MethodPost, "/auth/register", bytes.NewBufferString(regBody))
 	regReq.Header.Set("Content-Type", "application/json")
 	router.ServeHTTP(httptest.NewRecorder(), regReq)
 
 	t.Run("returns 200 with JWT token on valid credentials", func(t *testing.T) {
-		body := `{"email":"bob@example.com","password":"password123"}`
+		body := `{"email":"bob@example.com","password":"Tr1cky-Pass9x"}`
 		req := httptest.NewRequest(http.MethodPost, "/auth/login", bytes.NewBufferString(body))
 		req.Header.Set("Content-Type", "application/json")
 		rec := httptest.NewRecorder()

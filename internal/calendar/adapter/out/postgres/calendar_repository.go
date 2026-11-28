@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"time"
 
@@ -13,8 +14,16 @@ import (
 )
 
 // CalendarRepository lee hitos de sprints e incidencias. Es solo lectura: no guarda estado propio.
+// querier is what the repository needs of the database handle; *sqlx.DB satisfies it.
+type querier interface {
+	GetContext(ctx context.Context, dest any, query string, args ...any) error
+	SelectContext(ctx context.Context, dest any, query string, args ...any) error
+	ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error)
+	BeginTxx(ctx context.Context, opts *sql.TxOptions) (*sqlx.Tx, error)
+}
+
 type CalendarRepository struct {
-	db *sqlx.DB
+	db querier
 }
 
 func NewCalendarRepository(db *sqlx.DB) *CalendarRepository {

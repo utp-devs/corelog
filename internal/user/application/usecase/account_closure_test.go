@@ -39,9 +39,9 @@ func TestUserService_DeactivateBlockedForSoleOwner(t *testing.T) {
 	detacher := &fakeDetacher{soleOwned: 1}
 	svc := NewUserService(repo, sessions).WithAccountClosure(tx, detacher)
 	ctx := context.Background()
-	userID := registerUser(t, svc, "owner@example.com", "clave-segura-1")
+	userID := registerUser(t, svc, "owner@example.com", "clave-segura-Z9")
 
-	err := svc.DeactivateAccount(ctx, userID, "clave-segura-1")
+	err := svc.DeactivateAccount(ctx, userID, "clave-segura-Z9")
 	if !errors.Is(err, domain.ErrSoleOwner) {
 		t.Fatalf("want ErrSoleOwner, got %v", err)
 	}
@@ -67,12 +67,12 @@ func TestUserService_DeactivateCascadesMemberships(t *testing.T) {
 	detacher := &fakeDetacher{}
 	svc := NewUserService(repo, sessions).WithAccountClosure(tx, detacher)
 	ctx := context.Background()
-	userID := registerUser(t, svc, "member@example.com", "clave-segura-1")
+	userID := registerUser(t, svc, "member@example.com", "clave-segura-Z9")
 	if _, err := svc.OpenSession(ctx, userID, "test", time.Now().Add(time.Hour)); err != nil {
 		t.Fatal(err)
 	}
 
-	if err := svc.DeactivateAccount(ctx, userID, "clave-segura-1"); err != nil {
+	if err := svc.DeactivateAccount(ctx, userID, "clave-segura-Z9"); err != nil {
 		t.Fatalf("deactivate: %v", err)
 	}
 	if tx.Calls != 1 {
@@ -95,9 +95,9 @@ func TestUserService_DeactivatePropagatesCascadeError(t *testing.T) {
 	sessions := newFakeSessionRepo()
 	detacher := &fakeDetacher{err: errors.New("boom")}
 	svc := NewUserService(repo, sessions).WithAccountClosure(&database.FakeTxManager{}, detacher)
-	userID := registerUser(t, svc, "fail@example.com", "clave-segura-1")
+	userID := registerUser(t, svc, "fail@example.com", "clave-segura-Z9")
 
-	if err := svc.DeactivateAccount(context.Background(), userID, "clave-segura-1"); err == nil {
+	if err := svc.DeactivateAccount(context.Background(), userID, "clave-segura-Z9"); err == nil {
 		t.Fatal("cascade error must be returned")
 	}
 }

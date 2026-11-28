@@ -13,8 +13,9 @@ import (
 )
 
 type Handler struct {
-	service   port.Service
-	jwtSecret string
+	service    port.Service
+	jwtSecret  string
+	dashboards port.DashboardService
 }
 
 func NewHandler(service port.Service, jwtSecret string) *Handler {
@@ -26,6 +27,9 @@ func (h *Handler) RegisterRoutes(r chi.Router) {
 		r.Use(appmw.Authenticate(h.jwtSecret))
 		r.Get("/me", h.Me)
 	})
+	if h.dashboards != nil {
+		h.registerDashboardRoutes(r)
+	}
 }
 
 type sprintResponse struct {

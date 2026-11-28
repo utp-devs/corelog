@@ -1,6 +1,9 @@
 package user
 
 import (
+	"github.com/jhonsferg/corelog/internal/platform/mailer"
+	"github.com/jhonsferg/corelog/internal/user/domain"
+	"log/slog"
 	"time"
 
 	"github.com/jhonsferg/corelog/internal/platform/clock"
@@ -43,4 +46,28 @@ func (m *Module) WithPhoneVerification(repo port.PhoneVerificationRepository, se
 func NewTwoFactorService(users port.Repository, repo port.TwoFactorRepository, cipher port.SecretCipher,
 	tx database.TxManager, publisher events.Publisher, clk clock.Clock) port.TwoFactorService {
 	return usecase.NewTwoFactorService(users, repo, cipher, tx, publisher, clk)
+}
+
+// RecoveryService is the password reset and email verification service. It also implements
+// usecase.EmailVerifier, so it can be handed to WithEmailVerification.
+type RecoveryService = usecase.RecoveryService
+
+// NewRecoveryService wires the password reset and email verification flows. baseURL is the public address of
+// the web application, used to build the links of the emails.
+func NewRecoveryService(users port.Repository, sessions port.SessionRepository, resets, verifications port.TokenStore,
+	lockouts port.LockoutStore, tx database.TxManager, mail mailer.Mailer, publisher events.Publisher,
+	clk clock.Clock, baseURL string, log *slog.Logger) *RecoveryService {
+	return usecase.NewRecoveryService(users, sessions, resets, verifications, lockouts, tx, mail, publisher, clk, baseURL, log)
+}
+
+// NewLoginGuard wires the per-account failed login lockout. Thresholds of zero disable the lockout.
+func NewLoginGuard(store port.LockoutStore, policy domain.LockoutPolicy, clk clock.Clock, publisher events.Publisher) port.LoginGuard {
+	return usecase.NewLoginGuard(store, policy, clk, publisher)
+}
+
+// WithEmailVerification makes login require a verified email address when required is true and sends the
+// verification link to new accounts through verifier (which may be nil).
+func (m *Module) WithEmailVerification(required bool, verifier usecase.EmailVerifier) *Module {
+	m.users.WithEmailVerification(required, verifier)
+	return m
 }

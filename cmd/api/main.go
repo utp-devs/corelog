@@ -66,6 +66,13 @@ func run() error {
 		}
 	}()
 
+	// The audit log is written from the same outbox, and expired tokens, lockouts and audit rows are cleaned.
+	go func() {
+		if err := startSecurityRuntime(dispatchCtx, cfg, db, log); err != nil {
+			log.Error("audit dispatcher stopped", "error", err)
+		}
+	}()
+
 	server := httpserver.New(cfg.Server, router)
 
 	serverErrors := make(chan error, 1)

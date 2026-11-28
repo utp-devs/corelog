@@ -40,7 +40,7 @@ func loginToken(t *testing.T, router http.Handler, email, password string) strin
 
 func TestUserHTTP_SessionsAndDeactivation(t *testing.T) {
 	router, _, _ := setupUserRouter()
-	const email, password = "sesiones@example.com", "password123"
+	const email, password = "sesiones@example.com", "Tr1cky-Pass9x"
 	doJSON(t, router, http.MethodPost, "/auth/register", `{"name":"Sesiones","email":"`+email+`","password":"`+password+`","password_confirmation":"`+password+`"}`, "")
 
 	token := loginToken(t, router, email, password)

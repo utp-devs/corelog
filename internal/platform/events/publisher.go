@@ -55,7 +55,7 @@ func (p *PostgresPublisher) Publish(ctx context.Context, e Event) error {
 	if payload == nil {
 		payload = map[string]any{}
 	}
-	raw, err := json.Marshal(payload)
+	raw, err := json.Marshal(withMeta(ctx, payload))
 	if err != nil {
 		return fmt.Errorf("%w: encode payload: %v", ErrInvalidEvent, err)
 	}

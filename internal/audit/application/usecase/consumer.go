@@ -37,6 +37,7 @@ func (c *Consumer) Name() string { return ConsumerName }
 // Handle stores an audit entry for events that have a mapping rule. Other
 // event types are skipped without error.
 func (c *Consumer) Handle(ctx context.Context, e events.Event) error {
+	payload := c.withActorName(ctx, e)
 	entry, ok := c.mapper.Map(domain.SourceEvent{
 		ID:         e.ID,
 		OrgID:      e.OrgID,
@@ -45,7 +46,7 @@ func (c *Consumer) Handle(ctx context.Context, e events.Event) error {
 		ActorID:    e.ActorID,
 		Type:       e.Type,
 		EntityType: e.EntityType,
-		Payload:    e.Payload,
+		Payload:    payload,
 		CreatedAt:  e.CreatedAt,
 	})
 	if !ok {
@@ -58,4 +59,25 @@ func (c *Consumer) Handle(ctx context.Context, e events.Event) error {
 		return fmt.Errorf("audit: save entry for event %d: %w", e.ID, err)
 	}
 	return nil
+}
+
+// withActorName returns the event payload with actor_name filled from the user directory when the producer
+// did not include it. Lookup failures fall back to the generic actor name instead of failing the event.
+func (c *Consumer) withActorName(ctx context.Context, e events.Event) map[string]any {
+	if e.ActorID == nil {
+		return e.Payload
+	}
+	if name, _ := e.Payload["actor_name"].(string); name != "" {
+		return e.Payload
+	}
+	name, err := c.repo.ActorName(ctx, *e.ActorID)
+	if err != nil || name == "" {
+		return e.Payload
+	}
+	out := make(map[string]any, len(e.Payload)+1)
+	for k, v := range e.Payload {
+		out[k] = v
+	}
+	out["actor_name"] = name
+	return out
 }

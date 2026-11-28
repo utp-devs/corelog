@@ -21,6 +21,7 @@ type fakeRepo struct {
 	saveErr     error
 	purgeCutoff time.Time
 	purgeCalls  int
+	names       map[uuid.UUID]string
 }
 
 func (f *fakeRepo) Save(_ context.Context, e domain.Entry) error {
@@ -41,6 +42,10 @@ func (f *fakeRepo) Save(_ context.Context, e domain.Entry) error {
 
 func (f *fakeRepo) List(context.Context, port.ListFilter) (port.ListPage, error) {
 	return port.ListPage{Entries: f.entries}, nil
+}
+
+func (f *fakeRepo) ActorName(_ context.Context, id uuid.UUID) (string, error) {
+	return f.names[id], nil
 }
 
 func (f *fakeRepo) PurgeOlderThan(_ context.Context, cutoff time.Time) (int64, error) {
@@ -87,7 +92,7 @@ func TestConsumerIgnoresUnmappedEvents(t *testing.T) {
 	t.Parallel()
 	repo := &fakeRepo{}
 	c := NewConsumer(repo, clock.NewFixed(time.Now()))
-	if err := c.Handle(context.Background(), events.Event{ID: 1, Type: "issue.created", EntityType: "issue"}); err != nil {
+	if err := c.Handle(context.Background(), events.Event{ID: 1, Type: "board.column_resized", EntityType: "board"}); err != nil {
 		t.Fatalf("Handle: %v", err)
 	}
 	if len(repo.entries) != 0 {
@@ -144,5 +149,19 @@ func TestRetentionJobCutoff(t *testing.T) {
 				t.Fatalf("purge calls=%d cutoff=%v, want 1 and %v", repo.purgeCalls, repo.purgeCutoff, tt.want)
 			}
 		})
+	}
+}
+
+func TestConsumerResolvesActorNameWhenPayloadHasNone(t *testing.T) {
+	t.Parallel()
+	actor := uuid.New()
+	repo := &fakeRepo{names: map[uuid.UUID]string{actor: "Luis Gómez"}}
+	c := NewConsumer(repo, clock.NewFixed(time.Now()))
+	err := c.Handle(context.Background(), events.Event{ID: 3, ActorID: &actor, Type: "auth.password_reset", EntityType: "user", Payload: map[string]any{}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := repo.entries[0].Summary; got != "Luis Gómez restableció su contraseña" {
+		t.Fatalf("summary = %q", got)
 	}
 }

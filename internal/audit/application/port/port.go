@@ -50,4 +50,6 @@ type Repository interface {
 	// PurgeOlderThan deletes entries created before cutoff and returns how many
 	// were removed. It is the only path that may delete rows.
 	PurgeOlderThan(ctx context.Context, cutoff time.Time) (int64, error)
+	// ActorName returns the display name of a user, or an empty string when it is unknown.
+	ActorName(ctx context.Context, id uuid.UUID) (string, error)
 }

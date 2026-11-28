@@ -119,7 +119,8 @@ func (m *Mapper) Map(src SourceEvent) (Entry, bool) {
 		Summary:        rule.Summary(actor, src.Payload),
 		Before:         object(src.Payload, "before"),
 		After:          object(src.Payload, "after"),
-		IP:             validIP(str(src.Payload, "ip")),
+		IP:             AnonymizeIP(str(src.Payload, "ip")),
+		RequestID:      str(src.Payload, "request_id"),
 		UserAgent:      str(src.Payload, "user_agent"),
 		SourceEventID:  &sourceID,
 		CreatedAt:      src.CreatedAt,
@@ -157,10 +158,15 @@ func object(p map[string]any, key string) map[string]any {
 	return m
 }
 
-// validIP returns s when it is a valid IP address, otherwise an empty string.
-func validIP(s string) string {
-	if net.ParseIP(s) == nil {
+// AnonymizeIP returns the address with its host part zeroed (IPv4 /24, IPv6 /48), or an empty string when s is
+// not an IP address. Audit rows keep the network, not the person.
+func AnonymizeIP(s string) string {
+	ip := net.ParseIP(s)
+	if ip == nil {
 		return ""
 	}
-	return s
+	if v4 := ip.To4(); v4 != nil {
+		return v4.Mask(net.CIDRMask(24, 32)).String()
+	}
+	return ip.Mask(net.CIDRMask(48, 128)).String()
 }

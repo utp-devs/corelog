@@ -112,7 +112,7 @@ func TestDeactivateAccountCascadeAtomicPostgres(t *testing.T) {
 	sessions := NewSessionRepository(db)
 	svc := usecase.NewUserService(repo, sessions).WithAccountClosure(database.NewTxManager(db), NewMembershipDetacher(db))
 
-	user, err := domain.NewUser("Closing Member", "closing@corelog.test", mustHash(t, "clave-segura-1"), domain.RoleUser)
+	user, err := domain.NewUser("Closing Member", "closing@corelog.test", mustHash(t, "clave-segura-Z9"), domain.RoleUser)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -125,7 +125,7 @@ func TestDeactivateAccountCascadeAtomicPostgres(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := svc.DeactivateAccount(ctx, user.ID, "clave-segura-1"); err != nil {
+	if err := svc.DeactivateAccount(ctx, user.ID, "clave-segura-Z9"); err != nil {
 		t.Fatalf("DeactivateAccount: %v", err)
 	}
 	if got := countRows(t, db, "organization_members", user.ID); got != 0 {
@@ -156,7 +156,7 @@ func TestDeactivateAccountBlockedForSoleOwnerPostgres(t *testing.T) {
 	svc := usecase.NewUserService(repo, NewSessionRepository(db)).
 		WithAccountClosure(database.NewTxManager(db), NewMembershipDetacher(db))
 
-	user, err := domain.NewUser("Sole Closing", "sole-closing@corelog.test", mustHash(t, "clave-segura-1"), domain.RoleUser)
+	user, err := domain.NewUser("Sole Closing", "sole-closing@corelog.test", mustHash(t, "clave-segura-Z9"), domain.RoleUser)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -166,7 +166,7 @@ func TestDeactivateAccountBlockedForSoleOwnerPostgres(t *testing.T) {
 	org := insertOrganization(t, db, "sole-closing-org")
 	addOrgMember(t, db, org, user.ID, "owner")
 
-	err = svc.DeactivateAccount(ctx, user.ID, "clave-segura-1")
+	err = svc.DeactivateAccount(ctx, user.ID, "clave-segura-Z9")
 	if !errors.Is(err, domain.ErrSoleOwner) {
 		t.Fatalf("want ErrSoleOwner, got %v", err)
 	}
