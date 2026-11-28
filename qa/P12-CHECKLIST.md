@@ -58,6 +58,14 @@
 - [ ] Desactivar la cuenta pide contraseña y cierra todas las sesiones; después no se puede iniciar sesión
 - [ ] Un token de API no puede gestionar sesiones
 
+## Borrado lógico y alertas de sesión
+
+- [ ] Eliminar un elemento con borrado lógico (organización, proyecto, incidencia, comentario, nota, panel) lo oculta de listados, búsqueda, informes y calendario, y su detalle responde 404
+- [ ] Restaurar (donde existe) lo devuelve con su historial; con la depuración en `PURGE_DRY_RUN=true` solo se registra lo que se borraría
+- [ ] Un token de API revocado no aparece en la lista salvo con el interruptor **Mostrar tokens revocados**
+- [ ] Un inicio de sesión nuevo genera una alerta en tiempo real con **No fui yo**; pulsarla cierra esa sesión y recomienda cambiar la contraseña
+- [ ] Limitación conocida: los estados y las membresías todavía se eliminan de forma definitiva
+
 ## Cabeceras y protecciones HTTP
 
 - [ ] Con `HSTS_ENABLED=true` la respuesta lleva `Strict-Transport-Security`

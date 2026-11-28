@@ -24,7 +24,7 @@
 - [ ] Correo desactivado: no llega ninguno
 - [ ] Los cambios persisten tras recargar y se aplican a la siguiente notificación
 
-## Esquemas de notificaciones (solo API)
+## Esquemas de notificaciones (interfaz y API)
 
 - [ ] Esquema predeterminado: asignación, mención y respuesta avisan en la aplicación; el resto de eventos a nadie
 - [ ] `GET /projects/{project}/notification-scheme` del proyecto CORE devuelve el esquema propio y lo marca como tal
@@ -35,7 +35,7 @@
 - [ ] El esquema de la organización sustituye el predeterminado y el del proyecto sustituye al de la organización, evento por evento
 - [ ] Solo un lead cambia el esquema del proyecto y solo un administrador el de la organización (403 al resto)
 
-## Cola de correo y resumen (solo API)
+## Cola de correo y resumen (interfaz y API)
 
 - [ ] Con SMTP configurado, los correos pasan de pendiente a enviado; un servidor caído los deja pendientes con reintentos y, tras agotarlos, marcados como fallidos
 - [ ] `GET /admin/email-outbox` lo ve un administrador de la plataforma; un miembro recibe 403
@@ -44,7 +44,7 @@
 - [ ] El asunto y el cuerpo están en español, sin datos de proyectos a los que la persona no tiene acceso
 - [ ] Los enlaces de los correos usan `APP_PUBLIC_URL`
 
-## Automatización (solo API)
+## Automatización (interfaz y API)
 
 - [ ] La regla de ejemplo de CORE aparece desactivada y válida
 - [ ] Activarla (`POST /automation-rules/{id}/enable`) y pasar una incidencia de CORE a "Hecho": el informador recibe el aviso y la incidencia recibe el comentario con los valores inteligentes sustituidos
@@ -62,7 +62,7 @@
 - [ ] Una acción de webhook a una URL privada se rechaza
 - [ ] Un viewer no puede crear reglas (403); sin organización, 404
 
-## Webhooks (solo API)
+## Webhooks (interfaz y API)
 
 - [ ] El webhook de ejemplo del escenario demo aparece desactivado; rotar su secreto genera uno utilizable
 - [ ] Crear un webhook: la respuesta muestra el secreto una sola vez; listados posteriores no lo muestran
@@ -78,7 +78,7 @@
 - [ ] Un webhook desactivado no recibe eventos
 - [ ] Solo propietarios y administradores gestionan webhooks (403 a un miembro)
 
-## Tokens de API (solo API)
+## Tokens de API (interfaz y API)
 
 - [ ] Crear un token con alcance `read`: puede hacer GET y un POST responde 403 `api_token.scope_insufficient`
 - [ ] Un token `write` modifica; un token `admin` solo lo puede crear un administrador de la plataforma
@@ -89,7 +89,7 @@
 - [ ] Un token de una cuenta desactivada deja de funcionar
 - [ ] No se pueden tener más de 20 tokens activos y la caducidad máxima es de 366 días
 
-## Importación y exportación (solo API)
+## Importación y exportación (interfaz y API)
 
 - [ ] Subir un CSV de Jira con columnas en inglés: la correspondencia sugerida acierta; con columnas en español también
 - [ ] Un CSV sin columna de resumen, de más de 10 MiB, de más de 20 000 filas o con más de 100 columnas se rechaza
@@ -98,6 +98,22 @@
 - [ ] Una celda que empieza por `=`, `+`, `-` o `@` queda inofensiva en las exportaciones
 - [ ] La copia JSON del proyecto incluye incidencias, comentarios y tiempo, y solo la descarga un lead o administrador
 - [ ] Un contributor no puede importar si el esquema no se lo permite (403)
+
+## Avisos en tiempo real y alerta de nuevo inicio de sesión
+
+- [ ] Con la sesión abierta, un aviso generado por otra persona aparece en la campana sin recargar y el contador sube
+- [ ] Al cortar la red unos segundos y restablecerla, la aplicación se reconecta sola y aparecen los avisos perdidos, sin duplicados
+- [ ] Abrir CoreLog en una segunda pestaña deja una sola conexión activa por sesión
+- [ ] Iniciar sesión desde otro navegador genera la alerta de seguridad en la sesión original, con las acciones **Ver mis sesiones** y **No fui yo**
+- [ ] **No fui yo** cierra la sesión nueva (esa sesión recibe 401 en su siguiente petición), confirma con un mensaje y lleva a **Perfil > Seguridad**
+- [ ] Detrás de nginx con las directivas de `docs/despliegue.md`, la conexión no se corta ni se almacena en búfer durante al menos 5 minutos
+- [ ] La alerta también llega por correo si las preferencias lo permiten
+
+## Tokens de API: tokens revocados
+
+- [ ] En **Perfil > Tokens**, un token revocado desaparece de la lista
+- [ ] El interruptor **Mostrar tokens revocados** los muestra con su fecha de revocación y al apagarlo vuelven a ocultarse
+- [ ] Un token revocado sigue respondiendo 401 aunque esté oculto
 
 ## Estados de error y vacíos
 
