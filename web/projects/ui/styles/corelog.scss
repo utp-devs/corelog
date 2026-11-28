@@ -416,11 +416,9 @@
   --cl-auth-success-bg: #1b3b2e;
   --cl-auth-success-text: #7ee2b8;
   --cl-auth-plate: #f4f5f7;
-  /* Opaque surfaces: the container, the hero frame and the form panel are solid. The page keeps one flat dim tint over
+  /* Opaque surfaces: the hero frame and the form panel are solid. The phone background keeps one flat dim tint over
      the blurred photograph; the hero text block gets one flat tint. No gradients. */
-  --cl-auth-card: #151b2b;
   --cl-auth-panel: #111726;
-  --cl-auth-card-border: #2a3550;
   --cl-auth-page-tint: rgba(11, 18, 32, 0.6);
   --cl-auth-blur-page: 8px;
   --cl-hero-text: #ffffff;
@@ -451,18 +449,15 @@
   --cl-auth-light-success: #22a06b;
   --cl-auth-light-success-bg: #e3fcef;
   --cl-auth-light-success-text: #216e4e;
-  --cl-auth-light-card: #ffffff;
   --cl-auth-light-panel: #f7f9fd;
-  --cl-auth-light-card-border: #c5d0e4;
   --cl-auth-light-page-tint: rgba(238, 243, 251, 0.55);
   --cl-auth-light-hero-text: #0b1220;
   --cl-auth-light-hero-text-subtle: #26354f;
   --cl-auth-light-hero-panel: rgba(255, 255, 255, 0.72);
   --cl-auth-light-hero-chip: rgba(255, 255, 255, 0.85);
   --cl-auth-field-h: 48px;
-  --cl-auth-container-h: 44rem;
-  --cl-auth-container-h-tablet: 60rem;
   --cl-auth-button-h: 44px;
+  --cl-auth-hero-strip-h: 14rem;
 
   /* Text and scrims over photographs. Same in both themes: the photos are dark. */
   --cl-media-text: #ffffff;
@@ -495,10 +490,13 @@ textarea {
   font: inherit;
 }
 
+// The application never scrolls as a whole: each screen scrolls inside its own region, so the header and
+// the sidebar keep their place.
 html,
 body {
   margin: 0;
-  min-height: 100%;
+  height: 100%;
+  overflow: hidden;
   font-family:
     system-ui,
     -apple-system,
@@ -509,4 +507,17 @@ body {
   line-height: var(--cl-lh-body);
   color: var(--cl-text);
   background: var(--cl-bg-page);
+}
+
+@media print {
+  html,
+  body {
+    height: auto;
+    overflow: visible;
+  }
+}
+
+// Panels rendered through the CDK overlay sit above dialogs and menus.
+.cdk-overlay-container {
+  z-index: var(--cl-z-overlay);
 }

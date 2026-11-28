@@ -10,6 +10,9 @@
 
 .app-shell {
   @include m.flex-column(0);
+  // A positioned ancestor is the containing block of the visually hidden helpers (captions, tables kept for
+  // screen readers, live regions): without it they sit relative to the window and stretch the whole document.
+  position: relative;
   height: 100%;
   overflow: hidden;
   background: var(--cl-bg-page);

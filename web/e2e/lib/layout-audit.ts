@@ -739,6 +739,26 @@ export async function collectLayoutAudit(page: Page, options: AuditOptions): Pro
   });
 
   const violations = [...measured.violations];
+  // The application must never scroll as a whole: content scrolls inside its region and the header and the
+  // sidebar keep their place. A document taller than the window means something (usually an absolutely
+  // positioned helper without a positioned ancestor) stretches it.
+  const documentScroll = await page.evaluate(() => {
+    const root = document.scrollingElement ?? document.documentElement;
+    return {
+      scrollHeight: root.scrollHeight,
+      scrollWidth: root.scrollWidth,
+      height: window.innerHeight,
+      width: window.innerWidth,
+    };
+  });
+  if (
+    documentScroll.scrollHeight > documentScroll.height + 1 ||
+    documentScroll.scrollWidth > documentScroll.width + 1
+  ) {
+    violations.push(
+      `document scroll: the page scrolls as a whole (${documentScroll.scrollWidth}x${documentScroll.scrollHeight} inside ${documentScroll.width}x${documentScroll.height})`,
+    );
+  }
   const log = hygieneLogs.get(page);
   const expected = options.expectedFailures ?? [];
   // Browser "Failed to load resource" messages for statuses the test declared are not errors.
