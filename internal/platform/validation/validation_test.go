@@ -1,6 +1,7 @@
 package validation
 
 import (
+	"strings"
 	"testing"
 )
 
@@ -23,4 +24,17 @@ func TestValidation(t *testing.T) {
 			t.Errorf("expected validation error, got nil")
 		}
 	})
+}
+
+func TestDecodeStrictRejectsUnknownMembers(t *testing.T) {
+	t.Parallel()
+	var dst struct {
+		Name string `json:"name"`
+	}
+	if err := DecodeStrict(strings.NewReader(`{"name":"a"}`), &dst); err != nil || dst.Name != "a" {
+		t.Fatalf("valid body: %v %+v", err, dst)
+	}
+	if err := DecodeStrict(strings.NewReader(`{"name":"a","extra":1}`), &dst); err == nil {
+		t.Fatal("an unknown member must be rejected")
+	}
 }

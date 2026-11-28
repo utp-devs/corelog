@@ -22,10 +22,14 @@ type ServerConfig struct {
 	Env            string   `env:"APP_ENV" envDefault:"development"`
 	AllowedOrigins []string `env:"CORS_ALLOWED_ORIGIN" envDefault:"http://localhost:5173" envSeparator:","`
 	// CorsAllowedOrigins (CORS_ALLOWED_ORIGINS) takes precedence over the legacy singular variable.
-	CorsAllowedOrigins []string      `env:"CORS_ALLOWED_ORIGINS" envSeparator:","`
-	ReadTimeout        time.Duration `env:"SERVER_READ_TIMEOUT" envDefault:"10s"`
-	WriteTimeout       time.Duration `env:"SERVER_WRITE_TIMEOUT" envDefault:"10s"`
-	ShutdownTimeout    time.Duration `env:"SERVER_SHUTDOWN_TIMEOUT" envDefault:"15s"`
+	CorsAllowedOrigins []string `env:"CORS_ALLOWED_ORIGINS" envSeparator:","`
+	// ReadHeaderTimeout bounds the time a client has to send the request headers (slow header attacks).
+	ReadHeaderTimeout time.Duration `env:"SERVER_READ_HEADER_TIMEOUT" envDefault:"5s"`
+	ReadTimeout       time.Duration `env:"SERVER_READ_TIMEOUT" envDefault:"10s"`
+	WriteTimeout      time.Duration `env:"SERVER_WRITE_TIMEOUT" envDefault:"10s"`
+	// IdleTimeout closes keep-alive connections that stay unused.
+	IdleTimeout     time.Duration `env:"SERVER_IDLE_TIMEOUT" envDefault:"120s"`
+	ShutdownTimeout time.Duration `env:"SERVER_SHUTDOWN_TIMEOUT" envDefault:"15s"`
 }
 
 type DatabaseConfig struct {

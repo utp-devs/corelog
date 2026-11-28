@@ -1,7 +1,6 @@
 package http
 
 import (
-	"encoding/json"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -11,6 +10,7 @@ import (
 	"github.com/jhonsferg/corelog/internal/platform/apperror"
 	"github.com/jhonsferg/corelog/internal/platform/httpresponse"
 	appmw "github.com/jhonsferg/corelog/internal/platform/middleware"
+	"github.com/jhonsferg/corelog/internal/platform/validation"
 )
 
 type Handler struct {
@@ -94,7 +94,7 @@ func (h *Handler) MoveCard(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var body moveCardRequest
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil || body.ColumnID == uuid.Nil {
+	if err := validation.DecodeStrict(r.Body, &body); err != nil || body.ColumnID == uuid.Nil {
 		httpresponse.Error(w, apperror.New(apperror.KindValidation, "invalid request body"))
 		return
 	}
@@ -112,7 +112,7 @@ func (h *Handler) UpdateColumnWIP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var body updateColumnRequest
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+	if err := validation.DecodeStrict(r.Body, &body); err != nil {
 		httpresponse.Error(w, apperror.New(apperror.KindValidation, "invalid request body"))
 		return
 	}

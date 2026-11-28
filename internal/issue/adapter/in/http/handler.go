@@ -278,7 +278,7 @@ func (h *Handler) Assign(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req assignRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := validation.DecodeStrict(r.Body, &req); err != nil {
 		httpresponse.Error(w, apperror.New(apperror.KindValidation, "invalid request body"))
 		return
 	}
@@ -321,7 +321,7 @@ func (h *Handler) UpdateMetadata(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req updateMetadataRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := validation.DecodeStrict(r.Body, &req); err != nil {
 		httpresponse.Error(w, apperror.New(apperror.KindValidation, "invalid request body"))
 		return
 	}
@@ -356,7 +356,7 @@ func (h *Handler) UpdateDetails(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req updateDetailsRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := validation.DecodeStrict(r.Body, &req); err != nil {
 		httpresponse.Error(w, apperror.New(apperror.KindValidation, "invalid request body"))
 		return
 	}
@@ -482,7 +482,7 @@ func (h *Handler) UpdateRank(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req updateRankRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := validation.DecodeStrict(r.Body, &req); err != nil {
 		httpresponse.Error(w, apperror.New(apperror.KindValidation, "invalid request body"))
 		return
 	}
@@ -565,7 +565,7 @@ func (h *Handler) MoveInBacklog(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var body backlogMoveRequest
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+	if err := validation.DecodeStrict(r.Body, &body); err != nil {
 		httpresponse.Error(w, apperror.New(apperror.KindValidation, "invalid request body"))
 		return
 	}

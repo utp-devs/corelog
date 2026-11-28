@@ -371,9 +371,11 @@ func (s *ProjectService) canView(ctx context.Context, project *domain.Project, a
 	return s.allowed(ctx, port.ActionViewProject, project.ID, actorID, globalRole)
 }
 
-// requireManage: org owner/admin are implicit project leads; other actors need the project action.
+// requireManage: org owner/admin are implicit project leads; other actors need the project action. A platform
+// administrator only has support (read) access to a project, so it gets no bypass here: the authorizer grants it
+// the viewer role, which never holds a management permission.
 func (s *ProjectService) requireManage(ctx context.Context, action string, project *domain.Project, actorID uuid.UUID, globalRole, orgRole string) error {
-	if globalRole == platformAdmin || isOrgManager(orgRole) {
+	if isOrgManager(orgRole) {
 		// Managers skip the permission scheme, but the archive rules still apply to them.
 		if project.IsArchived() && !authorization.ArchivedActionAllowed(action) {
 			return authorization.ErrProjectArchived

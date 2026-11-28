@@ -1,7 +1,6 @@
 package http
 
 import (
-	"encoding/json"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -12,6 +11,7 @@ import (
 	"github.com/jhonsferg/corelog/internal/platform/apperror"
 	"github.com/jhonsferg/corelog/internal/platform/httpresponse"
 	appmw "github.com/jhonsferg/corelog/internal/platform/middleware"
+	"github.com/jhonsferg/corelog/internal/platform/validation"
 )
 
 type Handler struct {
@@ -157,7 +157,7 @@ func (h *Handler) UpdatePreferences(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req preferencesRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.InApp == nil {
+	if err := validation.DecodeStrict(r.Body, &req); err != nil || req.InApp == nil {
 		httpresponse.Error(w, apperror.New(apperror.KindValidation, "in_app is required"))
 		return
 	}

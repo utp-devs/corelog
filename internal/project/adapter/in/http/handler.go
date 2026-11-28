@@ -2,7 +2,6 @@ package http
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -37,7 +36,7 @@ func NewHandler(service port.Service, manager port.ProjectManager, jwtSecret str
 
 func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	var req createProjectRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := validation.DecodeStrict(r.Body, &req); err != nil {
 		httpresponse.Error(w, apperror.New(apperror.KindValidation, "invalid request body"))
 		return
 	}
@@ -137,7 +136,7 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	var req updateProjectRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := validation.DecodeStrict(r.Body, &req); err != nil {
 		httpresponse.Error(w, apperror.New(apperror.KindValidation, "invalid request body"))
 		return
 	}
@@ -183,7 +182,7 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req deleteProjectRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := validation.DecodeStrict(r.Body, &req); err != nil {
 		// A missing or malformed body is a missing confirmation.
 		httpresponse.Error(w, domain.ErrConfirmationMismatch)
 		return
@@ -398,7 +397,7 @@ func (h *Handler) ListLabels(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) CreateLabel(w http.ResponseWriter, r *http.Request) {
 	var req labelRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := validation.DecodeStrict(r.Body, &req); err != nil {
 		httpresponse.Error(w, apperror.New(apperror.KindValidation, "invalid request body"))
 		return
 	}
@@ -452,7 +451,7 @@ func (h *Handler) UpdateLabel(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req labelUpdateRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := validation.DecodeStrict(r.Body, &req); err != nil {
 		httpresponse.Error(w, apperror.New(apperror.KindValidation, "invalid request body"))
 		return
 	}
@@ -514,7 +513,7 @@ func (h *Handler) ListMembers(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) AddMember(w http.ResponseWriter, r *http.Request) {
 	var req projectMemberRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := validation.DecodeStrict(r.Body, &req); err != nil {
 		httpresponse.Error(w, apperror.New(apperror.KindValidation, "invalid request body"))
 		return
 	}
@@ -551,7 +550,7 @@ func (h *Handler) UpdateMember(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req updateProjectMemberRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := validation.DecodeStrict(r.Body, &req); err != nil {
 		httpresponse.Error(w, apperror.New(apperror.KindValidation, "invalid request body"))
 		return
 	}

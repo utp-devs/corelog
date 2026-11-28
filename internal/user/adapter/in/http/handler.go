@@ -1,7 +1,6 @@
 package http
 
 import (
-	"encoding/json"
 	"net/http"
 	"time"
 
@@ -39,7 +38,7 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req registerRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := validation.DecodeStrict(r.Body, &req); err != nil {
 		httpresponse.Error(w, apperror.New(apperror.KindValidation, "invalid request body"))
 		return
 	}
@@ -78,7 +77,7 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req loginRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := validation.DecodeStrict(r.Body, &req); err != nil {
 		httpresponse.Error(w, apperror.New(apperror.KindValidation, "invalid request body"))
 		return
 	}
@@ -177,7 +176,7 @@ func (h *Handler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req updateProfileRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := validation.DecodeStrict(r.Body, &req); err != nil {
 		httpresponse.Error(w, apperror.New(apperror.KindValidation, "invalid request body"))
 		return
 	}
@@ -214,7 +213,7 @@ func (h *Handler) ChangePassword(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req changePasswordRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := validation.DecodeStrict(r.Body, &req); err != nil {
 		httpresponse.Error(w, apperror.New(apperror.KindValidation, "invalid request body"))
 		return
 	}
@@ -321,7 +320,7 @@ func (h *Handler) SetTeam(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req setTeamRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := validation.DecodeStrict(r.Body, &req); err != nil {
 		httpresponse.Error(w, apperror.New(apperror.KindValidation, "invalid request body"))
 		return
 	}
@@ -424,7 +423,7 @@ func (h *Handler) DeactivateAccount(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req deactivateRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := validation.DecodeStrict(r.Body, &req); err != nil {
 		httpresponse.Error(w, apperror.New(apperror.KindValidation, "invalid request body"))
 		return
 	}
@@ -477,7 +476,7 @@ func (h *Handler) VerifyPhone(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req phoneVerifyRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := validation.DecodeStrict(r.Body, &req); err != nil {
 		httpresponse.Error(w, apperror.New(apperror.KindValidation, "invalid request body"))
 		return
 	}

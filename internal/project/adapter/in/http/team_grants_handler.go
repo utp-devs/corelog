@@ -1,7 +1,6 @@
 package http
 
 import (
-	"encoding/json"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -34,7 +33,7 @@ func (h *Handler) ListTeamGrants(w http.ResponseWriter, r *http.Request) {
 // SetTeamGrant creates or replaces the role of one team on the project. The body is {team_id, role}.
 func (h *Handler) SetTeamGrant(w http.ResponseWriter, r *http.Request) {
 	var req teamGrantRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := validation.DecodeStrict(r.Body, &req); err != nil {
 		httpresponse.Error(w, apperror.New(apperror.KindValidation, "invalid request body"))
 		return
 	}

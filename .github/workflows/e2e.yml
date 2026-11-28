@@ -17,7 +17,8 @@ permissions:
   contents: read
 
 env:
-  # Ports published by docker-compose.local.yaml (defaults). The API CORS origin is http://localhost:5173.
+  # The API (docker-compose.local.yaml, port 8080) allows the origin http://localhost:5173, where the built web apps
+  # are served natively by web/scripts/serve-dist.mjs.
   E2E_BASE_URL: http://localhost:5173
   E2E_API_URL: http://localhost:8080/api/v1
   # Must match web/package.json @playwright/test (1.65.1).
@@ -59,14 +60,13 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Build and start the local stack
-        run: docker compose -f docker-compose.local.yaml up -d --build
+      - name: Start the database, migrations and API
+        run: docker compose -f docker-compose.local.yaml up -d --build db migrate api
 
-      - name: Wait for API and UI, check migrations
+      - name: Wait for the API, check migrations
         run: |
           set -euo pipefail
           curl -fsS --retry 60 --retry-delay 2 --retry-all-errors http://localhost:8080/health
-          curl -fsS --retry 60 --retry-delay 2 --retry-all-errors http://localhost:5173/ > /dev/null
           migrate_id="$(docker compose -f docker-compose.local.yaml ps -a -q migrate)"
           if [ -z "${migrate_id}" ]; then
             echo "The migrate container was not created"
@@ -78,7 +78,7 @@ jobs:
             docker compose -f docker-compose.local.yaml logs migrate
             exit 1
           fi
-          echo "API healthy, UI reachable, migrations applied."
+          echo "API healthy, migrations applied."
 
       - name: Set up Go
         uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
@@ -102,13 +102,29 @@ jobs:
         working-directory: web
         run: npm ci --ignore-scripts
 
+      - name: Build the web libraries and applications
+        working-directory: web
+        run: |
+          npm run build:libs
+          npm run build:all:local
+
+      - name: Serve the built applications
+        working-directory: web
+        env:
+          PORT: "5173"
+          API_UPSTREAM: http://localhost:8080
+        run: |
+          nohup node scripts/serve-dist.mjs > "${RUNNER_TEMP}/serve-dist.log" 2>&1 &
+          curl -fsS --retry 30 --retry-delay 1 --retry-all-errors http://localhost:5173/ > /dev/null
+          curl -fsS http://localhost:5173/api/v1/meta/countries > /dev/null
+
       - name: Install Playwright Chromium
         working-directory: web
         run: npx playwright install --with-deps chromium
 
       - name: Run functional and layout e2e tests
         working-directory: web
-        run: npm run e2e
+        run: npx playwright test
 
       - name: Run visual e2e tests in the Playwright container
         # Non-blocking: visual baselines are Linux-only and still being stabilised.
@@ -127,7 +143,9 @@ jobs:
 
       - name: Show stack logs on failure
         if: failure()
-        run: docker compose -f docker-compose.local.yaml logs --no-color --tail 300
+        run: |
+          docker compose -f docker-compose.local.yaml logs --no-color --tail 300
+          cat "${RUNNER_TEMP}/serve-dist.log" || true
 
       - name: Upload Playwright report and traces
         if: always()

@@ -88,7 +88,7 @@ func (h *Handler) ListComponents(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) CreateComponent(w http.ResponseWriter, r *http.Request) {
 	var req componentRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := validation.DecodeStrict(r.Body, &req); err != nil {
 		httpresponse.Error(w, apperror.New(apperror.KindValidation, "invalid request body"))
 		return
 	}
@@ -134,7 +134,7 @@ func (h *Handler) UpdateComponent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req componentUpdateRequest
-	if err := json.Unmarshal(raw, &req); err != nil {
+	if err := validation.DecodeStrict(bytes.NewReader(raw), &req); err != nil {
 		httpresponse.Error(w, apperror.New(apperror.KindValidation, "invalid request body"))
 		return
 	}

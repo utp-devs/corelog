@@ -1,8 +1,10 @@
 package validation
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"reflect"
 	"strings"
 	"sync"
@@ -106,4 +108,12 @@ func spanishMessage(fe validator.FieldError) string {
 	default:
 		return "no es válido"
 	}
+}
+
+// DecodeStrict decodes one JSON value from body and rejects members the destination does not declare, so a typo
+// or an outdated client is told about instead of being silently ignored.
+func DecodeStrict(body io.Reader, dst any) error {
+	decoder := json.NewDecoder(body)
+	decoder.DisallowUnknownFields()
+	return decoder.Decode(dst)
 }

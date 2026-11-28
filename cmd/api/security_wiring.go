@@ -65,6 +65,7 @@ func routerOptions(cfg *config.Config, log *slog.Logger) httpserver.RouterOption
 		HSTS:             cfg.Security.HSTS,
 		MaxJSONBodyBytes: cfg.Security.MaxJSONBodyBytes,
 		TrustedProxies:   trustedProxies(cfg, log),
+		Logger:           log,
 	}
 }
 

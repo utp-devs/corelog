@@ -73,14 +73,24 @@ func (g *GlobalIndex) issues(ctx context.Context, req port.GlobalRequest, terms 
 		       CASE WHEN i.search_vector @@ q.tsq AND i.description <> ''
 		            THEN ts_headline('spanish', translate(i.description, chr(2) || chr(3), ''), q.tsq, `+markOptions+`)
 		            ELSE '' END AS snippet
-		FROM issues i
+		FROM (
+		  -- Candidates come from one indexed branch per match kind (full text, summary and description trigrams,
+		  -- issue key) instead of an OR over the whole table, which could only be answered by reading every issue.
+		  SELECT i2.id FROM issues i2
+		  WHERE i2.deleted_at IS NULL AND i2.search_vector @@ (websearch_to_tsquery('spanish', $3::text) || websearch_to_tsquery('simple', $3::text))
+		  UNION
+		  SELECT i2.id FROM issues i2 WHERE i2.deleted_at IS NULL AND i2.summary ILIKE $4::text ESCAPE '\'
+		  UNION
+		  SELECT i2.id FROM issues i2 WHERE i2.deleted_at IS NULL AND i2.description ILIKE $4::text ESCAPE '\'
+		  UNION
+		  SELECT i2.id FROM projects p2 JOIN issues i2 ON i2.project_id = p2.id AND i2.deleted_at IS NULL
+		  WHERE p2.deleted_at IS NULL AND lower(p2.key) = lower(split_part($3::text, '-', 1))
+		    AND i2.key_number::text = split_part($3::text, '-', 2) AND split_part($3::text, '-', 3) = ''
+		) cand
+		JOIN issues i ON i.id = cand.id
 		JOIN projects p ON p.id = i.project_id AND p.deleted_at IS NULL
 		CROSS JOIN q
-		WHERE i.deleted_at IS NULL AND `+visibleProjectSQL("p", "$1::uuid", "$2::boolean")+`
-		  AND (lower(p.key || '-' || i.key_number::text) = lower($3::text)
-		       OR i.search_vector @@ q.tsq
-		       OR i.summary ILIKE $4::text ESCAPE '\'
-		       OR i.description ILIKE $4::text ESCAPE '\')
+		WHERE `+visibleProjectSQL("p", "$1::uuid", "$2::boolean")+`
 		ORDER BY (lower(p.key || '-' || i.key_number::text) = lower($3::text)) DESC,
 		         ts_rank_cd(i.search_vector, q.tsq) DESC,
 		         (i.summary ILIKE $5::text ESCAPE '\') DESC,

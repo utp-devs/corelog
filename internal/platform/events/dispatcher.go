@@ -115,6 +115,8 @@ func (d *Dispatcher) Run(ctx context.Context, interval time.Duration) error {
 	}
 }
 
+// lockKey names the advisory lock of a consumer. The lock queries add the current schema, so two deployments (or
+// two test schemas) sharing a database never block each other.
 func lockKey(name string) string {
 	return "events:" + name
 }
@@ -132,7 +134,7 @@ func (d *Dispatcher) dispatchConsumer(ctx context.Context, c Consumer) error {
 
 	var locked bool
 	if err := conn.QueryRowContext(ctx,
-		`SELECT pg_try_advisory_lock(hashtext($1))`, lockKey(name)).Scan(&locked); err != nil {
+		`SELECT pg_try_advisory_lock(hashtext($1 || ':' || current_schema()))`, lockKey(name)).Scan(&locked); err != nil {
 		return fmt.Errorf("try lock: %w", err)
 	}
 	if !locked {
@@ -231,7 +233,7 @@ func nullUUIDPtr(n uuid.NullUUID) *uuid.UUID {
 func (d *Dispatcher) unlock(conn *sqlx.Conn, key string) {
 	ctx, cancel := context.WithTimeout(context.WithoutCancel(context.Background()), lockTimeout)
 	defer cancel()
-	if _, err := conn.ExecContext(ctx, `SELECT pg_advisory_unlock(hashtext($1))`, key); err != nil && !errors.Is(err, sql.ErrConnDone) {
+	if _, err := conn.ExecContext(ctx, `SELECT pg_advisory_unlock(hashtext($1 || ':' || current_schema()))`, key); err != nil && !errors.Is(err, sql.ErrConnDone) {
 		d.opts.Logger.Error("release event lock failed", slog.String("lock", key), slog.String("error", err.Error()))
 	}
 }

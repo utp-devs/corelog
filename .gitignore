@@ -232,3 +232,6 @@ GEMINI.md
 # Private working material (not versioned)
 /.images/
 /pinterest/
+
+# Files written by the import tests
+/cmd/api/data/

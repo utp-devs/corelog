@@ -1,6 +1,7 @@
 package httpserver
 
 import (
+	"log/slog"
 	"net/http"
 	"strings"
 	"time"
@@ -25,6 +26,8 @@ type RouterOptions struct {
 	MaxJSONBodyBytes int64
 	// TrustedProxies decides whose X-Forwarded-For is believed for the client address of events.
 	TrustedProxies *appmw.TrustedProxies
+	// Logger receives the request log and the recovered panics (default slog.Default()).
+	Logger *slog.Logger
 }
 
 // NewRouter builds the router with the default hardening options.
@@ -49,10 +52,11 @@ func NewRouterWith(cfg config.ServerConfig, opts RouterOptions) *chi.Mux {
 	r := chi.NewRouter()
 
 	r.Use(middleware.RequestID)
+	r.Use(appmw.EchoRequestID)
 	r.Use(appmw.SecurityHeaders(opts.HSTS))
 	r.Use(appmw.RequestMeta(opts.TrustedProxies))
-	r.Use(middleware.Logger)
-	r.Use(middleware.Recoverer)
+	r.Use(appmw.RequestLogger(opts.Logger))
+	r.Use(appmw.Recoverer(opts.Logger))
 	r.Use(middleware.Timeout(30 * time.Second))
 	r.Use(appmw.BodyLimit(opts.MaxJSONBodyBytes))
 	// With no valid origin no CORS headers are sent at all (the library would default to every origin).
