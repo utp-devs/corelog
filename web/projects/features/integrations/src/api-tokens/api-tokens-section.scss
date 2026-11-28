@@ -3,11 +3,16 @@
 $mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 
 :host {
-  display: block;
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
   min-width: 0;
 }
 
 .api-tokens {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
   min-width: 0;
 
   &__notice {
@@ -33,14 +38,45 @@ $mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 
   &__toggle {
     @include m.flex-row(2, center);
-    margin-block-end: var(--cl-space-3);
+    @include m.touch-target;
+    position: relative;
+    margin-block-end: var(--cl-space-2);
     color: var(--cl-text-subtle);
     font-size: var(--cl-font-small);
     cursor: pointer;
+
+    input {
+      @include m.visually-hidden;
+    }
+  }
+
+  &__toggle-box {
+    display: inline-grid;
+    place-items: center;
+    flex: none;
+    width: 1.25rem;
+    height: 1.25rem;
+    border: 1px solid var(--cl-border-strong);
+    border-radius: var(--cl-radius-sm);
+    background: var(--cl-bg-surface);
+    color: var(--cl-text-on-brand);
+    font-size: 0.75rem;
+
+    input:checked + & {
+      border-color: var(--cl-brand);
+      background: var(--cl-brand);
+    }
+
+    input:focus-visible + & {
+      outline: 2px solid var(--cl-brand);
+      outline-offset: 2px;
+    }
   }
 
   &__empty {
     @include m.flex-column(3, center);
+    justify-content: center;
+    min-height: 50vh;
     padding: var(--cl-space-6);
     border: 1px solid var(--cl-border);
     border-radius: var(--cl-radius-lg);

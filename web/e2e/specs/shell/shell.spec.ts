@@ -193,10 +193,14 @@ test.describe('busqueda y atajos de teclado', () => {
   test('Ctrl+K abre la paleta, busca, navega y Esc la cierra', async ({ as }) => {
     const page = await as('member');
     await page.goto(appPath('/dashboard'));
-    await page.locator('body').click({ position: { x: 5, y: 5 } });
-    await page.keyboard.press('Control+K');
+    await expect(page.getByRole('main')).toBeVisible();
     const palette = page.getByRole('dialog', { name: 'Paleta de comandos' });
-    await expect(palette).toBeVisible();
+    // The shell registers its shortcuts after the first render: press until it answers.
+    await expect(async () => {
+      await page.locator('body').click({ position: { x: 5, y: 5 } });
+      await page.keyboard.press('Control+K');
+      await expect(palette).toBeVisible({ timeout: 1000 });
+    }).toPass();
 
     await palette.getByLabel('Buscar o escribir un comando').fill('Ir a Incidencias');
     await page.keyboard.press('Enter');
@@ -211,10 +215,13 @@ test.describe('busqueda y atajos de teclado', () => {
   test('el atajo ? muestra los atajos de teclado y Esc los cierra', async ({ as }) => {
     const page = await as('member');
     await page.goto(appPath('/issues'));
-    await page.locator('body').click({ position: { x: 5, y: 5 } });
-    await page.keyboard.type('?');
+    await expect(page.getByRole('main')).toBeVisible();
     const dialog = page.getByRole('dialog', { name: 'Atajos de teclado' });
-    await expect(dialog).toBeVisible();
+    await expect(async () => {
+      await page.locator('body').click({ position: { x: 5, y: 5 } });
+      await page.keyboard.type('?');
+      await expect(dialog).toBeVisible({ timeout: 1000 });
+    }).toPass();
     await page.keyboard.press('Escape');
     await expect(dialog).toBeHidden();
   });
@@ -222,10 +229,13 @@ test.describe('busqueda y atajos de teclado', () => {
   test('las secuencias g i y g p navegan a incidencias y proyectos', async ({ as }) => {
     const page = await as('member');
     await page.goto(appPath('/dashboard'));
-    await page.locator('body').click({ position: { x: 5, y: 5 } });
-    await page.keyboard.press('g');
-    await page.keyboard.press('p');
-    await expect(page).toHaveURL(/\/projects$/);
+    await expect(page.getByRole('main')).toBeVisible();
+    await expect(async () => {
+      await page.locator('body').click({ position: { x: 5, y: 5 } });
+      await page.keyboard.press('g');
+      await page.keyboard.press('p');
+      await expect(page).toHaveURL(/\/projects$/, { timeout: 1000 });
+    }).toPass();
     await page.keyboard.press('g');
     await page.keyboard.press('i');
     await expect(page).toHaveURL(/\/issues$/);

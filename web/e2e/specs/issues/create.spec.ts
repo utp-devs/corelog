@@ -45,10 +45,13 @@ test.describe('crear incidencia', () => {
 
     const page = await as('member');
     await page.goto(appPath(`/projects/${project.key}/board`));
-    await page.waitForLoadState('networkidle');
-    await page.keyboard.press('c');
+    await expect(page.getByRole('main')).toBeVisible();
     const dialog = page.getByRole('dialog', { name: 'Crear incidencia' });
-    await expect(dialog).toBeVisible();
+    // The shell registers its shortcuts after the first render: press until it answers.
+    await expect(async () => {
+      await page.keyboard.press('c');
+      await expect(dialog).toBeVisible({ timeout: 1000 });
+    }).toPass();
     await expect(dialog.getByText(field.name)).toBeVisible();
     await dialog.getByRole('textbox', { name: /Resumen/ }).fill('Con campo obligatorio');
     await dialog.getByRole('textbox', { name: 'Descripción' }).click();

@@ -64,7 +64,12 @@ test.describe('alineacion del calendario', () => {
     expect(await label.evaluate((node) => node.scrollWidth <= node.clientWidth)).toBe(true);
   });
 
-  test('en Mes los nombres de dia coinciden con las columnas', async ({ as, api, data }) => {
+  test('en Mes los nombres de dia coinciden con las columnas', async ({
+    as,
+    api,
+    data,
+  }, testInfo) => {
+    test.skip((testInfo.project.use.viewport?.width ?? 0) < 700, 'phones use the day view');
     const owner = await api('owner');
     const project = await data.createProject('owner', await orgIdBySlug(owner, 'acme'));
     const page = await as('owner');

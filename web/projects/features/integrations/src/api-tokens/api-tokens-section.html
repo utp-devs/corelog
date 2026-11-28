@@ -3,6 +3,7 @@
     title="Tokens de acceso personales"
     description="Permiten que un programa o script use CoreLog en tu nombre, sin tu contraseña."
     ariaLabel="Tokens de acceso personales"
+    [fill]="true"
   >
     <p-button
       appSectionActions
@@ -30,6 +31,11 @@
         data-testid="token-show-revoked"
         (change)="setShowRevoked(toggle.checked)"
       />
+      <span class="api-tokens__toggle-box" aria-hidden="true">
+        @if (showRevoked()) {
+          <i class="pi pi-check"></i>
+        }
+      </span>
       <span>Mostrar tokens revocados</span>
     </label>
 

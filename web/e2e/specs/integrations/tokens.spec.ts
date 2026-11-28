@@ -67,7 +67,7 @@ test.describe('tokens de acceso personales', () => {
     expect(visibleRows.find((row) => row.name === name)).toBeUndefined();
 
     // The secondary toggle brings them back, dimmed and with their revocation date.
-    await page.getByTestId('token-show-revoked').check();
+    await page.locator('label.api-tokens__toggle').click();
     const revoked = page.getByTestId('token-item').filter({ hasText: name });
     await expect(revoked).toContainText('Revocado');
     await expect(revoked.getByTestId('token-revoked-at')).toBeVisible();
