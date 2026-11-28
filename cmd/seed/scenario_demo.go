@@ -162,6 +162,7 @@ func buildDemo(passwordHash string) *dataset {
 
 	recs := generateIssues(rng, org, demoIssueCount)
 	assignDemoSprints(recs, core.id, sprint11, sprint12)
+	addDemoConversations(org, recs)
 	emitIssues(ds, recs)
 	syncIssueCounters(ds, recs)
 	addDemoWorklogs(ds, recs)
@@ -171,6 +172,7 @@ func buildDemo(passwordHash string) *dataset {
 	addDemoSearchFilters(ds, org.orgID)
 	addPlanningSeed(ds, org.orgID, org.users[0], userID("agent@corelog.local"), core.id)
 	addDemoNotifications(ds, recs)
+	addDemoCollaboration(ds, org, recs)
 	return ds
 }
 
@@ -248,5 +250,29 @@ func addDemoNotifications(ds *dataset, recs []issueRec) {
 			notes.add(idFor("notification", email, strconv.Itoa(j)), uid, kind, message,
 				"/issues/"+rec.id.String(), readAt, created)
 		}
+	}
+}
+
+// addDemoCollaboration adds versions with fix-version issues, component leads, comment conversations, a
+// notification scheme for the main project, epic dates for the roadmap and the disabled sample automation rule
+// and webhook.
+func addDemoCollaboration(ds *dataset, org orgModel, recs []issueRec) {
+	addVersions(ds, org, recs)
+	addComponentLeads(ds)
+	addEpicDates(ds, recs)
+	addDemoNotificationScheme(ds, org, org.projects[0])
+	addDemoIntegrations(ds, org, org.projects[0])
+}
+
+// addDemoConversations adds a conversation (reply, mention, internal note and reactions) to three issues. It runs
+// before the issues are written.
+func addDemoConversations(org orgModel, recs []issueRec) {
+	roster := demoRoster()
+	for i, idx := range []int{9, 14, 21} {
+		author, replier, reactor := i, i+3, i+6
+		addCommentThread(&recs[idx], threadPeople{
+			author: org.users[author], replier: org.users[replier], reactor: org.users[reactor],
+			authorName: roster[author].name, replierName: roster[replier].name,
+		})
 	}
 }

@@ -57,11 +57,23 @@ var commentBodies = [...]string{
 
 var storyPointValues = [...]float64{1, 2, 3, 5, 8, 13}
 
-// commentRec is a comment attached to an issue.
+// commentRec is a comment attached to an issue. parent is the position of the parent comment among the comments
+// of the same issue (a reply); internalRole is the lowest project role that reads an internal comment (empty for
+// a public one). mentions and reactions are written next to the comment.
 type commentRec struct {
-	author uuid.UUID
-	body   string
-	at     time.Time
+	author       uuid.UUID
+	body         string
+	at           time.Time
+	parent       *int
+	internalRole string
+	mentions     []uuid.UUID
+	reactions    []reactionRec
+}
+
+// reactionRec is one emoji reaction of a user to a comment.
+type reactionRec struct {
+	user  uuid.UUID
+	emoji string
 }
 
 // issueRec is one generated issue with its relations. It is plain data, so the
@@ -254,7 +266,11 @@ func emitIssues(ds *dataset, recs []issueRec) {
 	issueComponents := ds.ignoreDuplicates("issue_components", "issue_id", "component_id")
 	watchers := ds.ignoreDuplicates("watchers", "issue_id", "user_id", "created_at")
 	activities := ds.table("activities", "id", "issue_id", "actor_id", "action", "field_name", "old_value", "new_value", "created_at")
-	comments := ds.table("comments", "id", "issue_id", "author_id", "body", "created_at", "updated_at")
+	comments := ds.table("comments", "id", "issue_id", "author_id", "body", "created_at", "updated_at",
+		"parent_id", "visibility", "internal_role")
+	mentions := ds.ignoreDuplicates("comment_mentions", "comment_id", "user_id", "created_at")
+	notices := ds.ignoreDuplicates("comment_notices", "comment_id", "user_id", "kind", "created_at")
+	reactions := ds.ignoreDuplicates("comment_reactions", "comment_id", "user_id", "emoji", "created_at")
 
 	keyNumbers := map[uuid.UUID]int{}
 	for _, r := range recs {
@@ -292,7 +308,23 @@ func emitIssues(ds *dataset, recs []issueRec) {
 				"status", "open", r.status, r.updated)
 		}
 		for k, c := range r.comments {
-			comments.add(idFor("comment", r.id.String(), strconv.Itoa(k)), r.id, c.author, c.body, c.at, c.at)
+			id := idFor("comment", r.id.String(), strconv.Itoa(k))
+			var parentID any
+			if c.parent != nil {
+				parentID = idFor("comment", r.id.String(), strconv.Itoa(*c.parent))
+			}
+			visibility, internalRole := "public", any(nil)
+			if c.internalRole != "" {
+				visibility, internalRole = "internal", c.internalRole
+			}
+			comments.add(id, r.id, c.author, c.body, c.at, c.at, parentID, visibility, internalRole)
+			for _, m := range c.mentions {
+				mentions.add(id, m, c.at)
+				notices.add(id, m, "mention", c.at)
+			}
+			for _, re := range c.reactions {
+				reactions.add(id, re.user, re.emoji, minTime(baseTime, c.at.Add(time.Hour)))
+			}
 		}
 	}
 }

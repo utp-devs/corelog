@@ -191,7 +191,7 @@ type e2eIssue struct {
 	itype, title, description string
 	status, priority          string
 	requester                 int
-	sprint                    bool
+	sprint, closedSprint      bool
 	points                    float64
 	labels, components        []int
 	watchers                  []int
@@ -215,6 +215,11 @@ var e2eIssues = []e2eIssue{
 	{project: 1, assignee: -1, parent: -1, itype: "bug", title: "Notificaciones duplicadas al reasignar", description: "Se envia el aviso dos veces al reasignar.", status: "open", priority: "medium", requester: e2eAna, labels: []int{0}, createdDays: 2},
 	{project: 1, assignee: e2eAgent, parent: -1, itype: "task", title: "Configurar alertas de CPU en produccion", description: "Alertar por uso de CPU sostenido.", status: "resolved", priority: "medium", requester: e2eAdmin, labels: []int{1}, createdDays: 21, closedDays: 7},
 	{project: 1, assignee: e2eAdmin, parent: -1, itype: "bug", title: "Actualizar dependencias con vulnerabilidades criticas", description: "Actualizar paquetes con CVE criticos.", status: "closed", priority: "critical", requester: e2eAdmin, labels: []int{0}, createdDays: 28, closedDays: 22},
+	{project: 0, assignee: -1, parent: -1, itype: "epic", title: "Notificaciones y avisos", description: "Agrupa el trabajo de avisos por correo y dentro de la aplicacion.", status: "in_progress", priority: "medium", requester: e2eAdmin, createdDays: 40},
+	{project: 0, assignee: e2eAgent, parent: 1, itype: "story", title: "Registro de actividad del solicitante", description: "Mostrar al solicitante el historial de sus incidencias.", status: "closed", priority: "high", requester: e2eAna, closedSprint: true, points: 5, createdDays: 35, closedDays: 16},
+	{project: 0, assignee: e2eMember, parent: 16, itype: "task", title: "Plantilla de correo de bienvenida", description: "Redactar el correo que recibe quien se registra.", status: "resolved", priority: "medium", requester: e2eAdmin, closedSprint: true, points: 3, createdDays: 34, closedDays: 17},
+	{project: 0, assignee: e2eAgent, parent: -1, itype: "bug", title: "Corregir enlace roto en el portal", description: "El enlace de ayuda del pie de pagina devuelve 404.", status: "closed", priority: "high", requester: e2eRequester, closedSprint: true, points: 2, labels: []int{0}, createdDays: 33, closedDays: 15},
+	{project: 0, assignee: e2eMember, parent: 16, itype: "task", title: "Migrar estilos al sistema de diseno", description: "No terminada en el sprint: pasa al siguiente.", status: "in_progress", priority: "low", requester: e2eAdmin, closedSprint: true, points: 8, createdDays: 32},
 }
 
 // buildE2E builds the e2e dataset. Issue n (1-based) is e2eIssues[n-1].
@@ -225,6 +230,9 @@ func buildE2E(passwordHash string) *dataset {
 	org := buildOrg(ds, e2eAcmeSpec(), users)
 	sprintID := addSprint(ds, org.projects[0].id, org.projects[0].key, "Sprint 1",
 		"Entregar el flujo de alta de incidencias", "active", daysFromBase(-7), daysFromBase(7), nil)
+
+	closedSprintID := addSprint(ds, org.projects[0].id, org.projects[0].key, "Sprint 0",
+		"Primera entrega del portal", "closed", daysFromBase(-28), daysFromBase(-14), ptr(daysFromBase(-14)))
 
 	recs := make([]issueRec, 0, len(e2eIssues))
 	for n, spec := range e2eIssues {
@@ -253,6 +261,9 @@ func buildE2E(passwordHash string) *dataset {
 		if spec.sprint {
 			rec.sprint = ptr(sprintID)
 		}
+		if spec.closedSprint {
+			rec.sprint = ptr(closedSprintID)
+		}
 		if spec.points > 0 {
 			rec.points = ptr(spec.points)
 		}
@@ -279,11 +290,16 @@ func buildE2E(passwordHash string) *dataset {
 		}
 		recs = append(recs, rec)
 	}
+	addE2EConversations(recs, org)
 	addE2ECustomFields(ds, org, recs)
 	emitIssues(ds, recs)
 	syncIssueCounters(ds, recs)
 	addE2EFilterAndNotifications(ds, org, recs)
 	addE2ESearchFilters(ds, org.orgID, org.users[e2eAdmin])
+	addVersions(ds, org, recs)
+	addComponentLeads(ds)
+	addEpicDates(ds, recs)
+	addE2EWorklogs(ds, org, recs)
 	addPlanningSeed(ds, org.orgID, org.users[e2eAdmin], org.users[e2eMember], org.projects[0].id)
 	addE2EFavoritesAndRecents(ds, users, org.projects)
 	return ds
@@ -323,4 +339,23 @@ func addE2EFilterAndNotifications(ds *dataset, org orgModel, recs []issueRec) {
 		notes.add(idFor("notification", strconv.Itoa(i)), org.users[item.user], item.kind, item.message,
 			"/issues/"+recs[item.issue].id.String(), readAt, created)
 	}
+}
+
+// addE2EConversations adds a conversation (reply, mention, internal note and reactions) to two issues of the first
+// project.
+func addE2EConversations(recs []issueRec, org orgModel) {
+	people := func(author, replier, reactor int, authorName, replierName string) threadPeople {
+		return threadPeople{author: org.users[author], replier: org.users[replier], reactor: org.users[reactor],
+			authorName: authorName, replierName: replierName}
+	}
+	addCommentThread(&recs[1], people(e2eAgent, e2eAdmin, e2eAna, "Agent User", "Admin User"))
+	addCommentThread(&recs[3], people(e2eAdmin, e2eAgent, e2eMember, "Admin User", "Agent User"))
+}
+
+// addE2EWorklogs logs time and sets estimates on three issues of the first project.
+func addE2EWorklogs(ds *dataset, org orgModel, recs []issueRec) {
+	agent, admin := org.users[e2eAgent], org.users[e2eAdmin]
+	addIssueWorklogs(ds, recs[1].id, agent, -2, 8*3600, 7200, 5400, 3600)
+	addIssueWorklogs(ds, recs[3].id, agent, -1, 4*3600, 3600, 1800)
+	addIssueWorklogs(ds, recs[9].id, admin, -3, 2*3600, 1800)
 }
