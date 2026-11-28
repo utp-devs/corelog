@@ -44,6 +44,20 @@ func init() {
 		"auth.password_changed":           fixed("user", "cambió su contraseña"),
 		"auth.email_verified":             fixed("user", "verificó su correo electrónico"),
 		"auth.account_locked":             fixed("user", "fue bloqueado temporalmente por intentos fallidos"),
+		"auth.token_revoked":              fixed("api_token", "revocó un token de acceso"),
+		"webhook.created":                 {EntityType: "webhook", Summary: func(a string, p map[string]any) string { return a + " creó un webhook" + named(p, "name") }},
+		"webhook.updated":                 {EntityType: "webhook", Summary: func(a string, p map[string]any) string { return a + " actualizó un webhook" + named(p, "name") }},
+		"webhook.deleted":                 {EntityType: "webhook", Summary: func(a string, p map[string]any) string { return a + " eliminó un webhook" + named(p, "name") }},
+		"automation.rule_created": {EntityType: "automation_rule", Summary: func(a string, p map[string]any) string {
+			return a + " creó una regla de automatización" + named(p, "name")
+		}},
+		"automation.rule_updated": {EntityType: "automation_rule", Summary: func(a string, p map[string]any) string {
+			return a + " actualizó una regla de automatización" + named(p, "name")
+		}},
+		"automation.rule_deleted": {EntityType: "automation_rule", Summary: func(a string, p map[string]any) string {
+			return a + " eliminó una regla de automatización" + named(p, "name")
+		}},
+		"import.completed": fixed("import_job", "importó incidencias desde CSV"),
 	}
 	for k, v := range more {
 		if _, exists := DefaultRules[k]; !exists {

@@ -39,6 +39,11 @@ func Authenticate(secret string) func(http.Handler) http.Handler {
 				return
 			}
 
+			if isAPIToken(token) {
+				authenticateToken(w, r, token, next)
+				return
+			}
+
 			claims, err := authtoken.Parse(secret, token)
 			if err != nil {
 				httpresponse.Error(w, apperror.New(apperror.KindUnauthorized, "not authenticated"))
