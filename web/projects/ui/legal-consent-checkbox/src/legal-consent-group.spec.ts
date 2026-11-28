@@ -133,7 +133,7 @@ describe('LegalConsentGroup', () => {
 
   it('opens the document from the link and ticks the box when accepted in the modal', async () => {
     const { fixture, host, el } = setup();
-    Array.from(el.querySelectorAll<HTMLButtonElement>('button'))
+    Array.from(el.querySelectorAll<HTMLElement>('button, [role="button"]'))
       .find((b) => b.textContent?.trim() === 'Términos de uso')
       ?.click();
     await fixture.whenStable();

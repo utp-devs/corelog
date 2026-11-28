@@ -79,8 +79,8 @@ async function settle(fixture: ComponentFixture<ConsentGate>): Promise<void> {
   fixture.detectChanges();
 }
 
-function button(el: HTMLElement, text: string): HTMLButtonElement | undefined {
-  return Array.from(el.querySelectorAll<HTMLButtonElement>('button')).find((b) =>
+function button(el: HTMLElement, text: string): HTMLElement | undefined {
+  return Array.from(el.querySelectorAll<HTMLElement>('button, [role="button"]')).find((b) =>
     b.textContent?.trim().startsWith(text),
   );
 }
@@ -122,15 +122,21 @@ describe('ConsentGate', () => {
 
   it('enables "Aceptar y continuar" only once every document is ticked', async () => {
     const { fixture, el } = setup();
-    expect(button(el, 'Aceptar y continuar')?.disabled).toBe(true);
+    expect((button(el, 'Aceptar y continuar') as HTMLButtonElement | undefined)?.disabled).toBe(
+      true,
+    );
     const first = el.querySelector<HTMLInputElement>('input[type="checkbox"]') as HTMLInputElement;
     first.checked = true;
     first.dispatchEvent(new Event('change'));
     await settle(fixture);
-    expect(button(el, 'Aceptar y continuar')?.disabled).toBe(true);
+    expect((button(el, 'Aceptar y continuar') as HTMLButtonElement | undefined)?.disabled).toBe(
+      true,
+    );
     tickAll(el);
     await settle(fixture);
-    expect(button(el, 'Aceptar y continuar')?.disabled).toBe(false);
+    expect((button(el, 'Aceptar y continuar') as HTMLButtonElement | undefined)?.disabled).toBe(
+      false,
+    );
   });
 
   it('accepts the shown versions with the login_reprompt source and closes', async () => {

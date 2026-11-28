@@ -68,11 +68,11 @@
   --p-progressspinner-color-4: var(--cl-auth-accent);
 }
 
-/// Native text input of an auth field: tall box with the value under the caption of the label.
+/// Native text input of an auth field: compact box (48px) with the value under the caption of the label.
 @mixin input {
   @include c.control-box(var(--cl-auth-field-h));
   height: var(--cl-auth-field-h);
-  padding: 0 var(--cl-space-12) 0 var(--cl-space-3);
+  padding: var(--cl-space-4) var(--cl-space-12) 0 var(--cl-space-3);
   border-radius: var(--cl-radius-lg);
   background: var(--cl-auth-field);
   font-size: var(--cl-font-body-strong);

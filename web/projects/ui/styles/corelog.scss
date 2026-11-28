@@ -160,6 +160,15 @@
   --cl-type-bug: #c9372c;
   --cl-type-bug-bg: #ffeceb;
   --cl-type-bug-text: #ae2a19;
+  // Chart series palette (colorblind-safe: blue, orange, teal, purple, magenta, gray, ochre, sky).
+  --cl-chart-1: #0b5cad;
+  --cl-chart-2: #c25a00;
+  --cl-chart-3: #00806a;
+  --cl-chart-4: #8a3fb4;
+  --cl-chart-5: #b02f6a;
+  --cl-chart-6: #5b6676;
+  --cl-chart-7: #8f6d00;
+  --cl-chart-8: #1b7ea6;
   --cl-type-subtask: #1d7f8c;
   --cl-type-subtask-bg: #e6fcff;
   --cl-type-subtask-text: #0e4f57;
@@ -311,6 +320,15 @@
   --cl-type-bug: #ff8f73;
   --cl-type-bug-bg: #5d1f1a;
   --cl-type-bug-text: #ffd2cc;
+  // Chart series palette (colorblind-safe: blue, orange, teal, purple, magenta, gray, ochre, sky).
+  --cl-chart-1: #6cb0ff;
+  --cl-chart-2: #ffa14d;
+  --cl-chart-3: #4fd1b5;
+  --cl-chart-4: #c79cf0;
+  --cl-chart-5: #f07fb0;
+  --cl-chart-6: #a8b3c0;
+  --cl-chart-7: #e6c24a;
+  --cl-chart-8: #6ed0f0;
   --cl-type-subtask: #60c6d2;
   --cl-type-subtask-bg: #113b40;
   --cl-type-subtask-text: #b2f2f9;
@@ -441,7 +459,7 @@
   --cl-auth-light-hero-text-subtle: #26354f;
   --cl-auth-light-hero-panel: rgba(255, 255, 255, 0.72);
   --cl-auth-light-hero-chip: rgba(255, 255, 255, 0.85);
-  --cl-auth-field-h: 60px;
+  --cl-auth-field-h: 48px;
   --cl-auth-button-h: 44px;
 
   /* Text and scrims over photographs. Same in both themes: the photos are dark. */

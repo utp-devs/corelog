@@ -105,14 +105,9 @@
   }
 
   &__link {
-    display: inline-flex;
-    align-items: center;
-    min-height: var(--cl-control-h-md);
+    display: inline;
     margin-inline: 0.25em;
     min-width: 0;
-    padding: 0;
-    border: 0;
-    background: none;
     color: var(--cl-brand);
     font: inherit;
     font-weight: var(--cl-weight-semibold);
@@ -126,6 +121,13 @@
     &:focus-visible {
       @include c.focus-ring;
       border-radius: var(--cl-radius-sm);
+    }
+
+    // Inline links inside a sentence keep the text line; on touch screens they get a full-size target.
+    @media (pointer: coarse) {
+      display: inline-flex;
+      align-items: center;
+      min-height: var(--cl-control-h-lg);
     }
   }
 

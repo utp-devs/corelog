@@ -19,15 +19,17 @@
       <label class="legal-consent-checkbox__label" [attr.id]="id + '-before'" [attr.for]="id">{{
         before()
       }}</label>
-      <button
-        type="button"
+      <span
+        role="button"
+        tabindex="0"
         class="legal-consent-checkbox__link"
         [attr.id]="id + '-link'"
         [attr.aria-label]="linkDescription()"
         (click)="openDocument($event)"
+        (keydown.enter)="openDocument($event)"
+        (keydown.space)="openDocument($event)"
+        >{{ linkLabel() }}</span
       >
-        {{ linkLabel() }}
-      </button>
       @if (after()) {
         <label class="legal-consent-checkbox__label" [attr.id]="id + '-after'" [attr.for]="id">{{
           after()

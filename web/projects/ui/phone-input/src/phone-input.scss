@@ -31,6 +31,11 @@
     min-height: var(--cl-control-h-lg);
   }
 
+  // The large variant sits under a caption label (the access screens): the value starts below it.
+  &--lg &__field {
+    padding-top: var(--cl-space-4);
+  }
+
   &__field {
     @include c.control-box;
     flex: 1 1 auto;
