@@ -26,7 +26,10 @@
     position: relative;
     isolation: isolate;
     overflow: hidden;
-    background: var(--cl-media-bg);
+    align-items: flex-end;
+    box-sizing: border-box;
+    min-height: var(--cl-banner-h-compact);
+    background: var(--cl-media-fallback);
 
     .project-workspace__title {
       color: var(--cl-media-text);
@@ -48,6 +51,7 @@
     width: 100%;
     height: 100%;
     object-fit: cover;
+    object-position: center 40%;
   }
 
   &__scrim {

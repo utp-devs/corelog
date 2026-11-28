@@ -53,11 +53,15 @@ function safeFile(dir, relative) {
   }
 }
 
+// Build output names carry a content hash (chunk-ABCD1234.js); everything else may change between builds.
+const HASHED = /-[A-Z0-9]{8}\.(?:js|css)$/;
+
 function send(res, file, noCache) {
   const type = mimeTypes[extname(file).toLowerCase()] ?? 'application/octet-stream';
   res.writeHead(200, {
     'Content-Type': type,
-    'Cache-Control': noCache ? 'no-cache' : 'public, max-age=31536000, immutable',
+    'Cache-Control':
+      !noCache && HASHED.test(file) ? 'public, max-age=31536000, immutable' : 'no-cache',
   });
   createReadStream(file).pipe(res);
 }
@@ -66,7 +70,7 @@ function serveApp(res, app, relative) {
   const dir = appDir(app);
   const exact = relative === '' || relative.endsWith('/') ? null : safeFile(dir, relative);
   if (exact) {
-    send(res, exact, exact.endsWith('.html'));
+    send(res, exact, false);
     return;
   }
   if (extname(relative) && extname(relative) !== '.html') {

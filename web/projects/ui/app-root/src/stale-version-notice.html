@@ -1,0 +1,15 @@
+@if (recovery.stale()) {
+  <div class="stale-version-notice" role="alert" data-testid="stale-version-notice">
+    <p class="stale-version-notice__text">
+      Hay una versión nueva de la aplicación. Recarga la página.
+    </p>
+    <button
+      type="button"
+      class="stale-version-notice__action"
+      data-testid="stale-version-reload"
+      (click)="recovery.reloadNow()"
+    >
+      Recargar
+    </button>
+  </div>
+}

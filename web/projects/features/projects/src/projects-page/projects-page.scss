@@ -174,9 +174,10 @@
   /* Cover photograph at the top of the card with the project avatar over it, under a dark gradient. */
   &__cover {
     position: relative;
-    height: 5.5rem;
+    height: var(--cl-banner-h-compact);
+    min-height: var(--cl-banner-h-compact);
     margin-inline: calc(var(--cl-space-4) * -1);
-    background: var(--cl-media-bg);
+    background: var(--cl-media-fallback);
 
     &::after {
       content: '';
@@ -191,6 +192,7 @@
     width: 100%;
     height: 100%;
     object-fit: cover;
+    object-position: center;
   }
 
   &__cover-avatar {

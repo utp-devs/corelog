@@ -10,7 +10,7 @@
 }
 
 .calendar-time-grid {
-  --gutter: 3.5rem;
+  --gutter: 4.25rem;
   --hour-h: 3.5rem;
 
   display: flex;
@@ -27,6 +27,10 @@
     display: grid;
     grid-template-columns: var(--gutter) repeat(var(--columns), minmax(0, 1fr));
     border-bottom: 1px solid var(--cl-border);
+    /* Same reserved scrollbar width as the scrolling body, so the day columns line up with the hour columns. */
+    flex: none;
+    overflow-y: hidden;
+    scrollbar-gutter: stable;
   }
 
   &__head {
@@ -40,6 +44,7 @@
     &--label {
       padding: var(--cl-space-2) var(--cl-space-1);
       text-align: right;
+      white-space: nowrap;
     }
   }
 
@@ -131,6 +136,7 @@
     flex: 1 1 auto;
     min-height: 0;
     overflow-y: auto;
+    scrollbar-gutter: stable;
   }
 
   &__body {
@@ -150,6 +156,7 @@
     font-size: var(--cl-font-caption);
     font-variant-numeric: tabular-nums;
     text-align: right;
+    white-space: nowrap;
     line-height: 1;
     padding-top: var(--cl-space-1);
   }

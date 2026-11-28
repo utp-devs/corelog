@@ -14,11 +14,12 @@
   align-items: flex-end;
   overflow: hidden;
   box-sizing: border-box;
-  height: clamp(7rem, 16vw, 11rem);
+  height: var(--cl-banner-h-compact);
+  min-height: var(--cl-banner-h-compact);
   margin-top: var(--cl-space-4);
   padding: var(--cl-space-5) var(--cl-space-6);
   border-radius: var(--cl-radius-lg);
-  background: var(--cl-media-bg);
+  background: var(--cl-media-fallback);
   color: var(--cl-media-text);
 
   &__image {

@@ -1,5 +1,6 @@
 export * from './lib/config/api.config';
 export * from './lib/config/app-title.strategy';
+export * from './lib/config/chunk-recovery';
 export * from './lib/config/corelog-providers';
 export * from './lib/config/http-context';
 export * from './lib/config/issue-paths';

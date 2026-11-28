@@ -111,6 +111,10 @@
   --cl-dialog-w-lg: 720px;
   --cl-popover-w: 340px;
   --cl-toast-w: 360px;
+  /* Banner / cover images: full banners (page headers, welcome) and compact ones (project header, cards). */
+  --cl-banner-h: clamp(8rem, 18vw, 14rem);
+  --cl-banner-h-compact: clamp(5.5rem, 10vw, 8rem);
+  --cl-banner-ratio: 3 / 1;
   --cl-tooltip-w: 280px;
 
   /* Motion. */
@@ -354,6 +358,8 @@
 @media (max-width: 767.98px) {
   :root {
     --cl-gutter: 16px;
+    --cl-banner-h: 7rem;
+    --cl-banner-h-compact: 5rem;
   }
 }
 
@@ -464,6 +470,8 @@
   --cl-media-text: #ffffff;
   --cl-media-text-subtle: #dbe4f3;
   --cl-media-bg: #0b1220;
+  /* Backdrop of a banner while its image loads or when it has none. */
+  --cl-media-fallback: linear-gradient(135deg, var(--cl-brand) 0%, var(--cl-media-bg) 70%);
   --cl-media-accent: #4c9aff;
   --cl-media-scrim-strong: rgba(11, 18, 32, 0.88);
   --cl-media-scrim-soft: rgba(11, 18, 32, 0.45);

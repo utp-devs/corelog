@@ -17,6 +17,7 @@ import {
   provideRouter,
   withComponentInputBinding,
   withInMemoryScrolling,
+  withNavigationErrorHandler,
 } from '@angular/router';
 import { map } from 'rxjs';
 import { MessageService } from 'primeng/api';
@@ -31,6 +32,7 @@ import { authInterceptor } from '../interceptors/auth.interceptor';
 import { errorInterceptor } from '../interceptors/error.interceptor';
 import { loadingInterceptor } from '../interceptors/loading.interceptor';
 import { API_URL, CORELOG_APP } from './api.config';
+import { ChunkRecovery } from './chunk-recovery';
 import { AppTitleStrategy } from './app-title.strategy';
 import { normalizePrimeAutofocus } from './primeng-autofocus';
 import { PRIMENG_TRANSLATION_ES, CL_Z_INDEX, CorelogPreset } from './theme';
@@ -79,6 +81,12 @@ export function provideCorelog(options: CorelogOptions): EnvironmentProviders {
       options.routes as Route[],
       withComponentInputBinding(),
       withInMemoryScrolling({ scrollPositionRestoration: 'top', anchorScrolling: 'enabled' }),
+      // A lazy chunk missing after a new build reloads the page once, then shows a notice.
+      withNavigationErrorHandler((failure) => {
+        if (!inject(ChunkRecovery).handle(failure)) {
+          throw failure.error;
+        }
+      }),
     ),
     { provide: TitleStrategy, useClass: AppTitleStrategy },
     { provide: LOCALE_ID, useValue: 'es-PE' },

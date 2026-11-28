@@ -28,6 +28,10 @@
   &__head {
     border-bottom: 1px solid var(--cl-border);
     background: var(--cl-bg-sunken);
+    /* Reserves the scrollbar width of the body so weekday names sit above their columns. */
+    flex: none;
+    overflow-y: hidden;
+    scrollbar-gutter: stable;
   }
 
   &__weekday {
@@ -45,6 +49,7 @@
     grid-auto-rows: minmax(var(--cl-calendar-row-min, 6.5rem), 1fr);
     min-height: 0;
     overflow-y: auto;
+    scrollbar-gutter: stable;
   }
 
   &__week {
