@@ -38,10 +38,12 @@ Los propietarios y administradores de la organización actúan como lead en todo
 - **Tablero:** columnas por estado. Arrastra una tarjeta a otra columna para cambiar el estado de la incidencia. Una columna con límite WIP lleno no acepta más tarjetas. Si eres lead, puedes fijar el límite de cada columna en su cabecera.
 - **Backlog:** todas las incidencias del proyecto en orden de prioridad. Usa las flechas para subir o bajar una incidencia.
 - **Sprints:** planifica un sprint con nombre, objetivo y fechas. Solo puede haber un sprint activo por proyecto. Al cerrar un sprint, las incidencias no terminadas pasan al backlog o a otro sprint planificado. El gráfico de burndown muestra el trabajo restante frente a la línea ideal, y necesita fechas de inicio y fin.
-- **Calendario:** inicios y fines de sprint, y fechas límite de incidencias del mes. Puedes verlo en cuadrícula o en lista.
+- **Calendario:** inicios y fines de sprint, fechas límite de incidencias y eventos propios del mes. Puedes verlo en cuadrícula o en lista (en el móvil se muestra el día).
+- **Hoja de ruta, informes y paneles:** cada proyecto tiene su hoja de ruta (`Proyectos > proyecto > Hoja de ruta`) e informes; en **Paneles** armas tus propios tableros de gadgets. Ver las secciones correspondientes más abajo.
+- **Administración:** la aplicación de administración (`/admin`) reúne la organización (resumen, miembros, catálogos, campos, estados, invitaciones, documentos legales), las notificaciones de la organización, los webhooks y la auditoría. Para la plataforma añade la cola de correo, los trabajos programados y la auditoría global.
 - **Mi resumen:** tus incidencias abiertas, las vencidas, tus proyectos, los sprints activos de esos proyectos y las incidencias más urgentes.
 - **Búsqueda:** en la cabecera, busca proyectos (por nombre o clave) e incidencias (por título o descripción). Solo aparece lo que puedes ver. Escribe al menos dos caracteres.
-- **Notificaciones:** la campana de la cabecera muestra cuántos avisos tienes sin leer. Se actualiza cada 30 segundos. Recibes un aviso cuando te asignan una incidencia.
+- **Notificaciones:** la campana de la cabecera muestra cuántos avisos tienes sin leer y se actualiza en tiempo real. Ver "Notificaciones".
 
 ## Proyectos
 
@@ -113,7 +115,7 @@ Ejemplo: si concedes "crear incidencias" al viewer, un viewer puede crear incide
 ### Archivar y eliminar
 
 - **Archivar** deja el proyecto en solo lectura: no puedes cambiar su nombre, su configuración, su visibilidad ni su plantilla, y la API responde 409 (`project.archived`). El proyecto desaparece del listado normal y se puede ver con el filtro de archivados. **Restaurar** lo devuelve a la lista activa. En esta versión, el bloqueo cubre la configuración del proyecto; las incidencias y el tablero todavía no se bloquean al archivar.
-- **Eliminar** es un borrado lógico. Solo lo pueden hacer el lead y los propietarios o administradores de la organización. Debes escribir el nombre exacto del proyecto para confirmarlo. El proyecto deja de aparecer en todas las vistas y su clave queda libre. La interfaz no ofrece recuperarlo.
+- **Eliminar** es un borrado lógico. Solo lo pueden hacer el lead y los propietarios o administradores de la organización. Debes escribir el nombre exacto del proyecto para confirmarlo. El proyecto deja de aparecer en todas las vistas y su clave queda libre. La interfaz no ofrece recuperarlo. Con la depuración activada se elimina de forma definitiva pasados 30 días.
 
 ### Qué pueden hacer los invitados y los viewers
 
@@ -458,15 +460,23 @@ En **Repetir** elige diaria, semanal (con días de la semana), mensual (por fech
 
 ## Notificaciones
 
-La campana de la cabecera muestra los avisos sin leer (se actualiza cada 30 segundos). Márcalos como leídos uno a uno o todos a la vez.
+La campana de la cabecera muestra los avisos sin leer. Márcalos como leídos uno a uno o todos a la vez.
+
+### Avisos en tiempo real
+
+Los avisos llegan al instante sin recargar la página: la aplicación mantiene abierta una conexión de solo lectura con el servidor (`GET /api/v1/notifications/stream`) y la campana, el contador y la lista se actualizan solos. Si la conexión se corta, la aplicación vuelve a conectarse sola y recupera lo que te perdiste. Si abres CoreLog en otra pestaña, la conexión anterior se sustituye y solo queda una por sesión.
+
+### Alerta de nuevo inicio de sesión
+
+Cada vez que se abre una sesión nueva en tu cuenta recibes en el momento un aviso de seguridad (en la aplicación y, según tus preferencias, por correo) con la fecha del inicio de sesión y dos acciones: **Ver mis sesiones** (te lleva a **Perfil > Seguridad**) y **No fui yo**. Si fuiste tú, ignóralo. Si no, pulsa **No fui yo**: se cierra esa sesión de inmediato y se te recomienda cambiar la contraseña.
 
 ### Qué avisa y a quién
 
 Un **esquema de notificaciones** decide, para cada evento, a quién avisar y por qué canal (en la aplicación, por correo o ambos). Los eventos son: incidencia creada, asignada, comentada, mencionada, transicionada, resuelta o actualizada; comentario editado; tiempo registrado; versión publicada; sprint iniciado o completado; y suscripción de filtro. Los destinatarios pueden ser el informador, el responsable, los seguidores, el lead del proyecto, el lead del componente, las personas mencionadas, el autor de un comentario al que se responde, una persona, un equipo o un rol del proyecto.
 
 - **Esquema predeterminado:** avisa en la aplicación al responsable asignado, a quien es mencionado y al autor de un comentario al que responden.
-- **Esquema de la organización:** sustituye el predeterminado evento por evento. Solo API: `GET`/`PUT /organizations/{org}/notification-scheme`.
-- **Esquema del proyecto:** sustituye al de la organización evento por evento. Solo API: `GET`/`PUT /projects/{project}/notification-scheme`.
+- **Esquema de la organización:** sustituye el predeterminado evento por evento. Se edita en **Administración > Organización > Notificaciones** (`/admin/organization/notifications`); también por API: `GET`/`PUT /organizations/{org}/notification-scheme`.
+- **Esquema del proyecto:** sustituye al de la organización evento por evento. Se edita en **Proyecto > Configuración > Notificaciones**; también por API: `GET`/`PUT /projects/{project}/notification-scheme`.
 
 Quien comenta o cambia algo no recibe aviso de sus propias acciones, salvo que active esa preferencia.
 
@@ -478,11 +488,11 @@ En **Perfil > Notificaciones** (`/profile/notifications`) cada persona decide:
 2. **Correo:** **inmediato** (un correo por aviso), **resumen diario** (un solo correo con todos los avisos del día, a la hora que configura el administrador) o **desactivado**. Solo afecta a los eventos que el esquema envía por correo.
 3. **Mis propias acciones:** recibir también avisos de lo que haces tú.
 
-Los correos salen por una cola con reintentos. Los administradores de la plataforma ven la cola y los envíos fallidos en `GET /admin/email-outbox` y pueden reintentar uno (solo API).
+Los correos salen por una cola con reintentos. Los administradores de la plataforma ven la cola y los envíos fallidos en **Administración > Cola de correo** y pueden reintentar uno; los trabajos programados (resumen, depuración, suscripciones) se ven en **Administración > Trabajos programados**.
 
 ## Automatización
 
-Las reglas de automatización ejecutan acciones cuando ocurre algo en un proyecto. El lead las gestiona; hoy se administran por la API (`/projects/{project}/automation-rules`) — solo API.
+Las reglas de automatización ejecutan acciones cuando ocurre algo en un proyecto. El lead las gestiona en **Proyecto > Configuración > Automatización** (lista de reglas con su estado, y un constructor para crear o editar cada regla: elige el disparador, añade condiciones y acciones, y activa o desactiva la regla). Cada regla muestra su historial de ejecuciones. También están disponibles por API (`/projects/{project}/automation-rules`).
 
 Una regla tiene un **disparador** ("cuando"), **condiciones** ("si", todas deben cumplirse, hasta 10) y **acciones** ("entonces", de 1 a 10).
 
@@ -524,7 +534,7 @@ Para evitar bucles, una regla que se dispara por el efecto de otra regla se deti
 
 ## Webhooks
 
-Un webhook envía a una URL externa cada evento al que se suscribe. Los gestionan los propietarios y administradores de la organización por la API (`/organizations/{org}/webhooks`) — solo API.
+Un webhook envía a una URL externa cada evento al que se suscribe. Los gestionan los propietarios y administradores de la organización en **Administración > Organización > Webhooks** (`/admin/organization/webhooks`), o por la API (`/organizations/{org}/webhooks`). Desde la pantalla creas, editas, activas o desactivas, pruebas, rotas el secreto y revisas las entregas.
 
 1. Crea el webhook con nombre, URL `http` o `https` pública, los eventos y, si quieres, un filtro CoreQL. Eventos disponibles: `issue.created`, `issue.updated`, `issue.transitioned`, `issue.deleted`, `issue.restored`, `comment.created`, `sprint.started`, `sprint.completed` y `version.released` (o `*` para todos). Las URLs privadas, locales o internas se rechazan.
 2. La respuesta incluye el **secreto de firma** (`whsec_...`) una sola vez. Guárdalo; `POST .../rotate-secret` genera uno nuevo.
@@ -581,10 +591,11 @@ Responde con un código 2xx en menos de 10 segundos. Si no, CoreLog reintenta ha
 
 Un token de API personal permite que un script o una integración use la API con tus permisos, sin contraseña.
 
-1. Crea el token en `POST /api/v1/me/api-tokens` (solo API; la gestión de tokens exige sesión iniciada) con un nombre, los alcances y, opcionalmente, una caducidad (máximo 366 días).
+1. Entra en **Perfil > Tokens** (`/profile/tokens`) y pulsa **Crear token** con un nombre, el alcance y, opcionalmente, una caducidad (máximo 366 días). La gestión de tokens exige sesión iniciada (equivale a `POST /api/v1/me/api-tokens`).
 2. Copia el valor (`cl_pat_...`): solo se muestra una vez; en el sistema se guarda únicamente su huella.
 3. Úsalo como `Authorization: Bearer cl_pat_...`.
-4. Revoca el token con `DELETE /api/v1/me/api-tokens/{id}`. Puedes tener hasta 20 tokens activos.
+4. Revoca el token desde la misma lista (equivale a `DELETE /api/v1/me/api-tokens/{id}`). Puedes tener hasta 20 tokens activos.
+5. Los tokens revocados no aparecen en la lista; activa **Mostrar tokens revocados** si necesitas consultarlos (nombre, creación y fecha de revocación).
 
 | Alcance | Permite |
 |---|---|
@@ -596,9 +607,9 @@ Un token nunca puede hacer más que su dueño y no sirve para iniciar sesión, c
 
 ## Importación y exportación
 
-- **Importar incidencias desde CSV** (solo API: `POST /projects/{project}/import/csv`): sube el archivo (hasta 10 MiB y 20 000 filas), revisa la correspondencia sugerida de columnas a campos (reconoce los nombres de las exportaciones de Jira y los equivalentes en español) y arranca la importación con `POST .../import/csv/{job}/start`. Campos importables: resumen (obligatorio), descripción, tipo, prioridad, estado, responsable, informador, etiquetas, componentes, versiones de corrección, fechas de inicio y límite, puntos, padre y campos personalizados (`custom:<nombre>`). Consulta el avance en `GET .../import/jobs/{job}`; las filas con error se descargan en `.../errors.csv`.
-- **Exportar incidencias a CSV:** desde el listado de incidencias o por la API (ver "Incidencias").
-- **Copia completa de un proyecto en JSON** (solo API): `GET /projects/{project}/export/project.json` incluye proyecto, incidencias, comentarios, registros de trabajo y vínculos, con límites de tamaño (el campo `truncated` avisa si se recortó). Solo el lead y los administradores.
+- **Importar incidencias desde CSV** (**Proyecto > Configuración > Importar**, asistente en pasos; por API: `POST /projects/{project}/import/csv`): sube el archivo (hasta 10 MiB y 20 000 filas), revisa la correspondencia sugerida de columnas a campos (reconoce los nombres de las exportaciones de Jira y los equivalentes en español) y arranca la importación con `POST .../import/csv/{job}/start`. Campos importables: resumen (obligatorio), descripción, tipo, prioridad, estado, responsable, informador, etiquetas, componentes, versiones de corrección, fechas de inicio y límite, puntos, padre y campos personalizados (`custom:<nombre>`). Consulta el avance en `GET .../import/jobs/{job}`; las filas con error se descargan en `.../errors.csv`.
+- **Exportar incidencias a CSV:** desde el listado de incidencias, desde **Proyecto > Configuración > Exportar** o por la API (ver "Incidencias").
+- **Copia completa de un proyecto en JSON** (**Proyecto > Configuración > Exportar**, o `GET /projects/{project}/export/project.json`): incluye proyecto, incidencias, comentarios, registros de trabajo y vínculos, con límites de tamaño (el campo `truncated` avisa si se recortó). Solo el lead y los administradores.
 - **Exportar auditoría a CSV:** ver "Seguridad".
 
 ## Seguridad
@@ -628,7 +639,7 @@ Tras 5 intentos fallidos de iniciar sesión en una cuenta en 15 minutos, la cuen
 
 ### Sesiones
 
-En **Perfil > Seguridad** ves tus sesiones abiertas (dispositivo y última actividad). Puedes cerrar una o **cerrar todas las demás**. Desactivar tu cuenta (**Perfil > Privacidad**) cierra todas las sesiones.
+En **Perfil > Seguridad** ves tus sesiones abiertas (dispositivo y última actividad). Puedes cerrar una o **cerrar todas las demás**. Si ves una sesión que no reconoces, ciérrala y cambia la contraseña; las altas desde dispositivos nuevos también te llegan como alerta (ver "Notificaciones"). Desactivar tu cuenta (**Perfil > Privacidad**) cierra todas las sesiones.
 
 ### Auditoría
 
@@ -647,6 +658,13 @@ En **Perfil > Privacidad** (`/profile/privacy`) gestionas lo que CoreLog sabe de
 - **Teléfono:** elige el país y escribe tu número. Para verificarlo: pulsa Verificar, recibe un código de 6 dígitos (vale 10 minutos, hasta 5 intentos y hasta 3 envíos por hora) y escríbelo. Cambiar el número quita la verificación. Con el proveedor de SMS de desarrollo, el código no se envía a ningún teléfono.
 - **Desactivar la cuenta:** cierra todas tus sesiones y bloquea el acceso. Se pide la contraseña.
 - Los administradores de la plataforma pueden publicar documentos legales y ver los consentimientos de las personas en `/organization/legal`.
+
+## Borrado lógico: qué desaparece y qué no
+
+Muchos elementos no se borran de inmediato: se marcan como eliminados y dejan de verse (borrado lógico), lo que permite restaurarlos y conservar el historial. Es el caso de organizaciones, proyectos, incidencias, comentarios, notas, paneles, eventos, reglas, webhooks y otros. Dos detalles que conviene conocer:
+
+- Los **tokens de API revocados** se ocultan de la lista de **Perfil > Tokens**; un interruptor los muestra.
+- Los **estados** y las **membresías** todavía se eliminan de forma definitiva, sin restauración.
 
 ## Atajos de teclado
 

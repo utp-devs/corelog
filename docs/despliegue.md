@@ -2,6 +2,33 @@
 
 Guía operativa del despliegue continuo de Corelog en el VPS. No contiene secretos: los valores sensibles viven en los *secrets* del entorno `production` de GitHub y en `/opt/corelog/.env` dentro del servidor.
 
+## Requisitos previos
+
+- Un servidor Linux con Docker Engine y el plugin Docker Compose v2, y nginx en el host como única entrada pública.
+- Un dominio para el frontend y otro para la API (o el mismo, ver más abajo) con certificado TLS vigente.
+- Acceso a GHCR (`ghcr.io/utp-devs/corelog-api` y `corelog-ui`) desde el servidor.
+- Un servidor SMTP para correo saliente (recuperación de contraseña, verificación, resumen y alertas).
+- El archivo `/opt/corelog/.env` con los valores de la sección *Variables de entorno de la API*. Las obligatorias hacen que `docker compose` se niegue a arrancar si faltan: `DB_USER`, `DB_PASSWORD`, `DB_NAME`, `JWT_SECRET`, `TWO_FACTOR_ENCRYPTION_KEY`, `APP_ENCRYPTION_KEY`, `APP_PUBLIC_URL` y `CORS_ALLOWED_ORIGINS` (o la variable anterior `CORS_ALLOWED_ORIGIN`).
+
+Plantilla mínima de `/opt/corelog/.env` (valores de ejemplo, nunca los publiques):
+
+```dotenv
+DB_USER=corelog
+DB_PASSWORD=<contraseña larga y única>
+DB_NAME=corelog
+JWT_SECRET=<salida de: openssl rand -base64 48>
+TWO_FACTOR_ENCRYPTION_KEY=<salida de: openssl rand -base64 32>
+APP_ENCRYPTION_KEY=<salida de: openssl rand -base64 32>
+APP_PUBLIC_URL=https://corelog.example.com
+PUBLIC_URL=https://corelog.example.com
+CORS_ALLOWED_ORIGINS=https://corelog.example.com
+TRUSTED_PROXIES=172.16.0.0/12
+SMTP_HOST=smtp.example.com
+SMTP_USER=<usuario>
+SMTP_PASSWORD=<contraseña>
+SMTP_FROM=CoreLog <no-reply@example.com>
+```
+
 ## Arquitectura
 
 ```
@@ -19,7 +46,9 @@ Workflow: `.github/workflows/deploy.yml`, se ejecuta en cada push a `main` (y ma
 
 1. `build-and-push`: construye ambas imágenes y las publica con el SHA del commit y `latest`.
 2. `deploy` (entorno `production`): abre SSH con la huella del servidor fijada, copia `deploy/docker-compose.prod.yml` y las migraciones a `/opt/corelog`, ejecuta `docker compose pull && up -d` y verifica que la API responda desde el propio servidor.
-3. El servicio `migrate` aplica las migraciones pendientes antes de arrancar la API.
+3. Antes de actualizar, el flujo hace un volcado de PostgreSQL en `/opt/corelog/backups/pre-deploy-<fecha>.sql.gz` (se conservan los 5 últimos; se omite en el primer despliegue).
+4. El servicio `migrate` aplica las migraciones pendientes antes de arrancar la API. `migrate up` es idempotente: sin migraciones nuevas no hace nada.
+5. La verificación final llama a `GET /health` de la API desde el propio servidor y exige `200`. La API y la base de datos tienen *healthcheck* en el compose; la imagen del frontend trae el suyo (`/healthz`). La API solo expone `/health` (vivacidad); no existe un endpoint `/ready` separado.
 
 ### Configuración necesaria en GitHub
 
@@ -33,6 +62,23 @@ Workflow: `.github/workflows/deploy.yml`, se ejecuta en cada push a `main` (y ma
 
 Recomendado: activar *required reviewers* en el entorno `production` para que un merge no despliegue sin aprobación.
 
+## Actualizar desde la versión anterior a la plataforma de gestión
+
+La versión anterior era una aplicación de un solo espacio. Las migraciones nuevas crean la organización predeterminada y asignan a ella a las personas, equipos, proyectos e incidencias existentes, y añaden roles, catálogos, flujos, notificaciones, automatización, tokens, webhooks, importación, índices y borrado lógico. Algunas reescriben datos, por lo que el orden importa.
+
+1. **Respaldar primero.** Aunque el flujo automático hace un volcado, haz uno manual y guárdalo fuera del servidor:
+   ```bash
+   cd /opt/corelog
+   docker compose exec -T db sh -c 'pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB"' | gzip > corelog-antes-de-actualizar-$(date +%F).sql.gz
+   ```
+   Respalda también el volumen de adjuntos (`corelog_attachments`).
+2. **Completar `/opt/corelog/.env`** con las variables obligatorias nuevas (`JWT_SECRET`, `TWO_FACTOR_ENCRYPTION_KEY`, `APP_ENCRYPTION_KEY`, `APP_PUBLIC_URL`, `CORS_ALLOWED_ORIGINS`). Guarda las dos claves de cifrado en un gestor de secretos.
+3. **Desplegar** (push a `main` o *workflow_dispatch*). Orden de operaciones: volcado previo, `docker compose pull`, `up -d`; el servicio `migrate` aplica las migraciones en orden y la API arranca solo si terminaron bien. Si una migración falla la API no arranca: revisa `docker compose logs migrate`.
+4. **Verificar:** `curl -s http://127.0.0.1:18080/health` devuelve `{"status":"ok"}`; inicia sesión con la cuenta administradora, confirma que existe la organización predeterminada con sus proyectos y que las personas conservan sus roles.
+5. **Revisar el registro de la API** (`docker compose logs api`) en busca de avisos de configuración.
+
+**Reversión.** Existen migraciones `down`, pero deshacer la organización predeterminada pierde la relación entre los datos y su organización. La vía segura es restaurar el volcado previo: detener `api` y `ui`, restaurar la base (ver *Backups y restauración*) y volver a la imagen anterior con `IMAGE_TAG`. Hazlo cuanto antes: lo escrito con la versión nueva después del volcado se perdería.
+
 ## Rollback
 
 Cada despliegue deja la imagen etiquetada con su SHA. Para volver a una versión anterior, en el servidor:
@@ -43,7 +89,7 @@ IMAGE_TAG=<sha-anterior> docker compose pull
 IMAGE_TAG=<sha-anterior> docker compose up -d
 ```
 
-Las migraciones no se revierten solas: si la versión anterior no es compatible con el esquema actual, ejecutar la migración `down` correspondiente antes.
+Las migraciones no se revierten solas: si la versión anterior no es compatible con el esquema actual, restaurar el volcado previo (preferido) o ejecutar la migración `down` correspondiente antes de arrancar la imagen anterior.
 
 ## Agregar un subdominio
 
@@ -76,6 +122,47 @@ zcat corelog-db-<fecha>.sql.gz | docker exec -i corelog-db-1 sh -c 'psql -U "$PO
 
 Probar la restauración periódicamente en un entorno aparte.
 
+Además de la base de datos, respalda los volúmenes de archivos: `corelog_attachments` (adjuntos), `corelog_avatars` (fotos de perfil), `corelog_logos` (logotipos de organización) y `corelog_imports` (CSV de importación). Ejemplo para un volumen:
+
+```bash
+docker run --rm -v corelog_corelog_attachments:/data:ro -v "$PWD":/backup alpine tar czf /backup/attachments-$(date +%F).tgz -C /data .
+```
+
+(El nombre real del volumen lleva el prefijo del proyecto de Compose: confírmalo con `docker volume ls`.)
+
+## Proxy inverso y notificaciones en tiempo real
+
+El flujo `GET /api/v1/notifications/stream` es una conexión SSE que queda abierta durante horas. Si un proxy la almacena en búfer o la corta por inactividad, las notificaciones llegan con retraso o la interfaz reconecta sin parar. La API responde con `X-Accel-Buffering: no`, envía un comentario de latido cada 20 s y exime esa ruta del plazo de 30 s de las peticiones normales, pero conviene configurar explícitamente cada nginx por el que pasa. En el nginx del host:
+
+```nginx
+location /api/v1/notifications/stream {
+    proxy_pass http://127.0.0.1:18080;
+    proxy_http_version 1.1;
+    proxy_set_header Connection "";
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_buffering off;
+    proxy_cache off;
+    proxy_read_timeout 1h;
+}
+```
+
+Si el dominio de la API es distinto del del frontend, esta regla va en el `server` de la API. Si el navegador usa el frontend como puerta de entrada (`/api/` hacia el contenedor `ui`), el nginx de la imagen del frontend también intermedia la conexión: su bloque `location /api/` usa `proxy_read_timeout 60s` y no desactiva el búfer de forma explícita. Con el latido de 20 s y la cabecera `X-Accel-Buffering` funciona, pero se recomienda añadir allí un bloque equivalente al anterior para el flujo.
+
+## TLS
+
+- Termina TLS en el nginx del host con certificado vigente y renovación automática; la API y el contenedor `ui` solo escuchan en `127.0.0.1`.
+- Activa `HSTS_ENABLED=true` (es el valor por defecto del compose de producción) solo cuando todo el tráfico va por HTTPS.
+- Usa `https://` en `APP_PUBLIC_URL`, `PUBLIC_URL` y `CORS_ALLOWED_ORIGINS`.
+- `DB_SSLMODE` puede quedarse en `disable` mientras la base viva en la red interna del compose; el servicio `migrate` también se conecta sin TLS por esa red.
+- `TRUSTED_PROXIES` debe incluir el rango de la red de Docker por la que llegan las peticiones (por ejemplo `172.16.0.0/12`), no solo `127.0.0.1`: nginx del host llega al contenedor desde la puerta de enlace del *bridge*.
+
+## Registros y datos sensibles
+
+La API escribe registros estructurados (JSON fuera de `development`) con el identificador de cada petición. No registra contraseñas, tokens ni secretos de webhooks, y el cuerpo de los correos solo se muestra en `development`. Aun así: no envíes registros a terceros sin revisarlos, rota los de Docker (`max-size`/`max-file` en el demonio o `logrotate`) y limita su acceso, porque contienen correos y direcciones IP. Nunca pegues el contenido de `/opt/corelog/.env` en incidencias o chats.
+
+
 ## Rotación de la llave de despliegue
 
 1. Generar un par nuevo: `ssh-keygen -t ed25519 -f deploy_key -N ""`.
@@ -92,7 +179,9 @@ La API lee su configuración del entorno (y de un archivo `.env` si existe). `.e
 |---|---|---|---|
 | `APP_ENV` | `development` | Modo de ejecución. Con `production` se ignoran `RATE_LIMIT_DISABLED` y `WEBHOOK_ALLOW_PRIVATE`, y se exige `TWO_FACTOR_ENCRYPTION_KEY` | `production` |
 | `SERVER_PORT` | `8080` | Puerto de la API | `8080` (publicado solo en `127.0.0.1`) |
-| `SERVER_READ_TIMEOUT`, `SERVER_WRITE_TIMEOUT`, `SERVER_SHUTDOWN_TIMEOUT` | `10s`, `10s`, `15s` | Plazos del servidor HTTP y del apagado ordenado | Subir `SERVER_WRITE_TIMEOUT` solo si hay exportaciones lentas |
+| `SERVER_READ_HEADER_TIMEOUT` | `5s` | Tiempo que tiene el cliente para enviar las cabeceras (defensa contra conexiones lentas) | Mantener |
+| `SERVER_READ_TIMEOUT`, `SERVER_WRITE_TIMEOUT`, `SERVER_SHUTDOWN_TIMEOUT` | `10s`, `10s`, `15s` | Plazos del servidor HTTP y del apagado ordenado. El flujo de notificaciones fija su propio plazo de escritura | Subir `SERVER_WRITE_TIMEOUT` solo si hay exportaciones lentas |
+| `SERVER_IDLE_TIMEOUT` | `120s` | Cierra las conexiones *keep-alive* sin uso | Mantener |
 | `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME` | `localhost`, `5432`, `corelog`, `corelog`, `corelog` | Conexión a PostgreSQL | Usuario y contraseña propios, nunca los de desarrollo |
 | `DB_SSLMODE` | `disable` | Modo TLS de la conexión | `require` o superior si la base no está en la red interna del compose |
 | `DB_MAX_OPEN_CONNS`, `DB_MAX_IDLE_CONNS`, `DB_CONN_MAX_LIFETIME` | `25`, `25`, `5m` | Pool de conexiones | Ajustar al `max_connections` de PostgreSQL |
@@ -101,6 +190,8 @@ La API lee su configuración del entorno (y de un archivo `.env` si existe). `.e
 | `JOBS_ENABLED` | `true` | Activa las tareas en segundo plano (envío de correo, resumen, suscripciones, depuración). Con `false` no corre ninguna | `true` |
 | `ATTACHMENTS_DIR` | `data/attachments` | Carpeta de los archivos adjuntos | Volumen persistente incluido en el respaldo |
 | `IMPORTS_DIR` | `data/imports` | Carpeta de los CSV subidos para importar | Volumen persistente |
+| `AVATARS_DIR` | `data/avatars` | Carpeta de las fotos de perfil | Volumen persistente |
+| `LOGOS_DIR` | `data/logos` | Carpeta de los logotipos de organización | Volumen persistente |
 
 ### Autenticación y cifrado
 
@@ -144,12 +235,16 @@ La API lee su configuración del entorno (y de un archivo `.env` si existe). `.e
 | `AUDIT_RETENTION_DAYS` | `365` | Días que se conserva la auditoría | Según la política de cumplimiento |
 | `PURGE_ENABLED` | `false` | Activa la depuración diaria (04:00 UTC) de incidencias y proyectos eliminados hace más de 30 días | `true` tras probar con `PURGE_DRY_RUN=true` |
 | `PURGE_DRY_RUN` | `true` | Con `true` la depuración solo registra lo que borraría; con `false` borra de verdad | `false` solo cuando el registro de prueba sea el esperado |
+| `PURGE_RETENTION_DAYS` | `30` | Días que se conserva un elemento eliminado antes de depurarse (retención en desarrollo; revisa el valor vigente en `.env.example`) | `30` o la política de la organización |
+| `PURGE_NOTIFICATION_RETENTION_DAYS` | `180` | Días que se conservan las notificaciones antiguas | Según la política de privacidad |
+| `PURGE_FINGERPRINT_RETENTION_DAYS` | `90` | Días que se conservan las huellas de dispositivos de las sesiones | Según la política de privacidad |
+| `PURGE_DELETE_ORPHANS` | `false` | Borra archivos huérfanos de las carpetas de adjuntos | `false` hasta probar en modo de prueba |
 
 ### Herramienta de datos de ejemplo
 
 `cmd/seed` lee `SEED_PASSWORD` (obligatoria, sin valor por defecto, no se imprime) y `SEED_ALLOW_DATA_LOSS`. Con `SEED_ALLOW_DATA_LOSS=yes`, `--force-reset` también vacía una base que contiene cuentas que no son de la semilla. Nunca definas esta variable ni ejecutes la semilla contra una base de producción.
 
-El `deploy/docker-compose.prod.yml` actual solo pasa a la API las variables básicas (`APP_ENV`, `TWO_FACTOR_ENCRYPTION_KEY`, `CORS_ALLOWED_ORIGIN`, base de datos, `JWT_*` y `ATTACHMENTS_DIR`). Para usar el resto, añádelas a la sección `environment` del servicio `api`, leyéndolas de `/opt/corelog/.env`. La carpeta de `IMPORTS_DIR` también debe vivir en un volumen.
+El `deploy/docker-compose.prod.yml` pasa a la API todas las variables de las tablas anteriores (excepto `RATE_LIMIT_DISABLED` y `WEBHOOK_ALLOW_PRIVATE`, que no deben existir en producción) y monta volúmenes persistentes para adjuntos, avatares, logotipos e importaciones. Las obligatorias usan `${VAR:?mensaje}`; el resto tiene un valor por defecto seguro. Los valores se leen de `/opt/corelog/.env`.
 
 ## Lista de endurecimiento para producción
 

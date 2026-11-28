@@ -1,20 +1,26 @@
 # Production compose for the VPS (/opt/corelog). Secrets live in /opt/corelog/.env (not in git).
+# Variables written as ${VAR:?message} are mandatory: compose refuses to start without them.
+# Variables written as ${VAR:-default} are optional and fall back to the value shown.
+# Reference of every variable: docs/despliegue.md.
 services:
   db:
     image: postgres:17-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_USER: ${DB_USER}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
-      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER:?define DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?define DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME:?define DB_NAME}
     volumes:
       - corelog_db_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER}"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
       interval: 5s
       timeout: 5s
       retries: 10
 
+  # One-shot job: applies the pending migrations and exits. "up" is idempotent, so running it on every
+  # deploy is safe: with nothing pending it does nothing. The API starts only if it ends successfully.
+  # Take a database dump before upgrading (see docs/despliegue.md).
   migrate:
     image: migrate/migrate:v4.17.1
     restart: "no"
@@ -38,22 +44,85 @@ services:
         condition: service_completed_successfully
     environment:
       APP_ENV: production
-      TWO_FACTOR_ENCRYPTION_KEY: ${TWO_FACTOR_ENCRYPTION_KEY:?define TWO_FACTOR_ENCRYPTION_KEY (32 random bytes, base64)}
       SERVER_PORT: 8080
-      CORS_ALLOWED_ORIGIN: ${CORS_ALLOWED_ORIGIN}
+      SERVER_READ_HEADER_TIMEOUT: ${SERVER_READ_HEADER_TIMEOUT:-5s}
+      SERVER_READ_TIMEOUT: ${SERVER_READ_TIMEOUT:-10s}
+      SERVER_WRITE_TIMEOUT: ${SERVER_WRITE_TIMEOUT:-10s}
+      SERVER_IDLE_TIMEOUT: ${SERVER_IDLE_TIMEOUT:-120s}
+      SERVER_SHUTDOWN_TIMEOUT: ${SERVER_SHUTDOWN_TIMEOUT:-15s}
+      # Origins allowed by CORS (comma separated, with https://). The legacy singular CORS_ALLOWED_ORIGIN
+      # in /opt/corelog/.env is still honoured as a fallback.
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-${CORS_ALLOWED_ORIGIN:?define CORS_ALLOWED_ORIGINS (https://frontend-domain)}}
+      # Database
       DB_HOST: db
       DB_PORT: 5432
-      DB_USER: ${DB_USER}
-      DB_PASSWORD: ${DB_PASSWORD}
-      DB_NAME: ${DB_NAME}
-      DB_SSLMODE: disable
-      JWT_SECRET: ${JWT_SECRET}
-      JWT_EXPIRATION: 24h
+      DB_USER: ${DB_USER:?define DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD:?define DB_PASSWORD}
+      DB_NAME: ${DB_NAME:?define DB_NAME}
+      DB_SSLMODE: ${DB_SSLMODE:-disable}
+      DB_MAX_OPEN_CONNS: ${DB_MAX_OPEN_CONNS:-25}
+      DB_MAX_IDLE_CONNS: ${DB_MAX_IDLE_CONNS:-25}
+      DB_CONN_MAX_LIFETIME: ${DB_CONN_MAX_LIFETIME:-5m}
+      # Secrets (mandatory)
+      JWT_SECRET: ${JWT_SECRET:?define JWT_SECRET (long random string)}
+      JWT_EXPIRATION: ${JWT_EXPIRATION:-24h}
+      TWO_FACTOR_ENCRYPTION_KEY: ${TWO_FACTOR_ENCRYPTION_KEY:?define TWO_FACTOR_ENCRYPTION_KEY (32 random bytes, base64)}
+      APP_ENCRYPTION_KEY: ${APP_ENCRYPTION_KEY:?define APP_ENCRYPTION_KEY (32 random bytes, base64)}
+      # Public links and legal consent
+      APP_PUBLIC_URL: ${APP_PUBLIC_URL:?define APP_PUBLIC_URL (https://frontend-domain)}
+      PUBLIC_URL: ${PUBLIC_URL:-}
+      LEGAL_ENFORCEMENT: ${LEGAL_ENFORCEMENT:-warn}
+      # Outgoing mail. Without SMTP_HOST the messages are only written to the log.
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM: ${SMTP_FROM:-CoreLog <no-reply@localhost>}
+      REQUIRE_EMAIL_VERIFICATION: ${REQUIRE_EMAIL_VERIFICATION:-false}
+      EMAIL_DIGEST_SCHEDULE: ${EMAIL_DIGEST_SCHEDULE:-daily at 08:00 UTC}
+      # Abuse protection. RATE_LIMIT_DISABLED is intentionally not passed: it is ignored in production.
+      RATE_LIMIT_LOGIN_PER_MIN: ${RATE_LIMIT_LOGIN_PER_MIN:-10}
+      RATE_LIMIT_REGISTER_PER_HOUR: ${RATE_LIMIT_REGISTER_PER_HOUR:-20}
+      RATE_LIMIT_FORGOT_PER_HOUR: ${RATE_LIMIT_FORGOT_PER_HOUR:-5}
+      RATE_LIMIT_PHONE_PER_HOUR: ${RATE_LIMIT_PHONE_PER_HOUR:-10}
+      API_TOKEN_RATE_LIMIT_PER_MIN: ${API_TOKEN_RATE_LIMIT_PER_MIN:-600}
+      LOCKOUT_THRESHOLD: ${LOCKOUT_THRESHOLD:-5}
+      LOCKOUT_DURATION: ${LOCKOUT_DURATION:-15m}
+      # Proxies whose X-Forwarded-For is trusted: the host nginx reaches the container through the Docker
+      # bridge gateway and the ui container adds its own hop, so list the compose network range here
+      # (for example 172.16.0.0/12). Empty makes every request look like it comes from the proxy.
+      TRUSTED_PROXIES: ${TRUSTED_PROXIES:-}
+      HSTS_ENABLED: ${HSTS_ENABLED:-true}
+      MAX_JSON_BODY_BYTES: ${MAX_JSON_BODY_BYTES:-1048576}
+      # Retention and background jobs
+      AUDIT_RETENTION_DAYS: ${AUDIT_RETENTION_DAYS:-365}
+      PURGE_ENABLED: ${PURGE_ENABLED:-false}
+      PURGE_DRY_RUN: ${PURGE_DRY_RUN:-true}
+      PURGE_RETENTION_DAYS: ${PURGE_RETENTION_DAYS:-30}
+      PURGE_NOTIFICATION_RETENTION_DAYS: ${PURGE_NOTIFICATION_RETENTION_DAYS:-180}
+      PURGE_FINGERPRINT_RETENTION_DAYS: ${PURGE_FINGERPRINT_RETENTION_DAYS:-90}
+      PURGE_DELETE_ORPHANS: ${PURGE_DELETE_ORPHANS:-false}
+      JOBS_ENABLED: ${JOBS_ENABLED:-true}
+      # Webhooks to private addresses are refused in production regardless of this value.
+      # File storage (persistent volumes below)
       ATTACHMENTS_DIR: /var/lib/corelog/attachments
+      AVATARS_DIR: /var/lib/corelog/avatars
+      LOGOS_DIR: /var/lib/corelog/logos
+      IMPORTS_DIR: /var/lib/corelog/imports
     ports:
       - "127.0.0.1:18080:8080"   # reachable only by nginx on the host
     volumes:
       - corelog_attachments:/var/lib/corelog/attachments
+      - corelog_avatars:/var/lib/corelog/avatars
+      - corelog_logos:/var/lib/corelog/logos
+      - corelog_imports:/var/lib/corelog/imports
+    # The API exposes /health (liveness) only; there is no separate readiness endpoint.
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:8080/health || exit 1"]
+      interval: 15s
+      timeout: 3s
+      retries: 5
+      start_period: 20s
 
   ui:
     image: ghcr.io/utp-devs/corelog-ui:${IMAGE_TAG:-latest}
@@ -64,7 +133,11 @@ services:
       - api
     ports:
       - "127.0.0.1:18081:8080"    # reachable only by nginx on the host
+    # The image already defines its own HEALTHCHECK (GET /healthz).
 
 volumes:
   corelog_db_data:
   corelog_attachments:
+  corelog_avatars:
+  corelog_logos:
+  corelog_imports:

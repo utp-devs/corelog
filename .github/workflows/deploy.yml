@@ -85,6 +85,16 @@ jobs:
           scp deploy/docker-compose.prod.yml vps:/opt/corelog/docker-compose.yml
           scp -r migrations/postgres vps:/opt/corelog/migrations/
 
+      - name: Back up the database before migrating
+        # Skipped silently on the very first deploy (no database container yet).
+        run: |
+          ssh vps 'cd /opt/corelog && mkdir -p backups && if docker compose ps --status running db | grep -q db; then
+            docker compose exec -T db sh -c "pg_dump -U \"\$POSTGRES_USER\" -d \"\$POSTGRES_DB\"" | gzip > backups/pre-deploy-$(date +%Y%m%d-%H%M%S).sql.gz
+            ls -1t backups/pre-deploy-*.sql.gz | tail -n +6 | xargs -r rm --
+          else
+            echo "no running database, skipping backup"
+          fi'
+
       - name: Deploy containers
         env:
           GHCR_USER: ${{ github.actor }}
@@ -100,9 +110,9 @@ jobs:
           # Checked from inside the VPS: the public endpoint is geo-restricted
           # and GitHub-hosted runners are outside the allowed country.
           for i in 1 2 3 4 5 6; do
-            code=$(ssh vps "curl -s -o /dev/null -w \"%{http_code}\" http://127.0.0.1:18080/" || true)
-            echo "api -> $code"
-            if [ "$code" != "000" ] && [ "$code" != "502" ]; then exit 0; fi
+            code=$(ssh vps "curl -s -o /dev/null -w \"%{http_code}\" http://127.0.0.1:18080/health" || true)
+            echo "api /health -> $code"
+            if [ "$code" = "200" ]; then exit 0; fi
             sleep 10
           done
           echo "API did not respond after deployment"; exit 1
