@@ -16,9 +16,11 @@ import {
   SearchApiService,
   SearchStore,
   ThemeService,
+  quoteValue,
   type SearchHit,
 } from '@corelog/core';
 import { CommandPalette, CommandRegistry, type PaletteSearch } from '@corelog/ui/command-palette';
+import { MarkText } from '@corelog/ui/mark-text';
 import { AppTooltip } from '@corelog/ui/tooltip';
 import { firstValueFrom } from 'rxjs';
 
@@ -28,17 +30,25 @@ import { ShellIcon } from './shell-icon';
 export const HEADER_SEARCH_DEBOUNCE_MS = 300;
 
 interface HitSection {
-  readonly name: 'Proyectos' | 'Incidencias';
+  readonly name: string;
   readonly items: readonly SearchHit[];
 }
 
-/** Splits hits into the Proyectos and Incidencias sections, keeping the server order. */
+const SECTIONS: ReadonlyArray<{ kind: SearchHit['kind']; name: string }> = [
+  { kind: 'issue', name: 'Incidencias' },
+  { kind: 'project', name: 'Proyectos' },
+  { kind: 'person', name: 'Personas' },
+  { kind: 'team', name: 'Equipos' },
+  { kind: 'filter', name: 'Filtros' },
+  { kind: 'note', name: 'Notas' },
+];
+
+/** Splits hits into one section per kind, keeping the server order inside each. */
 function sectionsOf(hits: readonly SearchHit[]): HitSection[] {
-  const sections: HitSection[] = [
-    { name: 'Proyectos', items: hits.filter((hit) => hit.kind === 'project') },
-    { name: 'Incidencias', items: hits.filter((hit) => hit.kind === 'issue') },
-  ];
-  return sections.filter((section) => section.items.length > 0);
+  return SECTIONS.map(({ kind, name }) => ({
+    name,
+    items: hits.filter((hit) => hit.kind === kind),
+  })).filter((section) => section.items.length > 0);
 }
 
 /**
@@ -48,7 +58,7 @@ function sectionsOf(hits: readonly SearchHit[]): HitSection[] {
  */
 @Component({
   selector: 'app-global-search',
-  imports: [AppTooltip, CommandPalette, ShellIcon],
+  imports: [AppTooltip, CommandPalette, MarkText, ShellIcon],
   templateUrl: './global-search.html',
   styleUrl: './global-search.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -224,6 +234,15 @@ export class GlobalSearch {
   protected openFullPalette(): void {
     this.panelRequested.set(false);
     this.openPalette(this.query().trim());
+  }
+
+  /** Every result of the typed text, in the issue navigator. */
+  protected openAllResults(term = this.query().trim()): void {
+    this.panelRequested.set(false);
+    if (term === '') return;
+    void this.router.navigate(['/issues'], {
+      queryParams: { jql: `text ~ ${quoteValue(term)}` },
+    });
   }
 
   protected onPaletteHit(hit: SearchHit): void {

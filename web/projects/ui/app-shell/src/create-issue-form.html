@@ -178,6 +178,24 @@
             />
           </app-field-row>
         </div>
+
+        @for (field of customFields(); track field.fieldId) {
+          <app-field-row
+            #customRow
+            [label]="field.name"
+            [required]="field.required"
+            [optional]="!field.required"
+          >
+            <app-field-editor
+              [type]="field.type"
+              [label]="field.name"
+              [inputId]="customRow.controlId"
+              [options]="field.options"
+              [users]="assigneeCandidates()"
+              (valueChange)="setCustom(field.fieldId, $event)"
+            />
+          </app-field-row>
+        }
       </form>
     }
   }

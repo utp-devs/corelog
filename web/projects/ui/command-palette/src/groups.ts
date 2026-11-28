@@ -1,24 +1,27 @@
 import type { SearchHit } from '@corelog/core';
 
-export type HitGroup = 'Proyectos' | 'Incidencias';
+export type HitGroup = 'Proyectos' | 'Incidencias' | 'Personas' | 'Equipos' | 'Filtros' | 'Notas';
 
 export interface HitSection {
   readonly name: HitGroup;
   readonly items: readonly SearchHit[];
 }
 
-/** Splits search hits into the Proyectos and Incidencias sections, keeping the server order. Empty sections are dropped. */
+const GROUPS: ReadonlyArray<{ kind: SearchHit['kind']; name: HitGroup }> = [
+  { kind: 'project', name: 'Proyectos' },
+  { kind: 'issue', name: 'Incidencias' },
+  { kind: 'person', name: 'Personas' },
+  { kind: 'team', name: 'Equipos' },
+  { kind: 'filter', name: 'Filtros' },
+  { kind: 'note', name: 'Notas' },
+];
+
+/** Splits search hits into one section per kind, keeping the server order. Empty sections are dropped. */
 export function groupHits(hits: readonly SearchHit[]): HitSection[] {
-  const projects = hits.filter((hit) => hit.kind === 'project');
-  const issues = hits.filter((hit) => hit.kind === 'issue');
-  const sections: HitSection[] = [];
-  if (projects.length > 0) {
-    sections.push({ name: 'Proyectos', items: projects });
-  }
-  if (issues.length > 0) {
-    sections.push({ name: 'Incidencias', items: issues });
-  }
-  return sections;
+  return GROUPS.map(({ kind, name }) => ({
+    name,
+    items: hits.filter((hit) => hit.kind === kind),
+  })).filter((section) => section.items.length > 0);
 }
 
 /** Lower-case, accent-free form used for matching. */

@@ -1,0 +1,23 @@
+@use '../../../../ui/styles/mixins' as m;
+
+.sprint-dialog {
+  @include m.flex-column(4);
+
+  &__input {
+    width: 100%;
+  }
+
+  &__dates {
+    @include m.grid-auto(12rem, 4);
+  }
+
+  &__force {
+    @include m.flex-row(2);
+    color: var(--cl-text);
+    cursor: pointer;
+
+    &--error {
+      color: var(--cl-danger-text);
+    }
+  }
+}

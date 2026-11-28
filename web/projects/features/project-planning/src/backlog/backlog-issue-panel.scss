@@ -1,0 +1,122 @@
+@use '../../../../ui/styles/mixins' as m;
+
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.issue-panel {
+  @include m.flex-column(3);
+
+  &__header {
+    @include m.flex-row(2);
+  }
+
+  &__type {
+    flex: none;
+    width: var(--cl-space-4);
+    height: var(--cl-space-4);
+  }
+
+  &__key {
+    color: var(--cl-brand);
+    font-weight: var(--cl-weight-semibold);
+    text-decoration: none;
+
+    &:hover {
+      text-decoration: underline;
+    }
+
+    &:focus-visible {
+      outline: none;
+      box-shadow: var(--cl-shadow-focus);
+    }
+  }
+
+  &__spacer {
+    flex: 1 1 auto;
+  }
+
+  &__close {
+    @include m.flex-row(0, center, center);
+    width: var(--cl-control-h-sm);
+    height: var(--cl-control-h-sm);
+    padding: 0;
+    border: 0;
+    border-radius: var(--cl-radius-md);
+    background: transparent;
+    color: var(--cl-text-subtle);
+    cursor: pointer;
+
+    &:hover {
+      background: var(--cl-bg-hover);
+    }
+
+    &:focus-visible {
+      outline: none;
+      box-shadow: var(--cl-shadow-focus);
+    }
+  }
+
+  &__summary {
+    margin: 0;
+    font-size: var(--cl-font-h3);
+    font-weight: var(--cl-weight-semibold);
+    line-height: var(--cl-lh-tight);
+    overflow-wrap: anywhere;
+  }
+
+  &__fields {
+    display: grid;
+    grid-template-columns: max-content minmax(0, 1fr);
+    gap: var(--cl-space-2) var(--cl-space-4);
+    margin: 0;
+
+    dt {
+      color: var(--cl-text-subtle);
+      font-size: var(--cl-font-small);
+    }
+
+    dd {
+      margin: 0;
+      min-width: 0;
+      overflow-wrap: anywhere;
+    }
+  }
+
+  &__value {
+    @include m.flex-row(2);
+  }
+
+  &__icon {
+    width: var(--cl-space-4);
+    height: var(--cl-space-4);
+  }
+
+  &__labels {
+    @include m.cluster(1);
+  }
+
+  &__label {
+    padding: 0 var(--cl-space-2);
+    border-radius: var(--cl-radius-sm);
+    background: var(--cl-bg-hover);
+    font-size: var(--cl-font-small);
+  }
+
+  &__open {
+    @include m.flex-row(2);
+    color: var(--cl-brand);
+    font-weight: var(--cl-weight-semibold);
+    text-decoration: none;
+
+    &:hover {
+      text-decoration: underline;
+    }
+
+    &:focus-visible {
+      outline: none;
+      box-shadow: var(--cl-shadow-focus);
+    }
+  }
+}

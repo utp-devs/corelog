@@ -1,0 +1,7 @@
+@for (segment of segments(); track $index) {
+  @if (segment.mark) {
+    <mark class="mark-text__mark">{{ segment.text }}</mark>
+  } @else {
+    <span class="mark-text__text">{{ segment.text }}</span>
+  }
+}

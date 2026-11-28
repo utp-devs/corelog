@@ -53,6 +53,8 @@ export class Dialog implements OnDestroy {
   readonly stacked = input(false);
   /** Escape and a click on the backdrop ask to close. The close button always does. */
   readonly dismissable = input(true);
+  /** Draws the close button of the header. Hide it only when the dialog cannot be dismissed. */
+  readonly showClose = input(true);
 
   readonly closeRequested = output<void>();
 

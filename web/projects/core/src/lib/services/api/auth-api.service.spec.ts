@@ -62,6 +62,11 @@ describe('AuthApiService', () => {
         createdAt: '2026-01-01T00:00:00Z',
         lastLoginAt: null,
         emailVerifiedAt: null,
+        firstName: '',
+        lastName: '',
+        locale: 'es',
+        phone: null,
+        pendingConsents: [],
       },
     });
     http.verify();
@@ -98,14 +103,27 @@ describe('AuthApiService', () => {
     let session: { token: string } | undefined;
 
     service
-      .register({ name: 'Ada', email: 'ada@example.com', password: 'clave-prueba' })
+      .register({
+        firstName: 'Ada',
+        lastName: 'Lovelace',
+        phone: { country: 'PE', number: '912345678' },
+        email: 'ada@example.com',
+        password: 'clave-prueba',
+        passwordConfirmation: 'clave-prueba',
+        consents: [{ slug: 'privacy_policy', version: 1 }],
+      })
       .subscribe((value) => (session = value));
 
     const register = http.expectOne('/api/v1/auth/register');
     expect(register.request.body).toEqual({
-      name: 'Ada',
+      first_name: 'Ada',
+      last_name: 'Lovelace',
       email: 'ada@example.com',
       password: 'clave-prueba',
+      password_confirmation: 'clave-prueba',
+      phone: { country: 'PE', number: '912345678' },
+      locale: 'es',
+      consents: [{ slug: 'privacy_policy', version: 1 }],
     });
     register.flush({ data: USER_RESPONSE });
     http
@@ -143,7 +161,11 @@ describe('AuthApiService', () => {
     service.changePassword({ currentPassword: 'actual', newPassword: 'nueva' }).subscribe();
 
     const request = http.expectOne({ method: 'POST', url: '/api/v1/users/me/password' });
-    expect(request.request.body).toEqual({ current_password: 'actual', new_password: 'nueva' });
+    expect(request.request.body).toEqual({
+      current_password: 'actual',
+      new_password: 'nueva',
+      new_password_confirmation: 'nueva',
+    });
     request.flush(null);
     http.verify();
   });

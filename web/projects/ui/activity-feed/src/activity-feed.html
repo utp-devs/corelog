@@ -1,0 +1,67 @@
+@if (loading()) {
+  <app-loading-skeleton variant="card" />
+} @else if (items().length === 0) {
+  <p class="activity-feed__empty">{{ emptyText() }}</p>
+} @else {
+  <ol class="activity-feed">
+    @for (item of items(); track item.id) {
+      <li
+        class="activity-feed__item"
+        [class.activity-feed__item--history]="item.kind === 'history'"
+        [attr.data-kind]="item.kind"
+      >
+        <app-user-avatar
+          [id]="item.actorId"
+          [name]="item.actorName"
+          [size]="item.kind === 'comment' ? 32 : 24"
+        />
+        <div class="activity-feed__content">
+          <p class="activity-feed__head">
+            <span class="activity-feed__actor">{{ item.actorName }}</span>
+            <span class="activity-feed__verb">{{
+              item.kind === 'comment' ? 'comentó' : 'actualizó la incidencia'
+            }}</span>
+            <time class="activity-feed__time" [title]="item.timeTitle">{{ item.timeText }}</time>
+            @if (item.edited) {
+              <span class="activity-feed__time">(editado)</span>
+            }
+          </p>
+          @if (item.kind === 'comment' && item.body) {
+            <app-rich-text-view [value]="item.body" />
+          }
+          @if (item.lines.length > 0) {
+            <ul class="activity-feed__lines">
+              @for (line of item.lines; track $index) {
+                <li class="activity-feed__line">
+                  @if (line.text) {
+                    {{ line.text }}
+                  } @else {
+                    <span class="activity-feed__label">{{ line.label }}:</span>
+                    @if (line.from) {
+                      <span class="activity-feed__from">{{ line.from }}</span>
+                    } @else {
+                      <span class="activity-feed__from">vacío</span>
+                    }
+                    <i class="pi pi-arrow-right activity-feed__arrow" aria-label="cambió a"></i>
+                    <span class="activity-feed__to">{{ line.to ?? 'vacío' }}</span>
+                  }
+                </li>
+              }
+            </ul>
+          }
+        </div>
+      </li>
+    }
+  </ol>
+  @if (hasMore()) {
+    <button
+      type="button"
+      class="activity-feed__more"
+      data-testid="activity-more"
+      [disabled]="loadingMore()"
+      (click)="loadMore.emit()"
+    >
+      {{ loadingMore() ? 'Cargando…' : 'Cargar más' }}
+    </button>
+  }
+}

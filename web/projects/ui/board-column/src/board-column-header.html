@@ -1,0 +1,20 @@
+<header class="board-column-header" [class]="colorClass()" [attr.data-wip-state]="wipState()">
+  <h3 class="board-column-header__name" [attr.title]="name()">{{ name() }}</h3>
+  @if (estimate()) {
+    <span class="board-column-header__estimate">{{ estimate() }}</span>
+  }
+  <span
+    class="board-column-header__count"
+    [class.board-column-header__count--warn]="wipState() === 'at_max' || wipState() === 'below_min'"
+    [class.board-column-header__count--over]="wipState() === 'over_max'"
+    [appTooltip]="tooltip()"
+    [attr.aria-label]="count() + ' incidencias. ' + (hasLimit() ? tooltip() : '')"
+    data-testid="column-count"
+  >
+    @if (wipState() === 'over_max') {
+      <i class="pi pi-exclamation-triangle" aria-hidden="true"></i>
+    }
+    {{ countText() }}
+  </span>
+  <ng-content />
+</header>

@@ -1,0 +1,39 @@
+@use '../../styles/mixins' as m;
+
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.field-view {
+  color: var(--cl-text);
+  overflow-wrap: anywhere;
+
+  &--empty {
+    color: var(--cl-text-subtle);
+  }
+
+  &--paragraph {
+    white-space: pre-wrap;
+  }
+
+  &__chips {
+    @include m.cluster(1);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  &__chip {
+    padding: 0 var(--cl-space-2);
+    border-radius: var(--cl-radius-md);
+    background: var(--cl-bg-sunken);
+    color: var(--cl-text);
+    font-size: var(--cl-font-small);
+  }
+
+  &__link {
+    color: var(--cl-brand);
+    text-decoration: underline;
+  }
+}

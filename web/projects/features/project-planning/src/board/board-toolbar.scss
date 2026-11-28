@@ -1,0 +1,200 @@
+@use '../../../../ui/styles/mixins' as m;
+@use '../../../../ui/app-shell/src/menu' as menu;
+@use '../../../../ui/app-shell/src/icon-button' as ib;
+
+:host {
+  display: block;
+}
+
+.board-toolbar {
+  @include m.flex-column(3);
+
+  &__main {
+    @include m.cluster(3);
+  }
+
+  &__title {
+    @include m.truncate;
+    margin: 0;
+    font-size: var(--cl-font-h2);
+    font-weight: var(--cl-weight-semibold);
+    line-height: var(--cl-lh-tight);
+  }
+
+  &__switcher {
+    width: 16rem;
+    max-width: 100%;
+  }
+
+  &__spacer {
+    flex: 1 1 auto;
+  }
+
+  &__sprint {
+    @include m.flex-row(2);
+    min-height: var(--cl-control-h-md);
+    padding: 0 var(--cl-space-3);
+    border-radius: var(--cl-radius-full);
+    background: var(--cl-cat-progress-bg);
+    color: var(--cl-cat-progress-text);
+    font-size: var(--cl-font-small);
+    text-decoration: none;
+
+    &:hover {
+      background: var(--cl-bg-selected);
+    }
+
+    &:focus-visible {
+      outline: none;
+      box-shadow: var(--cl-shadow-focus);
+    }
+
+    &--overdue {
+      background: var(--cl-warning-bg);
+      color: var(--cl-warning-text);
+    }
+  }
+
+  &__sprint-name {
+    font-weight: var(--cl-weight-semibold);
+  }
+
+  &__busy {
+    @include m.flex-row(2);
+    color: var(--cl-text-subtle);
+    font-size: var(--cl-font-small);
+  }
+
+  &__busy-text {
+    @include m.respond-down(768px) {
+      @include m.visually-hidden;
+    }
+  }
+
+  &__more-trigger {
+    @include ib.icon-button;
+    border: 1px solid var(--cl-border-strong);
+  }
+
+  &__item {
+    @include menu.menu-item;
+
+    &--danger {
+      color: var(--cl-danger-text);
+    }
+  }
+
+  &__note {
+    margin: 0;
+    padding: var(--cl-space-2) var(--cl-space-3);
+    max-width: var(--cl-menu-w);
+    color: var(--cl-text-subtle);
+    font-size: var(--cl-font-small);
+  }
+
+  &__controls {
+    @include m.cluster(3, center, space-between);
+  }
+
+  &__filters {
+    @include m.cluster(2);
+    min-width: 0;
+  }
+
+  &__hint {
+    color: var(--cl-text-subtle);
+    font-size: var(--cl-font-small);
+  }
+
+  &__chip {
+    min-height: var(--cl-control-h-md);
+    padding: 0 var(--cl-space-3);
+    border: 1px solid var(--cl-border-strong);
+    border-radius: var(--cl-radius-full);
+    background: var(--cl-bg-surface);
+    color: var(--cl-text);
+    font: inherit;
+    font-size: var(--cl-font-small);
+    cursor: pointer;
+
+    &:hover {
+      background: var(--cl-bg-hover);
+    }
+
+    &:focus-visible {
+      outline: none;
+      box-shadow: var(--cl-shadow-focus);
+    }
+
+    &--on {
+      border-color: var(--cl-brand);
+      background: var(--cl-brand-subtle);
+      color: var(--cl-brand);
+      font-weight: var(--cl-weight-semibold);
+    }
+
+    @media (pointer: coarse) {
+      min-height: var(--cl-control-h-lg);
+    }
+  }
+
+  &__clear {
+    min-height: var(--cl-control-h-md);
+    padding: 0 var(--cl-space-2);
+    border: 0;
+    background: transparent;
+    color: var(--cl-brand);
+    font: inherit;
+    font-size: var(--cl-font-small);
+    cursor: pointer;
+    text-decoration: underline;
+
+    &:focus-visible {
+      outline: none;
+      box-shadow: var(--cl-shadow-focus);
+    }
+  }
+
+  &__options {
+    @include m.cluster(3);
+  }
+
+  &__swimlane {
+    width: 11rem;
+  }
+
+  &__segmented {
+    @include m.flex-row(1);
+    padding: var(--cl-space-1);
+    border-radius: var(--cl-radius-md);
+    background: var(--cl-bg-sunken);
+  }
+
+  &__segment {
+    min-height: var(--cl-control-h-md);
+    padding: 0 var(--cl-space-3);
+    border: 0;
+    border-radius: var(--cl-radius-sm);
+    background: transparent;
+    color: var(--cl-text-subtle);
+    font: inherit;
+    font-size: var(--cl-font-small);
+    cursor: pointer;
+
+    &:focus-visible {
+      outline: none;
+      box-shadow: var(--cl-shadow-focus);
+    }
+
+    &--on {
+      background: var(--cl-bg-surface);
+      color: var(--cl-text);
+      font-weight: var(--cl-weight-semibold);
+      box-shadow: var(--cl-shadow-1);
+    }
+
+    @media (pointer: coarse) {
+      min-height: var(--cl-control-h-md);
+    }
+  }
+}

@@ -1,0 +1,114 @@
+@if (accessVariant(); as variant) {
+  <app-page-container variant="wide" pageName="sprint-report">
+    <div class="sprint-report">
+      <app-error-page [variant]="variant" [framed]="true" />
+    </div>
+  </app-page-container>
+} @else {
+  <app-page-container variant="wide" pageName="sprint-report" [ready]="ready()">
+    <div class="sprint-report">
+      <nav class="sprint-report__back" aria-label="Navegación del informe">
+        <a class="sprint-report__link" [routerLink]="sprintsPath()">
+          <i class="pi pi-arrow-left" aria-hidden="true"></i>
+          Sprints
+        </a>
+      </nav>
+
+      @if (failed()) {
+        <app-error-state [message]="loadErrorMessage" [canRetry]="true" (retry)="retry()" />
+      } @else if (sprint(); as current) {
+        <app-page-header
+          [title]="'Informe de ' + current.name"
+          [subtitle]="current.goal || undefined"
+        />
+
+        <div class="sprint-report__meta" data-testid="report-meta">
+          <app-lozenge [tone]="statusTone()">{{ statusLabel() }}</app-lozenge>
+          <span>{{ dates() }}</span>
+        </div>
+
+        @if (isPlanned()) {
+          <app-empty-state
+            image="empty-issues"
+            title="Este sprint todavía no empezó"
+            description="El informe se llena cuando el sprint se inicia. Planifícalo desde el backlog."
+          >
+            <a action class="sprint-report__link" [routerLink]="backlogPath()">Ir al backlog</a>
+          </app-empty-state>
+        } @else {
+          <ul
+            class="sprint-report__tiles"
+            aria-label="Resumen del sprint"
+            data-testid="report-tiles"
+          >
+            @for (tile of tiles(); track tile.label) {
+              <li class="sprint-report__tile">
+                <app-stat-tile [label]="tile.label" [value]="tile.value" [hint]="tile.hint" />
+              </li>
+            }
+          </ul>
+
+          <div class="sprint-report__charts">
+            <app-chart-card
+              data-testid="report-burndown"
+              title="Burndown"
+              description="Trabajo restante frente a la línea ideal y al alcance del sprint."
+              chartType="line"
+              [labels]="burndownLabels()"
+              [series]="burndownSeries()"
+              [table]="burndownTable()"
+              [isEmpty]="burndownLabels().length === 0"
+              emptyText="Aún no hay datos de burndown"
+              emptyDescription="El burndown necesita que el sprint haya empezado."
+            />
+            <app-chart-card
+              data-testid="report-velocity"
+              title="Velocidad"
+              description="Puntos completados por los últimos sprints cerrados."
+              chartType="bar"
+              [labels]="velocityLabels()"
+              [series]="velocitySeries()"
+              [table]="velocityTable()"
+              [isEmpty]="velocityLabels().length === 0"
+              emptyText="Todavía no hay sprints cerrados"
+              emptyDescription="La velocidad aparece cuando se completa un sprint."
+            />
+          </div>
+
+          <div class="sprint-report__lists">
+            @for (list of lists(); track list.id) {
+              <section class="sprint-report__list" [attr.data-testid]="'report-list-' + list.id">
+                <header class="sprint-report__list-header">
+                  <h2 class="sprint-report__list-title">{{ list.title }}</h2>
+                  <span class="sprint-report__list-count">
+                    {{ list.issues.length }} · {{ list.points }} pts
+                  </span>
+                </header>
+                <p class="sprint-report__list-help">{{ list.description }}</p>
+                @if (list.issues.length > 0) {
+                  <ul class="sprint-report__issues">
+                    @for (issue of list.issues; track issue.issueId) {
+                      <li class="sprint-report__issue">
+                        <a class="sprint-report__key" [routerLink]="href(issue)">{{ issue.key }}</a>
+                        <span class="sprint-report__summary">{{ issue.summary }}</span>
+                        <span class="sprint-report__points">{{ issue.points ?? '-' }}</span>
+                      </li>
+                    }
+                  </ul>
+                } @else {
+                  <p class="sprint-report__none">Ninguna.</p>
+                }
+              </section>
+            }
+          </div>
+        }
+      } @else {
+        <div class="sprint-report__skeleton" aria-busy="true" aria-label="Cargando informe">
+          <p-skeleton height="4rem" />
+          <p-skeleton height="10rem" />
+          <p-skeleton height="10rem" />
+        </div>
+      }
+    </div>
+  </app-page-container>
+}

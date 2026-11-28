@@ -1,0 +1,26 @@
+@use '../../styles/mixins' as m;
+@use '../../field-row/src/control' as c;
+
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.duration-input {
+  @include m.flex-column(1);
+
+  &__control {
+    @include c.control-box;
+  }
+
+  &__hint {
+    margin: 0;
+    min-height: var(--cl-space-4);
+    color: var(--cl-text-subtle);
+    font-size: var(--cl-fs-sm);
+
+    &--error {
+      color: var(--cl-danger);
+    }
+  }
+}

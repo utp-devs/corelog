@@ -1,0 +1,37 @@
+<div class="legal-consent-group" role="group" aria-label="Consentimientos legales">
+  @switch (status()) {
+    @case ('error') {
+      <div class="legal-consent-group__failed" role="alert">
+        <p class="legal-consent-group__failed-text">
+          No se pudieron cargar los documentos legales.
+        </p>
+        <p-button label="Reintentar" severity="secondary" size="small" (onClick)="retry()" />
+      </div>
+    }
+    @case ('ready') {
+      @for (item of items(); track item.copy.slug) {
+        <app-legal-consent-checkbox
+          [before]="item.copy.before"
+          [linkLabel]="item.copy.linkLabel"
+          [after]="item.copy.after"
+          [required]="item.document.required"
+          [error]="errorFor(item.copy, item.document)"
+          [ngModel]="isChecked(item.copy.slug)"
+          [disabled]="disabled()"
+          (ngModelChange)="toggle(item.copy.slug, $event)"
+          (read)="reading.set(item.copy.slug)"
+        />
+      }
+    }
+    @default {
+      <p class="legal-consent-group__loading" role="status">Cargando documentos legales...</p>
+    }
+  }
+</div>
+<app-legal-document-dialog
+  [slug]="reading()"
+  [version]="readingVersion()"
+  [acceptable]="true"
+  (closed)="reading.set(null)"
+  (accepted)="acceptFromDialog($event.slug)"
+/>

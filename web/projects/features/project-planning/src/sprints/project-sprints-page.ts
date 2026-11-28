@@ -6,76 +6,53 @@ import {
   inject,
   signal,
 } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import {
+  AgileSprint,
   CurrentProjectStore,
-  Sprint,
-  SprintDraft,
-  SprintIssue,
+  SprintApiService,
+  SprintPlanStore,
   SprintStatus,
-  SprintStore,
-  SprintUnfinishedPolicy,
-  WorkItemStatus,
+  VelocityPoint,
   projectAccessVariantOf,
+  projectPath,
 } from '@corelog/core';
 import { ArchivedNotice } from '@corelog/ui/archived-notice';
-import { ConfirmModal } from '@corelog/ui/confirm-modal';
-import { DataTable, DataTableCell, DataTableColumn } from '@corelog/ui/data-table';
-import { DateField } from '@corelog/ui/date-field';
+import { ChartCard, ChartCardSeries, ChartTable } from '@corelog/ui/chart-card';
 import { EmptyState } from '@corelog/ui/empty-state';
 import { ErrorPage } from '@corelog/ui/error-page';
 import { ErrorState } from '@corelog/ui/error-state';
-import { FieldControl, FieldRow } from '@corelog/ui/field-row';
-import { Lozenge, LozengeCategory, LozengeTone } from '@corelog/ui/lozenge';
 import { LoadingSkeleton } from '@corelog/ui/loading-skeleton';
+import { Lozenge } from '@corelog/ui/lozenge';
 import { PageContainer } from '@corelog/ui/page-container';
 import { PageHeader } from '@corelog/ui/page-header';
-import { Section, SectionActions } from '@corelog/ui/section';
-import { StatTile } from '@corelog/ui/stat-tile';
-import { Button } from 'primeng/button';
-import { InputText } from 'primeng/inputtext';
-import { Message } from 'primeng/message';
-import { Select } from 'primeng/select';
 
-import { projectIdChanges } from '../shared/project-scope';
 import {
   SPRINT_STATUS_LABELS,
   SPRINT_STATUS_TONES,
-  STATUS_CATEGORIES,
+  formatPoints,
   sprintDatesOf,
-  statusName,
-} from '../shared/work-labels';
-import { BurndownChart } from './burndown-chart';
+} from '../shared/planning-format';
+import { trackProjectScope } from '../shared/project-scope';
 
-const ISSUE_COLUMNS: DataTableColumn[] = [
-  { key: 'title', title: 'Incidencia', mobilePrimary: true },
-  { key: 'status', title: 'Estado' },
-  { key: 'points', title: 'Puntos', align: 'right' },
-  { key: 'actions', title: '', align: 'right' },
-];
+const LOAD_ERROR_MESSAGE =
+  'No se pudieron cargar los sprints. Verifica que tengas acceso al proyecto e intenta de nuevo.';
+
+interface SprintGroup {
+  readonly status: SprintStatus;
+  readonly title: string;
+  readonly sprints: readonly AgileSprint[];
+}
 
 /**
- * Sprint planning: the sprint list, the selected sprint with its issues and burndown, the lifecycle
- * actions (plan, start, close), the issues that can join the sprint and the velocity of closed sprints.
- * Every action reloads the server state through the sprint store.
+ * Sprints of the project in three groups (active, planned, closed), each with its dates, goal and points, and
+ * a link to its report. Planning itself happens in the backlog.
  */
 @Component({
   selector: 'app-project-sprints-page',
   imports: [
     ArchivedNotice,
-    FormsModule,
-    Button,
-    InputText,
-    Message,
-    Select,
-    BurndownChart,
-    ConfirmModal,
-    DateField,
-    FieldControl,
-    FieldRow,
-    DataTable,
-    DataTableCell,
+    ChartCard,
     EmptyState,
     ErrorPage,
     ErrorState,
@@ -83,113 +60,96 @@ const ISSUE_COLUMNS: DataTableColumn[] = [
     Lozenge,
     PageContainer,
     PageHeader,
-    Section,
-    SectionActions,
-    StatTile,
+    RouterLink,
   ],
   templateUrl: './project-sprints-page.html',
   styleUrl: './project-sprints-page.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ProjectSprintsPage {
-  protected readonly store = inject(SprintStore);
+  private readonly store = inject(SprintPlanStore);
+  private readonly velocityApi = inject(SprintApiService);
+  private readonly current = inject(CurrentProjectStore);
   private readonly destroyRef = inject(DestroyRef);
-  private readonly currentProject = inject(CurrentProjectStore);
 
-  /** An archived project is read-only: no planning, starting, closing or assigning. */
-  protected readonly archived = this.currentProject.isArchived;
+  protected readonly loadErrorMessage = LOAD_ERROR_MESSAGE;
+  protected readonly velocity = signal<readonly VelocityPoint[]>([]);
 
-  protected readonly sprints = this.store.sprints;
-  protected readonly selected = this.store.selected;
-  protected readonly selectedId = this.store.selectedId;
-  protected readonly issues = computed(() => [...this.store.issues()]);
-  protected readonly burndown = this.store.burndown;
-  protected readonly velocity = this.store.velocity;
-  protected readonly totals = this.store.issueTotals;
-  protected readonly draft = this.store.draft;
-  protected readonly closePolicy = this.store.closePolicy;
-  protected readonly closeTargetId = this.store.closeTargetId;
-  protected readonly issueToAdd = this.store.issueToAdd;
-  protected readonly plannedTargets = this.store.plannedTargets;
-  protected readonly actionError = this.store.actionError;
-  protected readonly loadErrorMessage = this.store.loadErrorMessage;
-  protected readonly issueColumns = ISSUE_COLUMNS;
-  /** The confirmation of the close action is open. */
-  protected readonly closeOpen = signal(false);
-  protected readonly closeDescription = computed(() => {
-    const sprint = this.selected();
-    const target =
-      this.closePolicy() === 'sprint'
-        ? this.plannedTargets().find((item) => item.id === this.closeTargetId())?.name
-        : undefined;
-    const destination = target ? `al sprint ${target}` : 'al backlog';
-    return `Se cerrará ${sprint?.name ?? 'el sprint'}. Las incidencias sin terminar pasarán ${destination}. Esta acción no se puede deshacer.`;
+  protected readonly scope = trackProjectScope(this.current, this.destroyRef, (projectId) => {
+    this.store.loadSprints(projectId);
+    this.velocityApi.velocity(projectId).subscribe({
+      next: (points) => this.velocity.set([...points].reverse()),
+      error: () => this.velocity.set([]),
+    });
   });
-  protected readonly assignableOptions = computed(() =>
-    this.store.assignableBacklog().map((item) => ({ value: item.id, label: item.summary })),
-  );
+
+  private readonly failure = computed(() => this.scope.accessError() ?? this.store.sprints.error());
+  protected readonly accessVariant = computed(() => projectAccessVariantOf(this.failure()));
+  protected readonly failed = computed(() => this.failure() !== null);
   protected readonly ready = computed(
-    () => this.store.overview.hasValue() && !this.loadErrorMessage(),
-  );
-  protected readonly accessVariant = computed(() =>
-    projectAccessVariantOf(this.store.overview.error()),
+    () => this.store.sprints.value() !== undefined && !this.failed(),
   );
 
-  constructor() {
-    projectIdChanges()
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe((projectId) => this.store.load(projectId));
-  }
+  protected readonly groups = computed<SprintGroup[]>(() => {
+    const sprints = this.store.sprints.value() ?? [];
+    const order: [SprintStatus, string][] = [
+      ['active', 'Sprint activo'],
+      ['planned', 'Planificados'],
+      ['closed', 'Cerrados'],
+    ];
+    return order
+      .map(([status, title]) => ({
+        status,
+        title,
+        sprints: sprints.filter((sprint) => sprint.status === status),
+      }))
+      .filter((group) => group.sprints.length > 0);
+  });
+  protected readonly isEmpty = computed(() => (this.store.sprints.value()?.length ?? 0) === 0);
+
+  protected readonly velocityLabels = computed(() => this.velocity().map((point) => point.name));
+  protected readonly velocitySeries = computed<ChartCardSeries[]>(() => [
+    { label: 'Puntos completados', data: this.velocity().map((point) => point.points) },
+  ]);
+  protected readonly velocityTable = computed<ChartTable>(() => ({
+    headers: ['Sprint', 'Puntos completados'],
+    rows: this.velocity().map((point) => [point.name, point.points]),
+  }));
+
+  protected readonly backlogPath = computed(() => this.pathOf('backlog'));
+  protected readonly boardPath = computed(() => this.pathOf('board'));
 
   protected statusLabel(status: SprintStatus): string {
     return SPRINT_STATUS_LABELS[status];
   }
 
-  protected statusTone(status: SprintStatus): LozengeTone {
+  protected tone(status: SprintStatus): (typeof SPRINT_STATUS_TONES)[SprintStatus] {
     return SPRINT_STATUS_TONES[status];
   }
 
-  protected issueStatusLabel(status: WorkItemStatus): string {
-    return statusName(status, status);
-  }
-
-  protected issueCategory(status: WorkItemStatus): LozengeCategory {
-    return STATUS_CATEGORIES[status] ?? 'todo';
-  }
-
-  /** Dates of a sprint as dd/MM/yyyy. */
-  protected dateRangeOf(sprint: Sprint): string {
+  protected dates(sprint: AgileSprint): string {
     return sprintDatesOf(sprint);
   }
 
-  protected setDraft(field: keyof SprintDraft, event: Event): void {
-    this.store.setDraft({ [field]: (event.target as HTMLInputElement).value });
+  protected points(sprint: AgileSprint): string {
+    if (sprint.status === 'closed') {
+      return `${formatPoints(sprint.completedPoints ?? 0)} de ${formatPoints(sprint.committedPoints ?? 0)} pts`;
+    }
+    return sprint.committedPoints !== null
+      ? `${formatPoints(sprint.committedPoints)} pts comprometidos`
+      : '';
   }
 
-  /** Date fields give ISO days or null; the draft keeps an empty text for no date. */
-  protected setDraftDate(field: 'startDate' | 'endDate', value: string | null): void {
-    this.store.setDraft({ [field]: value ?? '' });
+  protected reportPath(sprint: AgileSprint): string {
+    return this.pathOf(`sprints/${sprint.id}/report`);
   }
 
-  protected askClose(): void {
-    if (this.store.canClose()) this.closeOpen.set(true);
+  protected retry(): void {
+    this.scope.reload();
   }
 
-  protected confirmClose(): void {
-    const sprint = this.selected();
-    this.closeOpen.set(false);
-    if (sprint) this.store.close(sprint.id);
-  }
-
-  protected setCloseMode(policy: SprintUnfinishedPolicy): void {
-    this.store.setCloseMode(policy);
-  }
-
-  protected removeIssue(sprint: Sprint, issue: SprintIssue): void {
-    this.store.removeIssue(sprint.id, issue.id);
-  }
-
-  protected canRemove(sprint: Sprint): boolean {
-    return sprint.status !== 'closed' && !this.archived();
+  private pathOf(section: string): string {
+    const project = this.current.project();
+    return project ? projectPath(project, section) : '/';
   }
 }

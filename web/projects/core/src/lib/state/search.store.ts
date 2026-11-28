@@ -1,6 +1,8 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 
-import { SearchHit } from '../models/search.model';
+import { Observable, map, tap } from 'rxjs';
+
+import { SearchCounts, SearchHit } from '../models/search.model';
 import { SearchApiService } from '../services/api/search-api.service';
 import { RecentItem, getRecent, pushRecent } from '../utils/recent-items';
 import { AsyncState } from './async-state';
@@ -16,10 +18,13 @@ export const PALETTE_SEARCH_DEBOUNCE_MS = 150;
 export class SearchStore {
   private readonly api = inject(SearchApiService);
   private readonly queryState = signal('');
+  private readonly countsState = signal<SearchCounts>({});
   private readonly recentState = signal<RecentItem[]>(getRecent());
 
   readonly results = new AsyncState<SearchHit[]>();
   readonly query = this.queryState.asReadonly();
+  /** Results per kind for the last search, beyond the page of hits kept. */
+  readonly counts = this.countsState.asReadonly();
   readonly recent = this.recentState.asReadonly();
   readonly hits = computed<readonly SearchHit[]>(() => this.results.value() ?? []);
   readonly searchable = computed(() => this.queryState().trim().length >= SEARCH_MIN_CHARS);
@@ -34,9 +39,14 @@ export class SearchStore {
     const term = query.trim();
     if (term.length < SEARCH_MIN_CHARS) {
       this.results.reset();
+      this.countsState.set({});
       return;
     }
-    this.results.load(this.api.search(term, limit));
+    const source: Observable<SearchHit[]> = this.api.searchAll(term, { limit }).pipe(
+      tap((found) => this.countsState.set(found.counts)),
+      map((found) => [...found.hits]),
+    );
+    this.results.load(source);
   }
 
   /** Records a visited project or issue at the top of the recent list. */
@@ -47,5 +57,6 @@ export class SearchStore {
   reset(): void {
     this.queryState.set('');
     this.results.reset();
+    this.countsState.set({});
   }
 }

@@ -19,10 +19,18 @@ describe('GlobalSearch', () => {
   let navigate: ReturnType<typeof vi.spyOn>;
 
   function setup(results: SearchHit[] = hits, compact = false): void {
-    search = vi.fn(() => of(results));
+    const searchMock = vi.fn((_term: string, _limit?: number) => of(results));
+    search = searchMock;
+    const searchAll = (term: string, options?: { limit?: number }) => {
+      searchMock(term, options?.limit);
+      return of({ hits: results, counts: {} });
+    };
     TestBed.configureTestingModule({
       imports: [GlobalSearch],
-      providers: [provideRouter([]), { provide: SearchApiService, useValue: { search } }],
+      providers: [
+        provideRouter([]),
+        { provide: SearchApiService, useValue: { search, searchAll } },
+      ],
     });
     navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
     fixture = TestBed.createComponent(GlobalSearch);

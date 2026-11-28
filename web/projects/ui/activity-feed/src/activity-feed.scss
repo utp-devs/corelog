@@ -1,0 +1,85 @@
+@use '../../styles/mixins' as m;
+@use '../../field-row/src/control' as c;
+
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.activity-feed {
+  @include m.flex-column(4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  &__empty {
+    margin: 0;
+    color: var(--cl-text-subtle);
+  }
+
+  &__item {
+    @include m.flex-row(3, flex-start);
+    min-width: 0;
+  }
+
+  &__content {
+    @include m.flex-column(2);
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__head {
+    @include m.cluster(1);
+    margin: 0;
+  }
+
+  &__actor {
+    font-weight: var(--cl-weight-semibold);
+  }
+
+  &__verb {
+    color: var(--cl-text-subtle);
+  }
+
+  &__time {
+    color: var(--cl-text-subtle);
+    font-size: var(--cl-font-small);
+  }
+
+  &__lines {
+    @include m.flex-column(1);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  &__line {
+    @include m.cluster(1);
+    overflow-wrap: anywhere;
+  }
+
+  &__label {
+    font-weight: var(--cl-weight-semibold);
+  }
+
+  &__from {
+    color: var(--cl-text-subtle);
+    text-decoration: line-through;
+  }
+
+  &__arrow {
+    color: var(--cl-text-subtle);
+    font-size: var(--cl-font-small);
+  }
+
+  &__more {
+    @include c.control-box;
+    margin-top: var(--cl-space-3);
+    width: auto;
+    cursor: pointer;
+
+    &:hover:not(:disabled) {
+      background: var(--cl-bg-hover);
+    }
+  }
+}

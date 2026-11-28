@@ -1,0 +1,47 @@
+<div class="legal-consent-checkbox" [class.legal-consent-checkbox--invalid]="!!error()">
+  <div class="legal-consent-checkbox__row">
+    <span class="legal-consent-checkbox__control">
+      <input
+        class="legal-consent-checkbox__input"
+        type="checkbox"
+        [attr.id]="id"
+        [attr.aria-labelledby]="labelledBy()"
+        [attr.aria-required]="required() ? 'true' : null"
+        [attr.aria-invalid]="error() ? 'true' : null"
+        [attr.aria-describedby]="error() ? id + '-error' : null"
+        [checked]="checked()"
+        [disabled]="disabled()"
+        (change)="onToggle($event)"
+      />
+      <span class="legal-consent-checkbox__mark" aria-hidden="true"></span>
+    </span>
+    <span class="legal-consent-checkbox__text">
+      <label class="legal-consent-checkbox__label" [attr.id]="id + '-before'" [attr.for]="id">{{
+        before()
+      }}</label>
+      <button
+        type="button"
+        class="legal-consent-checkbox__link"
+        [attr.id]="id + '-link'"
+        [attr.aria-label]="linkDescription()"
+        (click)="openDocument($event)"
+      >
+        {{ linkLabel() }}
+      </button>
+      @if (after()) {
+        <label class="legal-consent-checkbox__label" [attr.id]="id + '-after'" [attr.for]="id">{{
+          after()
+        }}</label>
+      }
+      @if (!required()) {
+        <span class="legal-consent-checkbox__optional">(opcional)</span>
+      }
+    </span>
+  </div>
+  @if (error(); as message) {
+    <p class="legal-consent-checkbox__error" role="alert" [attr.id]="id + '-error'">
+      <i class="pi pi-exclamation-circle" aria-hidden="true"></i>
+      <span>{{ message }}</span>
+    </p>
+  }
+</div>

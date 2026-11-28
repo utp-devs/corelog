@@ -7,64 +7,66 @@
 } @else {
   <app-page-container variant="fluid" pageName="board" [ready]="ready()" [fill]="true">
     <div class="project-board">
-      <app-page-header
-        title="Tablero"
-        [subtitle]="
-          readOnly()
-            ? 'Solo lectura: puedes consultar el tablero, pero no mover incidencias.'
-            : 'Arrastra una incidencia a otra columna, o usa el menú «Mover a» de cada tarjeta.'
-        "
-      />
       <app-archived-notice />
-      <p class="project-board__live" role="status" aria-live="polite">{{ announcement() }}</p>
-
-      @if (store.moveError(); as message) {
-        <div class="project-board__alert" role="alert">
-          <p-message severity="warn" [closable]="true" (onClose)="store.clearMoveError()">{{
-            message
-          }}</p-message>
-        </div>
-      }
+      <p class="project-board__live" role="status" aria-live="polite">{{ store.announcement() }}</p>
 
       @if (failed()) {
         <app-error-state [message]="loadErrorMessage" [canRetry]="true" (retry)="retry()" />
       } @else if (board(); as current) {
-        @if (store.hasColumns()) {
-          <div
-            class="project-board__filters"
-            role="search"
-            aria-label="Filtrar tarjetas del tablero"
-          >
-            <app-search-input
-              class="project-board__search"
-              [placeholder]="'Buscar en el tablero'"
-              [ariaLabel]="'Buscar en el tablero'"
-              [debounceMs]="0"
-              [value]="filter().search"
-              (valueChange)="setSearch($event)"
-            />
-            <p-select
-              styleClass="project-board__priority"
-              placeholder="Prioridad"
-              ariaLabel="Filtrar por prioridad"
-              [options]="priorityOptions"
-              optionLabel="label"
-              optionValue="value"
-              [showClear]="true"
-              [ngModel]="filter().priority"
-              (ngModelChange)="setPriority($event)"
-            />
-            <label class="project-board__mine">
-              <p-toggleswitch
-                size="small"
-                ariaLabel="Solo mis incidencias"
-                [ngModel]="filter().onlyMine"
-                (ngModelChange)="setOnlyMine($event)"
-              />
-              <span>Solo mis incidencias</span>
-            </label>
-          </div>
+        <app-board-toolbar
+          [boards]="store.boards.value() ?? []"
+          [board]="current"
+          [sprint]="sprintChip()"
+          [activeFilterIds]="store.activeFilterIds()"
+          [estimation]="estimation()"
+          [canManage]="canManage()"
+          [canCompleteSprint]="canManage() && !!sprintChip()"
+          [readOnly]="archived()"
+          [refreshing]="store.refreshing()"
+          [backlogLink]="backlogPath()"
+          (boardSelected)="onBoardSelected($event)"
+          (filterToggled)="store.toggleFilter($event)"
+          (filtersCleared)="store.clearFilters()"
+          (swimlaneChanged)="onSwimlane($event)"
+          (estimationChanged)="store.setEstimation($event)"
+          (completeSprint)="openComplete()"
+          (settingsRequested)="settingsOpen.set(true)"
+          (createBoardRequested)="openCreateBoard()"
+          (deleteBoardRequested)="deleteBoardOpen.set(true)"
+        />
 
+        @if (store.moveError(); as message) {
+          <div class="project-board__alert" role="alert">
+            <p-message severity="warn" [closable]="true" (onClose)="store.clearMoveError()">{{
+              message
+            }}</p-message>
+          </div>
+        }
+        @if (store.wipWarning(); as message) {
+          <div class="project-board__alert" role="status" data-testid="wip-warning">
+            <p-message severity="warn" [closable]="true" (onClose)="store.clearWipWarning()">{{
+              message
+            }}</p-message>
+          </div>
+        }
+
+        @if (noActiveSprint()) {
+          <div class="project-board__empty">
+            <app-empty-state
+              image="empty-issues"
+              title="No hay un sprint activo"
+              description="Inicia un sprint desde el backlog para ver su trabajo en el tablero."
+            >
+              <a action class="project-board__link" [routerLink]="backlogPath()">Ir al backlog</a>
+            </app-empty-state>
+          </div>
+        } @else if (headers().length === 0) {
+          <app-empty-state
+            image="empty-issues"
+            title="Sin columnas"
+            description="El tablero todavía no tiene columnas. Añádelas desde «Configurar tablero»."
+          />
+        } @else {
           @if (isMobile()) {
             <div
               class="project-board__switcher"
@@ -72,24 +74,24 @@
               aria-label="Columnas del tablero"
               data-scroll-x=""
             >
-              @for (column of columns(); track column.id) {
+              @for (header of headers(); track header.id) {
                 <button
                   type="button"
                   role="tab"
                   class="project-board__switch"
-                  [class.project-board__switch--active]="mobileColumn()?.id === column.id"
-                  [attr.aria-selected]="mobileColumn()?.id === column.id"
-                  (click)="selectMobileColumn(column.id)"
+                  [class.project-board__switch--active]="mobileColumnId() === header.id"
+                  [attr.aria-selected]="mobileColumnId() === header.id"
+                  (click)="selectMobileColumn(header.id)"
                 >
-                  {{ columnName(column) }}
-                  <span class="project-board__switch-count">{{ column.count }}</span>
+                  {{ header.name }}
+                  <span class="project-board__switch-count">{{ header.count }}</span>
                 </button>
               }
             </div>
           }
 
           <div
-            class="project-board__columns"
+            class="project-board__scroller"
             role="region"
             [attr.aria-label]="'Tablero ' + current.name"
             data-scroll="inside-board"
@@ -97,170 +99,260 @@
             [attr.data-layout]="isMobile() ? 'mobile-columns' : 'desktop-columns'"
             cdkDropListGroup
           >
-            @for (column of shownColumns(); track column.id) {
-              <section
-                class="project-board__column"
-                data-board-column
-                [class.project-board__column--over]="
-                  overColumnId() === column.id && !isFull(column)
-                "
-                [class.project-board__column--full]="isFull(column)"
-                [attr.aria-labelledby]="'column-' + column.id"
-              >
-                <header class="project-board__column-header">
-                  <h3
-                    class="project-board__column-title"
-                    [id]="'column-' + column.id"
-                    [attr.title]="columnName(column)"
-                  >
-                    {{ columnName(column) }}
-                  </h3>
-                  <div class="project-board__column-meta">
-                    <app-lozenge
-                      [tone]="isFull(column) ? 'danger' : 'neutral'"
-                      [appTooltip]="
-                        column.wipLimit !== undefined
-                          ? 'Límite de trabajo en curso: ' + column.wipLimit
-                          : 'Sin límite de trabajo en curso'
-                      "
-                      >{{ countLabel(column) }}</app-lozenge
-                    >
-                    @if (canManage()) {
-                      <app-dropdown-menu
-                        class="project-board__column-menu"
-                        [label]="'Opciones de ' + columnName(column)"
-                        align="end"
-                      >
-                        <button
-                          appMenuTrigger
-                          type="button"
-                          class="project-board__menu-trigger"
-                          appTooltip="Opciones de la columna"
-                          [attr.aria-label]="'Opciones de ' + columnName(column)"
-                        >
-                          <i class="pi pi-ellipsis-v" aria-hidden="true"></i>
-                        </button>
-                        <button
-                          type="button"
-                          role="menuitem"
-                          class="project-board__menu-item"
-                          (click)="startWip(column)"
-                        >
-                          <i class="pi pi-sliders-h" aria-hidden="true"></i>
-                          <span>Editar límite WIP</span>
-                        </button>
-                        @if (column.wipLimit !== undefined) {
-                          <button
-                            type="button"
-                            role="menuitem"
-                            class="project-board__menu-item"
-                            (click)="removeWip(column)"
-                          >
-                            <i class="pi pi-times" aria-hidden="true"></i>
-                            <span>Quitar límite</span>
-                          </button>
-                        }
-                      </app-dropdown-menu>
-                    }
-                  </div>
-                </header>
-
-                @if (wipEditing() === column.id) {
-                  <form
-                    class="project-board__wip"
-                    (ngSubmit)="saveWip(column)"
-                    (keydown.escape)="cancelWip()"
-                  >
-                    <p-inputnumber
-                      size="small"
-                      styleClass="project-board__wip-input"
-                      [min]="1"
-                      placeholder="Sin límite"
-                      [ariaLabel]="'Límite WIP de ' + columnName(column)"
-                      [ngModel]="wipDraft()"
-                      [ngModelOptions]="{ standalone: true }"
-                      (ngModelChange)="wipDraft.set($event)"
-                    />
-                    <button type="submit" class="project-board__wip-save">Guardar</button>
-                    <button type="button" class="project-board__wip-cancel" (click)="cancelWip()">
-                      Cancelar
-                    </button>
-                  </form>
+            <div class="board-grid" [style.--board-cols]="shownHeaders().length">
+              <div class="board-grid__head">
+                @for (header of shownHeaders(); track header.id) {
+                  <app-board-column-header
+                    [name]="header.name"
+                    [count]="header.count"
+                    [total]="header.total"
+                    [estimate]="estimateOf(header.estimate)"
+                    [wipState]="header.wipState"
+                    [min]="header.min"
+                    [max]="header.max"
+                    [color]="header.color"
+                    [attr.data-testid]="'column-header-' + header.id"
+                  />
                 }
+              </div>
 
-                <div
-                  class="project-board__column-body"
-                  cdkDropList
-                  [cdkDropListData]="column.id"
-                  [cdkDropListDisabled]="isFull(column) || readOnly()"
-                  (cdkDropListEntered)="onEnter($event.container.data)"
-                  (cdkDropListExited)="overColumnId.set(null)"
-                  (cdkDropListDropped)="onDrop($event)"
-                >
-                  @if (column.cards.length === 0) {
-                    <app-empty-state
-                      title="Sin incidencias"
-                      [description]="readOnly() ? '' : 'Arrastra incidencias aquí.'"
-                    />
-                  } @else {
-                    <ul
-                      class="project-board__cards"
-                      [attr.aria-label]="'Incidencias en ' + columnName(column)"
+              @for (row of rows(); track row.id; let rowFirst = $first) {
+                <section class="board-lane" [attr.aria-label]="row.hasHeader ? row.name : null">
+                  @if (row.hasHeader) {
+                    <button
+                      type="button"
+                      class="board-lane__toggle"
+                      [attr.aria-expanded]="!store.collapsedLanes().has(row.id)"
+                      [attr.data-testid]="'lane-toggle-' + row.id"
+                      (click)="store.toggleLane(row.id)"
                     >
-                      @for (card of column.cards; track trackCard(card)) {
-                        <li class="project-board__card-item">
-                          <div
-                            class="project-board__card-row"
-                            cdkDrag
-                            [cdkDragData]="card.id"
-                            [cdkDragDisabled]="readOnly() || isMobile()"
-                            [class.project-board__card-row--draggable]="!readOnly() && !isMobile()"
-                            [class.project-board__card-row--dragging]="activeCardId() === card.id"
-                            (cdkDragStarted)="activeCardId.set(card.id)"
-                            (cdkDragEnded)="activeCardId.set(null)"
-                          >
-                            <app-board-card
-                              [card]="card"
-                              [readOnly]="readOnly()"
-                              [targets]="targetsOf(card.id)"
-                              (moved)="moveCard(card.id, $event)"
-                            />
-                            <ng-template cdkDragPreview>
-                              <app-board-card [card]="card" [dragging]="true" [readOnly]="true" />
-                            </ng-template>
-                          </div>
-                        </li>
-                      }
-                    </ul>
+                      <i
+                        class="pi"
+                        [class.pi-chevron-down]="!store.collapsedLanes().has(row.id)"
+                        [class.pi-chevron-right]="store.collapsedLanes().has(row.id)"
+                        aria-hidden="true"
+                      ></i>
+                      <span class="board-lane__name">{{ row.name }}</span>
+                      <span class="board-lane__count">{{ row.count }}</span>
+                    </button>
                   }
-                </div>
-              </section>
-            }
+                  @if (!row.hasHeader || !store.collapsedLanes().has(row.id)) {
+                    <div class="board-lane__cells">
+                      @for (cell of row.cells; track cell.columnId) {
+                        <div
+                          class="board-cell"
+                          cdkDropList
+                          [cdkDropListData]="cell"
+                          [cdkDropListDisabled]="readOnly()"
+                          [cdkDropListEnterPredicate]="
+                            cell.columnId === unmappedId ? canEnter : anyEnter
+                          "
+                          [attr.data-wip]="cell.wipState"
+                          [attr.data-column]="cell.columnId"
+                          [attr.data-lane]="cell.laneId"
+                          [attr.aria-label]="'Incidencias en ' + columnNameOf(cell.columnId)"
+                          (cdkDropListDropped)="onDrop($event)"
+                        >
+                          @for (card of cell.cards; track card.id) {
+                            <div
+                              class="board-cell__item"
+                              cdkDrag
+                              [cdkDragData]="card"
+                              [cdkDragDisabled]="dragDisabled()"
+                              [class.board-cell__item--draggable]="!dragDisabled()"
+                            >
+                              <app-kanban-card
+                                [card]="card"
+                                [fields]="current.cardFields"
+                                [targets]="targetsOf(cell.columnId)"
+                                (moved)="moveTo(card, $event)"
+                                (shifted)="shift(card, cell.columnId, $event)"
+                              />
+                              <ng-template cdkDragPreview matchSize>
+                                <app-kanban-card
+                                  [card]="card"
+                                  [fields]="current.cardFields"
+                                  [dragging]="true"
+                                />
+                              </ng-template>
+                              <div *cdkDragPlaceholder class="board-cell__placeholder"></div>
+                            </div>
+                          }
+                          @if (cell.cards.length === 0) {
+                            <p class="board-cell__empty">
+                              {{ readOnly() ? 'Sin incidencias' : 'Suelta una incidencia aquí' }}
+                            </p>
+                          }
+                          @if (rowFirst && cell.columnId === firstColumnId() && !readOnly()) {
+                            <div class="board-cell__create">
+                              @if (creating()) {
+                                <form class="board-create" (ngSubmit)="submitCreate()">
+                                  <input
+                                    pInputText
+                                    type="text"
+                                    class="board-create__input"
+                                    autocomplete="off"
+                                    maxlength="255"
+                                    placeholder="¿Qué hay que hacer?"
+                                    aria-label="Resumen de la nueva incidencia"
+                                    [ngModel]="draft()"
+                                    [ngModelOptions]="{ standalone: true }"
+                                    (ngModelChange)="draft.set($event)"
+                                    (keydown.escape)="cancelCreate()"
+                                    data-testid="board-create-input"
+                                  />
+                                  @if (createError(); as message) {
+                                    <p class="board-create__error" role="alert">{{ message }}</p>
+                                  }
+                                  <div class="board-create__actions">
+                                    <p-button
+                                      type="submit"
+                                      label="Crear"
+                                      size="small"
+                                      data-testid="board-create-submit"
+                                    />
+                                    <p-button
+                                      type="button"
+                                      label="Cancelar"
+                                      size="small"
+                                      severity="secondary"
+                                      (onClick)="cancelCreate()"
+                                    />
+                                  </div>
+                                </form>
+                              } @else {
+                                <button
+                                  type="button"
+                                  class="board-cell__add"
+                                  data-testid="board-create-open"
+                                  (click)="startCreate()"
+                                >
+                                  <i class="pi pi-plus" aria-hidden="true"></i>
+                                  Crear incidencia
+                                </button>
+                              }
+                            </div>
+                          }
+                        </div>
+                      }
+                    </div>
+                  }
+                </section>
+              }
+            </div>
           </div>
-        } @else {
-          <app-empty-state
-            title="Sin columnas"
-            description="El proyecto todavía no tiene columnas de tablero."
+        }
+
+        @if (canManage()) {
+          <app-board-settings-drawer
+            [open]="settingsOpen()"
+            [board]="current"
+            (closeRequested)="settingsOpen.set(false)"
           />
         }
       } @else {
-        <div class="project-board__columns" aria-busy="true" aria-label="Cargando tablero">
+        <div class="project-board__skeleton" aria-busy="true" aria-label="Cargando tablero">
           @for (index of skeletonColumns; track index) {
-            <div class="project-board__column">
-              <p-skeleton height="8rem" />
-              <p-skeleton height="8rem" />
-              <p-skeleton height="8rem" />
+            <div class="project-board__skeleton-column">
+              <p-skeleton height="2.5rem" />
+              <p-skeleton height="6rem" />
+              <p-skeleton height="6rem" />
             </div>
           }
         </div>
       }
     </div>
+
     <app-transition-runner
-      [issueId]="pendingCard()?.id ?? ''"
-      [context]="pendingCard()?.context"
-      (finished)="onPendingFinished()"
-      (failed)="finishPending()"
-      (cancelled)="finishPending()"
+      [issueId]="store.inputRequest()?.cardId ?? ''"
+      [context]="inputCard()?.key + ' ' + inputCard()?.summary"
+      (finished)="onTransitionFinished()"
+      (failed)="onTransitionClosed()"
+      (cancelled)="onTransitionClosed()"
+    />
+
+    <app-dialog
+      size="sm"
+      heading="¿A qué estado pasa?"
+      subtitle="Varios cambios de estado llevan a esa columna. Elige cuál aplicar."
+      [open]="store.choice() !== null"
+      (closeRequested)="store.clearChoice()"
+    >
+      <ul class="project-board__choices" data-testid="transition-choices">
+        @for (candidate of store.choice()?.candidates ?? []; track candidate.id) {
+          <li>
+            <button
+              type="button"
+              class="project-board__choice"
+              [attr.data-testid]="'choice-' + candidate.id"
+              (click)="pickTransition(candidate.id)"
+            >
+              {{ candidate.name }}
+            </button>
+          </li>
+        }
+      </ul>
+    </app-dialog>
+
+    <app-complete-sprint-dialog
+      [open]="completeOpen()"
+      [sprint]="activeSprint()"
+      [summary]="completeSummary()"
+      [plannedSprints]="plannedSprints()"
+      [busy]="completeBusy()"
+      [error]="completeError()"
+      (confirmed)="confirmComplete($event)"
+      (closeRequested)="completeOpen.set(false)"
+    />
+
+    <app-dialog
+      size="sm"
+      heading="Crear tablero"
+      [open]="createBoardOpen()"
+      (closeRequested)="createBoardOpen.set(false)"
+    >
+      <form class="project-board__form" (ngSubmit)="submitCreateBoard()">
+        <app-field-row label="Nombre" [required]="true" [error]="createBoardError() ?? undefined">
+          <input
+            pInputText
+            appFieldControl
+            data-autofocus
+            type="text"
+            maxlength="80"
+            autocomplete="off"
+            class="project-board__input"
+            [ngModel]="newBoardName()"
+            [ngModelOptions]="{ standalone: true }"
+            (ngModelChange)="newBoardName.set($event)"
+            data-testid="new-board-name"
+          />
+        </app-field-row>
+      </form>
+      <p-button
+        dialogFooter
+        type="button"
+        label="Cancelar"
+        severity="secondary"
+        (onClick)="createBoardOpen.set(false)"
+      />
+      <p-button
+        dialogFooter
+        type="button"
+        label="Crear tablero"
+        data-testid="new-board-confirm"
+        (onClick)="submitCreateBoard()"
+      />
+    </app-dialog>
+
+    <app-confirm-modal
+      [open]="deleteBoardOpen()"
+      title="Eliminar tablero"
+      description="Se elimina el tablero y su configuración. Las incidencias no se borran."
+      confirmText="Eliminar tablero"
+      [danger]="true"
+      [loading]="deleteBoardBusy()"
+      (confirmed)="confirmDeleteBoard()"
+      (cancelled)="deleteBoardOpen.set(false)"
     />
   </app-page-container>
 }

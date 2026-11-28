@@ -1,0 +1,442 @@
+<app-side-panel
+  size="lg"
+  heading="Configurar tablero"
+  [subtitle]="board().name"
+  [open]="open()"
+  (closeRequested)="closeRequested.emit()"
+>
+  <div class="board-settings" data-testid="board-settings-drawer">
+    <div
+      class="board-settings__tabs"
+      role="tablist"
+      aria-label="Secciones"
+      (keydown)="onTabKeydown($event)"
+    >
+      @for (item of tabs; track item.id) {
+        <button
+          type="button"
+          role="tab"
+          class="board-settings__tab"
+          [class.board-settings__tab--on]="tab() === item.id"
+          [id]="'settings-tab-' + item.id"
+          [attr.aria-selected]="tab() === item.id"
+          [attr.aria-controls]="'settings-panel-' + item.id"
+          [attr.tabindex]="tab() === item.id ? 0 : -1"
+          (click)="selectTab(item.id)"
+        >
+          {{ item.label }}
+        </button>
+      }
+    </div>
+
+    @if (error(); as message) {
+      <p-message severity="error" [closable]="false" role="alert" data-testid="settings-error">{{
+        message
+      }}</p-message>
+    }
+
+    <div
+      class="board-settings__panel"
+      role="tabpanel"
+      [id]="'settings-panel-' + tab()"
+      [attr.aria-labelledby]="'settings-tab-' + tab()"
+    >
+      @switch (tab()) {
+        @case ('columns') {
+          <p class="board-settings__help">
+            Arrastra las columnas para ordenarlas. Cada estado del flujo pertenece a una sola
+            columna; los que no tengan columna se muestran en «Sin asignar». El límite máximo es un
+            aviso, no impide mover tarjetas.
+          </p>
+          <div
+            class="board-settings__list"
+            cdkDropList
+            [cdkDropListData]="columns()"
+            (cdkDropListDropped)="dropColumn($event)"
+          >
+            @for (column of columns(); track column.key; let index = $index; let last = $last) {
+              <div class="board-settings__row" cdkDrag [attr.data-testid]="'column-row-' + index">
+                <div class="board-settings__row-head">
+                  <span
+                    class="board-settings__handle"
+                    cdkDragHandle
+                    appTooltip="Arrastrar para ordenar"
+                    aria-hidden="true"
+                  >
+                    <i class="pi pi-bars"></i>
+                  </span>
+                  <input
+                    pInputText
+                    type="text"
+                    class="board-settings__name"
+                    autocomplete="off"
+                    maxlength="80"
+                    placeholder="Nombre de la columna"
+                    [attr.aria-label]="'Nombre de la columna ' + (index + 1)"
+                    [ngModel]="column.name"
+                    (ngModelChange)="patchColumn(column.key, { name: $event })"
+                    [attr.data-testid]="'column-name-' + index"
+                  />
+                  <button
+                    type="button"
+                    class="board-settings__icon"
+                    appTooltip="Subir"
+                    [attr.aria-label]="'Subir la columna ' + (index + 1)"
+                    [disabled]="index === 0"
+                    (click)="moveColumn(index, -1)"
+                  >
+                    <i class="pi pi-arrow-up" aria-hidden="true"></i>
+                  </button>
+                  <button
+                    type="button"
+                    class="board-settings__icon"
+                    appTooltip="Bajar"
+                    [attr.aria-label]="'Bajar la columna ' + (index + 1)"
+                    [disabled]="last"
+                    (click)="moveColumn(index, 1)"
+                  >
+                    <i class="pi pi-arrow-down" aria-hidden="true"></i>
+                  </button>
+                  <button
+                    type="button"
+                    class="board-settings__icon board-settings__icon--danger"
+                    appTooltip="Quitar columna"
+                    [attr.aria-label]="'Quitar la columna ' + (index + 1)"
+                    [disabled]="columns().length <= 1"
+                    (click)="removeColumn(column.key)"
+                  >
+                    <i class="pi pi-trash" aria-hidden="true"></i>
+                  </button>
+                </div>
+                <div class="board-settings__row-body">
+                  <label class="board-settings__field board-settings__field--wide">
+                    <span class="board-settings__label">Estados</span>
+                    <p-multiselect
+                      appendTo="body"
+                      display="chip"
+                      placeholder="Sin estados"
+                      [options]="statusOptions()"
+                      optionLabel="label"
+                      optionValue="value"
+                      [ngModel]="column.statusIds"
+                      (ngModelChange)="setStatuses(column.key, $event ?? [])"
+                      [ariaLabel]="'Estados de la columna ' + (index + 1)"
+                    />
+                  </label>
+                  <label class="board-settings__field">
+                    <span class="board-settings__label">Mínimo</span>
+                    <input
+                      pInputText
+                      type="number"
+                      min="0"
+                      inputmode="numeric"
+                      class="board-settings__number"
+                      [ngModel]="column.min"
+                      (ngModelChange)="
+                        patchColumn(column.key, { min: $event === '' ? null : $event })
+                      "
+                    />
+                  </label>
+                  <label class="board-settings__field">
+                    <span class="board-settings__label">Máximo (WIP)</span>
+                    <input
+                      pInputText
+                      type="number"
+                      min="1"
+                      inputmode="numeric"
+                      class="board-settings__number"
+                      [ngModel]="column.max"
+                      (ngModelChange)="
+                        patchColumn(column.key, { max: $event === '' ? null : $event })
+                      "
+                      [attr.data-testid]="'column-max-' + index"
+                    />
+                  </label>
+                  <div class="board-settings__field board-settings__field--wide">
+                    <span class="board-settings__label" [id]="'color-label-' + column.key"
+                      >Color</span
+                    >
+                    <div
+                      class="board-settings__colors"
+                      role="radiogroup"
+                      [attr.aria-labelledby]="'color-label-' + column.key"
+                    >
+                      <button
+                        type="button"
+                        role="radio"
+                        class="board-settings__swatch board-settings__swatch--none"
+                        [attr.aria-checked]="column.color === ''"
+                        aria-label="Sin color"
+                        appTooltip="Sin color"
+                        (click)="patchColumn(column.key, { color: '' })"
+                      ></button>
+                      @for (color of colors; track color) {
+                        <button
+                          type="button"
+                          role="radio"
+                          class="board-settings__swatch"
+                          [class]="'board-settings__swatch board-settings__swatch--' + color"
+                          [attr.aria-checked]="column.color === color"
+                          [attr.aria-label]="colorNames[color]"
+                          [appTooltip]="colorNames[color]"
+                          (click)="patchColumn(column.key, { color })"
+                        ></button>
+                      }
+                    </div>
+                  </div>
+                </div>
+              </div>
+            }
+          </div>
+          @if (unassignedNames().length > 0) {
+            <p class="board-settings__note" data-testid="unassigned-statuses">
+              Sin columna: {{ unassignedNames().join(', ') }}.
+            </p>
+          }
+          @if (columnsInvalid()) {
+            <p class="board-settings__problem" role="alert">
+              Cada columna necesita nombre y el mínimo no puede superar el máximo.
+            </p>
+          }
+          <div class="board-settings__actions">
+            <p-button
+              type="button"
+              label="Añadir columna"
+              icon="pi pi-plus"
+              severity="secondary"
+              [disabled]="!canAddColumn()"
+              (onClick)="addColumn()"
+            />
+            <p-button
+              type="button"
+              label="Guardar columnas"
+              data-testid="save-columns"
+              [disabled]="columnsInvalid()"
+              [loading]="busy()"
+              (onClick)="saveColumns()"
+            />
+          </div>
+        }
+
+        @case ('swimlanes') {
+          <p class="board-settings__help">
+            Los carriles agrupan las tarjetas en filas. Soltar una tarjeta en otro carril puede
+            cambiar su responsable o su épica.
+          </p>
+          <label class="board-settings__field board-settings__field--wide">
+            <span class="board-settings__label">Agrupar por</span>
+            <app-select-field
+              ariaLabel="Agrupar por"
+              [options]="swimlaneOptions"
+              [ngModel]="swimlaneMode()"
+              (ngModelChange)="swimlaneMode.set($event)"
+              data-testid="settings-swimlane-mode"
+            />
+          </label>
+          @if (swimlaneMode() === 'query') {
+            <p class="board-settings__help">
+              Cada tarjeta cae en el primer carril cuya consulta cumple; el resto va a «Otras».
+              Ejemplo: <code>type = bug</code>
+            </p>
+            @for (lane of swimlanes(); track lane.key; let index = $index) {
+              <div class="board-settings__query">
+                <input
+                  pInputText
+                  type="text"
+                  class="board-settings__name"
+                  maxlength="60"
+                  placeholder="Nombre del carril"
+                  [attr.aria-label]="'Nombre del carril ' + (index + 1)"
+                  [ngModel]="lane.name"
+                  (ngModelChange)="patchQuery('swimlanes', lane.key, { name: $event })"
+                />
+                <input
+                  pInputText
+                  type="text"
+                  class="board-settings__query-text"
+                  maxlength="500"
+                  placeholder="Consulta, por ejemplo labels = urgente"
+                  [attr.aria-label]="'Consulta del carril ' + (index + 1)"
+                  [ngModel]="lane.query"
+                  (ngModelChange)="patchQuery('swimlanes', lane.key, { query: $event })"
+                />
+                <button
+                  type="button"
+                  class="board-settings__icon board-settings__icon--danger"
+                  appTooltip="Quitar carril"
+                  [attr.aria-label]="'Quitar el carril ' + (index + 1)"
+                  (click)="removeQuery('swimlanes', lane.key)"
+                >
+                  <i class="pi pi-trash" aria-hidden="true"></i>
+                </button>
+              </div>
+            }
+            <div>
+              <p-button
+                type="button"
+                label="Añadir carril"
+                icon="pi pi-plus"
+                severity="secondary"
+                [disabled]="!canAddLane()"
+                (onClick)="addQuery('swimlanes')"
+              />
+            </div>
+          }
+          <div class="board-settings__actions">
+            <p-button
+              type="button"
+              label="Guardar carriles"
+              data-testid="save-swimlanes"
+              [disabled]="lanesInvalid()"
+              [loading]="busy()"
+              (onClick)="saveSwimlanes()"
+            />
+          </div>
+        }
+
+        @case ('filters') {
+          <p class="board-settings__help">
+            Los filtros rápidos aparecen como botones sobre el tablero. Une condiciones con AND.
+            Ejemplos:
+            <code>assignee = currentUser()</code>, <code>priority in (Alta, Crítica)</code>,
+            <code>labels = urgente</code>, <code>type = bug</code>, <code>text ~ "pago"</code>,
+            <code>flagged = true</code>.
+          </p>
+          @for (filter of filters(); track filter.key; let index = $index) {
+            <div class="board-settings__query" [attr.data-testid]="'filter-row-' + index">
+              <input
+                pInputText
+                type="text"
+                class="board-settings__name"
+                maxlength="60"
+                placeholder="Nombre del filtro"
+                [attr.aria-label]="'Nombre del filtro ' + (index + 1)"
+                [ngModel]="filter.name"
+                (ngModelChange)="patchQuery('filters', filter.key, { name: $event })"
+                [attr.data-testid]="'filter-name-' + index"
+              />
+              <input
+                pInputText
+                type="text"
+                class="board-settings__query-text"
+                maxlength="500"
+                placeholder="Consulta"
+                [attr.aria-label]="'Consulta del filtro ' + (index + 1)"
+                [ngModel]="filter.query"
+                (ngModelChange)="patchQuery('filters', filter.key, { query: $event })"
+                [attr.data-testid]="'filter-query-' + index"
+              />
+              <button
+                type="button"
+                class="board-settings__icon board-settings__icon--danger"
+                appTooltip="Quitar filtro"
+                [attr.aria-label]="'Quitar el filtro ' + (index + 1)"
+                (click)="removeQuery('filters', filter.key)"
+              >
+                <i class="pi pi-trash" aria-hidden="true"></i>
+              </button>
+            </div>
+          } @empty {
+            <p class="board-settings__note">Todavía no hay filtros rápidos.</p>
+          }
+          @if (filtersInvalid()) {
+            <p class="board-settings__problem" role="alert">
+              Cada filtro necesita nombre y consulta.
+            </p>
+          }
+          <div class="board-settings__actions">
+            <p-button
+              type="button"
+              label="Añadir filtro"
+              icon="pi pi-plus"
+              severity="secondary"
+              data-testid="add-filter"
+              [disabled]="!canAddFilter()"
+              (onClick)="addQuery('filters')"
+            />
+            <p-button
+              type="button"
+              label="Guardar filtros"
+              data-testid="save-filters"
+              [disabled]="filtersInvalid()"
+              [loading]="busy()"
+              (onClick)="saveFilters()"
+            />
+          </div>
+        }
+
+        @case ('cards') {
+          <label class="board-settings__field board-settings__field--wide">
+            <span class="board-settings__label">Nombre del tablero</span>
+            <input
+              pInputText
+              type="text"
+              class="board-settings__name"
+              maxlength="80"
+              [ngModel]="name()"
+              (ngModelChange)="name.set($event)"
+              data-testid="settings-board-name"
+            />
+          </label>
+          <fieldset class="board-settings__fieldset">
+            <legend class="board-settings__label">Datos que muestra cada tarjeta</legend>
+            <div class="board-settings__checks">
+              @for (item of fieldLabels; track item.id) {
+                <label class="board-settings__check">
+                  <input
+                    type="checkbox"
+                    [checked]="fields().includes(item.id)"
+                    (change)="toggleField(item.id, $any($event.target).checked)"
+                    [attr.data-testid]="'field-' + item.id"
+                  />
+                  <span>{{ item.label }}</span>
+                </label>
+              }
+            </div>
+          </fieldset>
+          <label class="board-settings__field board-settings__field--wide">
+            <span class="board-settings__label">Estimación de las columnas</span>
+            <app-select-field
+              ariaLabel="Estimación"
+              [options]="estimationOptions"
+              [ngModel]="estimation()"
+              (ngModelChange)="estimation.set($event)"
+            />
+          </label>
+          <label class="board-settings__check">
+            <input
+              type="checkbox"
+              [checked]="showUnmapped()"
+              (change)="showUnmapped.set($any($event.target).checked)"
+            />
+            <span>Mostrar la columna «Sin asignar» cuando haya tarjetas sin columna</span>
+          </label>
+          <label class="board-settings__field">
+            <span class="board-settings__label">Días que se muestran las terminadas</span>
+            <input
+              pInputText
+              type="number"
+              min="0"
+              max="3650"
+              inputmode="numeric"
+              class="board-settings__number"
+              placeholder="Todas"
+              [ngModel]="retention()"
+              (ngModelChange)="retention.set($event === '' || $event === null ? null : $event)"
+            />
+          </label>
+          <div class="board-settings__actions">
+            <p-button
+              type="button"
+              label="Guardar tarjetas"
+              data-testid="save-cards"
+              [disabled]="!name().trim()"
+              [loading]="busy()"
+              (onClick)="saveCards()"
+            />
+          </div>
+        }
+      }
+    </div>
+  </div>
+</app-side-panel>

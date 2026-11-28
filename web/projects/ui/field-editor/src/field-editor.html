@@ -1,0 +1,128 @@
+<div class="field-editor">
+  @switch (type()) {
+    @case ('paragraph') {
+      <textarea
+        class="field-editor__control field-editor__control--area"
+        rows="3"
+        [id]="inputId() ?? null"
+        [attr.aria-label]="label()"
+        [attr.aria-invalid]="invalid() ? 'true' : null"
+        [disabled]="disabled()"
+        [value]="text()"
+        (blur)="commitText($event)"
+      ></textarea>
+    }
+    @case ('number') {
+      <input
+        class="field-editor__control"
+        type="number"
+        inputmode="decimal"
+        [id]="inputId() ?? null"
+        [attr.aria-label]="label()"
+        [attr.aria-invalid]="invalid() ? 'true' : null"
+        [attr.min]="min()"
+        [attr.max]="max()"
+        [disabled]="disabled()"
+        [value]="text()"
+        (blur)="commitText($event)"
+        (keydown.enter)="blurOnEnter($event)"
+      />
+    }
+    @case ('date') {
+      <app-date-field
+        [inputId]="inputId()"
+        [ariaLabel]="label()"
+        [invalid]="invalid()"
+        [disabled]="disabled()"
+        [ngModel]="draft()"
+        (ngModelChange)="commitValue($event)"
+      />
+    }
+    @case ('datetime') {
+      <input
+        class="field-editor__control"
+        type="datetime-local"
+        [id]="inputId() ?? null"
+        [attr.aria-label]="label()"
+        [attr.aria-invalid]="invalid() ? 'true' : null"
+        [disabled]="disabled()"
+        [value]="dateTimeText()"
+        (change)="commitDateTime($event)"
+      />
+    }
+    @case ('select') {
+      <app-select-field
+        [inputId]="inputId()"
+        [ariaLabel]="label()"
+        [options]="selectOptions()"
+        [showClear]="true"
+        [invalid]="invalid()"
+        [disabled]="disabled()"
+        [ngModel]="draft()"
+        (ngModelChange)="commitValue($event)"
+      />
+    }
+    @case ('multiselect') {
+      <p-multiselect
+        class="field-editor__multi"
+        appendTo="body"
+        optionLabel="label"
+        optionValue="value"
+        display="chip"
+        placeholder="Seleccionar"
+        [options]="multiOptions()"
+        [ariaLabel]="label()"
+        [invalid]="invalid()"
+        [disabled]="disabled()"
+        [ngModel]="draft()"
+        (ngModelChange)="commitValue($event)"
+      />
+    }
+    @case ('checkbox') {
+      <p-checkbox
+        [binary]="true"
+        [inputId]="inputId()"
+        [ariaLabel]="label()"
+        [disabled]="disabled()"
+        [ngModel]="draft() === true"
+        (ngModelChange)="commitValue($event)"
+      />
+    }
+    @case ('user') {
+      <app-user-picker
+        [ariaLabel]="label()"
+        [users]="pickable()"
+        [value]="userValue()"
+        [disabled]="disabled()"
+        (valueChange)="commitValue($event ?? null)"
+        (search)="userSearch.emit($event)"
+      />
+    }
+    @case ('labels') {
+      <input
+        class="field-editor__control"
+        type="text"
+        placeholder="etiqueta, otra etiqueta"
+        [id]="inputId() ?? null"
+        [attr.aria-label]="label() + ' (separadas por comas)'"
+        [disabled]="disabled()"
+        [value]="labelsText()"
+        (blur)="commitLabels($event)"
+        (keydown.enter)="blurOnEnter($event)"
+      />
+    }
+    @default {
+      <input
+        class="field-editor__control"
+        [attr.type]="type() === 'url' ? 'url' : 'text'"
+        [id]="inputId() ?? null"
+        [attr.aria-label]="label()"
+        [attr.aria-invalid]="invalid() ? 'true' : null"
+        [disabled]="disabled()"
+        [value]="text()"
+        (blur)="commitText($event)"
+        (keydown.enter)="blurOnEnter($event)"
+      />
+    }
+  }
+</div>

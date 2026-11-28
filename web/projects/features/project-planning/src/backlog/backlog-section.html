@@ -1,0 +1,373 @@
+<section
+  class="backlog-section"
+  [class.backlog-section--active]="section().kind === 'active'"
+  [attr.aria-label]="title()"
+  [attr.data-testid]="'backlog-section-' + (sprint()?.id ?? 'backlog')"
+  [attr.data-kind]="section().kind"
+>
+  <header class="backlog-section__header">
+    <button
+      type="button"
+      class="backlog-section__toggle"
+      [attr.aria-expanded]="!collapsed()"
+      [attr.aria-label]="(collapsed() ? 'Expandir ' : 'Contraer ') + title()"
+      (click)="collapsed.set(!collapsed())"
+    >
+      <i
+        class="pi"
+        [class.pi-chevron-down]="!collapsed()"
+        [class.pi-chevron-right]="collapsed()"
+        aria-hidden="true"
+      ></i>
+    </button>
+
+    <div class="backlog-section__heading">
+      <div class="backlog-section__line">
+        <h2 class="backlog-section__title">{{ title() }}</h2>
+        @if (sprint()) {
+          <app-lozenge [tone]="statusTone()">{{ statusLabel() }}</app-lozenge>
+        }
+        @if (dates()) {
+          <span class="backlog-section__dates">{{ dates() }}</span>
+        }
+        <span class="backlog-section__count" data-testid="section-count">{{ countText() }}</span>
+      </div>
+      @if (sprint()?.goal; as goal) {
+        <p class="backlog-section__goal">{{ goal }}</p>
+      }
+    </div>
+
+    <div class="backlog-section__totals" [attr.aria-label]="'Estimación: ' + pointsText()">
+      @for (item of categories(); track item.category) {
+        <span
+          class="backlog-section__total"
+          [class]="'backlog-section__total backlog-section__total--' + item.category"
+          [appTooltip]="item.label + ': ' + item.points + ' pts, ' + item.issues + ' incidencias'"
+          [attr.aria-label]="item.label + ': ' + item.points + ' puntos'"
+        >
+          {{ item.points }}
+        </span>
+      }
+    </div>
+
+    <div class="backlog-section__actions">
+      @if (canStart()) {
+        <p-button
+          label="Iniciar sprint"
+          size="small"
+          data-testid="start-sprint"
+          (onClick)="startRequested.emit()"
+        />
+      }
+      @if (canComplete()) {
+        <p-button
+          label="Completar sprint"
+          size="small"
+          severity="secondary"
+          data-testid="complete-sprint"
+          (onClick)="completeRequested.emit()"
+        />
+      }
+      @if (hasMenu()) {
+        <app-dropdown-menu
+          class="backlog-section__menu"
+          [label]="'Opciones de ' + title()"
+          align="end"
+        >
+          <button
+            appMenuTrigger
+            type="button"
+            class="backlog-section__menu-trigger"
+            appTooltip="Opciones del sprint"
+            [attr.aria-label]="'Opciones de ' + title()"
+            data-testid="sprint-menu"
+          >
+            <i class="pi pi-ellipsis-h" aria-hidden="true"></i>
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            class="backlog-section__menu-item"
+            data-testid="sprint-edit"
+            (click)="editRequested.emit()"
+          >
+            <i class="pi pi-pencil" aria-hidden="true"></i>
+            <span>Editar sprint</span>
+          </button>
+          @if (canDelete()) {
+            <button
+              type="button"
+              role="menuitem"
+              class="backlog-section__menu-item backlog-section__menu-item--danger"
+              data-testid="sprint-delete"
+              (click)="deleteRequested.emit()"
+            >
+              <i class="pi pi-trash" aria-hidden="true"></i>
+              <span>Eliminar sprint</span>
+            </button>
+          }
+        </app-dropdown-menu>
+      }
+    </div>
+
+    @if (section().totals.issues > 0 && !isBacklog()) {
+      <div
+        class="backlog-section__bar"
+        role="img"
+        [attr.aria-label]="
+          'Por hacer ' +
+          categories()[0].points +
+          ', en curso ' +
+          categories()[1].points +
+          ', hecho ' +
+          categories()[2].points
+        "
+      >
+        <span
+          class="backlog-section__bar-part backlog-section__bar-part--todo"
+          [style.--share]="shares().todo + '%'"
+        ></span>
+        <span
+          class="backlog-section__bar-part backlog-section__bar-part--progress"
+          [style.--share]="shares().in_progress + '%'"
+        ></span>
+        <span
+          class="backlog-section__bar-part backlog-section__bar-part--done"
+          [style.--share]="shares().done + '%'"
+        ></span>
+      </div>
+    }
+  </header>
+
+  @if (!collapsed()) {
+    <div
+      class="backlog-section__list"
+      cdkDropList
+      [cdkDropListData]="section()"
+      [cdkDropListDisabled]="dropDisabled()"
+      [attr.aria-label]="'Incidencias de ' + title()"
+      (cdkDropListDropped)="onDrop($event)"
+      [attr.data-testid]="'backlog-list-' + (sprint()?.id ?? 'backlog')"
+    >
+      @for (issue of section().issues; track issue.id; let index = $index) {
+        <div
+          class="backlog-row"
+          cdkDrag
+          [cdkDragData]="issue"
+          [cdkDragDisabled]="dropDisabled()"
+          [class.backlog-row--selected]="selected().has(issue.id)"
+          [class.backlog-row--done]="issue.statusCategory === 'done'"
+          [attr.data-testid]="'backlog-row-' + issue.key"
+          [attr.aria-selected]="selected().has(issue.id)"
+          tabindex="0"
+          (click)="onRowClick($event, issue)"
+          (keydown)="onRowKeydown($event, issue, index)"
+        >
+          <input
+            type="checkbox"
+            class="backlog-row__check"
+            [checked]="selected().has(issue.id)"
+            [attr.aria-label]="'Seleccionar ' + issue.key"
+            (change)="selectRequested.emit({ id: issue.id, mode: 'toggle' })"
+          />
+          <app-catalog-icon
+            class="backlog-row__type"
+            [icon]="issue.issueTypeIcon"
+            [color]="issue.issueTypeColor"
+            [appTooltip]="issue.issueTypeName"
+          />
+          <a class="backlog-row__key" [routerLink]="hrefOf(issue)">{{ issue.key }}</a>
+          <span class="backlog-row__summary" [attr.title]="issue.summary">{{ issue.summary }}</span>
+          @if (issue.flagged) {
+            <i
+              class="pi pi-flag-fill backlog-row__flag"
+              role="img"
+              aria-label="Con impedimento"
+            ></i>
+          }
+          <span class="backlog-row__chips">
+            @if (issue.epicId) {
+              <span
+                class="backlog-row__epic"
+                [appTooltip]="issue.epicKey + ' ' + issue.epicSummary"
+              >
+                {{ issue.epicSummary || issue.epicKey }}
+              </span>
+            }
+            @for (label of visibleLabels(issue); track label) {
+              <span class="backlog-row__label">{{ label }}</span>
+            }
+            @if (hiddenLabels(issue) > 0) {
+              <span class="backlog-row__label">+{{ hiddenLabels(issue) }}</span>
+            }
+          </span>
+          <app-catalog-icon
+            class="backlog-row__priority"
+            [icon]="issue.priorityIcon"
+            [color]="issue.priorityColor"
+            [appTooltip]="'Prioridad: ' + issue.priorityName"
+            role="img"
+            [attr.aria-label]="'Prioridad ' + issue.priorityName"
+          />
+          @if (issue.assigneeId) {
+            <app-user-avatar
+              class="backlog-row__assignee"
+              [id]="issue.assigneeId"
+              [name]="issue.assigneeName"
+              [size]="24"
+              [appTooltip]="issue.assigneeName"
+            />
+          } @else {
+            <span
+              class="backlog-row__assignee backlog-row__assignee--none"
+              role="img"
+              aria-label="Sin responsable"
+            >
+              <i class="pi pi-user" aria-hidden="true"></i>
+            </span>
+          }
+          <app-lozenge class="backlog-row__status" [category]="lozengeOf(issue)">{{
+            issue.statusName
+          }}</app-lozenge>
+
+          @if (editingPoints() === issue.id) {
+            <input
+              pInputText
+              type="number"
+              min="0"
+              step="0.5"
+              inputmode="decimal"
+              class="backlog-row__points-input"
+              [attr.aria-label]="'Puntos de ' + issue.key"
+              [ngModel]="pointsDraft()"
+              (ngModelChange)="pointsDraft.set($event)"
+              (keydown.enter)="savePoints(issue)"
+              (keydown.escape)="cancelPoints()"
+              (blur)="savePoints(issue)"
+              data-autofocus
+              [attr.data-testid]="'points-input-' + issue.key"
+            />
+          } @else {
+            <button
+              type="button"
+              class="backlog-row__points"
+              [class.backlog-row__points--empty]="issue.storyPoints === null"
+              [disabled]="!canMove() || readOnly()"
+              [attr.aria-label]="
+                'Puntos de ' + issue.key + ': ' + (issue.storyPoints ?? 'sin estimar') + '. Editar'
+              "
+              [attr.data-testid]="'points-' + issue.key"
+              (click)="startPoints(issue)"
+            >
+              {{ issue.storyPoints ?? '-' }}
+            </button>
+          }
+
+          @if (canMove() && !readOnly()) {
+            <app-dropdown-menu class="backlog-row__menu" label="Mover a" align="end">
+              <button
+                appMenuTrigger
+                type="button"
+                class="backlog-row__menu-trigger"
+                appTooltip="Mover"
+                [attr.aria-label]="'Mover ' + issue.key"
+              >
+                <i class="pi pi-ellipsis-v" aria-hidden="true"></i>
+              </button>
+              <p class="backlog-row__menu-heading">Mover a</p>
+              <button
+                type="button"
+                role="menuitem"
+                class="backlog-row__menu-item"
+                (click)="moveToTop(issue)"
+              >
+                Inicio de esta lista
+              </button>
+              @for (destination of otherDestinations(); track destination.sprintId) {
+                <button
+                  type="button"
+                  role="menuitem"
+                  class="backlog-row__menu-item"
+                  [attr.data-testid]="'move-to-' + (destination.sprintId ?? 'backlog')"
+                  (click)="moveTo(issue, destination)"
+                >
+                  {{ destination.name }}
+                </button>
+              }
+            </app-dropdown-menu>
+          }
+
+          <ng-template cdkDragPreview matchSize>
+            <div class="backlog-row backlog-row--preview">
+              <app-catalog-icon [icon]="issue.issueTypeIcon" [color]="issue.issueTypeColor" />
+              <span class="backlog-row__key">{{ issue.key }}</span>
+              <span class="backlog-row__summary">{{ issue.summary }}</span>
+              @if (movingFor(issue).length > 1) {
+                <span class="backlog-row__badge">{{ movingFor(issue).length }}</span>
+              }
+            </div>
+          </ng-template>
+          <div *cdkDragPlaceholder class="backlog-row__placeholder"></div>
+        </div>
+      } @empty {
+        <p class="backlog-section__empty">
+          {{
+            isBacklog()
+              ? 'El backlog está vacío. Crea una incidencia o arrastra alguna aquí.'
+              : 'Arrastra incidencias aquí desde el backlog o crea una nueva.'
+          }}
+        </p>
+      }
+    </div>
+
+    @if (canMove() && !readOnly()) {
+      <div class="backlog-section__create">
+        @if (creating()) {
+          <form class="backlog-create" (ngSubmit)="submitCreate()">
+            <input
+              pInputText
+              type="text"
+              class="backlog-create__input"
+              autocomplete="off"
+              maxlength="255"
+              placeholder="¿Qué hay que hacer?"
+              [attr.aria-label]="'Resumen de la nueva incidencia en ' + title()"
+              [ngModel]="draft()"
+              [ngModelOptions]="{ standalone: true }"
+              (ngModelChange)="draft.set($event)"
+              (keydown.escape)="cancelCreate()"
+              data-autofocus
+              data-testid="backlog-create-input"
+            />
+            @if (createError(); as message) {
+              <span class="backlog-create__error" role="alert">{{ message }}</span>
+            }
+            <p-button
+              type="submit"
+              label="Crear"
+              size="small"
+              data-testid="backlog-create-submit"
+            />
+            <p-button
+              type="button"
+              label="Cerrar"
+              size="small"
+              severity="secondary"
+              (onClick)="cancelCreate()"
+            />
+          </form>
+        } @else {
+          <button
+            type="button"
+            class="backlog-section__add"
+            data-testid="backlog-create-open"
+            (click)="startCreate()"
+          >
+            <i class="pi pi-plus" aria-hidden="true"></i>
+            Crear incidencia
+          </button>
+        }
+      </div>
+    }
+  }
+</section>

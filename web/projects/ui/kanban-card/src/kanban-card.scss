@@ -1,0 +1,198 @@
+@use '../../styles/mixins' as m;
+@use '../../app-shell/src/menu' as menu;
+@use '../../app-shell/src/icon-button' as ib;
+
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.kanban-card {
+  @include m.flex-column(2);
+  position: relative;
+  box-sizing: border-box;
+  min-width: 0;
+  padding: var(--cl-space-3);
+  border: 1px solid var(--cl-border);
+  border-radius: var(--cl-radius-md);
+  background: var(--cl-bg-surface);
+  box-shadow: var(--cl-shadow-1);
+  transition: box-shadow var(--cl-motion-fast) var(--cl-ease);
+
+  &:hover {
+    box-shadow: var(--cl-shadow-2);
+  }
+
+  &:focus-within {
+    border-color: var(--cl-brand);
+  }
+
+  &--flagged {
+    border-color: var(--cl-danger);
+    background: var(--cl-danger-bg);
+  }
+
+  &--preview {
+    box-shadow: var(--cl-shadow-3);
+    cursor: grabbing;
+  }
+
+  &--placeholder {
+    opacity: 0.45;
+  }
+
+  &__top {
+    @include m.flex-row(2);
+    min-width: 0;
+  }
+
+  &__type {
+    flex: none;
+    width: var(--cl-space-4);
+    height: var(--cl-space-4);
+  }
+
+  &__key {
+    @include m.truncate;
+    color: var(--cl-text-subtle);
+    font-size: var(--cl-font-small);
+    font-weight: var(--cl-weight-medium);
+  }
+
+  &__flag {
+    color: var(--cl-danger-text);
+    font-size: var(--cl-font-small);
+  }
+
+  &__spacer {
+    flex: 1 1 auto;
+  }
+
+  &__menu {
+    position: relative;
+    z-index: 1;
+  }
+
+  &__menu-trigger {
+    @include ib.icon-button;
+    color: var(--cl-text-subtle);
+  }
+
+  &__menu-heading {
+    @include menu.menu-heading;
+  }
+
+  &__menu-item {
+    @include menu.menu-item;
+  }
+
+  /* The link covers the whole card, so a click anywhere opens the issue. Controls sit above it. */
+  &__summary {
+    display: -webkit-box;
+    overflow: hidden;
+    color: var(--cl-text);
+    font-weight: var(--cl-weight-medium);
+    line-height: var(--cl-lh-body);
+    text-decoration: none;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+    overflow-wrap: anywhere;
+
+    @include m.respond-down(768px) {
+      min-height: var(--cl-control-h-md);
+    }
+
+    &::after {
+      position: absolute;
+      inset: 0;
+      border-radius: var(--cl-radius-md);
+      content: '';
+    }
+
+    &:hover {
+      color: var(--cl-brand);
+    }
+
+    &:focus-visible {
+      outline: none;
+
+      &::after {
+        box-shadow: var(--cl-shadow-focus);
+      }
+    }
+  }
+
+  &__meta {
+    @include m.cluster(1);
+    min-width: 0;
+  }
+
+  &__epic,
+  &__label,
+  &__subtasks {
+    @include m.flex-row(1);
+    max-width: 100%;
+    padding: 0 var(--cl-space-2);
+    border-radius: var(--cl-radius-sm);
+    background: var(--cl-bg-hover);
+    color: var(--cl-text-subtle);
+    font-size: var(--cl-font-caption);
+    line-height: var(--cl-lh-body);
+  }
+
+  &__epic {
+    background: var(--cl-type-epic-bg);
+    color: var(--cl-type-epic-text);
+    min-width: 0;
+  }
+
+  &__epic-name {
+    @include m.truncate;
+  }
+
+  &__label--more {
+    color: var(--cl-text-subtle);
+  }
+
+  &__footer {
+    @include m.flex-row(2);
+    min-width: 0;
+  }
+
+  &__priority {
+    flex: none;
+    width: var(--cl-space-4);
+    height: var(--cl-space-4);
+  }
+
+  &__points {
+    min-width: 1.5rem;
+    padding: 0 var(--cl-space-2);
+    border-radius: var(--cl-radius-full);
+    background: var(--cl-bg-hover);
+    color: var(--cl-text);
+    font-size: var(--cl-font-caption);
+    font-weight: var(--cl-weight-semibold);
+    line-height: var(--cl-space-5);
+    text-align: center;
+  }
+
+  &__assignee {
+    flex: none;
+  }
+
+  &__unassigned {
+    @include m.flex-row(0, center, center);
+    flex: none;
+    width: var(--cl-space-6);
+    height: var(--cl-space-6);
+    border: 1px dashed var(--cl-border-strong);
+    border-radius: var(--cl-radius-full);
+    color: var(--cl-text-subtle);
+    font-size: var(--cl-font-caption);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+  }
+}

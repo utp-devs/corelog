@@ -143,9 +143,13 @@ describe('AuthStore', () => {
     const store = TestBed.inject(AuthStore);
 
     const pending = store.register({
-      name: 'Ada',
+      firstName: 'Ada',
+      lastName: 'Lovelace',
+      phone: { country: 'PE', number: '912345678' },
       email: 'ada@example.com',
       password: 'clave-prueba',
+      passwordConfirmation: 'clave-prueba',
+      consents: [{ slug: 'privacy_policy', version: 1 }],
     });
     http.expectOne('/api/v1/auth/register').flush({ data: USER_RESPONSE });
     const login = http.expectOne('/api/v1/auth/login');
@@ -247,6 +251,7 @@ describe('AuthStore', () => {
     expect(request.request.body).toEqual({
       current_password: 'clave-prueba',
       new_password: 'nueva-clave',
+      new_password_confirmation: 'nueva-clave',
     });
     request.flush(null);
     await pending;

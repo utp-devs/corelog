@@ -1,0 +1,21 @@
+@use '../../styles/mixins' as m;
+
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.legal-consent-group {
+  @include m.flex-column(1);
+
+  &__loading,
+  &__failed-text {
+    margin: 0;
+    font-size: var(--cl-font-small);
+    color: var(--cl-text-subtle);
+  }
+
+  &__failed {
+    @include m.flex-column(2, flex-start);
+  }
+}

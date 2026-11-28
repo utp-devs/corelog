@@ -1,3 +1,5 @@
+import type { PhoneValue } from './country.model';
+import type { ConsentRef } from './legal.model';
 import type { User } from './user.model';
 
 export interface LoginPayload {
@@ -6,7 +8,12 @@ export interface LoginPayload {
 }
 
 export interface RegisterPayload {
-  readonly name: string;
+  readonly firstName: string;
+  readonly lastName: string;
+  readonly phone: PhoneValue;
+  readonly passwordConfirmation: string;
+  readonly locale?: string;
+  readonly consents: readonly ConsentRef[];
   readonly email: string;
   readonly password: string;
 }

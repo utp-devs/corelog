@@ -1,4 +1,4 @@
-import { NgTemplateOutlet } from '@angular/common';
+import { CdkDropListGroup } from '@angular/cdk/drag-drop';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -7,223 +7,318 @@ import {
   inject,
   signal,
 } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { Router } from '@angular/router';
 import {
-  AuthStore,
-  PriorityRef,
-  priorityDisplayOf,
-  BacklogItem,
-  BacklogSprint,
-  BacklogStore,
-  OrganizationStore,
+  AgileSprint,
+  BacklogSection,
+  BacklogViewStore,
+  BreakpointService,
+  CompleteSprintInput,
   CurrentProjectStore,
-  ProjectStore,
-  SprintStatus,
-  WorkItemStatus,
+  NotificationService,
+  PROJECT_MOBILE_QUERY,
+  SelectionMode,
+  SprintPlanStore,
+  asApiError,
   projectAccessVariantOf,
-  shortIssueKeyOf,
+  projectPath,
+  sprintErrorMessage,
 } from '@corelog/core';
 import { ArchivedNotice } from '@corelog/ui/archived-notice';
-import { DropdownMenu } from '@corelog/ui/app-shell';
-import { DataTable, DataTableCell, DataTableColumn } from '@corelog/ui/data-table';
+import { ConfirmModal } from '@corelog/ui/confirm-modal';
 import { EmptyState } from '@corelog/ui/empty-state';
 import { ErrorPage } from '@corelog/ui/error-page';
-import { Lozenge, LozengeCategory, LozengeTone } from '@corelog/ui/lozenge';
+import { ErrorState } from '@corelog/ui/error-state';
 import { PageContainer } from '@corelog/ui/page-container';
 import { PageHeader, PageHeaderActions } from '@corelog/ui/page-header';
-import { PriorityTag } from '@corelog/ui/priority-tag';
 import { ProgressBar } from '@corelog/ui/progress-bar';
-import { AppTooltip } from '@corelog/ui/tooltip';
+import { SearchInput } from '@corelog/ui/search-input';
+import { SidePanel } from '@corelog/ui/side-panel';
 import { Button } from 'primeng/button';
 import { Message } from 'primeng/message';
+import { Skeleton } from 'primeng/skeleton';
 
 import { trackProjectScope } from '../shared/project-scope';
-import {
-  SPRINT_STATUS_LABELS,
-  SPRINT_STATUS_TONES,
-  STATUS_CATEGORIES,
-  isReadOnlyRole,
-  isResolvedStatus,
-  sprintDatesOf,
-  statusName,
-  typeName,
-} from '../shared/work-labels';
-
-const COLUMNS: DataTableColumn[] = [
-  { key: 'position', title: '#', align: 'left' },
-  { key: 'summary', title: 'Incidencia', mobilePrimary: true },
-  { key: 'type', title: 'Tipo' },
-  { key: 'priority', title: 'Prioridad' },
-  { key: 'status', title: 'Estado' },
-  { key: 'points', title: 'Puntos', align: 'right' },
-  { key: 'order', title: 'Orden', align: 'right' },
-];
+import { CompleteSprintDialog, CompleteSprintSummary } from '../sprints/complete-sprint-dialog';
+import { SprintDialog, SprintDialogMode, SprintDialogValue } from '../sprints/sprint-dialog';
+import { BacklogIssuePanel } from './backlog-issue-panel';
+import { BacklogDestination, BacklogRankRequest, BacklogSectionView } from './backlog-section';
 
 const LOAD_ERROR_MESSAGE =
   'No se pudo cargar el backlog. Verifica que tengas acceso al proyecto e intenta de nuevo.';
-
-/** Id of the collapsible block that lists the issues no open sprint holds. */
-const BACKLOG_SECTION_ID = 'backlog';
+const WIDE_QUERY = '(min-width: 1100px)';
 
 /**
- * Project backlog: one collapsible block per active or planned sprint, with its dates, goal, progress and
- * issues, then the block of the issues no sprint holds, in rank order. Those move one position at a time
- * with the up and down controls; the server answers with the renumbered list, which replaces the rows.
+ * Backlog of the project: the epics panel, the sprint sections (active, planned) and the backlog as ranked
+ * lists, and the selected issue in a side panel. It also runs the sprint lifecycle: create, edit, start,
+ * complete and delete.
  */
 @Component({
   selector: 'app-project-backlog-page',
   imports: [
     ArchivedNotice,
-    NgTemplateOutlet,
-    RouterLink,
+    BacklogIssuePanel,
+    BacklogSectionView,
     Button,
-    AppTooltip,
-    DropdownMenu,
-    PageHeaderActions,
-    Message,
-    DataTable,
-    DataTableCell,
+    CdkDropListGroup,
+    CompleteSprintDialog,
+    ConfirmModal,
     EmptyState,
     ErrorPage,
-    Lozenge,
+    ErrorState,
+    Message,
     PageContainer,
     PageHeader,
-    PriorityTag,
+    PageHeaderActions,
     ProgressBar,
+    SearchInput,
+    SidePanel,
+    Skeleton,
+    SprintDialog,
   ],
   templateUrl: './project-backlog-page.html',
   styleUrl: './project-backlog-page.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ProjectBacklogPage {
-  protected readonly store = inject(BacklogStore);
-  private readonly auth = inject(AuthStore);
-  private readonly orgs = inject(OrganizationStore);
-  private readonly projects = inject(ProjectStore);
-  private readonly currentProject = inject(CurrentProjectStore);
+  protected readonly store = inject(BacklogViewStore);
+  private readonly sprintPlan = inject(SprintPlanStore);
+  private readonly current = inject(CurrentProjectStore);
+  private readonly notify = inject(NotificationService);
+  private readonly router = inject(Router);
+  private readonly breakpoints = inject(BreakpointService);
   private readonly destroyRef = inject(DestroyRef);
 
-  protected readonly items = computed(() => [...this.store.unplanned()]);
-  protected readonly sprintBlocks = this.store.sprints.value;
-  protected readonly backlogSectionId = BACKLOG_SECTION_ID;
-  private readonly collapsedIds = signal<ReadonlySet<string>>(new Set());
-  protected readonly columns = COLUMNS;
+  protected readonly isMobile = this.breakpoints.matches(PROJECT_MOBILE_QUERY);
+  protected readonly isWide = this.breakpoints.matches(WIDE_QUERY);
+  protected readonly view = this.store.view.value;
   protected readonly loadErrorMessage = LOAD_ERROR_MESSAGE;
+  protected readonly skeletonRows = [0, 1, 2, 3, 4];
 
-  /** Failure of the project read or of the backlog load. */
-  private readonly failure = computed(() => this.scope.accessError() ?? this.store.items.error());
+  protected readonly scope = trackProjectScope(this.current, this.destroyRef, (projectId) =>
+    this.store.open(projectId),
+  );
+
+  private readonly failure = computed(() => this.scope.accessError() ?? this.store.view.error());
   protected readonly accessVariant = computed(() => projectAccessVariantOf(this.failure()));
-  protected readonly tableError = computed(() => (this.failure() ? LOAD_ERROR_MESSAGE : null));
-  protected readonly loading = computed(
-    () => !this.store.items.hasValue() && this.failure() === null,
-  );
-  protected readonly ready = computed(() => this.store.items.hasValue() && this.failure() === null);
+  protected readonly failed = computed(() => this.failure() !== null);
+  protected readonly ready = computed(() => this.view() !== undefined && !this.failed());
 
-  protected readonly scope = trackProjectScope(
-    inject(CurrentProjectStore),
-    this.destroyRef,
-    (projectId) => {
-      this.store.load(projectId);
-      this.projects.fetchMembers(projectId);
-    },
+  protected readonly archived = this.current.isArchived;
+  protected readonly canMove = computed(() => this.store.canMove() && !this.archived());
+  protected readonly canManage = computed(() => this.store.canManageSprints() && !this.archived());
+  protected readonly sections = computed(() => this.view()?.sections ?? []);
+  protected readonly epics = computed(() => this.view()?.epics ?? []);
+  protected readonly hasActive = computed(() => this.sections().some((s) => s.kind === 'active'));
+  protected readonly orderedIds = computed(() =>
+    this.sections().flatMap((section) => section.issues.map((issue) => issue.id)),
   );
-
-  /** Viewers, guests and archived projects read the backlog; only editors of a live project reorder it. */
-  protected readonly readOnly = computed(
-    () =>
-      this.currentProject.isArchived() ||
-      isReadOnlyRole(
-        this.auth.user()?.role,
-        this.orgs.currentRole(),
-        this.auth.user()?.id,
-        this.projects.members(),
-      ),
+  protected readonly totalIssues = computed(() => this.orderedIds().length);
+  protected readonly destinations = computed<BacklogDestination[]>(() =>
+    this.sections().map((section) => ({
+      sprintId: section.sprint?.id ?? null,
+      name: section.sprint?.name ?? 'Backlog',
+    })),
   );
+  protected readonly inspected = this.store.inspected;
+  protected readonly epicsOpen = signal(false);
+  protected readonly backlogPath = computed(() => {
+    const project = this.current.project();
+    return project ? projectPath(project, 'board') : '/';
+  });
 
-  protected isOpen(sectionId: string): boolean {
-    return !this.collapsedIds().has(sectionId);
+  /* Sprint dialogs */
+
+  protected readonly sprintDialogOpen = signal(false);
+  protected readonly sprintDialogMode = signal<SprintDialogMode>('create');
+  protected readonly dialogSprint = signal<AgileSprint | null>(null);
+  protected readonly dialogIssueCount = signal(0);
+  protected readonly sprintBusy = signal(false);
+  protected readonly sprintError = signal<string | null>(null);
+
+  protected readonly completeOpen = signal(false);
+  protected readonly completeSprintTarget = signal<AgileSprint | null>(null);
+  protected readonly completeSummary = signal<CompleteSprintSummary>({
+    doneIssues: 0,
+    openIssues: 0,
+    donePoints: 0,
+    openPoints: 0,
+  });
+  protected readonly plannedForComplete = signal<readonly AgileSprint[]>([]);
+  protected readonly completeBusy = signal(false);
+  protected readonly completeError = signal<string | null>(null);
+
+  protected readonly deleteTarget = signal<AgileSprint | null>(null);
+  protected readonly deleteBusy = signal(false);
+
+  protected readonly suggestedName = computed(() => {
+    const names = this.sections()
+      .map((section) => section.sprint?.name ?? '')
+      .filter((name) => name);
+    const numbers = names
+      .map((name) => /(\d+)\s*$/.exec(name))
+      .filter((match): match is RegExpExecArray => match !== null)
+      .map((match) => Number(match[1]));
+    const next = numbers.length > 0 ? Math.max(...numbers) + 1 : names.length + 1;
+    return `Sprint ${next}`;
+  });
+
+  /* Selection, ranking, points, create */
+
+  protected onSelect(event: { id: string; mode: SelectionMode }): void {
+    this.store.select(event.id, event.mode);
   }
 
-  protected toggle(sectionId: string): void {
-    this.collapsedIds.update((current) => {
-      const next = new Set(current);
-      if (!next.delete(sectionId)) {
-        next.add(sectionId);
-      }
-      return next;
+  protected onRank(request: BacklogRankRequest): void {
+    this.store.rank(request.issueIds, request.sprintId, request.anchor);
+  }
+
+  protected onPoints(event: { id: string; points: number | null }): void {
+    this.store.setPoints(event.id, event.points);
+  }
+
+  protected onCreateIssue(summary: string, section: BacklogSection): void {
+    this.store.createIssue(summary, section.sprint?.id ?? null).subscribe({
+      next: () => this.notify.success('Incidencia creada'),
+      error: () => this.notify.error('No se pudo crear la incidencia. Intenta de nuevo.'),
     });
   }
 
-  protected sprintStatusLabel(status: SprintStatus): string {
-    return SPRINT_STATUS_LABELS[status];
+  /* Sprint lifecycle */
+
+  protected openCreateSprint(): void {
+    this.sprintError.set(null);
+    this.dialogSprint.set(null);
+    this.sprintDialogMode.set('create');
+    this.sprintDialogOpen.set(true);
   }
 
-  protected sprintStatusTone(status: SprintStatus): LozengeTone {
-    return SPRINT_STATUS_TONES[status];
+  protected openEditSprint(sprint: AgileSprint): void {
+    this.sprintError.set(null);
+    this.dialogSprint.set(sprint);
+    this.sprintDialogMode.set('edit');
+    this.sprintDialogOpen.set(true);
   }
 
-  protected sprintDates(block: BacklogSprint): string {
-    return sprintDatesOf(block.sprint);
+  protected openStartSprint(section: BacklogSection): void {
+    this.sprintError.set(null);
+    this.dialogSprint.set(section.sprint);
+    this.dialogIssueCount.set(section.issues.length);
+    this.sprintDialogMode.set('start');
+    this.sprintDialogOpen.set(true);
   }
 
-  protected resolvedOf(block: BacklogSprint): number {
-    return block.issues.filter((issue) => isResolvedStatus(issue.status)).length;
+  protected submitSprint(value: SprintDialogValue): void {
+    const projectId = this.current.projectId();
+    const sprint = this.dialogSprint();
+    const mode = this.sprintDialogMode();
+    if (!projectId) return;
+    this.sprintBusy.set(true);
+    this.sprintError.set(null);
+    const request =
+      mode === 'create'
+        ? this.sprintPlan.create(projectId, {
+            name: value.name,
+            goal: value.goal,
+            startDate: value.startDate,
+            endDate: value.endDate,
+          })
+        : mode === 'edit' && sprint
+          ? this.sprintPlan.update(sprint.id, {
+              name: value.name,
+              goal: value.goal,
+              startDate: value.startDate,
+              endDate: value.endDate,
+            })
+          : sprint
+            ? this.sprintPlan.start(sprint.id, {
+                name: value.name,
+                goal: value.goal,
+                startDate: value.startDate ?? undefined,
+                endDate: value.endDate ?? undefined,
+                force: value.force || undefined,
+              })
+            : null;
+    if (!request) {
+      this.sprintBusy.set(false);
+      return;
+    }
+    request.subscribe({
+      next: (saved) => {
+        this.sprintBusy.set(false);
+        this.sprintDialogOpen.set(false);
+        this.store.refresh();
+        this.notify.success(
+          mode === 'create'
+            ? `Sprint «${saved.name}» creado`
+            : mode === 'edit'
+              ? 'Sprint actualizado'
+              : `Sprint «${saved.name}» iniciado`,
+        );
+      },
+      error: (error: unknown) => {
+        this.sprintBusy.set(false);
+        this.sprintError.set(sprintErrorMessage(asApiError(error)));
+      },
+    });
   }
 
-  /** Share of the sprint issues that are resolved or closed; an empty sprint has none. */
-  protected percentOf(block: BacklogSprint): number {
-    return block.issues.length === 0 ? 0 : (this.resolvedOf(block) / block.issues.length) * 100;
+  protected openComplete(section: BacklogSection): void {
+    if (!section.sprint) return;
+    const done = section.totals.byCategory.done;
+    this.completeError.set(null);
+    this.completeSprintTarget.set(section.sprint);
+    this.completeSummary.set({
+      doneIssues: done?.issues ?? 0,
+      donePoints: done?.points ?? 0,
+      openIssues: section.totals.issues - (done?.issues ?? 0),
+      openPoints: section.totals.points - (done?.points ?? 0),
+    });
+    this.plannedForComplete.set(
+      this.sections()
+        .filter((candidate) => candidate.kind === 'planned' && candidate.sprint)
+        .map((candidate) => candidate.sprint as AgileSprint),
+    );
+    this.completeOpen.set(true);
   }
 
-  protected statusLabel(status: WorkItemStatus): string {
-    return statusName(status, status);
+  protected confirmComplete(input: CompleteSprintInput): void {
+    const sprint = this.completeSprintTarget();
+    const project = this.current.project();
+    if (!sprint || !project) return;
+    this.completeBusy.set(true);
+    this.sprintPlan.complete(sprint.id, input).subscribe({
+      next: (result) => {
+        this.completeBusy.set(false);
+        this.completeOpen.set(false);
+        this.store.refresh();
+        this.notify.success(`Sprint «${result.sprint.name}» completado`);
+        void this.router.navigateByUrl(projectPath(project, `sprints/${sprint.id}/report`));
+      },
+      error: (error: unknown) => {
+        this.completeBusy.set(false);
+        this.completeError.set(sprintErrorMessage(asApiError(error)));
+      },
+    });
   }
 
-  protected priorityOf(key: string): PriorityRef {
-    return priorityDisplayOf(key);
-  }
-
-  protected typeLabel(type: string): string {
-    return typeName(type);
-  }
-
-  protected shortKey(item: { readonly id: string }): string {
-    return shortIssueKeyOf(item);
-  }
-
-  protected statusCategory(status: WorkItemStatus): LozengeCategory {
-    return STATUS_CATEGORIES[status] ?? 'todo';
-  }
-
-  /** 1-based position of the item in the backlog. */
-  protected positionOf(item: BacklogItem): number {
-    return this.items().indexOf(item) + 1;
-  }
-
-  protected canMoveUp(item: BacklogItem): boolean {
-    return this.store.canMoveUp(this.items().indexOf(item));
-  }
-
-  protected canMoveDown(item: BacklogItem): boolean {
-    return this.store.canMoveDown(this.items().indexOf(item));
-  }
-
-  protected moveUp(item: BacklogItem): void {
-    const index = this.items().indexOf(item);
-    this.store.move(index, index - 1);
-  }
-
-  protected moveDown(item: BacklogItem): void {
-    const index = this.items().indexOf(item);
-    this.store.move(index, index + 1);
-  }
-
-  protected moveToStart(item: BacklogItem): void {
-    this.store.move(this.items().indexOf(item), 0);
-  }
-
-  protected moveToEnd(item: BacklogItem): void {
-    this.store.move(this.items().indexOf(item), this.items().length - 1);
+  protected confirmDelete(): void {
+    const sprint = this.deleteTarget();
+    if (!sprint) return;
+    this.deleteBusy.set(true);
+    this.sprintPlan.delete(sprint.id).subscribe({
+      next: () => {
+        this.deleteBusy.set(false);
+        this.deleteTarget.set(null);
+        this.store.refresh();
+        this.notify.success(`Sprint «${sprint.name}» eliminado`);
+      },
+      error: (error: unknown) => {
+        this.deleteBusy.set(false);
+        this.deleteTarget.set(null);
+        this.notify.error(sprintErrorMessage(asApiError(error)));
+      },
+    });
   }
 
   protected retry(): void {

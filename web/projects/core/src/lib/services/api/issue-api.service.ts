@@ -280,6 +280,7 @@ export class IssueApiService {
         parent_id: input.parentId,
         due_date: input.dueDate,
         story_points: input.storyPoints,
+        custom: input.custom,
       })
       .pipe(map((body) => toIssue(body.data)));
   }

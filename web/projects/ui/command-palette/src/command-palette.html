@@ -88,8 +88,14 @@
                     <path [attr.d]="sectionIcon[item.option.section]" />
                   </svg>
                   <span class="command-palette__option-title">
-                    @for (segment of item.segments; track $index) {
-                      <span [class.command-palette__mark]="segment.match">{{ segment.text }}</span>
+                    @if (item.option.highlight; as highlighted) {
+                      <app-mark-text [highlighted]="highlighted" [fallback]="item.option.title" />
+                    } @else {
+                      @for (segment of item.segments; track $index) {
+                        <span [class.command-palette__mark]="segment.match">{{
+                          segment.text
+                        }}</span>
+                      }
                     }
                   </span>
                   @if (item.option.subtitle) {

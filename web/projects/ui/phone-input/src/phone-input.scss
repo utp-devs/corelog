@@ -1,0 +1,124 @@
+@use '../../styles/mixins' as m;
+@use '../../field-row/src/control' as c;
+
+:host {
+  display: block;
+  min-width: 0;
+  // Width of the country button; surrounding fields read it to place their caption.
+  --phone-input-country-w: calc(var(--cl-space-16) + var(--cl-space-6));
+}
+
+.phone-input {
+  position: relative;
+  @include m.flex-row;
+  min-width: 0;
+
+  &__country {
+    @include c.control-box;
+    @include m.flex-row(1);
+    flex: none;
+    width: var(--phone-input-country-w);
+    padding-inline: var(--cl-space-2);
+    border-radius: var(--phone-input-radius, var(--cl-radius-md)) 0 0
+      var(--phone-input-radius, var(--cl-radius-md));
+    border-right-width: 0;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+
+  &--lg &__country,
+  &--lg &__field {
+    min-height: var(--cl-control-h-lg);
+  }
+
+  &__field {
+    @include c.control-box;
+    flex: 1 1 auto;
+    border-radius: 0 var(--phone-input-radius, var(--cl-radius-md))
+      var(--phone-input-radius, var(--cl-radius-md)) 0;
+  }
+
+  &--invalid &__country {
+    border-color: var(--cl-danger);
+  }
+
+  &__flag {
+    flex: none;
+    font-size: var(--cl-font-body-strong);
+    line-height: 1;
+  }
+
+  &__dial {
+    font-variant-numeric: tabular-nums;
+    font-size: var(--cl-font-body);
+  }
+
+  &__chevron {
+    margin-left: auto;
+    font-size: var(--cl-font-small);
+    color: var(--cl-text-subtle);
+  }
+
+  &__panel {
+    position: absolute;
+    top: calc(100% + var(--cl-space-1));
+    left: 0;
+    z-index: var(--cl-z-dropdown);
+    @include m.flex-column(1);
+    width: min(100%, var(--cl-popover-w));
+    min-width: var(--cl-menu-w-min);
+    padding: var(--cl-space-2);
+    border: 1px solid var(--cl-border);
+    border-radius: var(--cl-radius-lg);
+    background: var(--cl-bg-elevated);
+    box-shadow: var(--cl-elev-overlay);
+  }
+
+  &__search {
+    @include c.control-box;
+  }
+
+  &__list {
+    max-height: calc(var(--cl-menu-item-h) * 7.5);
+    margin: 0;
+    padding: 0;
+    overflow-y: auto;
+    list-style: none;
+  }
+
+  &__option {
+    @include m.flex-row(2);
+    min-height: var(--cl-menu-item-h);
+    padding: 0 var(--cl-space-2);
+    border-radius: var(--cl-radius-md);
+    color: var(--cl-text);
+    font-size: var(--cl-font-body);
+    cursor: pointer;
+
+    &--active {
+      background: var(--cl-bg-hover);
+    }
+
+    &[aria-selected='true'] {
+      background: var(--cl-bg-selected);
+      font-weight: var(--cl-weight-semibold);
+    }
+  }
+
+  &__name {
+    flex: 1 1 auto;
+    @include m.truncate;
+  }
+
+  &__option-dial {
+    flex: none;
+    font-variant-numeric: tabular-nums;
+    color: var(--cl-text-subtle);
+  }
+
+  &__empty {
+    padding: var(--cl-space-3);
+    color: var(--cl-text-subtle);
+    font-size: var(--cl-font-body);
+  }
+}

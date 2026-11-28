@@ -1,0 +1,23 @@
+@use '../../field-row/src/control' as c;
+
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.field-editor {
+  min-width: 0;
+
+  &__control {
+    @include c.control-box;
+
+    &--area {
+      padding: var(--cl-space-2) var(--cl-space-3);
+      resize: vertical;
+    }
+  }
+
+  &__multi {
+    width: 100%;
+  }
+}

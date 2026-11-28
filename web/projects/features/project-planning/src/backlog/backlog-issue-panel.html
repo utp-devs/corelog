@@ -1,0 +1,75 @@
+<article class="issue-panel" data-testid="backlog-issue-panel">
+  <header class="issue-panel__header">
+    <app-catalog-icon
+      class="issue-panel__type"
+      [icon]="issue().issueTypeIcon"
+      [color]="issue().issueTypeColor"
+    />
+    <a class="issue-panel__key" [routerLink]="href()">{{ issue().key }}</a>
+    <span class="issue-panel__spacer"></span>
+    <button
+      type="button"
+      class="issue-panel__close"
+      aria-label="Cerrar el detalle"
+      (click)="closed.emit()"
+    >
+      <i class="pi pi-times" aria-hidden="true"></i>
+    </button>
+  </header>
+
+  <h3 class="issue-panel__summary">{{ issue().summary }}</h3>
+
+  <dl class="issue-panel__fields">
+    <dt>Estado</dt>
+    <dd>
+      <app-lozenge [category]="category()">{{ issue().statusName }}</app-lozenge>
+    </dd>
+
+    <dt>Prioridad</dt>
+    <dd class="issue-panel__value">
+      <app-catalog-icon
+        class="issue-panel__icon"
+        [icon]="issue().priorityIcon"
+        [color]="issue().priorityColor"
+      />
+      {{ issue().priorityName }}
+    </dd>
+
+    <dt>Responsable</dt>
+    <dd class="issue-panel__value">
+      @if (issue().assigneeId; as id) {
+        <app-user-avatar [id]="id" [name]="issue().assigneeName" [size]="24" />
+        {{ issue().assigneeName }}
+      } @else {
+        Sin responsable
+      }
+    </dd>
+
+    <dt>Puntos</dt>
+    <dd>{{ issue().storyPoints ?? 'Sin estimar' }}</dd>
+
+    @if (estimate()) {
+      <dt>Estimación</dt>
+      <dd>{{ estimate() }}</dd>
+    }
+
+    @if (issue().epicId) {
+      <dt>Épica</dt>
+      <dd>{{ issue().epicKey }} {{ issue().epicSummary }}</dd>
+    }
+
+    @if (issue().labels.length > 0) {
+      <dt>Etiquetas</dt>
+      <dd class="issue-panel__labels">
+        @for (label of issue().labels; track label.id) {
+          <span class="issue-panel__label">{{ label.name }}</span>
+        }
+      </dd>
+    }
+  </dl>
+
+  <a class="issue-panel__open" [routerLink]="href()" data-testid="backlog-open-issue">
+    Abrir la incidencia completa
+    <i class="pi pi-arrow-right" aria-hidden="true"></i>
+  </a>
+</article>

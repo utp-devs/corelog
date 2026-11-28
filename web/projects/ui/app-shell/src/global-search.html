@@ -36,8 +36,12 @@
                 @for (hit of section.items; track hit.kind + hit.id) {
                   <li>
                     <button type="button" class="global-search__result" (click)="choose(hit)">
-                      <span class="global-search__result-title">{{ hit.title }}</span>
-                      <span class="global-search__result-subtitle">{{ hit.subtitle }}</span>
+                      <span class="global-search__result-title"
+                        ><app-mark-text [highlighted]="hit.highlight" [fallback]="hit.title"
+                      /></span>
+                      <span class="global-search__result-subtitle">{{
+                        hit.key ?? hit.subtitle
+                      }}</span>
                     </button>
                   </li>
                 }
@@ -46,6 +50,15 @@
           }
         </div>
         <div class="global-search__footer">
+          <button
+            type="button"
+            class="global-search__palette-link"
+            data-testid="search-all"
+            (click)="openAllResults()"
+          >
+            <app-shell-icon name="search" />
+            <span>Ver todos los resultados</span>
+          </button>
           <button type="button" class="global-search__palette-link" (click)="openFullPalette()">
             <app-shell-icon name="search" />
             <span>Abrir paleta de comandos</span>
@@ -62,4 +75,5 @@
   [seed]="paletteSeed()"
   [search]="searchPalette"
   (openHit)="onPaletteHit($event)"
+  (openAll)="openAllResults($event)"
 />

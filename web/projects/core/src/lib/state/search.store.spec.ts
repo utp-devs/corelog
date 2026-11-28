@@ -45,7 +45,7 @@ describe('SearchStore', () => {
 
   it('clears the results and sends nothing for a short query', () => {
     store.search('exportar');
-    httpMock.expectOne('/api/v1/search?q=exportar&limit=10').flush({ data: [hit] });
+    httpMock.expectOne('/api/v1/search?q=exportar&limit=10&types=all').flush({ data: [hit] });
 
     store.search('e');
 

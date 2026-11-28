@@ -5,6 +5,8 @@ import type { AuthSession, LoginPayload, RegisterPayload } from '../models/auth.
 import type { ChangePasswordPayload, UpdateProfilePayload, User } from '../models/user.model';
 import { AccountSecurityApiService } from '../services/api/account-security-api.service';
 import { AuthApiService } from '../services/api/auth-api.service';
+import { TwoFactorApiService } from '../services/api/two-factor-api.service';
+import { isTwoFactorChallenge, type TwoFactorLoginPayload } from '../models/two-factor.model';
 import { SessionService } from '../services/session.service';
 import { ApiError } from '../models/api-error.model';
 import { asApiError } from '../utils/api-error';
@@ -23,6 +25,7 @@ export class AuthStore {
   private readonly api = inject(AuthApiService);
   private readonly accountSecurity = inject(AccountSecurityApiService);
   private readonly session = inject(SessionService);
+  private readonly twoFactor = inject(TwoFactorApiService);
 
   private readonly account = new AsyncState<User>();
 
@@ -30,6 +33,8 @@ export class AuthStore {
   readonly error = signal<string | null>(null);
   /** False until the stored session has been checked (the guards wait for it). */
   readonly sessionChecked = signal(false);
+  /** Challenge token while a sign-in waits for its second step; null otherwise. */
+  readonly twoFactorChallenge = signal<string | null>(null);
 
   readonly user = computed<User | null>(() => this.account.value() ?? null);
   readonly isAuthenticated = computed(() => this.user() !== null);
@@ -47,10 +52,42 @@ export class AuthStore {
     this.status.set('loading');
     this.error.set(null);
     try {
-      this.open(await firstValueFrom(this.api.login(payload)));
+      const result = await firstValueFrom(this.api.login(payload));
+      if (isTwoFactorChallenge(result)) {
+        this.twoFactorChallenge.set(result.challengeToken);
+        this.status.set('idle');
+        return;
+      }
+      this.open(result);
     } catch (error) {
       throw this.fail(error);
     }
+  }
+
+  /**
+   * Finishes a sign-in that is waiting for its second step with a code or a recovery code. A rejected
+   * code keeps the challenge so the user can retry; an expired challenge clears it (back to credentials).
+   */
+  async completeTwoFactor(proof: { code?: string; recoveryCode?: string }): Promise<void> {
+    const challengeToken = this.twoFactorChallenge();
+    if (!challengeToken) throw this.fail(new Error('There is no sign-in waiting for a code'));
+    this.status.set('loading');
+    this.error.set(null);
+    const payload: TwoFactorLoginPayload = { challengeToken, ...proof };
+    try {
+      this.open(await firstValueFrom(this.twoFactor.completeLogin(payload)));
+    } catch (error) {
+      const apiError = this.fail(error);
+      if (apiError.code === 'auth.challenge_expired') this.twoFactorChallenge.set(null);
+      throw apiError;
+    }
+  }
+
+  /** Abandons the second step and returns to the credentials. */
+  cancelTwoFactor(): void {
+    this.twoFactorChallenge.set(null);
+    this.status.set('idle');
+    this.error.set(null);
   }
 
   /** Creates the account and signs in with it (the API does both steps). */
@@ -113,12 +150,14 @@ export class AuthStore {
 
   /** Clears the account and the status. Runs on logout and whenever the session ends. */
   reset(): void {
+    this.twoFactorChallenge.set(null);
     this.account.reset();
     this.status.set('idle');
     this.error.set(null);
   }
 
   private open(session: AuthSession): void {
+    this.twoFactorChallenge.set(null);
     this.session.startSession(session.token);
     this.account.set(session.user);
     this.status.set('authenticated');

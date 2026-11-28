@@ -1,0 +1,61 @@
+@use '../../styles/mixins' as m;
+@use '../../field-row/src/control' as c;
+
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.query-chips {
+  @include m.cluster(2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  &__chip {
+    @include m.flex-row(1);
+    max-width: 100%;
+    min-height: var(--cl-control-h-sm);
+    padding: 0 0 0 var(--cl-space-3);
+    border-radius: var(--cl-radius-full);
+    background: var(--cl-brand-subtle);
+    color: var(--cl-text);
+    font-size: var(--cl-font-small);
+  }
+
+  &__text {
+    @include m.truncate;
+  }
+
+  &__remove {
+    @include c.icon-button;
+    border-radius: var(--cl-radius-full);
+    color: var(--cl-text);
+    font-size: var(--cl-font-caption);
+
+    &:hover:not(:disabled) {
+      background: var(--cl-bg-hover);
+    }
+  }
+
+  &__clear {
+    min-height: var(--cl-control-h-sm);
+    padding: 0 var(--cl-space-2);
+    border: 0;
+    border-radius: var(--cl-radius-md);
+    background: transparent;
+    color: var(--cl-brand);
+    font: inherit;
+    font-size: var(--cl-font-small);
+    font-weight: var(--cl-btn-weight);
+    cursor: pointer;
+
+    &:hover {
+      background: var(--cl-bg-hover);
+    }
+
+    &:focus-visible {
+      @include c.focus-ring;
+    }
+  }
+}

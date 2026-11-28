@@ -1,0 +1,22 @@
+@if (chips().length > 0) {
+  <ul class="query-chips" aria-label="Filtros activos">
+    @for (chip of chips(); track chip.key) {
+      <li class="query-chips__chip" data-testid="query-chip">
+        <span class="query-chips__text">{{ chip.text }}</span>
+        <button
+          type="button"
+          class="query-chips__remove"
+          [attr.aria-label]="'Quitar filtro ' + chip.text"
+          (click)="remove.emit(chip)"
+        >
+          <i class="pi pi-times" aria-hidden="true"></i>
+        </button>
+      </li>
+    }
+    <li class="query-chips__clear-item">
+      <button type="button" class="query-chips__clear" (click)="clear.emit()">
+        Limpiar filtros
+      </button>
+    </li>
+  </ul>
+}

@@ -1,0 +1,157 @@
+@use '../../styles/mixins' as m;
+@use '../../field-row/src/control' as c;
+
+:host {
+  display: block;
+  min-width: 0;
+}
+
+// The mirror (hidden text with the underlined problems) decides the height; the textarea sits on top of it
+// with the same box and typography, so both lines always coincide.
+$padding-y: var(--cl-space-2);
+$padding-x: var(--cl-space-3);
+
+.coreql-input {
+  position: relative;
+  @include m.flex-column(var(--cl-space-2));
+
+  &__editor {
+    position: relative;
+    min-height: var(--cl-control-h-md);
+    border: 1px solid var(--cl-border-strong);
+    border-radius: var(--cl-radius-md);
+    background: var(--cl-bg-surface);
+
+    &:focus-within {
+      @include c.focus-ring;
+      border-color: var(--cl-brand);
+    }
+  }
+
+  &--invalid &__editor {
+    border-color: var(--cl-danger);
+  }
+
+  &__mirror,
+  &__field {
+    box-sizing: border-box;
+    margin: 0;
+    padding: $padding-y $padding-x;
+    border: 0;
+    font: inherit;
+    line-height: var(--cl-lh-body);
+    letter-spacing: normal;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+
+  &__mirror {
+    min-height: calc(var(--cl-control-h-md) - 2px);
+    color: transparent;
+    pointer-events: none;
+    user-select: none;
+  }
+
+  &__error {
+    text-decoration: underline wavy var(--cl-danger);
+    text-decoration-skip-ink: none;
+    text-underline-offset: 3px;
+  }
+
+  &__field {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    resize: none;
+    overflow: hidden;
+    background: transparent;
+    color: var(--cl-text);
+    outline: none;
+
+    &::placeholder {
+      color: var(--cl-text-placeholder);
+      opacity: 1;
+    }
+  }
+
+  &__list {
+    position: absolute;
+    top: calc(var(--cl-control-h-md) + var(--cl-space-1));
+    left: 0;
+    z-index: var(--cl-z-dropdown);
+    box-sizing: border-box;
+    width: min(100%, var(--cl-popover-w, 24rem));
+    max-height: 16rem;
+    margin: 0;
+    padding: var(--cl-space-1);
+    overflow-y: auto;
+    list-style: none;
+    border: 1px solid var(--cl-border);
+    border-radius: var(--cl-radius-md);
+    background: var(--cl-bg-elevated);
+    box-shadow: var(--cl-elev-overlay);
+  }
+
+  &__option {
+    @include m.flex-row(var(--cl-space-3), center, space-between);
+    min-height: var(--cl-menu-item-h);
+    padding: 0 var(--cl-space-3);
+    border-radius: var(--cl-radius-sm);
+    color: var(--cl-text);
+    cursor: pointer;
+
+    &--active,
+    &:hover {
+      background: var(--cl-bg-selected);
+    }
+  }
+
+  &__option-label {
+    @include m.truncate;
+    font-weight: var(--cl-weight-medium);
+  }
+
+  &__option-kind {
+    flex: none;
+    color: var(--cl-text-subtle);
+    font-size: var(--cl-font-small);
+  }
+
+  &__problems {
+    @include m.flex-column(var(--cl-space-1));
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  &__problem {
+    @include m.cluster(2);
+    color: var(--cl-danger-text);
+    font-size: var(--cl-font-small);
+  }
+
+  &__problem-position {
+    color: var(--cl-text-subtle);
+  }
+
+  &__fix {
+    min-height: var(--cl-control-h-sm);
+    padding: 0 var(--cl-space-2);
+    border: 1px solid var(--cl-border-strong);
+    border-radius: var(--cl-radius-md);
+    background: var(--cl-bg-surface);
+    color: var(--cl-brand);
+    font: inherit;
+    font-size: var(--cl-font-small);
+    cursor: pointer;
+
+    &:hover {
+      background: var(--cl-bg-hover);
+    }
+
+    &:focus-visible {
+      @include c.focus-ring;
+    }
+  }
+}

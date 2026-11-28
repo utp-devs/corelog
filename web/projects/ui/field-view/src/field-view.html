@@ -1,0 +1,17 @@
+@if (empty()) {
+  <span class="field-view field-view--empty">{{ emptyText }}</span>
+} @else if (chips().length > 0) {
+  <ul class="field-view field-view__chips">
+    @for (chip of chips(); track chip) {
+      <li class="field-view__chip">{{ chip }}</li>
+    }
+  </ul>
+} @else if (href(); as link) {
+  <a class="field-view field-view__link" target="_blank" rel="noopener noreferrer" [href]="link">{{
+    text()
+  }}</a>
+} @else {
+  <span class="field-view" [class.field-view--paragraph]="type() === 'paragraph'">{{
+    text()
+  }}</span>
+}

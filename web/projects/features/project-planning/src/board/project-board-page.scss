@@ -1,10 +1,9 @@
 @use '../../../../ui/styles/mixins' as m;
-@use '../../../../ui/app-shell/src/menu' as menu;
-@use '../../../../ui/app-shell/src/icon-button' as ib;
 
-/* Fluid template: the frame keeps the gutter, the columns fill the width and scroll inside their own box. */
+/* Fluid template: the frame keeps the gutter, the columns share the width and scroll inside their own box. */
 .project-board {
   @include m.flex-column(4);
+  --board-col-min: 16.5rem;
   flex: 1 1 auto;
   box-sizing: border-box;
   width: 100%;
@@ -20,23 +19,19 @@
     margin: 0;
   }
 
-  &__filters {
-    @include m.cluster(3);
+  &__empty {
+    @include m.flex-row(0, center, center);
+    flex: 1 1 auto;
+    border: 1px solid var(--cl-border);
+    border-radius: var(--cl-radius-lg);
+    background: var(--cl-bg-surface);
   }
 
-  &__search {
-    width: 17.5rem;
-    max-width: 100%;
-  }
-
-  &__priority {
-    width: 10rem;
-    max-width: 100%;
-  }
-
-  &__mine {
-    @include m.flex-row(2);
-    cursor: pointer;
+  &__link {
+    @include m.flex-row(0, center, center);
+    min-height: var(--cl-control-h-md);
+    color: var(--cl-brand);
+    font-weight: var(--cl-weight-semibold);
   }
 
   /* One column at a time on phones: a segmented switcher with the count of each column. */
@@ -83,150 +78,249 @@
     text-align: center;
   }
 
-  /* Horizontal and vertical scroll stay inside this box; the page itself never scrolls sideways.
-     It is also the containing block of the visually hidden labels inside the cards, which would
-     otherwise escape the clipping and widen the page. */
-  &__columns {
+  /* Horizontal and vertical scroll stay inside this box; the page itself never scrolls sideways. */
+  &__scroller {
+    display: flex;
+    flex-direction: column;
     position: relative;
-    display: grid;
     flex: 1 1 auto;
-    grid-auto-columns: minmax(16.25rem, 1fr);
-    grid-auto-flow: column;
-    gap: var(--cl-space-4);
-    align-items: start;
     box-sizing: border-box;
     width: 100%;
     min-width: 0;
     max-width: 100%;
     min-height: 0;
     overflow: auto;
-    padding-bottom: var(--cl-space-8);
+    padding-bottom: var(--cl-space-2);
   }
 
-  &__column {
+  &__skeleton {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(var(--board-col-min), 1fr));
+    gap: var(--cl-space-3);
+  }
+
+  &__skeleton-column {
     @include m.flex-column(3);
-    box-sizing: border-box;
-    min-width: 0;
-    padding: var(--cl-space-3);
-    border: 1px solid var(--cl-border);
-    border-radius: var(--cl-radius-lg);
-    background: var(--cl-bg-sunken);
-
-    &--over {
-      border-color: var(--cl-brand);
-      background: var(--cl-brand-subtle);
-    }
-
-    &--full {
-      border-color: var(--cl-danger);
-    }
   }
 
-  &__column-header {
-    @include m.flex-row(2, center, space-between);
-    min-width: 0;
-  }
-
-  &__column-title {
-    @include m.truncate;
+  &__choices {
+    @include m.flex-column(2);
     margin: 0;
-    color: var(--cl-text);
-    font-size: var(--cl-font-body-strong);
-    font-weight: var(--cl-weight-semibold);
+    padding: 0;
+    list-style: none;
   }
 
-  &__column-meta {
-    @include m.flex-row(1);
-    flex: none;
-  }
-
-  &__menu-trigger {
-    @include ib.icon-button;
-    width: var(--cl-control-h-sm);
-    height: var(--cl-control-h-sm);
-    color: var(--cl-text-subtle);
-  }
-
-  &__menu-item {
-    @include menu.menu-item;
-  }
-
-  &__wip {
-    @include m.cluster(2);
-  }
-
-  &__wip-input {
-    width: 7rem;
-  }
-
-  &__wip-save,
-  &__wip-cancel {
-    min-height: var(--cl-control-h-sm);
+  &__choice {
+    box-sizing: border-box;
+    width: 100%;
+    min-height: var(--cl-control-h-lg);
     padding: 0 var(--cl-space-3);
     border: 1px solid var(--cl-border-strong);
     border-radius: var(--cl-radius-md);
     background: var(--cl-bg-surface);
     color: var(--cl-text);
     font: inherit;
+    text-align: left;
     cursor: pointer;
+
+    &:hover {
+      background: var(--cl-bg-hover);
+    }
 
     &:focus-visible {
       outline: none;
       box-shadow: var(--cl-shadow-focus);
     }
+  }
 
-    @media (pointer: coarse) {
-      min-height: var(--cl-control-h-lg);
+  &__form {
+    @include m.flex-column(3);
+  }
+
+  &__input {
+    width: 100%;
+  }
+}
+
+/* Columns flex to fill the width; with many columns the grid grows and the scroller scrolls sideways. */
+.board-grid {
+  @include m.flex-column(3);
+  box-sizing: border-box;
+  width: 100%;
+  flex: 1 0 auto;
+  min-width: calc(
+    var(--board-cols, 1) * var(--board-col-min) + (var(--board-cols, 1) - 1) * var(--cl-space-3)
+  );
+
+  &__head {
+    display: grid;
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    grid-template-columns: repeat(var(--board-cols, 1), minmax(var(--board-col-min), 1fr));
+    gap: var(--cl-space-3);
+    padding-bottom: var(--cl-space-1);
+    background: var(--cl-bg-page);
+  }
+}
+
+.board-lane {
+  @include m.flex-column(2);
+
+  /* The last lane takes the free height, so the columns reach the bottom of the board. */
+  &:last-child {
+    flex: 1 1 auto;
+  }
+
+  &__toggle {
+    @include m.flex-row(2);
+    position: sticky;
+    left: 0;
+    align-self: flex-start;
+    min-height: var(--cl-control-h-md);
+    padding: 0 var(--cl-space-3);
+    border: 0;
+    border-radius: var(--cl-radius-md);
+    background: transparent;
+    color: var(--cl-text);
+    font: inherit;
+    font-weight: var(--cl-weight-semibold);
+    cursor: pointer;
+
+    &:hover {
+      background: var(--cl-bg-hover);
+    }
+
+    &:focus-visible {
+      outline: none;
+      box-shadow: var(--cl-shadow-focus);
     }
   }
 
-  &__wip-save {
-    border-color: var(--cl-brand);
-    background: var(--cl-brand);
-    color: var(--cl-text-on-brand);
+  &__count {
+    padding: 0 var(--cl-space-2);
+    border-radius: var(--cl-radius-full);
+    background: var(--cl-bg-hover);
+    color: var(--cl-text-subtle);
+    font-size: var(--cl-font-small);
   }
 
-  &__column-body {
-    @include m.flex-column;
-    min-height: 7.5rem;
+  &__cells {
+    display: grid;
+    flex: 1 1 auto;
+    grid-template-columns: repeat(var(--board-cols, 1), minmax(var(--board-col-min), 1fr));
+    gap: var(--cl-space-3);
+    align-items: stretch;
+  }
+}
+
+.board-cell {
+  @include m.flex-column(2);
+  box-sizing: border-box;
+  min-width: 0;
+  min-height: 6rem;
+  padding: var(--cl-space-2);
+  border: 1px solid var(--cl-border);
+  border-radius: var(--cl-radius-lg);
+  background: var(--cl-bg-sunken);
+  transition: background var(--cl-motion-fast) var(--cl-ease);
+
+  &[data-wip='at_max'],
+  &[data-wip='below_min'] {
+    border-color: var(--cl-warning);
   }
 
-  &__cards {
-    @include m.flex-column(3);
-    margin: 0;
-    padding: 0;
-    list-style: none;
+  &[data-wip='over_max'] {
+    border-color: var(--cl-danger);
   }
 
-  &__card-item {
-    min-width: 0;
+  &.cdk-drop-list-dragging {
+    background: var(--cl-brand-subtle);
   }
 
-  &__card-row {
-    display: flex;
+  &__item {
     min-width: 0;
 
     &--draggable {
       cursor: grab;
     }
 
-    &--dragging {
-      opacity: 0.4;
+    &.cdk-drag-preview {
+      box-sizing: border-box;
+      z-index: var(--cl-z-overlay);
+    }
+
+    &.cdk-drag-animating {
+      transition: transform var(--cl-motion) var(--cl-ease);
     }
   }
 
-  @include m.respond-down(768px) {
-    &__columns {
-      grid-auto-columns: minmax(0, 1fr);
-      grid-auto-flow: row;
+  &__placeholder {
+    min-height: 4rem;
+    border: 2px dashed var(--cl-brand);
+    border-radius: var(--cl-radius-md);
+    background: var(--cl-brand-subtle);
+  }
+
+  &__empty {
+    margin: 0;
+    padding: var(--cl-space-4) var(--cl-space-2);
+    color: var(--cl-text-subtle);
+    font-size: var(--cl-font-small);
+    text-align: center;
+  }
+
+  &__create {
+    margin-top: auto;
+  }
+
+  &__add {
+    @include m.flex-row(2);
+    box-sizing: border-box;
+    width: 100%;
+    min-height: var(--cl-control-h-md);
+    padding: 0 var(--cl-space-3);
+    border: 0;
+    border-radius: var(--cl-radius-md);
+    background: transparent;
+    color: var(--cl-text-subtle);
+    font: inherit;
+    cursor: pointer;
+
+    &:hover {
+      background: var(--cl-bg-hover);
+      color: var(--cl-text);
     }
 
-    &__search {
-      width: 100%;
+    &:focus-visible {
+      outline: none;
+      box-shadow: var(--cl-shadow-focus);
     }
+  }
 
-    &__mine {
-      min-height: var(--cl-control-h-lg);
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+
+    &__item.cdk-drag-animating {
+      transition: none;
     }
+  }
+}
+
+.board-create {
+  @include m.flex-column(2);
+
+  &__input {
+    width: 100%;
+  }
+
+  &__error {
+    margin: 0;
+    color: var(--cl-danger-text);
+    font-size: var(--cl-font-small);
+  }
+
+  &__actions {
+    @include m.flex-row(2);
   }
 }

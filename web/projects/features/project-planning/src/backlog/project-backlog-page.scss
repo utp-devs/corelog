@@ -1,40 +1,131 @@
 @use '../../../../ui/styles/mixins' as m;
-@use '../../../../ui/app-shell/src/menu' as menu;
 
+/* Fluid template, two or three panes: epics (left), sections (center), selected issue (right). */
 .project-backlog {
+  @include m.flex-column(4);
+  flex: 1 1 auto;
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  padding-inline: var(--cl-gutter);
+
+  &__live {
+    @include m.visually-hidden;
+  }
+
+  &__sr {
+    @include m.visually-hidden;
+  }
+
+  &__actions {
+    @include m.cluster(2);
+  }
+
   &__alert {
     margin: 0;
   }
 
-  /* The stack takes the free height and its last block grows with it, so a short backlog never leaves a blank area. */
-  &__stack {
-    @include m.flex-column(4);
-    flex: 1 1 auto;
-    min-width: 0;
+  &__filters {
+    @include m.cluster(3);
   }
 
-  &__block {
+  &__search {
+    width: 20rem;
+    max-width: 100%;
+  }
+
+  &__epic-chip {
+    @include m.flex-row(2);
+    min-height: var(--cl-control-h-md);
+    padding: 0 var(--cl-space-3);
+    border: 1px solid var(--cl-brand);
+    border-radius: var(--cl-radius-full);
+    background: var(--cl-brand-subtle);
+    color: var(--cl-brand);
+    font: inherit;
+    font-size: var(--cl-font-small);
+    cursor: pointer;
+
+    &:focus-visible {
+      outline: none;
+      box-shadow: var(--cl-shadow-focus);
+    }
+  }
+
+  &__selection {
+    @include m.flex-row(2);
+    color: var(--cl-text-subtle);
+    font-size: var(--cl-font-small);
+  }
+
+  &__link {
+    min-height: var(--cl-control-h-md);
+    padding: 0 var(--cl-space-2);
+    border: 0;
+    background: transparent;
+    color: var(--cl-brand);
+    font: inherit;
+    font-size: var(--cl-font-small);
+    text-decoration: underline;
+    cursor: pointer;
+
+    &:focus-visible {
+      outline: none;
+      box-shadow: var(--cl-shadow-focus);
+    }
+  }
+
+  &__layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    flex: 1 1 auto;
+    gap: var(--cl-space-4);
+    align-items: stretch;
+
+    @include m.respond-up(1100px) {
+      grid-template-columns: 17.5rem minmax(0, 1fr);
+    }
+
+    &--panel {
+      @include m.respond-up(1100px) {
+        grid-template-columns: 17.5rem minmax(0, 1fr) 24rem;
+      }
+    }
+  }
+
+  &__epics {
+    @include m.flex-column(2);
+    align-self: start;
+    padding: var(--cl-space-3);
     border: 1px solid var(--cl-border);
     border-radius: var(--cl-radius-lg);
     background: var(--cl-bg-surface);
 
-    &:last-child {
-      flex: 1 1 auto;
+    @include m.respond-up(1100px) {
+      position: sticky;
+      top: var(--cl-space-4);
     }
   }
 
-  &__block-title {
+  &__epics-title {
     margin: 0;
-    font-size: inherit;
+    font-size: var(--cl-font-h3);
+    font-weight: var(--cl-weight-semibold);
   }
 
-  &__toggle {
-    @include m.flex-row(2, center);
+  &__epics-empty {
+    margin: 0;
+    color: var(--cl-text-subtle);
+    font-size: var(--cl-font-small);
+  }
+
+  &__epic {
+    @include m.flex-column(1);
+    box-sizing: border-box;
     width: 100%;
-    min-height: var(--cl-control-h-lg);
-    padding: var(--cl-space-3) var(--cl-space-4);
-    border: 0;
-    border-radius: var(--cl-radius-lg);
+    padding: var(--cl-space-2) var(--cl-space-3);
+    border: 1px solid transparent;
+    border-radius: var(--cl-radius-md);
     background: transparent;
     color: var(--cl-text);
     font: inherit;
@@ -49,181 +140,52 @@
       outline: none;
       box-shadow: var(--cl-shadow-focus);
     }
-  }
 
-  &__chevron {
-    color: var(--cl-text-subtle);
-    font-size: var(--cl-font-small);
-  }
-
-  &__block-name {
-    @include m.truncate;
-    font-size: var(--cl-font-body-strong);
-    font-weight: var(--cl-weight-semibold);
-  }
-
-  &__block-meta {
-    margin-left: auto;
-    color: var(--cl-text-subtle);
-    font-size: var(--cl-font-small);
-    white-space: nowrap;
-  }
-
-  &__sprint-head {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(10rem, 16rem);
-    gap: var(--cl-space-3) var(--cl-space-6);
-    align-items: center;
-    padding: 0 var(--cl-space-4) var(--cl-space-3);
-
-    @include m.respond-down(640px) {
-      grid-template-columns: minmax(0, 1fr);
+    &--on {
+      border-color: var(--cl-brand);
+      background: var(--cl-brand-subtle);
     }
   }
 
-  &__goal {
-    margin: 0;
-    color: var(--cl-text-subtle);
+  &__epic-name {
+    font-weight: var(--cl-weight-medium);
+    overflow-wrap: anywhere;
   }
 
-  &__progress {
-    display: block;
+  &__epic-meta {
+    color: var(--cl-text-subtle);
+    font-size: var(--cl-font-small);
+  }
+
+  &__sections {
+    @include m.flex-column(4);
     min-width: 0;
   }
 
+  /* The backlog list takes the free height: it is a large place to drop issues. */
+  &__section {
+    &--grow {
+      flex: 1 1 auto;
+    }
+  }
+
   &__panel {
-    border-top: 1px solid var(--cl-divider);
+    align-self: start;
+    position: sticky;
+    top: var(--cl-space-4);
+    padding: var(--cl-space-4);
+    border: 1px solid var(--cl-border);
+    border-radius: var(--cl-radius-lg);
+    background: var(--cl-bg-surface);
   }
 
   &__note {
     margin: 0;
-    padding: var(--cl-space-4);
-    color: var(--cl-text-subtle);
-  }
-
-  &__issues {
-    @include m.flex-column(0);
-    margin: 0;
-    padding: 0;
-    list-style: none;
-  }
-
-  &__issue {
-    @include m.flex-row(3, center);
-    padding: var(--cl-space-3) var(--cl-space-4);
-
-    & + & {
-      border-top: 1px solid var(--cl-divider);
-    }
-
-    .project-backlog__main {
-      flex: 1 1 auto;
-    }
-
-    @include m.respond-down(640px) {
-      flex-wrap: wrap;
-    }
-  }
-
-  &__points {
-    min-width: 2ch;
-    color: var(--cl-text-subtle);
-    font-variant-numeric: tabular-nums;
-    text-align: right;
-  }
-
-  &__position {
-    color: var(--cl-text-subtle);
-    font-variant-numeric: tabular-nums;
-  }
-
-  &__main {
-    @include m.flex-column(1);
-    min-width: 0;
-  }
-
-  &__summary {
-    @include m.truncate;
-    display: block;
-    max-width: 100%;
-    color: var(--cl-text);
-    font-weight: var(--cl-weight-medium);
-    text-decoration: none;
-
-    /* A tap target on phones. */
-    @include m.respond-down(768px) {
-      padding-block: var(--cl-space-2);
-    }
-
-    &:hover {
-      color: var(--cl-brand);
-      text-decoration: underline;
-    }
-
-    &:focus-visible {
-      outline: none;
-      box-shadow: var(--cl-shadow-focus);
-    }
-  }
-
-  &__key,
-  &__type {
     color: var(--cl-text-subtle);
     font-size: var(--cl-font-small);
   }
 
-  &__order {
-    @include m.flex-row(1, center, flex-end);
-  }
-
-  /* 32 px targets on pointer devices, 44 px on touch screens. */
-  &__arrow {
-    @include m.flex-row(0, center, center);
-    width: var(--cl-control-h-sm);
-    height: var(--cl-control-h-sm);
-    padding: 0;
-    border: 1px solid var(--cl-border-strong);
-    border-radius: var(--cl-radius-md);
-    background: var(--cl-bg-surface);
-    color: var(--cl-text);
-    cursor: pointer;
-
-    &:hover:not(:disabled) {
-      background: var(--cl-bg-hover);
-    }
-
-    &:disabled {
-      border-color: var(--cl-border);
-      color: var(--cl-text-disabled);
-      cursor: not-allowed;
-    }
-
-    &:focus-visible {
-      outline: none;
-      box-shadow: var(--cl-shadow-focus);
-    }
-
-    @media (pointer: coarse) {
-      width: var(--cl-control-h-lg);
-      height: var(--cl-control-h-lg);
-    }
-  }
-
-  &__menu-item {
-    @include menu.menu-item;
-
-    &:disabled {
-      color: var(--cl-text-disabled);
-      cursor: not-allowed;
-    }
-  }
-
-  &__card {
+  &__skeleton {
     @include m.flex-column(2);
-    min-width: 0;
-  }
-
-  &__meta {
-    @include m.cluster(2);
   }
 }

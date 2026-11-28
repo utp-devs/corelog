@@ -1,0 +1,25 @@
+<div class="duration-input">
+  <input
+    class="duration-input__control"
+    type="text"
+    autocomplete="off"
+    spellcheck="false"
+    [id]="inputId()"
+    [attr.aria-label]="ariaLabel()"
+    [attr.aria-invalid]="invalid() || error() ? 'true' : null"
+    [attr.aria-describedby]="describedBy()"
+    [placeholder]="placeholder()"
+    [disabled]="isDisabled()"
+    [value]="text()"
+    (input)="onInput($event)"
+    (blur)="onBlur()"
+  />
+  <p
+    class="duration-input__hint"
+    [class.duration-input__hint--error]="error()"
+    [id]="describedBy()"
+    [attr.role]="error() ? 'alert' : null"
+  >
+    {{ error() ?? hint() ?? '' }}
+  </p>
+</div>

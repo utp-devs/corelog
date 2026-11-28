@@ -23,13 +23,15 @@ import {
   type SearchHit,
 } from '@corelog/core';
 
+import { MarkText } from '@corelog/ui/mark-text';
+
 import { CommandRegistry, type Command, type CommandGroup } from './command-registry';
 import { groupHits, highlightSegments, matchesQuery, type HitGroup } from './groups';
 
 /** Remote search for projects and issues. A rejection shows the error state. */
 export type PaletteSearch = (query: string) => Promise<SearchHit[]>;
 
-export type PaletteSection = CommandGroup | 'Recientes' | HitGroup;
+export type PaletteSection = CommandGroup | 'Recientes' | HitGroup | 'Búsqueda';
 
 export interface PaletteOption {
   readonly key: string;
@@ -37,6 +39,8 @@ export interface PaletteOption {
   readonly title: string;
   /** Issue or project key shown as a chip (the hit subtitle). */
   readonly subtitle?: string;
+  /** Title with the matches between mark tags (escaped HTML); shown through the sanitizing text component. */
+  readonly highlight?: string;
   /** Runs after the palette has closed. */
   readonly run: () => void;
 }
@@ -54,6 +58,11 @@ const SECTION_ORDER: readonly PaletteSection[] = [
   'Recientes',
   'Proyectos',
   'Incidencias',
+  'Personas',
+  'Equipos',
+  'Filtros',
+  'Notas',
+  'Búsqueda',
 ];
 
 /** Stroke paths (24 px grid) for the section icons. */
@@ -63,6 +72,13 @@ const SECTION_ICON: Record<PaletteSection, string> = {
   Recientes: 'M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm0 5v5l3 2',
   Proyectos: 'M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zM3 10h18',
   Incidencias: 'M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9zM14 3v6h6M8 13h8M8 17h8',
+  Personas:
+    'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM22 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8',
+  Equipos:
+    'M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM23 21v-2a4 4 0 0 0-3-3.9',
+  Filtros: 'M22 3H2l8 9.5V19l4 2v-8.5z',
+  Notas: 'M4 4h12l4 4v12H4zM8 12h8M8 16h5',
+  Búsqueda: 'M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM20 20l-4-4',
 };
 
 let nextPaletteId = 0;
@@ -74,6 +90,7 @@ let nextPaletteId = 0;
  */
 @Component({
   selector: 'app-command-palette',
+  imports: [MarkText],
   templateUrl: './command-palette.html',
   styleUrl: './command-palette.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -95,6 +112,8 @@ export class CommandPalette {
   readonly search = input.required<PaletteSearch>();
   /** Emits the search hit or recent item the user picked. The palette closes first. */
   readonly openHit = output<SearchHit>();
+  /** Emits the typed text when the user asks for every result in the navigator. */
+  readonly openAll = output<string>();
 
   protected readonly listId = `command-palette-list-${nextPaletteId++}`;
   protected readonly sectionIcon = SECTION_ICON;
@@ -140,6 +159,14 @@ export class CommandPalette {
         options.push(this.hitOption(section.name, hit));
       }
     }
+    if (this.searchable()) {
+      options.push({
+        key: 'search-all',
+        section: 'Búsqueda',
+        title: `Ver todos los resultados de «${term}»`,
+        run: () => this.openAll.emit(term),
+      });
+    }
     // Index N must match the Nth option in the DOM, so options are ordered by section here.
     return options.sort(
       (a, b) => SECTION_ORDER.indexOf(a.section) - SECTION_ORDER.indexOf(b.section),
@@ -150,7 +177,11 @@ export class CommandPalette {
   /** Typed text shown in the empty state. */
   protected readonly typedTerm = this.term;
   protected readonly showEmpty = computed(
-    () => this.searchable() && !this.loading() && !this.hasError() && this.options().length === 0,
+    () =>
+      this.searchable() &&
+      !this.loading() &&
+      !this.hasError() &&
+      this.options().every((option) => option.section === 'Búsqueda'),
   );
   private readonly safeActive = computed(() =>
     Math.min(this.active(), Math.max(this.options().length - 1, 0)),
@@ -372,7 +403,8 @@ export class CommandPalette {
       key: `${section}-${hit.kind}-${hit.id}`,
       section,
       title: hit.title,
-      subtitle: hit.subtitle,
+      subtitle: hit.key ?? hit.subtitle,
+      highlight: section === 'Recientes' ? undefined : hit.highlight,
       run: () => this.openHit.emit(hit),
     };
   }

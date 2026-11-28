@@ -1,0 +1,27 @@
+@use '../../styles/mixins' as m;
+
+.legal-document-dialog {
+  @include m.flex-column(3);
+  min-width: 0;
+
+  &__meta {
+    @include m.flex-row(1);
+    margin: 0;
+    font-size: var(--cl-font-small);
+    color: var(--cl-text-subtle);
+  }
+
+  &__status {
+    @include m.flex-column(3, flex-start);
+    margin: 0;
+    color: var(--cl-text-subtle);
+
+    &--error {
+      color: var(--cl-danger-text);
+    }
+  }
+
+  &__message {
+    margin: 0;
+  }
+}

@@ -1,0 +1,42 @@
+<app-dialog
+  size="lg"
+  [stacked]="true"
+  [open]="open()"
+  [heading]="heading()"
+  (closeRequested)="closed.emit()"
+>
+  <div class="legal-document-dialog" [attr.aria-busy]="state().kind === 'loading'">
+    @switch (state().kind) {
+      @case ('loading') {
+        <p class="legal-document-dialog__status" role="status">Cargando el documento...</p>
+      }
+      @case ('error') {
+        <div
+          class="legal-document-dialog__status legal-document-dialog__status--error"
+          role="alert"
+        >
+          <p class="legal-document-dialog__message">
+            No se pudo cargar el documento. Inténtalo de nuevo.
+          </p>
+          <p-button label="Reintentar" severity="secondary" size="small" (onClick)="retry()" />
+        </div>
+      }
+      @case ('ready') {
+        @if (document(); as doc) {
+          <p class="legal-document-dialog__meta">
+            Versión {{ doc.version }}
+            @if (doc.effectiveFrom) {
+              <span aria-hidden="true">·</span>
+              Vigente desde {{ doc.effectiveFrom | date: 'dd/MM/yyyy' }}
+            }
+          </p>
+          <app-rich-text-view class="legal-document-dialog__body" [value]="doc.bodyMarkdown" />
+        }
+      }
+    }
+  </div>
+  <p-button dialogFooter label="Cerrar" severity="secondary" (onClick)="closed.emit()" />
+  @if (acceptable() && document()) {
+    <p-button dialogFooter label="Aceptar y cerrar" (onClick)="accept()" />
+  }
+</app-dialog>

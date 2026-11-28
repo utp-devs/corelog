@@ -28,6 +28,8 @@ import {
   OrganizationStore,
   ProjectStore,
   StorageService,
+  CustomFieldApiService,
+  FieldLayoutItem,
   Issue,
   IssueStore,
   UNSAVED_CANCEL_TEXT,
@@ -45,6 +47,7 @@ import {
 import { ConfirmModal } from '@corelog/ui/confirm-modal';
 import { Dialog } from '@corelog/ui/dialog';
 import { CatalogIcon } from '@corelog/ui/catalog-icon';
+import { FieldEditor } from '@corelog/ui/field-editor';
 import { FieldControl, FieldRow } from '@corelog/ui/field-row';
 import { RichTextEditor } from '@corelog/ui/rich-text-editor';
 import { PickableUser, UserPicker } from '@corelog/ui/user-picker';
@@ -74,6 +77,7 @@ const FILTERABLE_PROJECTS = 8;
     ConfirmModal,
     Dialog,
     FieldControl,
+    FieldEditor,
     FieldRow,
     InputText,
     RichTextEditor,
@@ -97,6 +101,7 @@ export class CreateIssueForm {
   private readonly directory = inject(UserDirectoryApiService);
   private readonly organizationId = inject(ORGANIZATION_ID_PROVIDER);
   private readonly storage = inject(StorageService);
+  private readonly fieldsApi = inject(CustomFieldApiService);
 
   /** The dialog asks to close (cancel, Escape, X, or after the user chose what to do next). */
   readonly closed = output<void>();
@@ -133,6 +138,10 @@ export class CreateIssueForm {
   protected readonly created = signal<Issue | null>(null);
   protected readonly discardOpen = signal(false);
   protected readonly assigneeCandidates = signal<PickableUser[]>([]);
+  /** Custom fields the project asks for this issue type, and the values typed so far. */
+  protected readonly customFields = signal<readonly FieldLayoutItem[]>([]);
+  protected readonly customValues = signal<Readonly<Record<string, unknown>>>({});
+  private readonly typeId = signal('');
 
   protected readonly activeProjects = computed(() =>
     this.projects.projects().filter((project) => !project.archivedAt),
@@ -204,6 +213,15 @@ export class CreateIssueForm {
     this.form.controls.projectId.valueChanges
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((id) => this.projectId.set(id));
+    this.form.controls.issueTypeId.valueChanges
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((id) => this.typeId.set(id));
+    // The project decides which custom fields the type asks for, which are required and the defaults.
+    effect(() => {
+      const project = this.projectId();
+      const type = this.typeId();
+      untracked(() => this.loadLayout(project, type));
+    });
     this.reloadProjects();
     this.loadAssignees();
     // The form appears once the projects are known: the summary field takes the focus then.
@@ -255,6 +273,14 @@ export class CreateIssueForm {
     }
     if (this.submitting()) return;
 
+    const missing = this.customFields().find(
+      (field) => field.required && this.isEmpty(this.customValues()[field.fieldId ?? '']),
+    );
+    if (missing) {
+      this.serverError.set(`Completa el campo «${missing.name}».`);
+      return;
+    }
+
     const values = this.form.getRawValue();
     this.submitting.set(true);
     this.issues
@@ -264,6 +290,7 @@ export class CreateIssueForm {
         description: values.description,
         priorityId: values.priorityId || undefined,
         issueTypeId: values.issueTypeId || undefined,
+        custom: this.customFields().length > 0 ? this.customValues() : undefined,
       })
       .pipe(
         switchMap((issue) =>
@@ -307,6 +334,10 @@ export class CreateIssueForm {
     afterNextRender(() => this.summaryField()?.nativeElement.focus(), { injector: this.injector });
   }
 
+  protected setCustom(fieldId: string | null, value: unknown): void {
+    if (fieldId) this.customValues.update((current) => ({ ...current, [fieldId]: value }));
+  }
+
   protected goToProjects(): void {
     this.closed.emit();
     void this.router.navigateByUrl('/projects');
@@ -322,10 +353,41 @@ export class CreateIssueForm {
     );
   }
 
+  private isEmpty(value: unknown): boolean {
+    return (
+      value === null ||
+      value === undefined ||
+      value === '' ||
+      (Array.isArray(value) && value.length === 0)
+    );
+  }
+
+  private loadLayout(projectId: string, typeId: string): void {
+    if (!projectId || !typeId) {
+      this.customFields.set([]);
+      return;
+    }
+    this.fieldsApi
+      .layout(projectId, typeId)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (layout) => {
+          this.customFields.set(layout.items.filter((item) => item.kind === 'custom'));
+          this.customValues.set({});
+        },
+        error: () => this.customFields.set([]),
+      });
+  }
+
   private defaultProjectId(ids: readonly string[]): string {
     const inView = PROJECT_IN_URL.exec(this.router.url)?.[1];
     const fromUrl = inView ? decodeURIComponent(inView) : null;
     if (fromUrl && ids.includes(fromUrl)) return fromUrl;
+    // The address names the project by its key (CORE) or by its id.
+    const byKey = this.activeProjects().find(
+      (project) => project.key.toLowerCase() === fromUrl?.toLowerCase(),
+    );
+    if (byKey) return byKey.id;
     const last = this.storage.getItem(LAST_CREATE_PROJECT_KEY);
     if (last && ids.includes(last)) return last;
     return ids[0] ?? '';

@@ -1,270 +1,214 @@
 @if (accessVariant(); as variant) {
-  <app-page-container variant="wide" pageName="backlog" [fill]="true">
-    <app-error-page [variant]="variant" [framed]="true" />
+  <app-page-container variant="fluid" pageName="backlog">
+    <div class="project-backlog">
+      <app-error-page [variant]="variant" [framed]="true" />
+    </div>
   </app-page-container>
 } @else {
-  <app-page-container variant="wide" pageName="backlog" [ready]="ready()" [fill]="true">
-    <app-page-header
-      title="Backlog"
-      [subtitle]="
-        readOnly()
-          ? 'Solo lectura: las incidencias de arriba se trabajan primero.'
-          : 'Las incidencias de arriba se trabajan primero. Usa las flechas o el menú de cada fila para reordenarlas.'
-      "
-    >
-      @if (scope.projectId(); as projectId) {
-        <div appPageHeaderActions>
-          <p-button
-            label="Planificar sprints"
-            icon="pi pi-calendar"
-            [outlined]="true"
-            [routerLink]="['/projects', projectId, 'sprints']"
-          />
-        </div>
-      }
-    </app-page-header>
-    <app-archived-notice />
-
-    @if (store.moveError(); as message) {
-      <div class="project-backlog__alert" role="alert">
-        <p-message severity="warn" [closable]="true" (onClose)="store.clearMoveError()">{{
-          message
-        }}</p-message>
-      </div>
-    }
-
-    <div class="project-backlog__stack">
-      @for (block of sprintBlocks(); track block.sprint.id) {
-        <section
-          class="project-backlog__block"
-          [attr.aria-labelledby]="'backlog-title-' + block.sprint.id"
-        >
-          <h2 class="project-backlog__block-title" [id]="'backlog-title-' + block.sprint.id">
-            <button
-              type="button"
-              class="project-backlog__toggle"
-              [attr.aria-expanded]="isOpen(block.sprint.id)"
-              [attr.aria-controls]="'backlog-panel-' + block.sprint.id"
-              (click)="toggle(block.sprint.id)"
-            >
-              <i
-                class="project-backlog__chevron pi"
-                [class.pi-chevron-down]="isOpen(block.sprint.id)"
-                [class.pi-chevron-right]="!isOpen(block.sprint.id)"
-                aria-hidden="true"
-              ></i>
-              <span class="project-backlog__block-name">{{ block.sprint.name }}</span>
-              <app-lozenge [tone]="sprintStatusTone(block.sprint.status)">{{
-                sprintStatusLabel(block.sprint.status)
-              }}</app-lozenge>
-              <span class="project-backlog__block-meta">{{ sprintDates(block) }}</span>
-            </button>
-          </h2>
-          <div class="project-backlog__sprint-head">
-            <p class="project-backlog__goal">{{ block.sprint.goal || 'Sin objetivo definido.' }}</p>
-            <app-progress-bar
-              class="project-backlog__progress"
-              tone="success"
-              [value]="percentOf(block)"
-              [label]="'Resueltas ' + resolvedOf(block) + ' de ' + block.issues.length"
+  <app-page-container variant="fluid" pageName="backlog" [ready]="ready()" [fill]="true">
+    <div class="project-backlog">
+      <app-page-header
+        title="Backlog"
+        subtitle="Planifica el trabajo: ordena las incidencias, arrástralas a un sprint y empieza a trabajar."
+      >
+        <div appPageHeaderActions class="project-backlog__actions">
+          @if (canManage()) {
+            <p-button
+              label="Crear sprint"
+              icon="pi pi-plus"
+              data-testid="create-sprint"
+              (onClick)="openCreateSprint()"
             />
-          </div>
-          @if (isOpen(block.sprint.id)) {
-            <div class="project-backlog__panel" [id]="'backlog-panel-' + block.sprint.id">
-              @if (block.issues.length === 0) {
-                <p class="project-backlog__note">Este sprint aún no tiene incidencias.</p>
-              } @else {
-                <ul class="project-backlog__issues">
-                  @for (issue of block.issues; track issue.id) {
-                    <li class="project-backlog__issue">
-                      <div class="project-backlog__main">
-                        <a
-                          class="project-backlog__summary"
-                          [routerLink]="['/browse', issue.id]"
-                          [title]="issue.title"
-                          >{{ issue.title }}</a
-                        >
-                        <span class="project-backlog__key">{{ shortKey(issue) }}</span>
-                      </div>
-                      <app-priority-tag [priority]="priorityOf(issue.priority)" />
-                      <app-lozenge [category]="statusCategory(issue.status)">{{
-                        statusLabel(issue.status)
-                      }}</app-lozenge>
-                      <span class="project-backlog__points">{{ issue.storyPoints ?? '-' }}</span>
-                    </li>
-                  }
-                </ul>
-              }
-            </div>
           }
-        </section>
-      }
+        </div>
+      </app-page-header>
+      <app-archived-notice />
+      <p class="project-backlog__live" role="status" aria-live="polite">
+        {{ store.announcement() }}
+      </p>
 
-      <section class="project-backlog__block" aria-labelledby="backlog-title-backlog">
-        <h2 class="project-backlog__block-title" id="backlog-title-backlog">
-          <button
-            type="button"
-            class="project-backlog__toggle"
-            [attr.aria-expanded]="isOpen(backlogSectionId)"
-            aria-controls="backlog-panel-backlog"
-            (click)="toggle(backlogSectionId)"
-          >
-            <i
-              class="project-backlog__chevron pi"
-              [class.pi-chevron-down]="isOpen(backlogSectionId)"
-              [class.pi-chevron-right]="!isOpen(backlogSectionId)"
-              aria-hidden="true"
-            ></i>
-            <span class="project-backlog__block-name">Backlog</span>
-            <span class="project-backlog__block-meta">{{ items().length }} sin planificar</span>
-          </button>
-        </h2>
-        @if (isOpen(backlogSectionId)) {
-          <div
-            class="project-backlog__panel project-backlog__panel--flush"
-            id="backlog-panel-backlog"
-          >
-            <app-data-table
-              tableKey="project-backlog"
-              [columns]="columns"
-              [data]="items()"
-              rowKey="id"
-              [loading]="loading()"
-              [error]="tableError()"
-              [emptyState]="emptyTpl"
-              [mobileRender]="mobileTpl"
-              (retry)="retry()"
-            >
-              <ng-template appDataTableCell="position" let-row>
-                <span class="project-backlog__position">{{ positionOf(row) }}</span>
-              </ng-template>
-              <ng-template appDataTableCell="summary" let-row>
-                <div class="project-backlog__main">
-                  <a
-                    class="project-backlog__summary"
-                    [routerLink]="['/browse', row.id]"
-                    [title]="row.summary"
-                    >{{ row.summary }}</a
-                  >
-                  <span class="project-backlog__key">{{ shortKey(row) }}</span>
-                </div>
-              </ng-template>
-              <ng-template appDataTableCell="type" let-row>
-                {{ typeLabel(row.type) }}
-              </ng-template>
-              <ng-template appDataTableCell="priority" let-row>
-                <app-priority-tag [priority]="priorityOf(row.priority)" />
-              </ng-template>
-              <ng-template appDataTableCell="status" let-row>
-                <app-lozenge [category]="statusCategory(row.status)">{{
-                  statusLabel(row.status)
-                }}</app-lozenge>
-              </ng-template>
-              <ng-template appDataTableCell="points" let-row>
-                {{ row.storyPoints ?? '-' }}
-              </ng-template>
-              <ng-template appDataTableCell="order" let-row>
-                <ng-container *ngTemplateOutlet="moveTpl; context: { $implicit: row }" />
-              </ng-template>
-            </app-data-table>
-
-            <ng-template #emptyTpl>
-              @if (store.isEmpty()) {
-                <app-empty-state
-                  title="El backlog está vacío"
-                  description="Crea incidencias o impórtalas para empezar a planificar."
-                />
-              } @else {
-                <app-empty-state
-                  title="Todo está planificado"
-                  description="Las incidencias del backlog ya están asignadas a un sprint."
-                />
-              }
-            </ng-template>
-
-            <ng-template #mobileTpl let-row>
-              <div class="project-backlog__card">
-                <a
-                  class="project-backlog__summary"
-                  [routerLink]="['/browse', row.id]"
-                  [title]="row.summary"
-                  >{{ row.summary }}</a
-                >
-                <div class="project-backlog__meta">
-                  <span class="project-backlog__key">{{ shortKey(row) }}</span>
-                  <span class="project-backlog__type">{{ typeLabel(row.type) }}</span>
-                  <app-priority-tag [priority]="priorityOf(row.priority)" />
-                  <app-lozenge [category]="statusCategory(row.status)">{{
-                    statusLabel(row.status)
-                  }}</app-lozenge>
-                </div>
-                <ng-container *ngTemplateOutlet="moveTpl; context: { $implicit: row }" />
-              </div>
-            </ng-template>
-
-            <ng-template #moveTpl let-row>
-              @if (!readOnly()) {
-                <div class="project-backlog__order">
-                  <button
-                    type="button"
-                    class="project-backlog__arrow"
-                    appTooltip="Subir"
-                    [attr.aria-label]="'Subir ' + row.summary"
-                    [disabled]="!canMoveUp(row)"
-                    (click)="moveUp(row)"
-                  >
-                    <i class="pi pi-arrow-up" aria-hidden="true"></i>
-                  </button>
-                  <button
-                    type="button"
-                    class="project-backlog__arrow"
-                    appTooltip="Bajar"
-                    [attr.aria-label]="'Bajar ' + row.summary"
-                    [disabled]="!canMoveDown(row)"
-                    (click)="moveDown(row)"
-                  >
-                    <i class="pi pi-arrow-down" aria-hidden="true"></i>
-                  </button>
-                  <app-dropdown-menu
-                    [label]="'Más opciones de orden de ' + row.summary"
-                    align="end"
-                  >
-                    <button
-                      appMenuTrigger
-                      type="button"
-                      class="project-backlog__arrow"
-                      appTooltip="Más opciones"
-                      [attr.aria-label]="'Más opciones de orden de ' + row.summary"
-                    >
-                      <i class="pi pi-ellipsis-h" aria-hidden="true"></i>
-                    </button>
-                    <button
-                      type="button"
-                      role="menuitem"
-                      class="project-backlog__menu-item"
-                      [disabled]="!canMoveUp(row)"
-                      (click)="moveToStart(row)"
-                    >
-                      <i class="pi pi-angle-double-up" aria-hidden="true"></i>
-                      <span>Mover al inicio</span>
-                    </button>
-                    <button
-                      type="button"
-                      role="menuitem"
-                      class="project-backlog__menu-item"
-                      [disabled]="!canMoveDown(row)"
-                      (click)="moveToEnd(row)"
-                    >
-                      <i class="pi pi-angle-double-down" aria-hidden="true"></i>
-                      <span>Mover al final</span>
-                    </button>
-                  </app-dropdown-menu>
-                </div>
-              }
-            </ng-template>
+      @if (failed()) {
+        <app-error-state [message]="loadErrorMessage" [canRetry]="true" (retry)="retry()" />
+      } @else if (view()) {
+        @if (store.changeError(); as message) {
+          <div class="project-backlog__alert" role="alert">
+            <p-message severity="warn" [closable]="true" (onClose)="store.clearError()">{{
+              message
+            }}</p-message>
           </div>
         }
-      </section>
+
+        <div class="project-backlog__filters" role="search" aria-label="Filtrar el backlog">
+          <app-search-input
+            class="project-backlog__search"
+            placeholder="Buscar por texto o clave"
+            ariaLabel="Buscar en el backlog"
+            [debounceMs]="250"
+            [value]="store.search()"
+            (valueChange)="store.setSearch($event)"
+          />
+          @if (store.epicFilter(); as epicId) {
+            <button
+              type="button"
+              class="project-backlog__epic-chip"
+              data-testid="epic-filter-clear"
+              (click)="store.setEpicFilter(epicId)"
+            >
+              Épica filtrada
+              <i class="pi pi-times" aria-hidden="true"></i>
+              <span class="project-backlog__sr">Quitar el filtro de épica</span>
+            </button>
+          }
+          @if (store.selectedIds().length > 1) {
+            <span class="project-backlog__selection" data-testid="selection-count">
+              {{ store.selectedIds().length }} seleccionadas
+              <button type="button" class="project-backlog__link" (click)="store.clearSelection()">
+                Limpiar
+              </button>
+            </span>
+          }
+          @if (!isWide()) {
+            <button
+              type="button"
+              class="project-backlog__link"
+              [attr.aria-expanded]="epicsOpen()"
+              (click)="epicsOpen.set(!epicsOpen())"
+            >
+              {{ epicsOpen() ? 'Ocultar épicas' : 'Mostrar épicas' }}
+            </button>
+          }
+        </div>
+
+        <div
+          class="project-backlog__layout"
+          [class.project-backlog__layout--panel]="isWide() && inspected()"
+        >
+          @if (isWide() || epicsOpen()) {
+            <aside class="project-backlog__epics" aria-label="Épicas" data-testid="epics-panel">
+              <h2 class="project-backlog__epics-title">Épicas</h2>
+              @for (epic of epics(); track epic.id) {
+                <button
+                  type="button"
+                  class="project-backlog__epic"
+                  [class.project-backlog__epic--on]="store.epicFilter() === epic.id"
+                  [attr.aria-pressed]="store.epicFilter() === epic.id"
+                  [attr.data-testid]="'epic-' + epic.key"
+                  (click)="store.setEpicFilter(epic.id)"
+                >
+                  <span class="project-backlog__epic-name">{{ epic.summary }}</span>
+                  <span class="project-backlog__epic-meta"
+                    >{{ epic.key }} · {{ epic.done }}/{{ epic.total }}</span
+                  >
+                  <app-progress-bar
+                    [value]="epic.progress * 100"
+                    [label]="'Avance de ' + epic.summary"
+                    tone="success"
+                  />
+                </button>
+              } @empty {
+                <p class="project-backlog__epics-empty">Todavía no hay épicas en este proyecto.</p>
+              }
+            </aside>
+          }
+
+          <div class="project-backlog__sections" cdkDropListGroup>
+            @for (section of sections(); track section.sprint?.id ?? 'backlog') {
+              <app-backlog-section
+                class="project-backlog__section"
+                [class.project-backlog__section--grow]="section.kind === 'backlog'"
+                [section]="section"
+                [selectedIds]="store.selectedIds()"
+                [orderedIds]="orderedIds()"
+                [destinations]="destinations()"
+                [canMove]="canMove()"
+                [canManage]="canManage()"
+                [readOnly]="archived()"
+                [hasActive]="hasActive()"
+                (selectRequested)="onSelect($event)"
+                (rankRequested)="onRank($event)"
+                (startRequested)="openStartSprint(section)"
+                (completeRequested)="openComplete(section)"
+                (editRequested)="section.sprint && openEditSprint(section.sprint)"
+                (deleteRequested)="deleteTarget.set(section.sprint)"
+                (pointsChanged)="onPoints($event)"
+                (createRequested)="onCreateIssue($event, section)"
+              />
+            }
+            @if (totalIssues() === 0 && sections().length <= 1) {
+              <app-empty-state
+                image="empty-issues"
+                title="Todavía no hay incidencias"
+                description="Crea la primera desde el backlog y planifícala en un sprint."
+              />
+            }
+            @if (view()?.truncated) {
+              <p class="project-backlog__note">
+                Se muestran las primeras 3000 incidencias. Usa la búsqueda para acotar.
+              </p>
+            }
+          </div>
+
+          @if (isWide() && inspected(); as issue) {
+            <aside class="project-backlog__panel" aria-label="Detalle de la incidencia">
+              <app-backlog-issue-panel [issue]="issue" (closed)="store.clearSelection()" />
+            </aside>
+          }
+        </div>
+
+        @if (!isWide()) {
+          <app-side-panel
+            heading="Incidencia"
+            [open]="inspected() !== null"
+            (closeRequested)="store.clearSelection()"
+          >
+            @if (inspected(); as issue) {
+              <app-backlog-issue-panel [issue]="issue" (closed)="store.clearSelection()" />
+            }
+          </app-side-panel>
+        }
+      } @else {
+        <div class="project-backlog__skeleton" aria-busy="true" aria-label="Cargando backlog">
+          @for (index of skeletonRows; track index) {
+            <p-skeleton height="3rem" />
+          }
+        </div>
+      }
     </div>
+
+    <app-sprint-dialog
+      [open]="sprintDialogOpen()"
+      [mode]="sprintDialogMode()"
+      [sprint]="dialogSprint()"
+      [issueCount]="dialogIssueCount()"
+      [suggestedName]="suggestedName()"
+      [busy]="sprintBusy()"
+      [error]="sprintError()"
+      (submitted)="submitSprint($event)"
+      (closeRequested)="sprintDialogOpen.set(false)"
+    />
+
+    <app-complete-sprint-dialog
+      [open]="completeOpen()"
+      [sprint]="completeSprintTarget()"
+      [summary]="completeSummary()"
+      [plannedSprints]="plannedForComplete()"
+      [busy]="completeBusy()"
+      [error]="completeError()"
+      (confirmed)="confirmComplete($event)"
+      (closeRequested)="completeOpen.set(false)"
+    />
+
+    <app-confirm-modal
+      [open]="deleteTarget() !== null"
+      title="Eliminar sprint"
+      [description]="
+        'Se elimina «' + deleteTarget()?.name + '». Sus incidencias vuelven al backlog.'
+      "
+      confirmText="Eliminar sprint"
+      [danger]="true"
+      [loading]="deleteBusy()"
+      (confirmed)="confirmDelete()"
+      (cancelled)="deleteTarget.set(null)"
+    />
   </app-page-container>
 }

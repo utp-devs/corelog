@@ -144,6 +144,8 @@ export interface CreateIssueInput {
   readonly parentId?: string;
   readonly dueDate?: string;
   readonly storyPoints?: number;
+  /** Values of the custom fields of the project, by field id. */
+  readonly custom?: Readonly<Record<string, unknown>>;
 }
 
 export interface UpdateIssueMetadataInput {

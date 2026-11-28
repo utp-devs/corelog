@@ -103,6 +103,7 @@ describe('buildSidebar', () => {
       '/organization/catalogs',
       '/organization/statuses',
       '/organization/invitations',
+      '/organization/legal',
     ]);
   });
 
@@ -112,6 +113,7 @@ describe('buildSidebar', () => {
       '/profile/security',
       '/profile/notifications',
       '/profile/appearance',
+      '/profile/privacy',
     ]);
     expect(sidebarTitleOf({ kind: 'project', projectId: 'p1' }, DEFAULT_SHELL_NAV_CONFIG)).toBe(
       'Proyecto',

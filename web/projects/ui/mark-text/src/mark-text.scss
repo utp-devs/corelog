@@ -1,0 +1,14 @@
+:host {
+  display: inline;
+}
+
+.mark-text {
+  &__mark {
+    padding: 0;
+    border-radius: var(--cl-radius-sm);
+    background: var(--cl-warning-bg);
+    color: inherit;
+    font-weight: var(--cl-weight-semibold, 600);
+    box-shadow: 0 0 0 1px var(--cl-warning-bg);
+  }
+}

@@ -1,0 +1,145 @@
+@use '../../styles/mixins' as m;
+@use '../../field-row/src/control' as c;
+
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.legal-consent-checkbox {
+  @include m.flex-column(1);
+
+  &__row {
+    @include m.flex-row(1, flex-start);
+    min-height: var(--cl-control-h-md);
+  }
+
+  // The input is an invisible overlay as large as a control: it is the touch target. The mark is what is drawn.
+  &__control {
+    position: relative;
+    flex: none;
+    width: var(--cl-control-h-md);
+    height: var(--cl-control-h-md);
+  }
+
+  &__input {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    opacity: 0;
+    cursor: pointer;
+  }
+
+  &__mark {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 1.25rem;
+    height: 1.25rem;
+    transform: translate(-50%, -50%);
+    border: 2px solid var(--cl-border-strong);
+    border-radius: var(--cl-radius-sm);
+    background: var(--cl-bg-surface);
+    pointer-events: none;
+    transition: background-color var(--cl-motion-fast) var(--cl-ease);
+
+    &::after {
+      content: '';
+      position: absolute;
+      top: 10%;
+      left: 30%;
+      width: 28%;
+      height: 55%;
+      border: solid var(--cl-text-on-brand);
+      border-width: 0 2px 2px 0;
+      transform: rotate(45deg) scale(0);
+      transition: transform var(--cl-motion-fast) var(--cl-ease);
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      transition: none;
+
+      &::after {
+        transition: none;
+      }
+    }
+  }
+
+  &__input:hover:not(:disabled) + &__mark {
+    border-color: var(--cl-text-subtle);
+  }
+
+  &__input:checked + &__mark {
+    border-color: var(--cl-brand);
+    background: var(--cl-brand);
+
+    &::after {
+      transform: rotate(45deg) scale(1);
+    }
+  }
+
+  &__input:focus-visible + &__mark {
+    @include c.focus-ring;
+  }
+
+  &__input[aria-invalid='true'] + &__mark {
+    border-color: var(--cl-danger);
+  }
+
+  &__input:disabled + &__mark {
+    opacity: var(--cl-disabled-opacity);
+  }
+
+  &__text {
+    flex: 1 1 auto;
+    min-width: 0;
+    font-size: var(--cl-font-body);
+    line-height: var(--cl-lh-body);
+    color: var(--cl-text);
+  }
+
+  &__label {
+    cursor: pointer;
+  }
+
+  &__link {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--cl-control-h-md);
+    margin-inline: 0.25em;
+    min-width: 0;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--cl-brand);
+    font: inherit;
+    font-weight: var(--cl-weight-semibold);
+    text-decoration: underline;
+    cursor: pointer;
+
+    &:hover {
+      color: var(--cl-brand-hover);
+    }
+
+    &:focus-visible {
+      @include c.focus-ring;
+      border-radius: var(--cl-radius-sm);
+    }
+  }
+
+  &__optional {
+    margin-left: var(--cl-space-1);
+    color: var(--cl-text-subtle);
+    font-size: var(--cl-font-small);
+  }
+
+  &__error {
+    @include m.flex-row(1, flex-start);
+    margin: 0;
+    padding-left: calc(var(--cl-control-h-md) + var(--cl-space-1));
+    font-size: var(--cl-font-small);
+    color: var(--cl-danger-text);
+  }
+}

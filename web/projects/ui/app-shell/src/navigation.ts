@@ -123,6 +123,13 @@ export const DEFAULT_SHELL_NAV_CONFIG: ShellNavConfig = {
         icon: 'invitations',
         permission: 'org.admin',
       },
+      {
+        key: 'org-legal',
+        label: 'Documentos legales',
+        path: '/organization/legal',
+        icon: 'security',
+        permission: 'platform.admin',
+      },
     ],
     profile: [
       { key: 'profile', label: 'General', path: '/profile', icon: 'profile', exact: true },
@@ -134,6 +141,7 @@ export const DEFAULT_SHELL_NAV_CONFIG: ShellNavConfig = {
         icon: 'bell',
       },
       { key: 'appearance', label: 'Apariencia', path: '/profile/appearance', icon: 'appearance' },
+      { key: 'privacy', label: 'Privacidad', path: '/profile/privacy', icon: 'security' },
     ],
   },
   sidebarTitles: {

@@ -1,0 +1,120 @@
+<ng-template #commentTpl let-comment let-isReply="reply">
+  <div
+    class="comment-thread__comment"
+    [class.comment-thread__comment--reply]="isReply"
+    data-testid="comment"
+  >
+    <app-user-avatar
+      [id]="comment.authorId"
+      [name]="comment.authorName"
+      [size]="isReply ? 24 : 32"
+    />
+    <div class="comment-thread__content">
+      <div class="comment-thread__meta">
+        <span class="comment-thread__author">{{ comment.authorName }}</span>
+        <time class="comment-thread__time" [title]="comment.timeTitle">{{ comment.timeText }}</time>
+        @if (comment.internal) {
+          <span class="comment-thread__badge" data-testid="comment-internal">Interno</span>
+        }
+        @if (comment.edited && !comment.deleted) {
+          <button
+            type="button"
+            class="comment-thread__edited"
+            aria-label="Ver el historial de ediciones"
+            (click)="history.emit(comment.id)"
+          >
+            (editado)
+          </button>
+        }
+      </div>
+
+      @if (comment.deleted) {
+        <p class="comment-thread__deleted">Comentario eliminado</p>
+      } @else if (editingId() === comment.id && editor()) {
+        <ng-container *ngTemplateOutlet="editor()!; context: { $implicit: comment }" />
+      } @else {
+        <app-rich-text-view [value]="comment.body" />
+
+        <div class="comment-thread__bar">
+          @for (reaction of comment.reactions; track reaction.key) {
+            <button
+              type="button"
+              class="comment-thread__reaction"
+              [class.comment-thread__reaction--mine]="reaction.viewerReacted"
+              [attr.aria-pressed]="reaction.viewerReacted ? 'true' : 'false'"
+              [attr.aria-label]="reaction.label + ': ' + reaction.count"
+              [disabled]="!canReact()"
+              (click)="toggleReaction(comment.id, reaction.key)"
+            >
+              <span aria-hidden="true">{{ reaction.glyph }}</span>
+              <span class="comment-thread__count">{{ reaction.count }}</span>
+            </button>
+          }
+          @if (canReact()) {
+            <span class="comment-thread__picker-anchor">
+              <button
+                type="button"
+                class="comment-thread__action"
+                aria-label="Añadir reacción"
+                aria-haspopup="true"
+                [attr.aria-expanded]="pickerFor() === comment.id ? 'true' : 'false'"
+                (click)="togglePicker(comment.id)"
+              >
+                <i class="pi pi-face-smile" aria-hidden="true"></i>
+              </button>
+              @if (pickerFor() === comment.id) {
+                <span class="comment-thread__picker" role="group" aria-label="Reacciones">
+                  @for (choice of reactionChoices(); track choice.key) {
+                    <button
+                      type="button"
+                      class="comment-thread__choice"
+                      [attr.aria-label]="choice.label"
+                      [title]="choice.label"
+                      (click)="choose(comment.id, choice.key)"
+                    >
+                      {{ choice.glyph }}
+                    </button>
+                  }
+                </span>
+              }
+            </span>
+          }
+          @if (!isReply && canReply()) {
+            <button type="button" class="comment-thread__action" (click)="reply.emit(comment.id)">
+              Responder
+            </button>
+          }
+          @if (comment.canEdit) {
+            <button type="button" class="comment-thread__action" (click)="edit.emit(comment.id)">
+              Editar
+            </button>
+          }
+          @if (comment.canDelete) {
+            <button
+              type="button"
+              class="comment-thread__action comment-thread__action--danger"
+              (click)="remove.emit(comment.id)"
+            >
+              Eliminar
+            </button>
+          }
+        </div>
+      }
+    </div>
+  </div>
+</ng-template>
+
+<article class="comment-thread" [attr.data-comment-id]="thread().id">
+  <ng-container *ngTemplateOutlet="commentTpl; context: { $implicit: thread(), reply: false }" />
+
+  @if (thread().replies.length > 0 || (replyingId() === thread().id && composer())) {
+    <div class="comment-thread__replies">
+      @for (item of thread().replies; track item.id) {
+        <ng-container *ngTemplateOutlet="commentTpl; context: { $implicit: item, reply: true }" />
+      }
+      @if (replyingId() === thread().id && composer()) {
+        <ng-container *ngTemplateOutlet="composer()!; context: { $implicit: thread() }" />
+      }
+    </div>
+  }
+</article>

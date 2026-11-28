@@ -1,0 +1,82 @@
+<app-dialog
+  size="md"
+  [heading]="heading()"
+  [subtitle]="subtitle()"
+  [open]="open()"
+  (closeRequested)="closeRequested.emit()"
+>
+  <form class="sprint-dialog" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+    @if (error(); as message) {
+      <p-message
+        severity="error"
+        [closable]="false"
+        role="alert"
+        data-testid="sprint-dialog-error"
+        >{{ message }}</p-message
+      >
+    }
+
+    <app-field-row label="Nombre" [required]="true" [error]="nameError()">
+      <input
+        pInputText
+        appFieldControl
+        data-autofocus
+        type="text"
+        autocomplete="off"
+        class="sprint-dialog__input"
+        formControlName="name"
+        [maxLength]="nameMax"
+        data-testid="sprint-name"
+      />
+    </app-field-row>
+
+    <div class="sprint-dialog__dates">
+      <app-field-row #startRow label="Inicio" [optional]="true">
+        <app-date-field [inputId]="startRow.controlId" formControlName="startDate" />
+      </app-field-row>
+      <app-field-row #endRow label="Fin" [optional]="true" [error]="dateError()">
+        <app-date-field
+          [inputId]="endRow.controlId"
+          [min]="form.controls.startDate.value"
+          formControlName="endDate"
+        />
+      </app-field-row>
+    </div>
+
+    <app-field-row label="Objetivo" [optional]="true">
+      <textarea
+        pTextarea
+        appFieldControl
+        rows="3"
+        class="sprint-dialog__input"
+        formControlName="goal"
+        [maxLength]="goalMax"
+        data-testid="sprint-goal"
+      ></textarea>
+    </app-field-row>
+
+    @if (needsForce()) {
+      <label class="sprint-dialog__force" [class.sprint-dialog__force--error]="forceError()">
+        <input type="checkbox" formControlName="force" data-testid="sprint-force" />
+        <span>El sprint no tiene incidencias. Quiero iniciarlo así.</span>
+      </label>
+    }
+  </form>
+
+  <p-button
+    dialogFooter
+    type="button"
+    label="Cancelar"
+    severity="secondary"
+    [disabled]="busy()"
+    (onClick)="closeRequested.emit()"
+  />
+  <p-button
+    dialogFooter
+    type="button"
+    [label]="confirmLabel()"
+    data-testid="sprint-confirm"
+    [loading]="busy()"
+    (onClick)="submit()"
+  />
+</app-dialog>

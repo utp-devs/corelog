@@ -1,0 +1,83 @@
+<div
+  class="phone-input"
+  [class.phone-input--lg]="size() === 'lg'"
+  [class.phone-input--invalid]="invalid()"
+  [class.phone-input--open]="open()"
+>
+  <button
+    #trigger
+    type="button"
+    class="phone-input__country"
+    aria-haspopup="listbox"
+    [attr.aria-expanded]="open()"
+    [attr.aria-controls]="open() ? listId : null"
+    [attr.aria-label]="triggerLabel()"
+    [disabled]="disabled()"
+    (click)="toggle()"
+  >
+    <span class="phone-input__flag" aria-hidden="true">{{ flag() }}</span>
+    <span class="phone-input__dial">{{ dialCode() }}</span>
+    <i class="pi pi-chevron-down phone-input__chevron" aria-hidden="true"></i>
+  </button>
+
+  <input
+    #field
+    class="phone-input__field"
+    type="tel"
+    inputmode="tel"
+    autocomplete="tel-national"
+    spellcheck="false"
+    [attr.id]="inputId()"
+    [attr.maxlength]="maxLength()"
+    [attr.placeholder]="placeholder()"
+    [attr.aria-label]="ariaLabel()"
+    [attr.aria-invalid]="invalid() ? 'true' : null"
+    [attr.aria-required]="required() ? 'true' : null"
+    [attr.aria-describedby]="describedBy()"
+    [value]="shown()"
+    [disabled]="disabled()"
+    (input)="onInput($event)"
+    (blur)="onBlur()"
+  />
+
+  @if (open()) {
+    <div class="phone-input__panel">
+      <input
+        #search
+        class="phone-input__search"
+        type="text"
+        role="combobox"
+        aria-label="Buscar país o prefijo"
+        placeholder="Buscar país o prefijo"
+        autocomplete="off"
+        spellcheck="false"
+        aria-expanded="true"
+        [attr.aria-controls]="listId"
+        [attr.aria-activedescendant]="activeId()"
+        [value]="query()"
+        (input)="onSearch($event)"
+        (keydown)="onSearchKey($event)"
+      />
+      <ul class="phone-input__list" role="listbox" aria-label="Países" [attr.id]="listId">
+        @for (item of filtered(); track item.code; let i = $index) {
+          <li
+            class="phone-input__option"
+            role="option"
+            [class.phone-input__option--active]="i === active()"
+            [attr.id]="listId + '-' + item.code"
+            [attr.aria-selected]="item.code === countryCode()"
+            (mousedown)="$event.preventDefault()"
+            (click)="choose(item)"
+            (mousemove)="active.set(i)"
+          >
+            <span class="phone-input__flag" aria-hidden="true">{{ flagOf(item.code) }}</span>
+            <span class="phone-input__name">{{ item.name }}</span>
+            <span class="phone-input__option-dial">{{ item.dialCode }}</span>
+          </li>
+        } @empty {
+          <li class="phone-input__empty" role="presentation">Sin resultados</li>
+        }
+      </ul>
+    </div>
+  }
+</div>

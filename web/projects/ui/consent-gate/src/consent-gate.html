@@ -1,0 +1,44 @@
+<app-dialog
+  size="md"
+  heading="Actualizamos nuestros documentos legales"
+  subtitle="Para seguir usando CoreLog, lee y acepta la versión vigente."
+  [open]="open()"
+  [dismissable]="false"
+  [showClose]="false"
+>
+  <div class="consent-gate" data-testid="consent-gate">
+    @if (failure(); as message) {
+      <p class="consent-gate__error" role="alert">{{ message }}</p>
+    }
+    <ul class="consent-gate__list">
+      @for (item of pending(); track item.slug) {
+        <li class="consent-gate__item">
+          <app-legal-consent-checkbox
+            before="He leído y acepto"
+            [linkLabel]="item.title"
+            [after]="'(versión ' + item.version + ')'"
+            [required]="true"
+            [ngModel]="isTicked(item.slug)"
+            (ngModelChange)="toggle(item.slug, $event)"
+            (read)="reading.set(item.slug)"
+          />
+        </li>
+      }
+    </ul>
+  </div>
+  <p-button dialogFooter label="Cerrar sesión" severity="secondary" (onClick)="logout()" />
+  <p-button
+    dialogFooter
+    label="Aceptar y continuar"
+    [disabled]="!allTicked()"
+    [loading]="loading()"
+    (onClick)="accept()"
+  />
+</app-dialog>
+<app-legal-document-dialog
+  [slug]="reading()"
+  [version]="readingVersion()"
+  [acceptable]="true"
+  (closed)="reading.set(null)"
+  (accepted)="acceptFromDialog($event.slug)"
+/>

@@ -1,0 +1,131 @@
+<app-dialog
+  size="md"
+  heading="Completar sprint"
+  [subtitle]="subtitle()"
+  [open]="open()"
+  (closeRequested)="closeRequested.emit()"
+>
+  <div class="complete-sprint" data-testid="complete-sprint-dialog">
+    @if (error(); as message) {
+      <p-message severity="error" [closable]="false" role="alert">{{ message }}</p-message>
+    }
+
+    <ul class="complete-sprint__summary" aria-label="Resumen del sprint">
+      <li class="complete-sprint__stat complete-sprint__stat--done" data-testid="complete-done">
+        <i class="pi pi-check-circle" aria-hidden="true"></i>
+        {{ doneText() }}
+      </li>
+      <li
+        class="complete-sprint__stat"
+        [class.complete-sprint__stat--open]="hasOpen()"
+        data-testid="complete-open"
+      >
+        <i class="pi pi-clock" aria-hidden="true"></i>
+        {{ openText() }}
+      </li>
+    </ul>
+
+    @if (hasOpen()) {
+      <fieldset class="complete-sprint__destination">
+        <legend class="complete-sprint__legend">
+          ¿Qué hacemos con las incidencias sin terminar?
+        </legend>
+
+        <label class="complete-sprint__option">
+          <input
+            type="radio"
+            name="destination"
+            value="backlog"
+            [checked]="kind() === 'backlog'"
+            (change)="setKind('backlog')"
+            data-testid="destination-backlog"
+          />
+          <span>Devolverlas al backlog</span>
+        </label>
+
+        <label
+          class="complete-sprint__option"
+          [class.complete-sprint__option--disabled]="!canPickSprint()"
+        >
+          <input
+            type="radio"
+            name="destination"
+            value="sprint"
+            [disabled]="!canPickSprint()"
+            [checked]="kind() === 'sprint'"
+            (change)="setKind('sprint')"
+            data-testid="destination-sprint"
+          />
+          <span>
+            Pasarlas a otro sprint planificado
+            @if (!canPickSprint()) {
+              <span class="complete-sprint__hint">No hay sprints planificados.</span>
+            }
+          </span>
+        </label>
+        @if (kind() === 'sprint') {
+          <div class="complete-sprint__nested">
+            <app-select-field
+              ariaLabel="Sprint de destino"
+              [options]="sprintOptions()"
+              [ngModel]="targetSprintId()"
+              (ngModelChange)="targetSprintId.set($event)"
+            />
+          </div>
+        }
+
+        <label class="complete-sprint__option">
+          <input
+            type="radio"
+            name="destination"
+            value="new"
+            [checked]="kind() === 'new'"
+            (change)="setKind('new')"
+            data-testid="destination-new"
+          />
+          <span>Crear un sprint nuevo con ellas</span>
+        </label>
+        @if (kind() === 'new') {
+          <div class="complete-sprint__nested">
+            <app-field-row label="Nombre del sprint nuevo" [optional]="true">
+              <input
+                pInputText
+                type="text"
+                class="complete-sprint__input"
+                autocomplete="off"
+                maxlength="80"
+                placeholder="Se propone el siguiente nombre"
+                [ngModel]="newName()"
+                (ngModelChange)="newName.set($event)"
+                data-testid="destination-new-name"
+              />
+            </app-field-row>
+          </div>
+        }
+      </fieldset>
+    } @else {
+      <p class="complete-sprint__note">
+        Todas las incidencias del sprint están terminadas. Al completarlo quedará cerrado con su
+        informe.
+      </p>
+    }
+  </div>
+
+  <p-button
+    dialogFooter
+    type="button"
+    label="Cancelar"
+    severity="secondary"
+    [disabled]="busy()"
+    (onClick)="closeRequested.emit()"
+  />
+  <p-button
+    dialogFooter
+    type="button"
+    label="Completar sprint"
+    data-testid="complete-confirm"
+    [disabled]="invalid()"
+    [loading]="busy()"
+    (onClick)="submit()"
+  />
+</app-dialog>

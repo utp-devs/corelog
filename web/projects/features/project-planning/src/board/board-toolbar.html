@@ -1,0 +1,153 @@
+<div class="board-toolbar">
+  <div class="board-toolbar__main">
+    @if (hasSeveralBoards()) {
+      <app-select-field
+        class="board-toolbar__switcher"
+        ariaLabel="Tablero"
+        [options]="boardOptions()"
+        [ngModel]="board().id"
+        (ngModelChange)="boardSelected.emit($event)"
+        data-testid="board-switcher"
+      />
+    } @else {
+      <h1 class="board-toolbar__title" data-testid="board-title">{{ board().name }}</h1>
+    }
+
+    @if (sprint(); as chip) {
+      <a
+        class="board-toolbar__sprint"
+        [class.board-toolbar__sprint--overdue]="chip.overdue"
+        [routerLink]="backlogLink()"
+        data-testid="sprint-chip"
+      >
+        <i class="pi pi-bolt" aria-hidden="true"></i>
+        <span class="board-toolbar__sprint-name">{{ chip.name }}</span>
+        <span class="board-toolbar__sprint-days">{{ chip.remaining }}</span>
+      </a>
+    }
+
+    <span class="board-toolbar__spacer"></span>
+
+    @if (refreshing()) {
+      <span class="board-toolbar__busy" role="status">
+        <i class="pi pi-spin pi-spinner" aria-hidden="true"></i>
+        <span class="board-toolbar__busy-text">Actualizando</span>
+      </span>
+    }
+
+    @if (canCompleteSprint() && sprint()) {
+      <p-button
+        label="Completar sprint"
+        icon="pi pi-check-circle"
+        severity="secondary"
+        data-testid="complete-sprint"
+        (onClick)="completeSprint.emit()"
+      />
+    }
+
+    <app-dropdown-menu class="board-toolbar__more" label="Más opciones del tablero" align="end">
+      <button
+        appMenuTrigger
+        type="button"
+        class="board-toolbar__more-trigger"
+        appTooltip="Más opciones"
+        aria-label="Más opciones del tablero"
+        data-testid="board-more"
+      >
+        <i class="pi pi-ellipsis-h" aria-hidden="true"></i>
+      </button>
+      @if (canManage() && !readOnly()) {
+        <button
+          type="button"
+          role="menuitem"
+          class="board-toolbar__item"
+          data-testid="board-settings"
+          (click)="settingsRequested.emit()"
+        >
+          <i class="pi pi-cog" aria-hidden="true"></i>
+          <span>Configurar tablero</span>
+        </button>
+        <button
+          type="button"
+          role="menuitem"
+          class="board-toolbar__item"
+          data-testid="board-create"
+          (click)="createBoardRequested.emit()"
+        >
+          <i class="pi pi-plus" aria-hidden="true"></i>
+          <span>Crear tablero</span>
+        </button>
+        @if (canDelete()) {
+          <button
+            type="button"
+            role="menuitem"
+            class="board-toolbar__item board-toolbar__item--danger"
+            data-testid="board-delete"
+            (click)="deleteBoardRequested.emit()"
+          >
+            <i class="pi pi-trash" aria-hidden="true"></i>
+            <span>Eliminar tablero</span>
+          </button>
+        }
+      } @else {
+        <p class="board-toolbar__note">Solo quien administra el tablero puede configurarlo.</p>
+      }
+    </app-dropdown-menu>
+  </div>
+
+  <div class="board-toolbar__controls">
+    <div class="board-toolbar__filters" role="group" aria-label="Filtros rápidos">
+      @for (filter of filters(); track filter.id) {
+        <button
+          type="button"
+          class="board-toolbar__chip"
+          [class.board-toolbar__chip--on]="activeFilterIds().includes(filter.id)"
+          [attr.aria-pressed]="activeFilterIds().includes(filter.id)"
+          [attr.data-testid]="'quick-filter-' + filter.name"
+          [appTooltip]="filter.query"
+          (click)="filterToggled.emit(filter.id)"
+        >
+          {{ filter.name }}
+        </button>
+      } @empty {
+        <span class="board-toolbar__hint">Sin filtros rápidos</span>
+      }
+      @if (activeFilterIds().length > 0) {
+        <button
+          type="button"
+          class="board-toolbar__clear"
+          data-testid="quick-filters-clear"
+          (click)="filtersCleared.emit()"
+        >
+          Limpiar filtros
+        </button>
+      }
+    </div>
+
+    <div class="board-toolbar__options">
+      @if (canManage() && !readOnly()) {
+        <app-select-field
+          class="board-toolbar__swimlane"
+          ariaLabel="Agrupar por carriles"
+          [options]="swimlaneOptions"
+          [ngModel]="board().swimlaneMode"
+          (ngModelChange)="swimlaneChanged.emit($event)"
+          data-testid="swimlane-select"
+        />
+      }
+      <div class="board-toolbar__segmented" role="group" aria-label="Estimación de las columnas">
+        @for (item of estimations; track item.value) {
+          <button
+            type="button"
+            class="board-toolbar__segment"
+            [class.board-toolbar__segment--on]="estimation() === item.value"
+            [attr.aria-pressed]="estimation() === item.value"
+            (click)="estimationChanged.emit(item.value)"
+          >
+            {{ item.label }}
+          </button>
+        }
+      </div>
+    </div>
+  </div>
+</div>

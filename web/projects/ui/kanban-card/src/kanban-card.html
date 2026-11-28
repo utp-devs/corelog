@@ -1,0 +1,129 @@
+<article
+  class="kanban-card"
+  [class.kanban-card--preview]="dragging()"
+  [class.kanban-card--placeholder]="placeholder()"
+  [class.kanban-card--flagged]="card().flagged && shown().has('flag')"
+  [attr.data-testid]="'kanban-card-' + card().key"
+  (keydown)="onKeydown($event)"
+>
+  <div class="kanban-card__top">
+    @if (shown().has('type')) {
+      <app-catalog-icon
+        class="kanban-card__type"
+        [icon]="card().type.icon"
+        [color]="card().type.color"
+        [appTooltip]="card().type.name"
+      />
+    }
+    @if (shown().has('key')) {
+      <span class="kanban-card__key">{{ card().key }}</span>
+    }
+    @if (card().flagged && shown().has('flag')) {
+      <i
+        class="pi pi-flag-fill kanban-card__flag"
+        role="img"
+        aria-label="Con impedimento"
+        appTooltip="Con impedimento"
+      ></i>
+    }
+    <span class="kanban-card__spacer"></span>
+    @if (targets().length > 0) {
+      <app-dropdown-menu class="kanban-card__menu" label="Mover a" align="end">
+        <button
+          appMenuTrigger
+          type="button"
+          class="kanban-card__menu-trigger"
+          appTooltip="Mover a otra columna"
+          [attr.aria-label]="'Mover ' + card().key + ' a otra columna'"
+        >
+          <i class="pi pi-ellipsis-h" aria-hidden="true"></i>
+        </button>
+        <p class="kanban-card__menu-heading">Mover a</p>
+        @for (target of targets(); track target.id) {
+          <button
+            type="button"
+            role="menuitem"
+            class="kanban-card__menu-item"
+            (click)="moved.emit(target.id)"
+          >
+            {{ target.name }}
+          </button>
+        }
+      </app-dropdown-menu>
+    }
+  </div>
+
+  <a class="kanban-card__summary" [routerLink]="href()" [attr.title]="card().summary">{{
+    card().summary
+  }}</a>
+
+  @if (hasMeta()) {
+    <div class="kanban-card__meta">
+      @if (shown().has('epic') && card().epic; as epic) {
+        <span class="kanban-card__epic" [appTooltip]="epic.key + ' ' + epic.summary">
+          <i class="pi pi-bolt" aria-hidden="true"></i>
+          <span class="kanban-card__epic-name">{{ epic.summary }}</span>
+        </span>
+      }
+      @if (shown().has('labels')) {
+        @for (label of visibleLabels(); track label) {
+          <span class="kanban-card__label">{{ label }}</span>
+        }
+        @if (hiddenLabels() > 0) {
+          <span class="kanban-card__label kanban-card__label--more">+{{ hiddenLabels() }}</span>
+        }
+      }
+      @if (shown().has('subtasks') && card().subtasks.total > 0) {
+        <span
+          class="kanban-card__subtasks"
+          [attr.aria-label]="
+            card().subtasks.done + ' de ' + card().subtasks.total + ' subtareas terminadas'
+          "
+          [appTooltip]="card().subtasks.done + ' de ' + card().subtasks.total + ' subtareas'"
+        >
+          <i class="pi pi-check-square" aria-hidden="true"></i>
+          {{ card().subtasks.done }}/{{ card().subtasks.total }}
+        </span>
+      }
+    </div>
+  }
+
+  <div class="kanban-card__footer">
+    @if (shown().has('priority')) {
+      <app-catalog-icon
+        class="kanban-card__priority"
+        [icon]="card().priority.icon"
+        [color]="card().priority.color"
+        [appTooltip]="'Prioridad: ' + card().priority.name"
+        role="img"
+        [attr.aria-label]="'Prioridad ' + card().priority.name"
+      />
+    }
+    <span class="kanban-card__spacer"></span>
+    @if (shown().has('points') && card().storyPoints !== null) {
+      <span class="kanban-card__points" [attr.aria-label]="card().storyPoints + ' puntos'">{{
+        card().storyPoints
+      }}</span>
+    }
+    @if (shown().has('assignee')) {
+      @if (card().assignee; as assignee) {
+        <app-user-avatar
+          class="kanban-card__assignee"
+          [id]="assignee.id"
+          [name]="assignee.name"
+          [size]="24"
+          [appTooltip]="assignee.name"
+        />
+      } @else {
+        <span
+          class="kanban-card__unassigned"
+          role="img"
+          aria-label="Sin responsable"
+          appTooltip="Sin responsable"
+        >
+          <i class="pi pi-user" aria-hidden="true"></i>
+        </span>
+      }
+    }
+  </div>
+</article>

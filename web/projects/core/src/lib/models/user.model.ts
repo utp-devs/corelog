@@ -1,3 +1,6 @@
+import type { PendingConsent } from './legal.model';
+import type { PhoneValue, UserPhone } from './country.model';
+
 /** Platform role. The first account of an installation is admin; every other account is user. */
 export type AppRole = 'admin' | 'user';
 
@@ -17,11 +20,24 @@ export interface User {
   readonly createdAt: string;
   readonly lastLoginAt: string | null;
   readonly emailVerifiedAt: string | null;
+  /** Given names. Empty on an older API. */
+  readonly firstName?: string;
+  readonly lastName?: string;
+  readonly locale?: string;
+  /** Only present for the account itself and for organization admins. */
+  readonly phone?: UserPhone | null;
+  /** Required documents whose current version the account has not accepted. */
+  readonly pendingConsents?: readonly PendingConsent[];
 }
 
 /** Partial update of the account: omitted fields keep their current value. */
 export interface UpdateProfilePayload {
   readonly name?: string;
+  readonly firstName?: string;
+  readonly lastName?: string;
+  /** null removes the phone; a value replaces it (and clears its verification). */
+  readonly phone?: PhoneValue | null;
+  readonly locale?: string;
   readonly email?: string;
   readonly displayName?: string;
   readonly jobTitle?: string;
@@ -35,6 +51,7 @@ export type ProfileUpdate = Omit<UpdateProfilePayload, 'email'>;
 export interface ChangePasswordPayload {
   readonly currentPassword: string;
   readonly newPassword: string;
+  readonly newPasswordConfirmation?: string;
 }
 
 /** Search of the platform user directory (administration). Omitted fields are not sent. */

@@ -1,6 +1,7 @@
 import {
   CdkDrag,
   CdkDragDrop,
+  CdkDragPlaceholder,
   CdkDragPreview,
   CdkDropList,
   CdkDropListGroup,
@@ -9,6 +10,9 @@ import {
   ChangeDetectionStrategy,
   Component,
   DestroyRef,
+  DOCUMENT,
+  Injector,
+  afterNextRender,
   computed,
   effect,
   inject,
@@ -16,328 +20,450 @@ import {
   untracked,
   viewChild,
 } from '@angular/core';
+import { FormsModule } from '@angular/forms';
+import { Router, RouterLink } from '@angular/router';
 import {
-  AuthStore,
-  BoardColumn,
-  BoardCard,
-  BoardMoveTarget,
-  BoardPendingInput,
-  BoardStore,
+  BacklogV2ApiService,
+  BoardSwimlaneMode,
+  BoardViewCard,
+  BoardViewStore,
   BreakpointService,
-  ISSUE_PRIORITY_LABELS,
+  CompleteSprintInput,
+  CurrentProjectStore,
   IssueStore,
   NotificationService,
-  OrganizationStore,
-  CurrentProjectStore,
-  ProjectStore,
-  WorkItemPriority,
-  isColumnFull,
   PROJECT_MOBILE_QUERY,
+  SprintPlanStore,
+  UNMAPPED_COLUMN_ID,
+  adjacentColumnId,
+  asApiError,
+  dropNeighbors,
+  boardSettingsErrorMessage,
   projectAccessVariantOf,
+  projectPath,
+  sprintErrorMessage,
 } from '@corelog/core';
 import { ArchivedNotice } from '@corelog/ui/archived-notice';
-import { DropdownMenu } from '@corelog/ui/app-shell';
+import { BoardColumnHeader } from '@corelog/ui/board-column';
+import { Dialog } from '@corelog/ui/dialog';
 import { EmptyState } from '@corelog/ui/empty-state';
 import { ErrorPage } from '@corelog/ui/error-page';
 import { ErrorState } from '@corelog/ui/error-state';
-import { Lozenge } from '@corelog/ui/lozenge';
+import { FieldRow, FieldControl } from '@corelog/ui/field-row';
+import { KanbanCard, KanbanMoveTarget } from '@corelog/ui/kanban-card';
 import { PageContainer } from '@corelog/ui/page-container';
-import { PageHeader } from '@corelog/ui/page-header';
-import { SearchInput } from '@corelog/ui/search-input';
+import { ConfirmModal } from '@corelog/ui/confirm-modal';
 import { TransitionRunner } from '@corelog/ui/transition-dialog';
-import { AppTooltip } from '@corelog/ui/tooltip';
-import { InputNumber } from 'primeng/inputnumber';
+import { Button } from 'primeng/button';
+import { InputText } from 'primeng/inputtext';
 import { Message } from 'primeng/message';
-import { Select } from 'primeng/select';
 import { Skeleton } from 'primeng/skeleton';
-import { ToggleSwitch } from 'primeng/toggleswitch';
-import { FormsModule } from '@angular/forms';
 
+import { daysLeftOf, daysLeftText } from '../shared/planning-format';
 import { trackProjectScope } from '../shared/project-scope';
-import { isReadOnlyRole, statusName } from '../shared/work-labels';
-import { BoardCardView } from './board-card';
+import { CompleteSprintDialog, CompleteSprintSummary } from '../sprints/complete-sprint-dialog';
+import { BoardCell, boardHeaders, boardRows, estimateText } from './board-grid';
+import { BoardSettingsDrawer } from './board-settings-drawer';
+import { BoardSprintChip, BoardToolbar } from './board-toolbar';
 
-/** Priority filter options, most urgent first, as the board lists them. */
-const PRIORITY_OPTIONS: { value: WorkItemPriority; label: string }[] = [
-  { value: 'critical', label: ISSUE_PRIORITY_LABELS.critical },
-  { value: 'high', label: ISSUE_PRIORITY_LABELS.high },
-  { value: 'medium', label: ISSUE_PRIORITY_LABELS.medium },
-  { value: 'low', label: ISSUE_PRIORITY_LABELS.low },
-];
-
+const MIN_SUMMARY = 3;
 const LOAD_ERROR_MESSAGE =
   'No se pudo cargar el tablero. Verifica que tengas acceso al proyecto e intenta de nuevo.';
 
+const EMPTY_SUMMARY: CompleteSprintSummary = {
+  doneIssues: 0,
+  openIssues: 0,
+  donePoints: 0,
+  openPoints: 0,
+};
+
 /**
- * Kanban board of the project. Cards move by drag and drop or by the "Mover a" menu of each card, which is the
- * keyboard and touch alternative. A move waits for the server answer and then replaces the board; nothing is
- * shown as moved before that. Filters run on the loaded cards and never call the API.
+ * Board of the project: columns with sticky headers and WIP indicators, optional swimlanes, cards that move by
+ * drag and drop, by their "Mover a" menu or with Alt+Arrow keys. A move shows at once and goes back if the
+ * server refuses it. Settings, sprint completion and board creation live in drawers and dialogs from here.
  */
 @Component({
   selector: 'app-project-board-page',
   imports: [
     ArchivedNotice,
-    TransitionRunner,
-    FormsModule,
+    BoardColumnHeader,
+    BoardSettingsDrawer,
+    BoardToolbar,
+    Button,
     CdkDrag,
+    CdkDragPlaceholder,
     CdkDragPreview,
     CdkDropList,
     CdkDropListGroup,
-    InputNumber,
-    Message,
-    Select,
-    Skeleton,
-    ToggleSwitch,
-    BoardCardView,
-    AppTooltip,
-    DropdownMenu,
+    CompleteSprintDialog,
+    ConfirmModal,
+    Dialog,
     EmptyState,
     ErrorPage,
     ErrorState,
-    Lozenge,
+    FieldControl,
+    FieldRow,
+    FormsModule,
+    InputText,
+    KanbanCard,
+    Message,
     PageContainer,
-    PageHeader,
-    SearchInput,
+    RouterLink,
+    Skeleton,
+    TransitionRunner,
   ],
   templateUrl: './project-board-page.html',
   styleUrl: './project-board-page.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ProjectBoardPage {
-  protected readonly store = inject(BoardStore);
-  private readonly auth = inject(AuthStore);
-  private readonly orgs = inject(OrganizationStore);
-  private readonly projects = inject(ProjectStore);
-  private readonly currentProject = inject(CurrentProjectStore);
+  protected readonly store = inject(BoardViewStore);
+  private readonly current = inject(CurrentProjectStore);
+  private readonly sprintPlan = inject(SprintPlanStore);
+  private readonly backlogApi = inject(BacklogV2ApiService);
+  private readonly issues = inject(IssueStore);
+  private readonly notify = inject(NotificationService);
+  private readonly router = inject(Router);
   private readonly breakpoints = inject(BreakpointService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly document = inject(DOCUMENT);
+  private readonly injector = inject(Injector);
 
-  protected readonly board = this.store.board.value;
-  protected readonly columns = this.store.visibleColumns;
-  protected readonly filter = this.store.filter;
-  protected readonly priorityOptions = PRIORITY_OPTIONS;
   protected readonly isMobile = this.breakpoints.matches(PROJECT_MOBILE_QUERY);
+  protected readonly view = this.store.view.value;
   protected readonly skeletonColumns = [0, 1, 2, 3];
+  protected readonly loadErrorMessage = LOAD_ERROR_MESSAGE;
+  protected readonly unmappedId = UNMAPPED_COLUMN_ID;
 
-  /** Viewers, guests and archived projects: the board can be read but not changed. */
-  protected readonly readOnly = computed(
-    () =>
-      this.currentProject.isArchived() ||
-      isReadOnlyRole(
-        this.auth.user()?.role,
-        this.orgs.currentRole(),
-        this.auth.user()?.id,
-        this.projects.members(),
-      ),
-  );
-  protected readonly canManage = computed(
-    () => (this.board()?.canManageBoard ?? false) && !this.readOnly(),
-  );
+  protected readonly scope = trackProjectScope(this.current, this.destroyRef, (projectId) => {
+    this.store.open(projectId);
+    this.sprintPlan.loadSprints(projectId);
+  });
 
-  /** Column shown on phones, one at a time. Falls back to the first visible column. */
+  private readonly failure = computed(
+    () => this.scope.accessError() ?? this.store.boards.error() ?? this.store.view.error(),
+  );
+  protected readonly accessVariant = computed(() => projectAccessVariantOf(this.failure()));
+  protected readonly failed = computed(() => this.failure() !== null);
+  protected readonly ready = computed(() => this.view() !== undefined && !this.failed());
+
+  protected readonly board = computed(() => this.view()?.board ?? null);
+  protected readonly archived = this.current.isArchived;
+  /** Viewers, guests and archived projects read the board but do not change it. */
+  protected readonly readOnly = computed(() => this.archived() || !this.store.canMove());
+  protected readonly canManage = computed(() => this.store.canManage() && !this.archived());
+  protected readonly dragDisabled = computed(() => this.readOnly() || this.isMobile());
+  protected readonly backlogPath = computed(() => {
+    const project = this.current.project();
+    return project ? projectPath(project, 'backlog') : '/';
+  });
+
+  /** Sprint chip and completion: scrum boards with an active sprint. */
+  protected readonly sprintChip = computed<BoardSprintChip | null>(() => {
+    const view = this.view();
+    if (!view?.sprint || view.board.type !== 'scrum') return null;
+    const detail = this.sprintPlan.sprints.value()?.find((item) => item.id === view.sprint?.id);
+    const days = daysLeftOf(detail?.endDate);
+    return {
+      id: view.sprint.id,
+      name: view.sprint.name,
+      remaining: daysLeftText(days),
+      overdue: days !== null && days < 0,
+    };
+  });
+  protected readonly noActiveSprint = computed(() => {
+    const view = this.view();
+    return !!view && view.board.type === 'scrum' && !view.sprint;
+  });
+
+  protected readonly headers = computed(() => {
+    const view = this.view();
+    return view ? boardHeaders(view, this.store.estimation()) : [];
+  });
   private readonly mobileColumnState = signal<string | null>(null);
-  protected readonly mobileColumn = computed<BoardColumn | null>(() => {
-    const columns = this.columns();
-    return columns.find((column) => column.id === this.mobileColumnState()) ?? columns[0] ?? null;
+  protected readonly mobileColumnId = computed(() => {
+    const headers = this.headers();
+    const chosen = this.mobileColumnState();
+    return headers.find((header) => header.id === chosen)?.id ?? headers[0]?.id ?? null;
   });
-  protected readonly shownColumns = computed(() => {
-    const active = this.mobileColumn();
-    return this.isMobile() && active ? [active] : this.columns();
+  protected readonly shownHeaders = computed(() => {
+    const headers = this.headers();
+    const active = this.mobileColumnId();
+    return this.isMobile() && active ? headers.filter((header) => header.id === active) : headers;
   });
+  protected readonly rows = computed(() => {
+    const view = this.view();
+    if (!view) return [];
+    const rows = boardRows(view);
+    const active = this.mobileColumnId();
+    if (!this.isMobile() || !active) return rows;
+    return rows.map((row) => ({
+      ...row,
+      cells: row.cells.filter((cell) => cell.columnId === active),
+    }));
+  });
+  protected readonly estimation = this.store.estimation;
+  protected readonly firstColumnId = computed(() => this.headers()[0]?.id ?? null);
+  protected readonly hasCards = computed(() => this.headers().some((header) => header.count > 0));
 
-  /** "Mover a" targets of every card, named in Spanish by status code. */
-  protected readonly targetsByCard = computed(() => {
-    const board = this.board();
-    const result = new Map<string, BoardMoveTarget[]>();
-    for (const column of board?.columns ?? []) {
-      for (const card of column.cards) {
-        result.set(
-          card.id,
-          this.store.moveTargetsFor(card.id).map((target) => ({
-            ...target,
-            name: this.nameOfColumnId(target.id),
-          })),
-        );
-      }
+  /** Columns a card can move to, by the column it is in (the unmapped column cannot be a target). */
+  private readonly targetsByColumn = computed(() => {
+    const mapped = this.headers().filter((header) => !header.implicit);
+    const result = new Map<string, KanbanMoveTarget[]>();
+    for (const header of this.headers()) {
+      result.set(
+        header.id,
+        mapped
+          .filter((target) => target.id !== header.id)
+          .map((target) => ({ id: target.id, name: target.name })),
+      );
     }
     return result;
   });
 
-  /** Spanish text for the live region, using the Spanish column name of the last move. */
-  private readonly lastTarget = signal('');
-  protected readonly announcement = computed(() =>
-    this.store.announcement() ? `Incidencia movida a ${this.lastTarget()}` : '',
+  protected readonly settingsOpen = signal(false);
+  protected readonly createBoardOpen = signal(false);
+  protected readonly newBoardName = signal('');
+  protected readonly createBoardError = signal<string | null>(null);
+  protected readonly deleteBoardOpen = signal(false);
+  protected readonly deleteBoardBusy = signal(false);
+
+  protected readonly creating = signal(false);
+  protected readonly draft = signal('');
+  protected readonly createError = signal<string | null>(null);
+
+  protected readonly completeOpen = signal(false);
+  protected readonly completeBusy = signal(false);
+  protected readonly completeError = signal<string | null>(null);
+  protected readonly completeSummary = signal<CompleteSprintSummary>(EMPTY_SUMMARY);
+  protected readonly plannedSprints = computed(
+    () => this.sprintPlan.sprints.value()?.filter((sprint) => sprint.status === 'planned') ?? [],
   );
+  protected readonly activeSprint = computed(() => {
+    const id = this.view()?.sprint?.id;
+    return this.sprintPlan.sprints.value()?.find((sprint) => sprint.id === id) ?? null;
+  });
 
-  /** Column whose limit is being edited, and the typed value. */
-  protected readonly wipEditing = signal<string | null>(null);
-  protected readonly wipDraft = signal<number | null>(null);
-
-  /** Column under a dragged card that can take it; null when none. */
-  protected readonly overColumnId = signal<string | null>(null);
-  /** Card being dragged; used for the dimmed original while the preview is carried. */
-  protected readonly activeCardId = signal<string | null>(null);
-  /**
-   * Changes after a failed move or limit change. Card views are keyed with it, so the DOM is rebuilt
-   * from the unchanged board data and no card stays where the failed drop left it.
-   */
-  private readonly renderEpoch = signal(0);
-
-  /** Failure of the project read or of the board load. */
-  private readonly failure = computed(() => this.scope.accessError() ?? this.store.board.error());
-  protected readonly accessVariant = computed(() => projectAccessVariantOf(this.failure()));
-  protected readonly failed = computed(() => this.failure() !== null);
-  protected readonly ready = computed(() => this.board() !== undefined && !this.failed());
-  protected readonly loadErrorMessage = LOAD_ERROR_MESSAGE;
-
-  protected readonly scope = trackProjectScope(
-    inject(CurrentProjectStore),
-    this.destroyRef,
-    (projectId) => {
-      this.store.load(projectId);
-      this.projects.fetchMembers(projectId);
-    },
-  );
+  protected readonly runner = viewChild(TransitionRunner);
+  protected readonly inputCard = computed(() => {
+    const request = this.store.inputRequest();
+    return request ? (this.store.findCard(request.cardId) ?? null) : null;
+  });
 
   constructor() {
     effect(() => {
-      this.store.setCurrentUserId(this.auth.user()?.id);
-    });
-    effect(() => {
-      const pending = this.store.pendingInput();
-      if (pending) untracked(() => this.resolvePendingInput(pending));
-    });
-    effect(() => {
-      if (this.store.moveError()) {
-        untracked(() => this.renderEpoch.update((value) => value + 1));
-      }
+      const request = this.store.inputRequest();
+      if (request) untracked(() => this.openTransitionDialog(request.cardId, request.transitionId));
     });
   }
 
-  private readonly issues = inject(IssueStore);
-  private readonly notify = inject(NotificationService);
-  protected readonly runner = viewChild(TransitionRunner);
-  protected readonly pendingCard = signal<{ id: string; context: string } | null>(null);
+  protected targetsOf(columnId: string): readonly KanbanMoveTarget[] {
+    return this.readOnly() ? [] : (this.targetsByColumn().get(columnId) ?? []);
+  }
 
-  /** The workflow asked for data before the move: open the transition dialog for the card. */
-  private resolvePendingInput(pending: BoardPendingInput): void {
-    const card = this.board()
-      ?.columns.flatMap((column) => column.cards)
-      .find((candidate) => candidate.id === pending.cardId);
-    this.pendingCard.set({ id: pending.cardId, context: card?.summary ?? '' });
-    this.issues.listTransitions(pending.cardId).subscribe({
+  protected estimateOf(estimate: number): string {
+    return estimateText(estimate, this.estimation());
+  }
+
+  protected columnNameOf(columnId: string): string {
+    return this.headers().find((header) => header.id === columnId)?.name ?? '';
+  }
+
+  protected selectMobileColumn(id: string): void {
+    this.mobileColumnState.set(id);
+  }
+
+  /* Moves */
+
+  protected onDrop(event: CdkDragDrop<BoardCell>): void {
+    const card = event.item.data as BoardViewCard;
+    const target = event.container.data;
+    if (this.readOnly() || target.columnId === UNMAPPED_COLUMN_ID) return;
+    const others = target.cards.map((item) => item.id).filter((id) => id !== card.id);
+    const neighbors = dropNeighbors(others, event.currentIndex);
+    const sameSpot =
+      event.previousContainer === event.container && event.previousIndex === event.currentIndex;
+    if (sameSpot) return;
+    this.store.move(card.id, target.columnId, {
+      ...neighbors,
+      swimlaneId: target.laneId && target.laneId !== card.swimlaneId ? target.laneId : undefined,
+    });
+  }
+
+  protected moveTo(card: BoardViewCard, columnId: string): void {
+    this.store.move(card.id, columnId);
+  }
+
+  /** Alt+Arrow on a card: move it to the neighbor column. */
+  protected shift(card: BoardViewCard, columnId: string, direction: -1 | 1): void {
+    const mapped = this.headers().filter((header) => !header.implicit);
+    const target = adjacentColumnId(mapped, columnId, direction);
+    if (target) this.store.move(card.id, target);
+  }
+
+  /** The card dropped into the unmapped column is refused: it only holds what has no column. */
+  protected readonly canEnter = (): boolean => false;
+  protected readonly anyEnter = (): boolean => true;
+
+  /* Header actions */
+
+  protected onSwimlane(mode: BoardSwimlaneMode): void {
+    if (mode === this.board()?.swimlaneMode) return;
+    this.store.saveSettings({ swimlaneMode: mode }).subscribe({
+      error: (error: unknown) => this.notify.error(boardSettingsErrorMessage(asApiError(error))),
+    });
+  }
+
+  protected onBoardSelected(id: string): void {
+    if (id !== this.store.boardId()) this.store.select(id);
+  }
+
+  /* Inline create */
+
+  protected startCreate(): void {
+    this.creating.set(true);
+    this.draft.set('');
+    this.createError.set(null);
+    afterNextRender(
+      () =>
+        this.document
+          .querySelector<HTMLInputElement>('[data-testid="board-create-input"]')
+          ?.focus(),
+      { injector: this.injector },
+    );
+  }
+
+  protected cancelCreate(): void {
+    this.creating.set(false);
+    this.createError.set(null);
+  }
+
+  protected submitCreate(): void {
+    const summary = this.draft().trim();
+    if (summary.length < MIN_SUMMARY) {
+      this.createError.set('Escribe al menos 3 caracteres.');
+      return;
+    }
+    this.store.createCard(summary).subscribe({
+      next: () => {
+        this.draft.set('');
+        this.createError.set(null);
+      },
+      error: () => this.createError.set('No se pudo crear la incidencia. Intenta de nuevo.'),
+    });
+  }
+
+  /* Dialogs: choice of transition, required data */
+
+  protected pickTransition(id: string): void {
+    this.store.resolveChoice(id);
+  }
+
+  private openTransitionDialog(cardId: string, transitionId: string): void {
+    this.issues.listTransitions(cardId).subscribe({
       next: (items) => {
-        const withScreen = items.filter((item) => item.needsScreen);
-        const match =
-          withScreen.find((item) => item.toStatus === pending.targetStatus) ?? withScreen[0];
+        const match = items.find((item) => item.id === transitionId);
         if (match) {
           this.runner()?.run(match);
         } else {
-          this.finishPending();
-          this.notify.error(
-            'No se pudo mover la incidencia: el flujo no tiene una transición disponible.',
-          );
+          this.store.clearInputRequest();
+          this.notify.error('El flujo no tiene una transición disponible para ese movimiento.');
         }
       },
       error: () => {
-        this.finishPending();
+        this.store.clearInputRequest();
         this.notify.error('No se pudo mover la incidencia. Intenta de nuevo.');
       },
     });
   }
 
-  protected onPendingFinished(): void {
-    this.finishPending();
-    this.store.retry();
+  protected onTransitionFinished(): void {
+    this.store.clearInputRequest();
+    this.store.refresh();
   }
 
-  protected finishPending(): void {
-    this.pendingCard.set(null);
-    this.store.clearPendingInput();
+  protected onTransitionClosed(): void {
+    this.store.clearInputRequest();
   }
 
-  protected isFull(column: BoardColumn): boolean {
-    return isColumnFull(column);
+  /* Sprint completion */
+
+  protected openComplete(): void {
+    const projectId = this.current.projectId();
+    if (!projectId) return;
+    this.completeError.set(null);
+    this.backlogApi.get(projectId).subscribe({
+      next: (backlog) => {
+        const active = backlog.sections.find((section) => section.kind === 'active');
+        const totals = active?.totals;
+        const done = totals?.byCategory.done;
+        this.completeSummary.set({
+          doneIssues: done?.issues ?? 0,
+          donePoints: done?.points ?? 0,
+          openIssues: (totals?.issues ?? 0) - (done?.issues ?? 0),
+          openPoints: (totals?.points ?? 0) - (done?.points ?? 0),
+        });
+        this.completeOpen.set(true);
+      },
+      error: () => this.notify.error('No se pudo leer el sprint. Intenta de nuevo.'),
+    });
   }
 
-  protected countLabel(column: BoardColumn): string {
-    return column.wipLimit !== undefined
-      ? `${column.count} / ${column.wipLimit}`
-      : String(column.count);
+  protected confirmComplete(input: CompleteSprintInput): void {
+    const sprint = this.view()?.sprint;
+    const project = this.current.project();
+    if (!sprint || !project) return;
+    this.completeBusy.set(true);
+    this.sprintPlan.complete(sprint.id, input).subscribe({
+      next: (result) => {
+        this.completeBusy.set(false);
+        this.completeOpen.set(false);
+        this.notify.success(`Sprint «${result.sprint.name}» completado`);
+        this.sprintPlan.loadSprints(project.id);
+        void this.router.navigateByUrl(projectPath(project, `sprints/${sprint.id}/report`));
+      },
+      error: (error: unknown) => {
+        this.completeBusy.set(false);
+        this.completeError.set(sprintErrorMessage(asApiError(error)));
+      },
+    });
   }
 
-  protected trackCard(card: BoardCard): string {
-    return `${this.renderEpoch()}:${card.id}`;
+  /* Boards */
+
+  protected openCreateBoard(): void {
+    this.newBoardName.set('');
+    this.createBoardError.set(null);
+    this.createBoardOpen.set(true);
   }
 
-  /** Spanish name of a column: by status code, never the raw API text. */
-  protected columnName(column: BoardColumn): string {
-    return statusName(column.status, column.name);
-  }
-
-  private nameOfColumnId(columnId: string): string {
-    const column = this.board()?.columns.find((candidate) => candidate.id === columnId);
-    return column ? this.columnName(column) : 'otra columna';
-  }
-
-  protected targetsOf(cardId: string): readonly BoardMoveTarget[] {
-    return this.targetsByCard().get(cardId) ?? [];
-  }
-
-  protected selectMobileColumn(columnId: string): void {
-    this.mobileColumnState.set(columnId);
-  }
-
-  protected onEnter(columnId: string): void {
-    this.overColumnId.set(columnId);
-  }
-
-  /** Drop on another column moves the card. Drops on the same column or outside any column do nothing. */
-  protected onDrop(event: CdkDragDrop<string, string>): void {
-    this.overColumnId.set(null);
-    if (event.previousContainer === event.container) {
+  protected submitCreateBoard(): void {
+    const name = this.newBoardName().trim();
+    if (!name) {
+      this.createBoardError.set('Escribe un nombre.');
       return;
     }
-    this.moveCard(event.item.data, event.container.data);
+    this.store.createBoard({ name }).subscribe({
+      next: () => this.createBoardOpen.set(false),
+      error: (error: unknown) =>
+        this.createBoardError.set(boardSettingsErrorMessage(asApiError(error))),
+    });
   }
 
-  protected moveCard(cardId: string, targetColumnId: string): void {
-    if (this.readOnly()) return;
-    this.lastTarget.set(this.nameOfColumnId(targetColumnId));
-    this.store.move(cardId, targetColumnId);
-  }
-
-  protected setSearch(search: string): void {
-    this.store.setFilter({ search });
-  }
-
-  protected setPriority(priority: WorkItemPriority | null): void {
-    this.store.setFilter({ priority });
-  }
-
-  protected setOnlyMine(onlyMine: boolean): void {
-    this.store.setFilter({ onlyMine });
-  }
-
-  protected startWip(column: BoardColumn): void {
-    this.wipDraft.set(column.wipLimit ?? null);
-    this.wipEditing.set(column.id);
-  }
-
-  protected cancelWip(): void {
-    this.wipEditing.set(null);
-  }
-
-  /** Saves the typed limit; an empty value removes it. */
-  protected saveWip(column: BoardColumn): void {
-    const draft = this.wipDraft();
-    this.store.saveWipLimit(column.id, draft === null ? '' : String(draft));
-    this.wipEditing.set(null);
-  }
-
-  protected removeWip(column: BoardColumn): void {
-    this.store.saveWipLimit(column.id, '');
-    this.wipEditing.set(null);
+  protected confirmDeleteBoard(): void {
+    this.deleteBoardBusy.set(true);
+    this.store.deleteBoard().subscribe({
+      next: () => {
+        this.deleteBoardBusy.set(false);
+        this.deleteBoardOpen.set(false);
+        this.notify.success('Tablero eliminado');
+      },
+      error: (error: unknown) => {
+        this.deleteBoardBusy.set(false);
+        this.deleteBoardOpen.set(false);
+        this.notify.error(boardSettingsErrorMessage(asApiError(error)));
+      },
+    });
   }
 
   protected retry(): void {
