@@ -5,7 +5,15 @@
  */
 
 /** Pages served by the portal at the origin root (sign-in, registration, invitation, onboarding). */
-const PORTAL_PATHS = ['/login', '/register', '/invite', '/onboarding'] as const;
+const PORTAL_PATHS = [
+  '/login',
+  '/register',
+  '/invite',
+  '/onboarding',
+  '/forgot-password',
+  '/reset-password',
+  '/verify-email',
+] as const;
 
 /** Work pages served by the workspace app under /workspace. */
 const WORKSPACE_PATHS = [
@@ -14,8 +22,10 @@ const WORKSPACE_PATHS = [
   '/browse',
   '/projects',
   '/dashboard',
+  '/dashboards',
   '/teams',
   '/notes',
+  '/calendar',
   '/timesheet',
   '/people',
   '/profile',

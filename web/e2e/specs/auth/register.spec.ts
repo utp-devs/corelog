@@ -3,6 +3,12 @@ import type { Page } from '@playwright/test';
 import { expect, test } from '../../fixtures/test.ts';
 import { readE2eEnv } from '../../lib/env.ts';
 import { appPath } from '../../lib/paths.ts';
+import {
+  fillRegisterStep1,
+  fillRegisterStep2,
+  fillRegisterSteps,
+  type RegisterData,
+} from '../../lib/register.ts';
 
 const REQUIRED = [/Política de privacidad/, /tratamiento de mis datos/, /Términos de uso/];
 
@@ -10,12 +16,14 @@ function uniqueEmail(): string {
   return `reg-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}@corelog.test`;
 }
 
-async function fillIdentity(page: Page, email: string, password: string): Promise<void> {
-  await page.getByLabel(/^Nombres/).fill('Ana  María');
-  await page.getByLabel(/^Apellidos/).fill("Torres O'Brien");
-  await page.getByLabel(/^Teléfono/).fill('+51 912 345 678');
-  await page.getByLabel('Correo electrónico').fill(email);
-  await page.getByLabel(/^Contraseña/).fill(password);
+const IDENTITY = {
+  firstName: 'Ana  María',
+  lastName: "Torres O'Brien",
+  phone: '+51 912 345 678',
+};
+
+function account(email: string, password: string): RegisterData {
+  return { ...IDENTITY, email, password };
 }
 
 /** Accounts have no hard delete: the account the test created is deactivated through the API. */
@@ -34,11 +42,10 @@ test.describe('registro de cuenta (/register)', () => {
   }) => {
     await page.goto(appPath('/register'));
     await expect(page.getByRole('heading', { name: 'Crear cuenta' })).toBeVisible();
-    const submit = page.getByRole('button', { name: 'Crear cuenta' });
-    await expect(submit).toBeDisabled();
-
-    await fillIdentity(page, uniqueEmail(), 'Secreta-12345');
-    await page.getByLabel(/^Confirmar contraseña/).fill('Secreta-1234');
+    const data = account(uniqueEmail(), 'Secreta-12345');
+    await fillRegisterStep1(page, data);
+    await page.getByTestId('register-next').click();
+    await fillRegisterStep2(page, { ...data, confirmation: 'Secreta-1234' });
     await expect(page.getByText('Las contraseñas no coinciden')).toBeVisible();
 
     // Fixing the first field re-evaluates the confirmation; changing it again breaks it again.
@@ -49,6 +56,10 @@ test.describe('registro de cuenta (/register)', () => {
     await page.getByLabel(/^Confirmar contraseña/).fill('Secreta-12345');
     await expect(page.getByText('Las contraseñas no coinciden')).toBeHidden();
 
+    // The last step is reached only with a valid account step.
+    await page.getByTestId('register-next').click();
+    await expect(page.getByTestId('register-step-3')).toBeVisible();
+    const submit = page.getByRole('button', { name: 'Crear cuenta' });
     // Valid data alone is not enough: the three documents must be accepted.
     await expect(submit).toBeDisabled();
     await page.getByRole('checkbox', { name: REQUIRED[0] }).check();
@@ -64,7 +75,8 @@ test.describe('registro de cuenta (/register)', () => {
     await page.getByLabel(/^Nombres/).fill('Ana1');
     await page.getByLabel(/^Apellidos/).fill('  ');
     await page.getByLabel(/^Teléfono/).fill('12');
-    await page.getByLabel('Correo electrónico').click();
+    await page.getByTestId('register-next').click();
+    await expect(page.getByTestId('register-step-1')).toBeVisible();
     await expect(page.getByText('Usa solo letras, espacios, guiones y apóstrofes')).toBeVisible();
     await expect(page.getByText('Escribe tus apellidos')).toBeVisible();
     await expect(page.getByText('El teléfono no es válido para el país elegido')).toBeVisible();
@@ -90,6 +102,7 @@ test.describe('registro de cuenta (/register)', () => {
     page,
   }) => {
     await page.goto(appPath('/register'));
+    await fillRegisterSteps(page, account(uniqueEmail(), 'Secreta-12345'));
     const box = page.getByRole('checkbox', { name: REQUIRED[0] });
     await expect(box).not.toBeChecked();
 
@@ -142,8 +155,7 @@ test.describe('registro de cuenta (/register)', () => {
     const email = uniqueEmail();
     try {
       await page.goto(appPath('/register'));
-      await fillIdentity(page, email, password ?? '');
-      await page.getByLabel(/^Confirmar contraseña/).fill(password ?? '');
+      await fillRegisterSteps(page, account(email, password ?? ''));
       for (const name of REQUIRED) await page.getByRole('checkbox', { name }).check();
       await page.getByRole('checkbox', { name: /comunicaciones/ }).check();
       await page.getByRole('button', { name: 'Crear cuenta' }).click();
@@ -190,11 +202,12 @@ test.describe('registro de cuenta (/register)', () => {
     const page = await context.newPage();
     try {
       await page.goto(appPath('/register'));
-      await fillIdentity(page, existing.email, password ?? '');
-      await page.getByLabel(/^Confirmar contraseña/).fill(password ?? '');
+      await fillRegisterSteps(page, account(existing.email, password ?? ''));
       for (const name of REQUIRED) await page.getByRole('checkbox', { name }).check();
       await page.getByRole('button', { name: 'Crear cuenta' }).click();
       await expect(page.getByText(/Ya existe una cuenta con este correo/).first()).toBeVisible();
+      // The error sends the person back to the step that holds the email.
+      await expect(page.getByTestId('register-step-2')).toBeVisible();
       await expect(page).toHaveURL(/\/register/);
     } finally {
       await context.close();
@@ -204,8 +217,8 @@ test.describe('registro de cuenta (/register)', () => {
   test('la pantalla de registro rellena cumple la auditoría de layout', async ({ page, audit }) => {
     await page.goto(appPath('/register'));
     await expect(page.getByRole('heading', { name: 'Crear cuenta' })).toBeVisible();
-    await page.getByLabel(/^Nombres/).fill('Ana');
-    await page.getByLabel(/^Apellidos/).fill('Torres');
+    await fillRegisterStep1(page, account(uniqueEmail(), 'Secreta-12345'));
+    await page.getByTestId('register-next').click();
     await page.getByLabel(/^Contraseña/).fill('Secreta-12345');
     await page.getByLabel(/^Confirmar contraseña/).fill('otra');
     await expect(page.getByText('Las contraseñas no coinciden')).toBeVisible();

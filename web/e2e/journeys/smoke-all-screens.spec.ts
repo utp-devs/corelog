@@ -49,6 +49,7 @@ interface Screen {
 
 const screens: readonly Screen[] = [
   { name: 'dashboard', path: () => '/dashboard', template: 'fluid' },
+  { name: 'dashboards', path: () => '/dashboards', template: 'wide' },
   { name: 'issues', path: () => '/issues', template: 'wide' },
   { name: 'issue-new', path: () => '/issues/new', template: 'reading' },
   { name: 'issue-detail', path: (ids) => `/browse/${ids.issueId}`, template: 'reading' },
@@ -77,6 +78,11 @@ const screens: readonly Screen[] = [
   {
     name: 'project-workflow',
     path: (ids) => `/projects/${ids.projectId}/settings/workflow`,
+    template: 'wide',
+  },
+  {
+    name: 'project-roadmap',
+    path: (ids) => `/projects/${ids.projectId}/roadmap`,
     template: 'wide',
   },
   { name: 'teams', path: () => '/teams', template: 'wide' },
