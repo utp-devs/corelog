@@ -115,6 +115,7 @@ describe('workspace navigation', () => {
         '/admin/organization/settings',
         '/admin/organization/members',
         '/admin/organization/invitations',
+        '/admin/organization/audit',
       ]);
     });
 

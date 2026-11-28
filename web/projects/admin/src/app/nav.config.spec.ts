@@ -88,6 +88,7 @@ describe('admin navigation', () => {
         ['Campos', '/organization/custom-fields'],
         ['Estados', '/organization/statuses'],
         ['Invitaciones', '/organization/invitations'],
+        ['Auditoría', '/organization/audit'],
       ]);
     });
 

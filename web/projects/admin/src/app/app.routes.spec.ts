@@ -70,6 +70,8 @@ describe('admin routes', () => {
       'statuses',
       'invitations',
       'legal',
+      'audit',
+      'platform-audit',
     ]);
   });
 

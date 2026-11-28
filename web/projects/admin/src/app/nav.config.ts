@@ -84,6 +84,20 @@ export const ADMIN_NAV: ShellNavConfig = {
         permission: 'org.admin',
       },
       {
+        key: 'org-audit',
+        label: 'Auditoría',
+        path: '/organization/audit',
+        icon: 'security',
+        permission: 'org.admin',
+      },
+      {
+        key: 'org-platform-audit',
+        label: 'Auditoría de la plataforma',
+        path: '/organization/platform-audit',
+        icon: 'security',
+        permission: 'platform.admin',
+      },
+      {
         key: 'org-legal',
         label: 'Documentos legales',
         path: '/organization/legal',

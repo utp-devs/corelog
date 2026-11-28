@@ -13,6 +13,8 @@ export const WORKSPACE_NAV: ShellNavConfig = {
       label: 'Paneles',
       path: '/dashboard',
       extras: [
+        { key: 'calendar', label: 'Calendario', path: '/calendar' },
+        { key: 'all-dashboards', label: 'Todos los paneles', path: '/dashboards' },
         { key: 'notes', label: 'Mis apuntes', path: '/notes' },
         { key: 'timesheet', label: 'Mi hoja de horas', path: '/timesheet' },
       ],
@@ -50,6 +52,14 @@ export const WORKSPACE_NAV: ShellNavConfig = {
         path: '/admin/organization/invitations',
         external: true,
         icon: 'invitations',
+        permission: 'org.admin',
+      },
+      {
+        key: 'org-audit',
+        label: 'Auditoría',
+        path: '/admin/organization/audit',
+        external: true,
+        icon: 'security',
         permission: 'org.admin',
       },
       {

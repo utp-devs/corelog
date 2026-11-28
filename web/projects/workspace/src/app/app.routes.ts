@@ -1,12 +1,14 @@
 import { Routes } from '@angular/router';
 
 import { authGuard, externalPath, requireOrgGuard, sameUrl } from '@corelog/core';
-import { DASHBOARD_ROUTES } from '@corelog/features/dashboard';
+import { CALENDAR_ROUTES } from '@corelog/features/calendar';
+import { DASHBOARDS_ROUTES, DASHBOARD_ROUTES } from '@corelog/features/dashboard';
 import { FILTERS_ROUTES } from '@corelog/features/filters';
 import { NOTES_ROUTES } from '@corelog/features/notes';
 import { PEOPLE_ROUTES } from '@corelog/features/people';
 import { PROFILE_ROUTES } from '@corelog/features/profile';
 import { PROJECT_PLANNING_ROUTES } from '@corelog/features/project-planning';
+import { ROADMAP_ROUTES } from '@corelog/features/roadmap';
 import { PROJECTS_ROUTES, PROJECT_DETAIL_CHILDREN } from '@corelog/features/projects';
 import { TEAMS_ROUTES } from '@corelog/features/teams';
 import { ISSUE_BROWSE_ROUTES, ISSUES_ROUTES, TIMESHEET_ROUTES } from '@corelog/features/issues';
@@ -25,6 +27,7 @@ const PROJECT_ROUTES: Routes = [
     children: [
       ...PROJECT_DETAIL_CHILDREN,
       ...PROJECT_PLANNING_ROUTES,
+      ...ROADMAP_ROUTES,
       { path: '**', redirectTo: 'board' },
     ],
   },
@@ -53,8 +56,11 @@ export const routes: Routes = [
       { path: 'people', children: PEOPLE_ROUTES },
       { path: 'projects', children: PROJECT_ROUTES },
       { path: 'dashboard', children: DASHBOARD_ROUTES },
+      { path: 'dashboards', children: DASHBOARDS_ROUTES },
+      { path: 'me/dashboard', pathMatch: 'full', redirectTo: 'dashboard' },
       { path: 'teams', children: TEAMS_ROUTES },
       { path: 'notes', children: NOTES_ROUTES },
+      { path: 'calendar', children: CALENDAR_ROUTES },
       {
         path: '**',
         title: 'Página no encontrada',

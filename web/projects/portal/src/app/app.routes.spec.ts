@@ -23,7 +23,23 @@ function setup(authenticated: boolean) {
 describe('portal routes', () => {
   it('mounts sign-in, registration and invitation at the root, not under login', () => {
     const paths = routes.map((route) => route.path);
-    expect(paths).toEqual(['', 'login', 'register', 'invite/:token', 'onboarding', '**']);
+    expect(paths).toEqual([
+      '',
+      'login',
+      'register',
+      'forgot-password',
+      'reset-password',
+      'verify-email',
+      'invite/:token',
+      'onboarding',
+      '**',
+    ]);
+  });
+
+  it('keeps the recovery and verification pages open to everyone, signed in or not', () => {
+    for (const path of ['forgot-password', 'reset-password', 'verify-email']) {
+      expect(routes.find((route) => route.path === path)?.canActivate).toBeUndefined();
+    }
   });
 
   it('guards sign-in and registration for signed-out users only', () => {

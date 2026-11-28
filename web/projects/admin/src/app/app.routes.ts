@@ -5,8 +5,10 @@ import {
   externalPath,
   requireOrgAdminGuard,
   requireOrgGuard,
+  requirePlatformAdminGuard,
   sameUrl,
 } from '@corelog/core';
+import { ORG_AUDIT_ROUTES, PLATFORM_AUDIT_ROUTES } from '@corelog/features/audit';
 import { ORG_ADMIN_ROUTES } from '@corelog/features/organizations';
 
 /**
@@ -31,7 +33,16 @@ export const routes: Routes = [
         path: 'organization',
         canActivate: [requireOrgAdminGuard],
         canActivateChild: [requireOrgAdminGuard],
-        children: [{ path: '', pathMatch: 'full', redirectTo: 'settings' }, ...ORG_ADMIN_ROUTES],
+        children: [
+          { path: '', pathMatch: 'full', redirectTo: 'settings' },
+          ...ORG_ADMIN_ROUTES,
+          { path: 'audit', children: ORG_AUDIT_ROUTES },
+          {
+            path: 'platform-audit',
+            canActivate: [requirePlatformAdminGuard],
+            children: PLATFORM_AUDIT_ROUTES,
+          },
+        ],
       },
       {
         path: '403',

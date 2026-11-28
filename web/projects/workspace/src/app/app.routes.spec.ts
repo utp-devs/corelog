@@ -58,8 +58,11 @@ describe('workspace routes', () => {
       'people',
       'projects',
       'dashboard',
+      'dashboards',
+      'me/dashboard',
       'teams',
       'notes',
+      'calendar',
       '**',
     ]);
   });
