@@ -38,7 +38,10 @@ test.describe('versiones del proyecto', () => {
 
     const page = await as('owner');
     await page.goto(appPath(`/projects/${project.key}/settings/versions`));
-    const item = page.getByTestId('version-item').filter({ hasText: '1.0' });
+    // The version created by the release is named like "1.0.1", so match the whole name.
+    const item = page.getByTestId('version-item').filter({
+      has: page.getByRole('heading', { name: '1.0', exact: true }),
+    });
     await expect(item).toBeVisible();
     await expect(item.getByTestId('version-progress').first()).toBeVisible();
 
@@ -47,7 +50,7 @@ test.describe('versiones del proyecto', () => {
       await page.getByTestId('move-new').check();
     }
     await page.getByTestId('release-confirm').click();
-    await expect(item.getByText('Publicada')).toBeVisible();
+    await expect(item.getByText('Publicada', { exact: true })).toBeVisible();
     if (linked.ok()) {
       await expect(
         page.getByTestId('version-item').filter({ hasText: 'Sin publicar' }),
@@ -59,7 +62,7 @@ test.describe('versiones del proyecto', () => {
     await page.getByRole('button', { name: 'Cerrar' }).first().click();
 
     await item.getByTestId('version-archive').click();
-    await expect(item.getByText('Archivada')).toBeVisible();
+    await expect(item.getByText('Archivada', { exact: true })).toBeVisible();
   });
 
   test('un colaborador ve las versiones sin acciones de gestión', async ({ as, api, data }) => {

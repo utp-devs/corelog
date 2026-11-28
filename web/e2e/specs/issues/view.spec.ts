@@ -1,7 +1,7 @@
 import { expect, test } from '../../fixtures/test.ts';
 import { appPath } from '../../lib/paths.ts';
 import { createIssueViaApi } from '../../lib/workflow-api.ts';
-import { projectWithIssue, readView } from './issue-fixtures.ts';
+import { openIssueView, projectWithIssue, readView } from './issue-fixtures.ts';
 
 test.describe('vista de la incidencia', () => {
   test('quien lidera edita puntos, etiquetas y marca, y los cambios quedan guardados', async ({
@@ -12,8 +12,7 @@ test.describe('vista de la incidencia', () => {
     const { owner, issue } = await projectWithIssue(api, data, 'view');
 
     const page = await as('lead');
-    await page.goto(appPath(`/browse/${issue.key}`));
-    await expect(page.getByTestId('issue-fields')).toBeVisible();
+    await openIssueView(page, issue.key);
 
     // Story points through the inline editor.
     await page
@@ -51,8 +50,7 @@ test.describe('vista de la incidencia', () => {
   }) => {
     const { issue } = await projectWithIssue(api, data, 'viewro');
     const page = await as('viewer');
-    await page.goto(appPath(`/browse/${issue.key}`));
-    await expect(page.getByTestId('issue-fields')).toBeVisible();
+    await openIssueView(page, issue.key);
     await expect(page.getByRole('textbox', { name: /Etiquetas/ })).toHaveCount(0);
     await expect(page.getByTestId('log-work-open')).toHaveCount(0);
     await expect(page.getByTestId('link-open')).toHaveCount(0);
@@ -66,14 +64,13 @@ test.describe('vista de la incidencia', () => {
   }) => {
     const { owner, issue } = await projectWithIssue(api, data, 'stale');
     const page = await as('lead');
-    await page.goto(appPath(`/browse/${issue.key}`));
-    await expect(page.getByTestId('issue-fields')).toBeVisible();
+    await openIssueView(page, issue.key);
 
     // Someone else changes the issue after the page loaded.
     const other = await owner.patch(`issues/${issue.id}`, { data: { story_points: 8 } });
     expect(other.ok()).toBe(true);
 
-    await page.getByRole('checkbox', { name: 'Incidencia marcada' }).check();
+    await page.getByRole('checkbox', { name: 'Incidencia marcada' }).click();
     await expect(page.getByText(/Alguien cambió esta incidencia/).first()).toBeVisible();
     await expect(page.getByRole('checkbox', { name: 'Incidencia marcada' })).not.toBeChecked();
   });
@@ -117,8 +114,7 @@ test.describe('vista de la incidencia', () => {
   test('la vista y la creación no rompen el diseño', async ({ as, api, data, audit }) => {
     const { issue } = await projectWithIssue(api, data, 'audit');
     const page = await as('lead');
-    await page.goto(appPath(`/browse/${issue.key}`));
-    await expect(page.getByTestId('issue-fields')).toBeVisible();
+    await openIssueView(page, issue.key);
     await audit(page, { template: 'wide', name: 'issue-view' });
   });
 });

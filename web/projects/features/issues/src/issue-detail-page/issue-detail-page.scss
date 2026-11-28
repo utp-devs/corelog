@@ -122,6 +122,9 @@
   }
 
   &__link {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--cl-control-h-md);
     color: var(--cl-brand);
   }
 

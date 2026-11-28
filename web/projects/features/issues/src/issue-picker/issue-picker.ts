@@ -21,7 +21,8 @@ export const ISSUE_SEARCH_DEBOUNCE_MS = 300;
 const PAGE_SIZE = 20;
 
 interface IssueOption {
-  readonly value: string;
+  /** Named `id`, not `value`: PrimeNG would emit a `value` field instead of the option object. */
+  readonly id: string;
   /** Text of the field once chosen: key and title. */
   readonly label: string;
   readonly key: string;
@@ -59,10 +60,10 @@ export class IssuePicker {
     const id = this.value();
     if (!id) return null;
     const picked = this.picked();
-    if (picked?.value === id) return picked;
+    if (picked?.id === id) return picked;
     return (
-      this.options().find((option) => option.value === id) ?? {
-        value: id,
+      this.options().find((option) => option.id === id) ?? {
+        id,
         label: shortIssueKeyOf({ id }),
         key: shortIssueKeyOf({ id }),
         title: '',
@@ -100,7 +101,7 @@ export class IssuePicker {
   /** Results come from the server search: the list is shown as returned, without a client-side filter. */
   protected onPick(option: IssueOption | null): void {
     this.picked.set(option);
-    this.value.set(option?.value ?? '');
+    this.value.set(option?.id ?? '');
   }
 
   private toOptions(items: readonly Issue[]): IssueOption[] {
@@ -109,7 +110,7 @@ export class IssuePicker {
       .map((issue) => {
         const key = shortIssueKeyOf(issue);
         return {
-          value: issue.id,
+          id: issue.id,
           label: `${key} · ${issue.summary}`,
           key,
           title: issue.summary,

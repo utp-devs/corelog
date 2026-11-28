@@ -485,13 +485,17 @@ export class IssuesListPage {
       columns.map((key) => csvCell(titles.get(key) ?? key)).join(','),
       ...rows.map((issue) => columns.map((key) => csvCell(this.cellText(issue, key))).join(',')),
     ];
-    const blob = new Blob([`﻿${lines.join('\r\n')}\r\n`], { type: 'text/csv;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = 'incidencias.csv';
-    link.click();
-    URL.revokeObjectURL(url);
+    try {
+      const blob = new Blob([`﻿${lines.join('\r\n')}\r\n`], { type: 'text/csv;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `issues-${new Date().toISOString().slice(0, 10)}.csv`;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      this.notify.error(error);
+    }
   }
 
   // Saved filters.

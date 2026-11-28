@@ -1,7 +1,8 @@
-import { expect, type APIRequestContext } from '@playwright/test';
+import { expect, type APIRequestContext, type Page } from '@playwright/test';
 
 import type { ApiForRole, DataHelpers } from '../../fixtures/test.ts';
 import { orgIdBySlug } from '../../lib/api.ts';
+import { appPath } from '../../lib/paths.ts';
 import { createIssueViaApi, userIdOf, type ApiIssue } from '../../lib/workflow-api.ts';
 
 export interface IssueProject {
@@ -44,4 +45,15 @@ export async function readView(
   const response = await client.get(`issues/${ref}`);
   expect(response.ok(), 'reading the issue').toBe(true);
   return ((await response.json()) as { data: Record<string, unknown> }).data;
+}
+
+/** Opens the issue view and, on phones where the details card starts collapsed, expands it. */
+export async function openIssueView(page: Page, key: string): Promise<void> {
+  await page.goto(appPath(`/browse/${key}`));
+  await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+  const toggle = page.getByRole('button', { name: 'Mostrar detalles' });
+  if (await toggle.isVisible()) {
+    await toggle.click();
+  }
+  await expect(page.getByTestId('issue-fields')).toBeVisible();
 }

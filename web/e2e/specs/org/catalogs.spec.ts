@@ -220,15 +220,21 @@ test.describe('catalogos de la organizacion', () => {
     const acme = await orgIdBySlug(owner, 'acme');
     const project = await data.createProject('owner', acme, 'tip');
     const page = await as('owner');
-    await page.goto(appPath(`/projects/${project.key}/settings/issue-types`));
 
-    await expect(page.getByRole('checkbox', { name: /Épica/ })).toBeDisabled();
-    await expect(page.getByRole('checkbox', { name: /Subtarea/ })).toBeDisabled();
-    const bug = page.getByRole('checkbox', { name: /Error/ });
-    await expect(bug).toBeChecked();
-    await bug.uncheck();
-    await page.getByTestId('project-issue-types-save').getByRole('button').click();
-    await expect(page.getByText('Tipos de incidencia del proyecto guardados')).toBeVisible();
+    // Other specs create and delete organization-wide types in parallel: a type listed here can vanish
+    // before the save, and the server rejects the stale list. Reload and try again in that case.
+    await expect(async () => {
+      await page.goto(appPath(`/projects/${project.key}/settings/issue-types`));
+      await expect(page.getByRole('checkbox', { name: /Épica/ })).toBeDisabled();
+      await expect(page.getByRole('checkbox', { name: /Subtarea/ })).toBeDisabled();
+      const bug = page.getByRole('checkbox', { name: /Error/ });
+      await expect(bug).toBeChecked();
+      await bug.uncheck();
+      await page.getByTestId('project-issue-types-save').getByRole('button').click();
+      await expect(page.getByText('Tipos de incidencia del proyecto guardados')).toBeVisible({
+        timeout: 5_000,
+      });
+    }).toPass({ timeout: 30_000 });
 
     const saved = await owner.get(`projects/${project.id}/issue-types`);
     const body = (await saved.json()) as {

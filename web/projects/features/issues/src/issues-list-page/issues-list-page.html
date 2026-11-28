@@ -66,11 +66,11 @@
           (onClick)="openSave()"
         />
         <p-button
-          label="Exportar"
+          label="Exportar CSV"
           icon="pi pi-download"
           severity="secondary"
           [outlined]="true"
-          [disabled]="issues().length === 0"
+          [disabled]="loading() || issues().length === 0"
           data-testid="export-csv"
           (onClick)="exportCsv()"
         />
