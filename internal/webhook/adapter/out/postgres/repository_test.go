@@ -153,8 +153,25 @@ func TestRepositoryWebhooksAndDeliveries(t *testing.T) {
 	if err := repo.Delete(ctx, org, scoped.ID); err != nil {
 		t.Fatal(err)
 	}
-	if left, _ := repo.ListDeliveries(ctx, scoped.ID, 10); len(left) != 0 {
-		t.Fatal("deliveries must cascade")
+	var kept, stamped int
+	if err := db.Get(&kept, `SELECT count(*) FROM webhook_deliveries WHERE webhook_id = $1`, scoped.ID); err != nil || kept == 0 {
+		t.Fatalf("deliveries must be kept for history: %d %v", kept, err)
+	}
+	if err := db.Get(&stamped, `SELECT count(*) FROM webhooks WHERE id = $1 AND deleted_at IS NOT NULL AND NOT enabled`, scoped.ID); err != nil || stamped != 1 {
+		t.Fatalf("the row must be kept with deleted_at set: %d %v", stamped, err)
+	}
+	if _, err := repo.Get(ctx, org, scoped.ID); !errors.Is(err, domain.ErrNotFound) {
+		t.Fatalf("deleted webhook visible through Get: %v", err)
+	}
+	if list, _ := repo.List(ctx, org, nil); len(list) != 0 {
+		for _, w := range list {
+			if w.ID == scoped.ID {
+				t.Fatal("deleted webhook listed")
+			}
+		}
+	}
+	if due, _ := repo.ClaimDue(ctx, now.Add(time.Hour), 10, time.Minute); len(due) != 0 {
+		t.Fatalf("deliveries of a deleted webhook were claimed: %d", len(due))
 	}
 	if err := repo.Delete(ctx, org, scoped.ID); !errors.Is(err, domain.ErrNotFound) {
 		t.Fatalf("second delete: %v", err)

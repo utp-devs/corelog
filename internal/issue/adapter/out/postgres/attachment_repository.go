@@ -42,7 +42,7 @@ func (r *AttachmentRepository) SaveAttachment(ctx context.Context, a *domain.Att
 }
 func (r *AttachmentRepository) FindAttachment(ctx context.Context, issueID, id uuid.UUID) (*domain.Attachment, error) {
 	var row attachmentRow
-	err := r.db.GetContext(ctx, &row, `SELECT id,issue_id,uploader_id,file_name,content_type,size_bytes,storage_key,created_at FROM attachments WHERE issue_id=$1 AND id=$2`, issueID, id)
+	err := r.db.GetContext(ctx, &row, `SELECT id,issue_id,uploader_id,file_name,content_type,size_bytes,storage_key,created_at FROM attachments WHERE issue_id=$1 AND id=$2 AND deleted_at IS NULL`, issueID, id)
 	if err == sql.ErrNoRows {
 		return nil, apperror.New(apperror.KindNotFound, "attachment not found")
 	}
@@ -53,7 +53,7 @@ func (r *AttachmentRepository) FindAttachment(ctx context.Context, issueID, id u
 }
 func (r *AttachmentRepository) ListAttachments(ctx context.Context, issueID uuid.UUID) ([]*domain.Attachment, error) {
 	var rows []attachmentRow
-	if err := r.db.SelectContext(ctx, &rows, `SELECT id,issue_id,uploader_id,file_name,content_type,size_bytes,storage_key,created_at FROM attachments WHERE issue_id=$1 ORDER BY created_at,id`, issueID); err != nil {
+	if err := r.db.SelectContext(ctx, &rows, `SELECT id,issue_id,uploader_id,file_name,content_type,size_bytes,storage_key,created_at FROM attachments WHERE issue_id=$1 AND deleted_at IS NULL ORDER BY created_at,id`, issueID); err != nil {
 		return nil, apperror.Wrap(apperror.KindInternal, "failed to list attachments", err)
 	}
 	out := make([]*domain.Attachment, 0, len(rows))
@@ -63,7 +63,7 @@ func (r *AttachmentRepository) ListAttachments(ctx context.Context, issueID uuid
 	return out, nil
 }
 func (r *AttachmentRepository) DeleteAttachment(ctx context.Context, issueID, id uuid.UUID) error {
-	res, err := r.db.ExecContext(ctx, `DELETE FROM attachments WHERE issue_id=$1 AND id=$2`, issueID, id)
+	res, err := r.db.ExecContext(ctx, `UPDATE attachments SET deleted_at = now() WHERE issue_id=$1 AND id=$2 AND deleted_at IS NULL`, issueID, id)
 	if err != nil {
 		return apperror.Wrap(apperror.KindInternal, "failed to delete attachment", err)
 	}

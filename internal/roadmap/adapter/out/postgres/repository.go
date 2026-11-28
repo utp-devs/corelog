@@ -149,7 +149,7 @@ func (r *Repository) Versions(ctx context.Context, projectID uuid.UUID) ([]domai
 		LEFT JOIN (SELECT iv.version_id, x.id, x.story_points, corelog_issue_category(x.status_id, x.status) AS cat
 		           FROM issue_versions iv JOIN issues x ON x.id = iv.issue_id AND x.deleted_at IS NULL
 		           WHERE iv.kind = 'fix') i ON i.version_id = v.id
-		WHERE v.project_id = $1 AND v.archived_at IS NULL
+		WHERE v.project_id = $1 AND v.deleted_at IS NULL AND v.archived_at IS NULL
 		GROUP BY v.id
 		ORDER BY COALESCE(v.release_date, v.start_date) NULLS LAST, lower(v.name), v.id`, projectID)
 	if err != nil {
@@ -167,7 +167,7 @@ func (r *Repository) Sprints(ctx context.Context, projectID uuid.UUID) ([]domain
 		JOIN projects p ON p.id = s.project_id AND p.deleted_at IS NULL
 		LEFT JOIN (SELECT x.sprint_id, x.id, x.story_points, corelog_issue_category(x.status_id, x.status) AS cat
 		           FROM issues x WHERE x.deleted_at IS NULL AND x.sprint_id IS NOT NULL) i ON i.sprint_id = s.id
-		WHERE s.project_id = $1
+		WHERE s.project_id = $1 AND s.deleted_at IS NULL
 		GROUP BY s.id
 		ORDER BY COALESCE(s.start_date, s.end_date) NULLS LAST, s.created_at, s.id`, projectID)
 	if err != nil {
@@ -191,7 +191,7 @@ func (r *Repository) Dependencies(ctx context.Context, projectID uuid.UUID) ([]d
 		JOIN issue_types st ON st.id = s.issue_type_id AND st.hierarchy_level = 1
 		JOIN issues t ON t.id = l.target_issue_id AND t.project_id = $1 AND t.deleted_at IS NULL
 		JOIN issue_types tt ON tt.id = t.issue_type_id AND tt.hierarchy_level = 1
-		WHERE l.kind = 'blocks'
+		WHERE l.kind = 'blocks' AND l.deleted_at IS NULL
 		ORDER BY l.created_at, l.id`, projectID)
 	if err != nil {
 		return nil, internal("failed to read the dependencies", err)

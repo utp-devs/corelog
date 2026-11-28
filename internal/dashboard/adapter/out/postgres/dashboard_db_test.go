@@ -289,14 +289,31 @@ func TestDashboardCrudPostgres(t *testing.T) {
 		t.Fatalf("a failed replacement was not rolled back: %+v", got.Gadgets)
 	}
 
-	// Delete removes gadgets, shares and the stars that pointed at it.
+	// Delete is logical: the dashboard and its gadgets stay stored, the stars that pointed at it go away and the
+	// dashboard is invisible through every read.
 	f.exec(`INSERT INTO favorites (user_id, entity_type, entity_id) VALUES ($1, 'dashboard', $2)`, f.owner, d.ID)
 	if err := f.repo.Delete(ctx, d.ID); err != nil {
 		t.Fatal(err)
 	}
-	var left int
-	if err := f.db.Get(&left, `SELECT (SELECT count(*) FROM dashboard_gadgets WHERE dashboard_id = $1) + (SELECT count(*) FROM favorites WHERE entity_id = $1)`, d.ID); err != nil || left != 0 {
+	var left, kept, stamped int
+	if err := f.db.Get(&left, `SELECT count(*) FROM favorites WHERE entity_id = $1`, d.ID); err != nil || left != 0 {
 		t.Fatalf("leftovers: %d %v", left, err)
+	}
+	if err := f.db.Get(&kept, `SELECT count(*) FROM dashboard_gadgets WHERE dashboard_id = $1`, d.ID); err != nil || kept == 0 {
+		t.Fatalf("gadgets must be kept for history: %d %v", kept, err)
+	}
+	if err := f.db.Get(&stamped, `SELECT count(*) FROM dashboards WHERE id = $1 AND deleted_at IS NOT NULL AND NOT is_default`, d.ID); err != nil || stamped != 1 {
+		t.Fatalf("the dashboard row must be kept with deleted_at set: %d %v", stamped, err)
+	}
+	if _, err := f.repo.Get(ctx, v(f.owner), d.ID); apperror.CodeOf(err) != domain.CodeNotFound {
+		t.Fatalf("deleted dashboard visible through Get: %v", err)
+	}
+	if items, _, _ := f.repo.List(ctx, v(f.owner), port.ListQuery{Page: 1, PageSize: 50}); true {
+		for _, item := range items {
+			if item.ID == d.ID {
+				t.Fatal("deleted dashboard listed")
+			}
+		}
 	}
 	if err := f.repo.Delete(ctx, d.ID); apperror.CodeOf(err) != domain.CodeNotFound {
 		t.Fatalf("second delete: %v", err)

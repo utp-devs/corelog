@@ -87,7 +87,7 @@ func (r *Repository) Save(ctx context.Context, v *domain.Version) error {
 	_, err := database.Executor(ctx, r.db).ExecContext(ctx, `
 		UPDATE versions SET name = $2, description = $3, start_date = $4, release_date = $5, status = $6,
 		       released_at = $7, archived_at = $8, updated_at = $9
-		WHERE id = $1`,
+		WHERE id = $1 AND deleted_at IS NULL`,
 		v.ID, v.Name, v.Description, v.StartDate, v.ReleaseDate, string(v.Status), v.ReleasedAt, v.ArchivedAt, v.UpdatedAt)
 	if err != nil {
 		return mapWriteError(err, "failed to save version")
@@ -105,7 +105,7 @@ func (r *Repository) LockByID(ctx context.Context, id uuid.UUID) (*domain.Versio
 
 func (r *Repository) find(ctx context.Context, id uuid.UUID, suffix string) (*domain.Version, error) {
 	var row versionRow
-	query := `SELECT ` + versionColumns + ` FROM versions WHERE id = $1` + suffix
+	query := `SELECT ` + versionColumns + ` FROM versions WHERE id = $1 AND deleted_at IS NULL` + suffix
 	if err := sqlx.GetContext(ctx, database.Executor(ctx, r.db), &row, query, id); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, domain.ErrVersionNotFound
@@ -124,7 +124,7 @@ func (r *Repository) List(ctx context.Context, projectID uuid.UUID, status *doma
 	var rows []versionRow
 	if err := sqlx.SelectContext(ctx, database.Executor(ctx, r.db), &rows, `
 		SELECT `+versionColumns+` FROM versions
-		WHERE project_id = $1 AND ($2::text IS NULL OR status = $2)
+		WHERE project_id = $1 AND deleted_at IS NULL AND ($2::text IS NULL OR status = $2)
 		ORDER BY COALESCE(release_date, DATE '9999-12-31') ASC, lower(name) ASC, id ASC`,
 		projectID, filter); err != nil {
 		return nil, apperror.Wrap(apperror.KindInternal, "failed to list versions", err)
@@ -171,7 +171,7 @@ func (r *Repository) Progress(ctx context.Context, versionIDs []uuid.UUID) (map[
 func (r *Repository) NameTaken(ctx context.Context, projectID uuid.UUID, name string, except uuid.UUID) (bool, error) {
 	var taken bool
 	if err := sqlx.GetContext(ctx, database.Executor(ctx, r.db), &taken, `
-		SELECT EXISTS (SELECT 1 FROM versions WHERE project_id = $1 AND lower(name) = lower($2) AND id <> $3)`,
+		SELECT EXISTS (SELECT 1 FROM versions WHERE project_id = $1 AND deleted_at IS NULL AND lower(name) = lower($2) AND id <> $3)`,
 		projectID, name, except); err != nil {
 		return false, apperror.Wrap(apperror.KindInternal, "failed to check version name", err)
 	}
@@ -179,7 +179,7 @@ func (r *Repository) NameTaken(ctx context.Context, projectID uuid.UUID, name st
 }
 
 func (r *Repository) Delete(ctx context.Context, id uuid.UUID) error {
-	result, err := database.Executor(ctx, r.db).ExecContext(ctx, `DELETE FROM versions WHERE id = $1`, id)
+	result, err := database.Executor(ctx, r.db).ExecContext(ctx, `UPDATE versions SET deleted_at = now() WHERE id = $1 AND deleted_at IS NULL`, id)
 	if err != nil {
 		return apperror.Wrap(apperror.KindInternal, "failed to delete version", err)
 	}

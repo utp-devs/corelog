@@ -23,7 +23,7 @@ func (r *OperationsRepository) ProjectLabelIDs(ctx context.Context, projectID uu
 		Name string    `db:"name"`
 	}
 	if err := sqlx.SelectContext(ctx, database.Executor(ctx, r.db), &rows,
-		"SELECT id, name FROM labels WHERE project_id = $1 AND id IN ("+list+")", args...); err != nil {
+		"SELECT id, name FROM labels WHERE project_id = $1 AND deleted_at IS NULL AND id IN ("+list+")", args...); err != nil {
 		return nil, apperror.Wrap(apperror.KindInternal, "failed to read labels", err)
 	}
 	for _, row := range rows {
@@ -36,8 +36,8 @@ func (r *OperationsRepository) ProjectLabelIDs(ctx context.Context, projectID uu
 func (r *OperationsRepository) IssueLabelNames(ctx context.Context, issueID uuid.UUID) ([]string, error) {
 	var names []string
 	if err := sqlx.SelectContext(ctx, database.Executor(ctx, r.db), &names, `
-		SELECT l.name FROM issue_labels il JOIN labels l ON l.id = il.label_id
-		WHERE il.issue_id = $1 ORDER BY l.name`, issueID); err != nil {
+		SELECT l.name FROM issue_labels il JOIN labels l ON l.id = il.label_id AND l.deleted_at IS NULL
+		WHERE il.issue_id = $1 AND l.deleted_at IS NULL ORDER BY l.name`, issueID); err != nil {
 		return nil, apperror.Wrap(apperror.KindInternal, "failed to read issue labels", err)
 	}
 	return names, nil

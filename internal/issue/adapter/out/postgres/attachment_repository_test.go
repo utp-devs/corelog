@@ -51,6 +51,9 @@ func TestAttachmentRepositoryPostgresCRUD(t *testing.T) {
 	if _, err := db.Exec(`ALTER TABLE attachments ALTER COLUMN id SET DEFAULT gen_random_uuid()`); err != nil {
 		t.Fatal(err)
 	}
+	if _, err := db.Exec(`ALTER TABLE attachments ADD COLUMN deleted_at TIMESTAMPTZ NULL`); err != nil {
+		t.Fatal(err)
+	}
 
 	ctx := context.Background()
 	issueID, uploaderID := uuid.New(), uuid.New()
@@ -81,6 +84,13 @@ func TestAttachmentRepositoryPostgresCRUD(t *testing.T) {
 	}
 	if _, err := repo.FindAttachment(ctx, issueID, want.ID); apperror.KindOf(err) != apperror.KindNotFound {
 		t.Fatalf("FindAttachment after delete error = %v, want not found", err)
+	}
+	if items, _ := repo.ListAttachments(ctx, issueID); len(items) != 0 {
+		t.Fatalf("deleted attachment listed: %#v", items)
+	}
+	var stamped int
+	if err := db.Get(&stamped, `SELECT count(*) FROM attachments WHERE id = $1 AND deleted_at IS NOT NULL`, want.ID); err != nil || stamped != 1 {
+		t.Fatalf("attachment metadata must be kept with deleted_at set: %d %v", stamped, err)
 	}
 	if err := repo.DeleteAttachment(ctx, issueID, uuid.New()); apperror.KindOf(err) != apperror.KindNotFound {
 		t.Fatalf("DeleteAttachment missing error = %v, want not found", err)

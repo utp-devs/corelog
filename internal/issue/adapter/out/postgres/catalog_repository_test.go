@@ -140,6 +140,22 @@ func TestCatalogDeleteInUseIsRefusedAndMoveIssuesUnblocksIt(t *testing.T) {
 	if err := repo.DeleteItem(ctx, bug); err != nil {
 		t.Fatalf("delete after move: %v", err)
 	}
+	// Logical delete: the issue keeps showing the name, the catalog hides the item and its name is reusable.
+	if items, _ := repo.ListItems(ctx, org, domain.CatalogIssueType); true {
+		for _, it := range items {
+			if it.ID == bug.ID {
+				t.Fatal("deleted catalog item listed")
+			}
+		}
+	}
+	var stamped int
+	if err := db.Get(&stamped, `SELECT count(*) FROM issue_types WHERE id = $1 AND deleted_at IS NOT NULL`, bug.ID); err != nil || stamped != 1 {
+		t.Fatalf("catalog row must be kept with deleted_at set: %d %v", stamped, err)
+	}
+	again := &domain.CatalogItem{OrganizationID: org, Kind: domain.CatalogIssueType, Name: bug.Name, HierarchyLevel: 0, Icon: "bug", Color: "red"}
+	if err := repo.InsertItem(ctx, again); err != nil {
+		t.Fatalf("name of a deleted item must be reusable: %v", err)
+	}
 }
 
 func TestCatalogNamesAreUniquePerOrganization(t *testing.T) {

@@ -48,7 +48,7 @@ func (r *IssueLabelRepository) ResolveLabelNames(ctx context.Context, projectID 
 	if err := sqlx.SelectContext(ctx, database.Executor(ctx, r.db), &rows, `
 		INSERT INTO labels (project_id, name, color)
 		SELECT $1, n, $3 FROM unnest($2::text[]) AS n
-		ON CONFLICT (project_id, name) DO UPDATE SET name = EXCLUDED.name
+		ON CONFLICT (project_id, name) WHERE deleted_at IS NULL DO UPDATE SET name = EXCLUDED.name
 		RETURNING id, name`, projectID, names, palette.Default); err != nil {
 		return nil, apperror.Wrap(apperror.KindInternal, "failed to resolve labels", err)
 	}

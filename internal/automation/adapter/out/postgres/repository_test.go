@@ -130,7 +130,17 @@ func TestRepositoryRulesAndRuns(t *testing.T) {
 		t.Fatal(err)
 	}
 	if runs, _ := repo.ListRuns(ctx, rule.ID, "", 10); len(runs) != 0 {
-		t.Fatal("runs must cascade")
+		t.Fatal("runs of a deleted rule must be hidden")
+	}
+	var kept, stamped int
+	if err := db.Get(&kept, `SELECT count(*) FROM automation_runs WHERE rule_id = $1`, rule.ID); err != nil || kept == 0 {
+		t.Fatalf("runs must be kept for statistics: %d %v", kept, err)
+	}
+	if err := db.Get(&stamped, `SELECT count(*) FROM automation_rules WHERE id = $1 AND deleted_at IS NOT NULL`, rule.ID); err != nil || stamped != 1 {
+		t.Fatalf("the rule must be kept with deleted_at set: %d %v", stamped, err)
+	}
+	if _, err := repo.Get(ctx, rule.ID); !errors.Is(err, domain.ErrNotFound) {
+		t.Fatalf("deleted rule visible through Get: %v", err)
 	}
 	if err := repo.Delete(ctx, rule.ID); !errors.Is(err, domain.ErrNotFound) {
 		t.Fatalf("second delete: %v", err)

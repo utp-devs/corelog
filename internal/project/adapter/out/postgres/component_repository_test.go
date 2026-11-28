@@ -107,6 +107,27 @@ func TestComponentRepositoryLeadCountsAndMove(t *testing.T) {
 	if _, err := catalog.FindComponent(ctx, project.ID, payments.ID); apperror.CodeOf(err) != "component.not_found" {
 		t.Fatalf("deleted component still found: %v", err)
 	}
+	// The delete is logical: the row and its issue links stay, reads hide it and its name can be used again.
+	var kept, stamped int
+	if err := db.Get(&kept, `SELECT count(*) FROM issue_components WHERE component_id = $1`, payments.ID); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Get(&stamped, `SELECT count(*) FROM components WHERE id = $1 AND deleted_at IS NOT NULL`, payments.ID); err != nil || stamped != 1 {
+		t.Fatalf("component row must be kept with deleted_at set: %d %v (links %d)", stamped, err, kept)
+	}
+	listed, err := catalog.ListComponents(ctx, project.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, c := range listed {
+		if c.ID == payments.ID {
+			t.Fatal("deleted component listed")
+		}
+	}
+	again2, _ := domain.NewComponent(project.ID, "Pagos", "")
+	if err := catalog.CreateComponent(ctx, again2); err != nil {
+		t.Fatalf("name of a deleted component must be reusable: %v", err)
+	}
 }
 
 func strPtr(s string) *string { return &s }

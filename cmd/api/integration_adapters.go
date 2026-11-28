@@ -150,7 +150,7 @@ func (d automationData) Snapshot(ctx context.Context, issueID uuid.UUID) (automa
 		return automationdomain.Snapshot{}, err
 	}
 	var labels []string
-	if err := sqlx.SelectContext(ctx, d.db, &labels, `SELECT l.name FROM issue_labels il JOIN labels l ON l.id = il.label_id
+	if err := sqlx.SelectContext(ctx, d.db, &labels, `SELECT l.name FROM issue_labels il JOIN labels l ON l.id = il.label_id AND l.deleted_at IS NULL
 		WHERE il.issue_id = $1 ORDER BY l.name`, issueID); err != nil {
 		return automationdomain.Snapshot{}, err
 	}
@@ -321,7 +321,7 @@ func (a automationActions) catalogID(ctx context.Context, issueID uuid.UUID, tab
 	}
 	var id uuid.UUID
 	err := sqlx.GetContext(ctx, a.db, &id, `SELECT c.id FROM priorities c JOIN projects p ON p.organization_id = c.organization_id
-		JOIN issues i ON i.project_id = p.id WHERE i.id = $1 AND lower(c.name) = lower($2)`, issueID, strings.TrimSpace(name))
+		JOIN issues i ON i.project_id = p.id WHERE i.id = $1 AND c.deleted_at IS NULL AND lower(c.name) = lower($2)`, issueID, strings.TrimSpace(name))
 	if errors.Is(err, sql.ErrNoRows) {
 		return uuid.Nil, apperror.New(apperror.KindValidation, "prioridad desconocida: "+name)
 	}
@@ -441,10 +441,10 @@ func (r rowImporter) catalog(ctx context.Context, table string, org uuid.UUID, n
 	var aliases catalogAliases
 	switch table {
 	case "issue_types":
-		query = `SELECT id FROM issue_types WHERE organization_id = $1 AND (lower(name) = lower($2) OR legacy_key = $3)`
+		query = `SELECT id FROM issue_types WHERE organization_id = $1 AND deleted_at IS NULL AND (lower(name) = lower($2) OR legacy_key = $3)`
 		aliases = typeAliases
 	case "priorities":
-		query = `SELECT id FROM priorities WHERE organization_id = $1 AND (lower(name) = lower($2) OR legacy_key = $3)`
+		query = `SELECT id FROM priorities WHERE organization_id = $1 AND deleted_at IS NULL AND (lower(name) = lower($2) OR legacy_key = $3)`
 		aliases = priorityAliases
 	default:
 		return nil, errors.New("catalogo no admitido")
@@ -511,17 +511,17 @@ func (r rowImporter) Import(ctx context.Context, in importport.ImportRow) (strin
 		}
 		parent = &id
 	}
-	components, err := r.named(ctx, `SELECT id FROM components WHERE project_id = $1 AND lower(name) = lower($2)`, in.ProjectID, row.Components, "componente")
+	components, err := r.named(ctx, `SELECT id FROM components WHERE project_id = $1 AND deleted_at IS NULL AND lower(name) = lower($2)`, in.ProjectID, row.Components, "componente")
 	if err != nil {
 		return "", err
 	}
-	versions, err := r.named(ctx, `SELECT id FROM versions WHERE project_id = $1 AND lower(name) = lower($2)`, in.ProjectID, row.FixVersions, "version")
+	versions, err := r.named(ctx, `SELECT id FROM versions WHERE project_id = $1 AND deleted_at IS NULL AND lower(name) = lower($2)`, in.ProjectID, row.FixVersions, "version")
 	if err != nil {
 		return "", err
 	}
 	custom := map[string]json.RawMessage{}
 	for name, value := range row.Custom {
-		id, ok, err := r.lookup(ctx, `SELECT id FROM custom_fields WHERE organization_id = $1 AND lower(name) = lower($2)`, org, name)
+		id, ok, err := r.lookup(ctx, `SELECT id FROM custom_fields WHERE organization_id = $1 AND deleted_at IS NULL AND lower(name) = lower($2)`, org, name)
 		if err != nil {
 			return "", err
 		}

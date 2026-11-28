@@ -26,25 +26,25 @@ var suggestQueries = map[string]string{
 		FROM statuses s WHERE s.organization_id IN ` + viewerOrgsSQL + ` AND s.name ILIKE $3 ESCAPE '\'
 		ORDER BY lower(s.name) LIMIT $4`,
 	"priority": `SELECT DISTINCT ON (lower(x.name)) x.name AS value, x.name AS label, '' AS detail
-		FROM priorities x WHERE x.organization_id IN ` + viewerOrgsSQL + ` AND x.name ILIKE $3 ESCAPE '\'
+		FROM priorities x WHERE x.deleted_at IS NULL AND x.organization_id IN ` + viewerOrgsSQL + ` AND x.name ILIKE $3 ESCAPE '\'
 		ORDER BY lower(x.name) LIMIT $4`,
 	"issuetype": issueTypeSuggestSQL, "type": issueTypeSuggestSQL,
 	"resolution": `SELECT DISTINCT ON (lower(x.name)) x.name AS value, x.name AS label, '' AS detail
-		FROM resolutions x WHERE x.organization_id IN ` + viewerOrgsSQL + ` AND x.name ILIKE $3 ESCAPE '\'
+		FROM resolutions x WHERE x.deleted_at IS NULL AND x.organization_id IN ` + viewerOrgsSQL + ` AND x.name ILIKE $3 ESCAPE '\'
 		ORDER BY lower(x.name) LIMIT $4`,
 	"project": `SELECT p.key AS value, p.name AS label, p.key AS detail FROM projects p
 		WHERE p.deleted_at IS NULL AND ` + visibleProjectSQL("p", "$1::uuid", "$2::boolean") + `
 		AND (p.key ILIKE $3 ESCAPE '\' OR p.name ILIKE $3 ESCAPE '\') ORDER BY p.key LIMIT $4`,
 	"labels": `SELECT DISTINCT ON (lower(l.name)) l.name AS value, l.name AS label, '' AS detail
-		FROM labels l JOIN projects p ON p.id = l.project_id AND p.deleted_at IS NULL
+		FROM labels l JOIN projects p ON p.id = l.project_id AND p.deleted_at IS NULL AND l.deleted_at IS NULL
 		WHERE ` + visibleProjectSQL("p", "$1::uuid", "$2::boolean") + ` AND l.name ILIKE $3 ESCAPE '\'
 		ORDER BY lower(l.name) LIMIT $4`,
 	"component": `SELECT DISTINCT ON (lower(c.name)) c.name AS value, c.name AS label, '' AS detail
-		FROM components c JOIN projects p ON p.id = c.project_id AND p.deleted_at IS NULL
+		FROM components c JOIN projects p ON p.id = c.project_id AND p.deleted_at IS NULL AND c.deleted_at IS NULL
 		WHERE ` + visibleProjectSQL("p", "$1::uuid", "$2::boolean") + ` AND c.name ILIKE $3 ESCAPE '\'
 		ORDER BY lower(c.name) LIMIT $4`,
 	"sprint": `SELECT s.name AS value, s.name AS label, p.key AS detail
-		FROM sprints s JOIN projects p ON p.id = s.project_id AND p.deleted_at IS NULL
+		FROM sprints s JOIN projects p ON p.id = s.project_id AND p.deleted_at IS NULL AND s.deleted_at IS NULL
 		WHERE ` + visibleProjectSQL("p", "$1::uuid", "$2::boolean") + ` AND s.name ILIKE $3 ESCAPE '\'
 		ORDER BY s.status = 'active' DESC, s.created_at DESC LIMIT $4`,
 	"key": issueSuggestSQL, "epic": issueSuggestSQL, "parent": issueSuggestSQL,
@@ -59,7 +59,7 @@ const userSuggestSQL = `SELECT u.email AS value, u.display_name AS label, u.emai
 	ORDER BY lower(u.display_name) LIMIT $4`
 
 const issueTypeSuggestSQL = `SELECT DISTINCT ON (lower(x.name)) x.name AS value, x.name AS label, '' AS detail
-	FROM issue_types x WHERE x.organization_id IN ` + viewerOrgsSQL + ` AND x.name ILIKE $3 ESCAPE '\'
+	FROM issue_types x WHERE x.deleted_at IS NULL AND x.organization_id IN ` + viewerOrgsSQL + ` AND x.name ILIKE $3 ESCAPE '\'
 	ORDER BY lower(x.name) LIMIT $4`
 
 const issueSuggestSQL = `SELECT p.key || '-' || i.key_number::text AS value, i.summary AS label, p.name AS detail
@@ -69,7 +69,7 @@ const issueSuggestSQL = `SELECT p.key || '-' || i.key_number::text AS value, i.s
 	ORDER BY i.updated_at DESC, i.id LIMIT $4`
 
 const versionSuggestSQL = `SELECT DISTINCT ON (lower(v.name)) v.name AS value, v.name AS label, v.status AS detail
-	FROM versions v JOIN projects p ON p.id = v.project_id AND p.deleted_at IS NULL
+	FROM versions v JOIN projects p ON p.id = v.project_id AND p.deleted_at IS NULL AND v.deleted_at IS NULL
 	WHERE ` + `%VISIBLE%` + ` AND v.name ILIKE $3 ESCAPE '\'
 	ORDER BY lower(v.name) LIMIT $4`
 

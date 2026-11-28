@@ -46,10 +46,10 @@ func (r *fakeRepo) CountActive(_ context.Context, userID uuid.UUID, now time.Tim
 	return n, nil
 }
 
-func (r *fakeRepo) List(_ context.Context, userID uuid.UUID) ([]domain.Token, error) {
+func (r *fakeRepo) List(_ context.Context, userID uuid.UUID, includeRevoked bool) ([]domain.Token, error) {
 	var out []domain.Token
 	for _, s := range r.tokens {
-		if s.tok.UserID == userID {
+		if s.tok.UserID == userID && (includeRevoked || s.tok.RevokedAt == nil) {
 			out = append(out, s.tok)
 		}
 	}
@@ -120,7 +120,7 @@ func TestCreateShowsPlaintextOnceAndStoresOnlyTheHash(t *testing.T) {
 			t.Fatalf("audit payload %s leaks the token", k)
 		}
 	}
-	listed, _ := svc.List(context.Background(), user)
+	listed, _ := svc.List(context.Background(), user, false)
 	if len(listed) != 1 {
 		t.Fatalf("list = %v", listed)
 	}

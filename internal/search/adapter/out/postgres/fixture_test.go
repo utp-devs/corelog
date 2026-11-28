@@ -138,7 +138,7 @@ func (e *searchEnv) label(issue, project uuid.UUID, name string) {
 	e.t.Helper()
 	var id uuid.UUID
 	if err := e.db.Get(&id, `INSERT INTO labels (id, project_id, name) VALUES (gen_random_uuid(), $1, $2)
-		ON CONFLICT (project_id, name) DO UPDATE SET name = EXCLUDED.name RETURNING id`, project, name); err != nil {
+		ON CONFLICT (project_id, name) WHERE deleted_at IS NULL DO UPDATE SET name = EXCLUDED.name RETURNING id`, project, name); err != nil {
 		e.t.Fatal(err)
 	}
 	e.exec(`INSERT INTO issue_labels (issue_id, label_id) VALUES ($1, $2)`, issue, id)
@@ -148,7 +148,7 @@ func (e *searchEnv) component(issue, project uuid.UUID, name string) {
 	e.t.Helper()
 	var id uuid.UUID
 	if err := e.db.Get(&id, `INSERT INTO components (id, project_id, name) VALUES (gen_random_uuid(), $1, $2)
-		ON CONFLICT (project_id, name) DO UPDATE SET name = EXCLUDED.name RETURNING id`, project, name); err != nil {
+		ON CONFLICT (project_id, name) WHERE deleted_at IS NULL DO UPDATE SET name = EXCLUDED.name RETURNING id`, project, name); err != nil {
 		e.t.Fatal(err)
 	}
 	e.exec(`INSERT INTO issue_components (issue_id, component_id) VALUES ($1, $2)`, issue, id)

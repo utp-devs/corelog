@@ -231,4 +231,16 @@ func TestCustomFieldValuesOnIssuesAreStoredAndCounted(t *testing.T) {
 	if err := repo.DeleteField(ctx, field); err != nil {
 		t.Fatal(err)
 	}
+	if _, err := repo.FindField(ctx, field.OrganizationID, field.ID); err != domain.ErrCustomFieldNotFound {
+		t.Fatalf("deleted field visible through FindField: %v", err)
+	}
+	fields, err := repo.ListFields(ctx, field.OrganizationID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, f := range fields {
+		if f.ID == field.ID {
+			t.Fatal("deleted field listed")
+		}
+	}
 }

@@ -54,7 +54,7 @@ func (r *SavedFilterRepository) ListSavedFilters(ctx context.Context, ownerID uu
 	var rows []savedFilterRow
 	if err := r.db.SelectContext(ctx, &rows, `
 		SELECT id, owner_id, name, filters, created_at, updated_at
-		FROM saved_filters WHERE owner_id=$1 ORDER BY name, id`, ownerID); err != nil {
+		FROM saved_filters WHERE owner_id=$1 AND deleted_at IS NULL ORDER BY name, id`, ownerID); err != nil {
 		return nil, apperror.Wrap(apperror.KindInternal, "failed to list saved filters", err)
 	}
 	out := make([]*domain.SavedFilter, 0, len(rows))
@@ -69,7 +69,7 @@ func (r *SavedFilterRepository) ListSavedFilters(ctx context.Context, ownerID uu
 }
 
 func (r *SavedFilterRepository) DeleteSavedFilter(ctx context.Context, ownerID, filterID uuid.UUID) error {
-	result, err := r.db.ExecContext(ctx, `DELETE FROM saved_filters WHERE owner_id=$1 AND id=$2`, ownerID, filterID)
+	result, err := r.db.ExecContext(ctx, `UPDATE saved_filters SET deleted_at = now() WHERE owner_id=$1 AND id=$2 AND deleted_at IS NULL`, ownerID, filterID)
 	if err != nil {
 		return apperror.Wrap(apperror.KindInternal, "failed to delete saved filter", err)
 	}

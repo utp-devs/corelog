@@ -48,7 +48,7 @@ func (r *SprintRepository) Backlog(ctx context.Context, projectID uuid.UUID, fil
 	var sprintRows []sprintRow
 	if err := sqlx.SelectContext(ctx, r.ext(ctx), &sprintRows, `
 		SELECT `+sprintColumns+` FROM sprints
-		WHERE project_id = $1 AND status IN ('active', 'planned')
+		WHERE project_id = $1 AND deleted_at IS NULL AND status IN ('active', 'planned')
 		  AND EXISTS (SELECT 1 FROM projects p WHERE p.id = sprints.project_id AND p.deleted_at IS NULL)
 		ORDER BY CASE status WHEN 'active' THEN 0 ELSE 1 END, created_at, id`, projectID); err != nil {
 		return nil, internal("failed to read backlog sprints", err)
@@ -121,7 +121,7 @@ func (r *SprintRepository) Backlog(ctx context.Context, projectID uuid.UUID, fil
 		}
 		if err := sqlx.SelectContext(ctx, r.ext(ctx), &labels, `
 			SELECT il.issue_id, l.id, l.name, l.color
-			FROM issue_labels il JOIN labels l ON l.id = il.label_id
+			FROM issue_labels il JOIN labels l ON l.id = il.label_id AND l.deleted_at IS NULL
 			WHERE il.issue_id = ANY($1::uuid[])
 			ORDER BY l.name`, idStrings(ids)); err != nil {
 			return nil, internal("failed to read backlog labels", err)

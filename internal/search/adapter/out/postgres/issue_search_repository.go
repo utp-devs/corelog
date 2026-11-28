@@ -212,7 +212,7 @@ func loadRecords(ctx context.Context, tx *sqlx.Tx, ids []uuid.UUID) ([]port.Issu
 		Name    string    `db:"name"`
 	}
 	if err := tx.SelectContext(ctx, &labelRows, `
-		SELECT il.issue_id, l.name FROM issue_labels il JOIN labels l ON l.id = il.label_id
+		SELECT il.issue_id, l.name FROM issue_labels il JOIN labels l ON l.id = il.label_id AND l.deleted_at IS NULL
 		WHERE il.issue_id = ANY($1::uuid[]) ORDER BY l.name`, uuidStrings(ids)); err != nil {
 		return nil, err
 	}
@@ -315,10 +315,10 @@ func (r *IssueSearchRepository) CustomFields(ctx context.Context, viewer port.Vi
 	err := r.db.SelectContext(ctx, &rows, `
 		SELECT min(f.name) AS name, f.field_type, string_agg(f.id::text, ',' ORDER BY f.id) AS ids
 		FROM custom_fields f
-		WHERE $2::boolean OR f.organization_id IN (
+		WHERE f.deleted_at IS NULL AND ($2::boolean OR f.organization_id IN (
 		    SELECT om.organization_id FROM organization_members om
 		    JOIN organizations o ON o.id = om.organization_id AND o.deleted_at IS NULL
-		    WHERE om.user_id = $1::uuid)
+		    WHERE om.user_id = $1::uuid))
 		GROUP BY lower(f.name), f.field_type
 		ORDER BY lower(min(f.name)), f.field_type`, viewer.UserID, viewer.PlatformAdmin)
 	if err != nil {

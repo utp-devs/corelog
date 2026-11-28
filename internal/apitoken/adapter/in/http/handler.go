@@ -85,7 +85,7 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 		httpresponse.Error(w, apperror.New(apperror.KindUnauthorized, "No autenticado"))
 		return
 	}
-	tokens, err := h.service.List(r.Context(), userID)
+	tokens, err := h.service.List(r.Context(), userID, r.URL.Query().Get("include_revoked") == "true")
 	if err != nil {
 		httpresponse.Error(w, err)
 		return

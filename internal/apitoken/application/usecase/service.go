@@ -94,8 +94,8 @@ func (s *Service) publish(ctx context.Context, kind string, userID uuid.UUID, t 
 }
 
 // List returns the tokens of the user, newest first.
-func (s *Service) List(ctx context.Context, userID uuid.UUID) ([]domain.Token, error) {
-	return s.repo.List(ctx, userID)
+func (s *Service) List(ctx context.Context, userID uuid.UUID, includeRevoked bool) ([]domain.Token, error) {
+	return s.repo.List(ctx, userID, includeRevoked)
 }
 
 // Revoke revokes a token of the user.

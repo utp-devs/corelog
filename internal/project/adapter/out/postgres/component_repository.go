@@ -64,7 +64,7 @@ func mapComponentWriteError(err error, message string) error {
 func (r *CatalogRepository) ListComponents(ctx context.Context, projectID uuid.UUID) ([]domain.Component, error) {
 	var rows []componentRow
 	if err := sqlx.SelectContext(ctx, database.Executor(ctx, r.db), &rows,
-		componentSelect+` WHERE c.project_id = $1 ORDER BY c.name ASC`, projectID); err != nil {
+		componentSelect+` WHERE c.project_id = $1 AND c.deleted_at IS NULL ORDER BY c.name ASC`, projectID); err != nil {
 		return nil, apperror.Wrap(apperror.KindInternal, "failed to list components", err)
 	}
 	components := make([]domain.Component, 0, len(rows))
@@ -77,7 +77,7 @@ func (r *CatalogRepository) ListComponents(ctx context.Context, projectID uuid.U
 func (r *CatalogRepository) FindComponent(ctx context.Context, projectID, componentID uuid.UUID) (*domain.Component, error) {
 	var row componentRow
 	if err := sqlx.GetContext(ctx, database.Executor(ctx, r.db), &row,
-		componentSelect+` WHERE c.project_id = $1 AND c.id = $2`, projectID, componentID); err != nil {
+		componentSelect+` WHERE c.project_id = $1 AND c.id = $2 AND c.deleted_at IS NULL`, projectID, componentID); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, domain.ErrComponentNotFound
 		}
@@ -114,7 +114,7 @@ func (r *CatalogRepository) UpdateComponent(ctx context.Context, component *doma
 	}
 	if _, err := database.Executor(ctx, r.db).ExecContext(ctx, `
 		UPDATE components SET name = $3, description = $4, lead_id = $5, default_assignee_policy = $6, updated_at = $7
-		WHERE project_id = $1 AND id = $2`,
+		WHERE project_id = $1 AND id = $2 AND deleted_at IS NULL`,
 		component.ProjectID, component.ID, component.Name, component.Description, lead,
 		component.DefaultAssigneePolicy, component.UpdatedAt); err != nil {
 		return mapComponentWriteError(err, "failed to update component")
@@ -133,7 +133,7 @@ func (r *CatalogRepository) MoveComponentIssues(ctx context.Context, from, to uu
 }
 
 func (r *CatalogRepository) DeleteComponent(ctx context.Context, projectID, componentID uuid.UUID) error {
-	result, err := database.Executor(ctx, r.db).ExecContext(ctx, `DELETE FROM components WHERE project_id = $1 AND id = $2`, projectID, componentID)
+	result, err := database.Executor(ctx, r.db).ExecContext(ctx, `UPDATE components SET deleted_at = now() WHERE project_id = $1 AND id = $2 AND deleted_at IS NULL`, projectID, componentID)
 	if err != nil {
 		return apperror.Wrap(apperror.KindInternal, "failed to delete component", err)
 	}

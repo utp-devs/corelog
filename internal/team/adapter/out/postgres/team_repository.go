@@ -73,7 +73,7 @@ func (r *TeamRepository) Save(ctx context.Context, t *domain.Team) error {
 
 func (r *TeamRepository) FindByID(ctx context.Context, id, viewerID uuid.UUID) (*domain.Team, error) {
 	var row teamRow
-	query := `SELECT ` + teamViewColumns("$2") + ` FROM teams t WHERE t.id = $1`
+	query := `SELECT ` + teamViewColumns("$2") + ` FROM teams t WHERE t.id = $1 AND t.deleted_at IS NULL`
 
 	if err := sqlx.GetContext(ctx, r.exec(ctx), &row, query, id, viewerID); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -86,7 +86,7 @@ func (r *TeamRepository) FindByID(ctx context.Context, id, viewerID uuid.UUID) (
 
 func (r *TeamRepository) FindByName(ctx context.Context, name string) (*domain.Team, error) {
 	var row teamRow
-	const query = `SELECT ` + teamColumns + ` FROM teams WHERE name = $1`
+	const query = `SELECT ` + teamColumns + ` FROM teams WHERE name = $1 AND deleted_at IS NULL`
 
 	if err := sqlx.GetContext(ctx, r.exec(ctx), &row, query, name); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -99,7 +99,7 @@ func (r *TeamRepository) FindByName(ctx context.Context, name string) (*domain.T
 
 func (r *TeamRepository) FindByOrganization(ctx context.Context, organizationID, viewerID uuid.UUID) ([]*domain.Team, error) {
 	var rows []teamRow
-	query := `SELECT ` + teamViewColumns("$2") + ` FROM teams t WHERE t.organization_id = $1 ORDER BY t.name ASC`
+	query := `SELECT ` + teamViewColumns("$2") + ` FROM teams t WHERE t.organization_id = $1 AND t.deleted_at IS NULL ORDER BY t.name ASC`
 
 	if err := sqlx.SelectContext(ctx, r.exec(ctx), &rows, query, organizationID, viewerID); err != nil {
 		return nil, apperror.Wrap(apperror.KindInternal, "failed to list teams", err)
@@ -115,7 +115,7 @@ func (r *TeamRepository) FindByOrganization(ctx context.Context, organizationID,
 func (r *TeamRepository) FindByOrganizationAndMember(ctx context.Context, organizationID, memberID, viewerID uuid.UUID) ([]*domain.Team, error) {
 	var rows []teamRow
 	query := `SELECT ` + teamViewColumns("$3") + ` FROM teams t
-		WHERE t.organization_id = $1
+		WHERE t.organization_id = $1 AND t.deleted_at IS NULL
 		  AND EXISTS (SELECT 1 FROM team_members tm WHERE tm.team_id = t.id AND tm.user_id = $2)
 		ORDER BY t.name ASC`
 
@@ -133,7 +133,7 @@ func (r *TeamRepository) Update(ctx context.Context, t *domain.Team) error {
 	const query = `
 		UPDATE teams
 		SET name = $3, description = $4, avatar_color = $5, updated_at = $6
-		WHERE id = $1 AND organization_id = $2`
+		WHERE id = $1 AND organization_id = $2 AND deleted_at IS NULL`
 
 	result, err := r.exec(ctx).ExecContext(ctx, query,
 		t.ID, t.OrganizationID, t.Name, t.Description, nullableString(t.AvatarColor), t.UpdatedAt)
@@ -153,8 +153,19 @@ func (r *TeamRepository) Update(ctx context.Context, t *domain.Team) error {
 	return nil
 }
 
+// Delete logically deletes the team: the row stays for history and statistics. Its memberships and the project
+// roles granted to it are access rules, so they are removed in the same statement and the team stops
+// granting anything the moment it is deleted.
 func (r *TeamRepository) Delete(ctx context.Context, organizationID, id uuid.UUID) error {
-	const query = `DELETE FROM teams WHERE id = $1 AND organization_id = $2`
+	const query = `
+		WITH gone AS (
+			UPDATE teams SET deleted_at = now() WHERE id = $1 AND organization_id = $2 AND deleted_at IS NULL RETURNING id
+		), members AS (
+			DELETE FROM team_members WHERE team_id IN (SELECT id FROM gone)
+		), grants AS (
+			DELETE FROM project_team_roles WHERE team_id IN (SELECT id FROM gone)
+		)
+		SELECT id FROM gone`
 
 	result, err := r.exec(ctx).ExecContext(ctx, query, id, organizationID)
 	if err != nil {
@@ -177,7 +188,7 @@ func (r *TeamRepository) FindMember(ctx context.Context, organizationID, teamID,
 		SELECT tm.team_id, tm.user_id, tm.role, tm.created_at
 		FROM team_members tm
 		JOIN teams t ON t.id = tm.team_id
-		WHERE tm.team_id = $1 AND tm.user_id = $2 AND t.organization_id = $3`
+		WHERE tm.team_id = $1 AND tm.user_id = $2 AND t.organization_id = $3 AND t.deleted_at IS NULL`
 
 	if err := sqlx.GetContext(ctx, r.exec(ctx), &row, query, teamID, userID, organizationID); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -195,7 +206,7 @@ func (r *TeamRepository) ListMembers(ctx context.Context, organizationID, teamID
 		FROM team_members tm
 		JOIN teams t ON t.id = tm.team_id
 		JOIN users u ON u.id = tm.user_id AND u.deactivated_at IS NULL
-		WHERE tm.team_id = $1 AND t.organization_id = $2
+		WHERE tm.team_id = $1 AND t.organization_id = $2 AND t.deleted_at IS NULL
 		ORDER BY tm.created_at ASC, tm.user_id ASC`
 
 	if err := sqlx.SelectContext(ctx, r.exec(ctx), &rows, query, teamID, organizationID); err != nil {
@@ -213,7 +224,7 @@ func (r *TeamRepository) AddMember(ctx context.Context, organizationID uuid.UUID
 	const query = `
 		INSERT INTO team_members (team_id, user_id, role)
 		SELECT t.id, $2, $3 FROM teams t
-		WHERE t.id = $1 AND t.organization_id = $4
+		WHERE t.id = $1 AND t.organization_id = $4 AND t.deleted_at IS NULL
 		RETURNING created_at`
 
 	var createdAt time.Time
@@ -235,7 +246,7 @@ func (r *TeamRepository) UpdateMemberRole(ctx context.Context, organizationID, t
 	const query = `
 		UPDATE team_members tm SET role = $3
 		FROM teams t
-		WHERE t.id = tm.team_id AND tm.team_id = $1 AND tm.user_id = $2 AND t.organization_id = $4`
+		WHERE t.id = tm.team_id AND tm.team_id = $1 AND tm.user_id = $2 AND t.organization_id = $4 AND t.deleted_at IS NULL`
 
 	result, err := r.exec(ctx).ExecContext(ctx, query, teamID, userID, role, organizationID)
 	if err != nil {
@@ -255,7 +266,7 @@ func (r *TeamRepository) RemoveMember(ctx context.Context, organizationID, teamI
 	const query = `
 		DELETE FROM team_members tm
 		USING teams t
-		WHERE t.id = tm.team_id AND tm.team_id = $1 AND tm.user_id = $2 AND t.organization_id = $3`
+		WHERE t.id = tm.team_id AND tm.team_id = $1 AND tm.user_id = $2 AND t.organization_id = $3 AND t.deleted_at IS NULL`
 
 	result, err := r.exec(ctx).ExecContext(ctx, query, teamID, userID, organizationID)
 	if err != nil {

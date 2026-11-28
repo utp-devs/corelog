@@ -136,7 +136,7 @@ func (r *IssueRepository) fillDefaultCatalogIDs(ctx context.Context, exec sqlx.E
 		if err := exec.QueryRowxContext(ctx, `
 			SELECT it.id FROM issue_types it
 			JOIN projects p ON p.organization_id = it.organization_id
-			WHERE p.id = $1 AND it.is_default`, t.ProjectID).Scan(&t.IssueTypeID); err != nil {
+			WHERE p.id = $1 AND it.is_default AND it.deleted_at IS NULL`, t.ProjectID).Scan(&t.IssueTypeID); err != nil {
 			return apperror.Wrap(apperror.KindInternal, "failed to find default issue type", err)
 		}
 	}
@@ -144,7 +144,7 @@ func (r *IssueRepository) fillDefaultCatalogIDs(ctx context.Context, exec sqlx.E
 		if err := exec.QueryRowxContext(ctx, `
 			SELECT pr.id FROM priorities pr
 			JOIN projects p ON p.organization_id = pr.organization_id
-			WHERE p.id = $1 AND pr.is_default`, t.ProjectID).Scan(&t.PriorityID); err != nil {
+			WHERE p.id = $1 AND pr.is_default AND pr.deleted_at IS NULL`, t.ProjectID).Scan(&t.PriorityID); err != nil {
 			return apperror.Wrap(apperror.KindInternal, "failed to find default priority", err)
 		}
 	}

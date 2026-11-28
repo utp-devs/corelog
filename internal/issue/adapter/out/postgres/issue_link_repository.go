@@ -101,7 +101,7 @@ func (r *IssueLinkRepository) ListLinks(ctx context.Context, issueID uuid.UUID) 
 		JOIN projects p ON p.id = o.project_id AND p.deleted_at IS NULL
 		LEFT JOIN issue_types it ON it.id = o.issue_type_id
 		LEFT JOIN priorities pr ON pr.id = o.priority_id
-		WHERE (l.source_issue_id = $1 OR l.target_issue_id = $1) AND o.deleted_at IS NULL
+		WHERE (l.source_issue_id = $1 OR l.target_issue_id = $1) AND o.deleted_at IS NULL AND l.deleted_at IS NULL
 		ORDER BY l.kind, l.created_at, l.id`, issueID); err != nil {
 		return nil, apperror.Wrap(apperror.KindInternal, "failed to list issue links", err)
 	}
@@ -125,7 +125,7 @@ func (r *IssueLinkRepository) FindLinkForIssue(ctx context.Context, issueID, lin
 	if err := sqlx.GetContext(ctx, database.Executor(ctx, r.db), &row, `
 		SELECT id, source_issue_id, target_issue_id, kind, created_by, created_at
 		FROM issue_links
-		WHERE id = $1 AND (source_issue_id = $2 OR target_issue_id = $2)`, linkID, issueID); err != nil {
+		WHERE id = $1 AND deleted_at IS NULL AND (source_issue_id = $2 OR target_issue_id = $2)`, linkID, issueID); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, domain.ErrIssueLinkNotFound
 		}
@@ -143,7 +143,7 @@ func (r *IssueLinkRepository) PairExists(ctx context.Context, a, b uuid.UUID, ki
 	if err := database.Executor(ctx, r.db).QueryRowxContext(ctx, `
 		SELECT EXISTS (
 		  SELECT 1 FROM issue_links
-		  WHERE kind = $3 AND ((source_issue_id = $1 AND target_issue_id = $2) OR (source_issue_id = $2 AND target_issue_id = $1)))`,
+		  WHERE kind = $3 AND deleted_at IS NULL AND ((source_issue_id = $1 AND target_issue_id = $2) OR (source_issue_id = $2 AND target_issue_id = $1)))`,
 		a, b, string(kind)).Scan(&exists); err != nil {
 		return false, apperror.Wrap(apperror.KindInternal, "failed to check issue link", err)
 	}
@@ -156,9 +156,9 @@ func (r *IssueLinkRepository) BlocksReach(ctx context.Context, from, to uuid.UUI
 	var reached bool
 	if err := database.Executor(ctx, r.db).QueryRowxContext(ctx, `
 		WITH RECURSIVE reach(id) AS (
-		  SELECT l.target_issue_id FROM issue_links l WHERE l.kind = 'blocks' AND l.source_issue_id = $1
+		  SELECT l.target_issue_id FROM issue_links l WHERE l.kind = 'blocks' AND l.deleted_at IS NULL AND l.source_issue_id = $1
 		  UNION
-		  SELECT l.target_issue_id FROM issue_links l JOIN reach rc ON l.source_issue_id = rc.id WHERE l.kind = 'blocks'
+		  SELECT l.target_issue_id FROM issue_links l JOIN reach rc ON l.source_issue_id = rc.id WHERE l.kind = 'blocks' AND l.deleted_at IS NULL
 		)
 		SELECT EXISTS (SELECT 1 FROM reach WHERE id = $2)`, from, to).Scan(&reached); err != nil {
 		return false, apperror.Wrap(apperror.KindInternal, "failed to walk blocking links", err)
@@ -182,9 +182,9 @@ func (r *IssueLinkRepository) Save(ctx context.Context, link *domain.IssueLink) 
 	return nil
 }
 
-// Delete removes the link by id. The caller has checked that the link touches the issue.
+// Delete logically deletes the link by id; the row stays for history. The caller has checked that the link touches the issue.
 func (r *IssueLinkRepository) Delete(ctx context.Context, linkID uuid.UUID) error {
-	result, err := database.Executor(ctx, r.db).ExecContext(ctx, `DELETE FROM issue_links WHERE id = $1`, linkID)
+	result, err := database.Executor(ctx, r.db).ExecContext(ctx, `UPDATE issue_links SET deleted_at = now() WHERE id = $1 AND deleted_at IS NULL`, linkID)
 	if err != nil {
 		return apperror.Wrap(apperror.KindInternal, "failed to delete issue link", err)
 	}

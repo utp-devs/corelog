@@ -39,11 +39,11 @@ func TestRepositoryLifecycle(t *testing.T) {
 	if n, _ := repo.CountActive(ctx, user, now.Add(2*time.Hour)); n != 0 {
 		t.Fatal("expired tokens are not active")
 	}
-	list, err := repo.List(ctx, user)
+	list, err := repo.List(ctx, user, false)
 	if err != nil || len(list) != 1 || len(list[0].Scopes) != 2 || list[0].Scopes[0] != domain.ScopeRead || list[0].ExpiresAt == nil {
 		t.Fatalf("list %+v %v", list, err)
 	}
-	if list, _ := repo.List(ctx, other); len(list) != 0 {
+	if list, _ := repo.List(ctx, other, false); len(list) != 0 {
 		t.Fatal("tokens of another user listed")
 	}
 
@@ -79,6 +79,19 @@ func TestRepositoryLifecycle(t *testing.T) {
 	}
 	if n, _ := repo.CountActive(ctx, user, now); n != 0 {
 		t.Fatal("revoked tokens are not active")
+	}
+	if list, _ := repo.List(ctx, user, false); len(list) != 0 {
+		t.Fatalf("revoked tokens must be hidden from the list: %+v", list)
+	}
+	if list, _ := repo.List(ctx, user, true); len(list) != 1 {
+		t.Fatalf("include_revoked must return the revoked row: %+v", list)
+	}
+	var deleted *time.Time
+	if err := db.Get(&deleted, `SELECT deleted_at FROM api_tokens WHERE id = $1`, tok.ID); err != nil || deleted == nil {
+		t.Fatalf("the row must be kept with deleted_at set: %v %v", deleted, err)
+	}
+	if _, _, _, err := repo.FindByHash(ctx, testHash); err != nil {
+		t.Fatalf("a revoked token must still be found so authentication can reject it: %v", err)
 	}
 	if _, err := db.Exec(`UPDATE users SET deactivated_at = now() WHERE id = $1`, user); err != nil {
 		t.Fatal(err)

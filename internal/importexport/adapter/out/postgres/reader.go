@@ -55,7 +55,7 @@ func (r *Reader) Rows(ctx context.Context, projectID uuid.UUID, ids []uuid.UUID)
 		       COALESCE(t.name, i.issue_type) AS type, COALESCE(pr.name, i.priority) AS priority,
 		       COALESCE(s.name, i.status) AS status, COALESCE(a.email, '') AS assignee, COALESCE(rp.email, '') AS reporter,
 		       i.created_at, i.updated_at, i.due_date, i.story_points,
-		       COALESCE((SELECT json_agg(l.name ORDER BY l.name) FROM issue_labels il JOIN labels l ON l.id = il.label_id
+		       COALESCE((SELECT json_agg(l.name ORDER BY l.name) FROM issue_labels il JOIN labels l ON l.id = il.label_id AND l.deleted_at IS NULL
 		                 WHERE il.issue_id = i.id), '[]'::json) AS labels
 		FROM issues i JOIN projects p ON p.id = i.project_id
 		LEFT JOIN issue_types t ON t.id = i.issue_type_id
@@ -221,7 +221,7 @@ func (r *Reader) Dump(ctx context.Context, projectID uuid.UUID, now time.Time) (
 		SELECT l.source_issue_id, l.kind, tp.key || '-' || ti.key_number AS target_key FROM issue_links l
 		JOIN issues si ON si.id = l.source_issue_id JOIN issues ti ON ti.id = l.target_issue_id
 		JOIN projects tp ON tp.id = ti.project_id
-		WHERE si.project_id = $1 AND si.deleted_at IS NULL AND ti.deleted_at IS NULL ORDER BY l.created_at LIMIT $2`,
+		WHERE si.project_id = $1 AND si.deleted_at IS NULL AND ti.deleted_at IS NULL AND l.deleted_at IS NULL ORDER BY l.created_at LIMIT $2`,
 		projectID, dumpMaxLinks+1); err != nil {
 		return dump, internal("no se pudieron leer los vinculos", err)
 	}

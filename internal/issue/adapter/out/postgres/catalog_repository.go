@@ -126,7 +126,7 @@ func (r *CatalogRepository) ListItems(ctx context.Context, orgID uuid.UUID, kind
 		return nil, err
 	}
 	var rows []catalogRow
-	query := "SELECT " + sp.selectList("t") + " FROM " + sp.table + " t WHERE t.organization_id = $1 ORDER BY t.position, t.name"
+	query := "SELECT " + sp.selectList("t") + " FROM " + sp.table + " t WHERE t.organization_id = $1 AND t.deleted_at IS NULL ORDER BY t.position, t.name"
 	if err := sqlx.SelectContext(ctx, database.Executor(ctx, r.db), &rows, query, orgID); err != nil {
 		return nil, apperror.Wrap(apperror.KindInternal, "failed to list catalog", err)
 	}
@@ -143,7 +143,7 @@ func (r *CatalogRepository) FindItem(ctx context.Context, orgID uuid.UUID, kind 
 		return nil, err
 	}
 	var row catalogRow
-	query := "SELECT " + sp.selectList("t") + " FROM " + sp.table + " t WHERE t.organization_id = $1 AND t.id = $2"
+	query := "SELECT " + sp.selectList("t") + " FROM " + sp.table + " t WHERE t.organization_id = $1 AND t.id = $2 AND t.deleted_at IS NULL"
 	if err := sqlx.GetContext(ctx, database.Executor(ctx, r.db), &row, query, orgID, id); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, domain.ErrCatalogNotFound
@@ -213,7 +213,7 @@ func (r *CatalogRepository) UpdateItem(ctx context.Context, item *domain.Catalog
 	sets = append(sets, fmt.Sprintf("updated_at = $%d", len(args)+1))
 	args = append(args, item.UpdatedAt)
 	args = append(args, item.ID, item.OrganizationID)
-	query := fmt.Sprintf("UPDATE %s SET %s WHERE id = $%d AND organization_id = $%d",
+	query := fmt.Sprintf("UPDATE %s SET %s WHERE id = $%d AND organization_id = $%d AND deleted_at IS NULL",
 		sp.table, strings.Join(sets, ", "), len(args)-1, len(args))
 
 	result, err := database.Executor(ctx, r.db).ExecContext(ctx, query, args...)
@@ -228,20 +228,25 @@ func (r *CatalogRepository) UpdateItem(ctx context.Context, item *domain.Catalog
 	return nil
 }
 
-// DeleteItem removes an item. The foreign keys of issues refuse the delete while an issue still uses it, which
-// is reported as in use.
+// DeleteItem logically deletes an item: the row stays so every issue that used it keeps its name for history and
+// statistics. The delete is refused while any issue still uses the item, which is reported as in use.
 func (r *CatalogRepository) DeleteItem(ctx context.Context, item *domain.CatalogItem) error {
 	sp, err := specOf(item.Kind)
 	if err != nil {
 		return err
 	}
-	query := fmt.Sprintf("DELETE FROM %s WHERE id = $1 AND organization_id = $2", sp.table)
-	result, err := database.Executor(ctx, r.db).ExecContext(ctx, query, item.ID, item.OrganizationID)
+	exec := database.Executor(ctx, r.db)
+	var inUse bool
+	if err := sqlx.GetContext(ctx, exec, &inUse, fmt.Sprintf(
+		"SELECT EXISTS (SELECT 1 FROM issues WHERE %s = $1)", sp.usageColumn), item.ID); err != nil {
+		return apperror.Wrap(apperror.KindInternal, "failed to check catalog item usage", err)
+	}
+	if inUse {
+		return domain.ErrCatalogInUse
+	}
+	query := fmt.Sprintf("UPDATE %s SET deleted_at = now(), is_default = FALSE WHERE id = $1 AND organization_id = $2 AND deleted_at IS NULL", sp.table)
+	result, err := exec.ExecContext(ctx, query, item.ID, item.OrganizationID)
 	if err != nil {
-		var pgErr *pgconn.PgError
-		if errors.As(err, &pgErr) && pgErr.Code == pgForeignKeyViolation {
-			return domain.ErrCatalogInUse
-		}
 		return apperror.Wrap(apperror.KindInternal, "failed to delete catalog item", err)
 	}
 	if n, err := result.RowsAffected(); err != nil {
@@ -266,7 +271,7 @@ func (r *CatalogRepository) SetDefaultItem(ctx context.Context, orgID uuid.UUID,
 		return apperror.Wrap(apperror.KindInternal, "failed to clear default catalog item", err)
 	}
 	if _, err := exec.ExecContext(ctx, fmt.Sprintf(
-		"UPDATE %s SET is_default = TRUE WHERE organization_id = $1 AND id = $2", sp.table), orgID, id); err != nil {
+		"UPDATE %s SET is_default = TRUE WHERE organization_id = $1 AND id = $2 AND deleted_at IS NULL", sp.table), orgID, id); err != nil {
 		return apperror.Wrap(apperror.KindInternal, "failed to set default catalog item", err)
 	}
 	return nil
@@ -346,10 +351,10 @@ func (r *CatalogRepository) ProjectIssueTypes(ctx context.Context, projectID uui
 	var query string
 	if configured {
 		query = "SELECT " + sp.selectList("t") + " FROM project_issue_types pit JOIN issue_types t ON t.id = pit.issue_type_id " +
-			"WHERE pit.project_id = $1 ORDER BY pit.position, t.name"
+			"WHERE pit.project_id = $1 AND t.deleted_at IS NULL ORDER BY pit.position, t.name"
 	} else {
 		query = "SELECT " + sp.selectList("t") + " FROM projects p JOIN issue_types t ON t.organization_id = p.organization_id " +
-			"WHERE p.id = $1 ORDER BY t.position, t.name"
+			"WHERE p.id = $1 AND t.deleted_at IS NULL ORDER BY t.position, t.name"
 	}
 	if err := sqlx.SelectContext(ctx, exec, &rows, query, projectID); err != nil {
 		return nil, false, apperror.Wrap(apperror.KindInternal, "failed to read project issue types", err)
@@ -408,7 +413,7 @@ func (r *CatalogRepository) Select(ctx context.Context, projectID uuid.UUID, kin
 		return nil, domain.ErrCatalogNotFound
 	}
 	query := "SELECT " + sp.selectList("t") + " FROM projects p JOIN " + sp.table + " t ON t.organization_id = p.organization_id " +
-		"WHERE p.id = $1 AND " + strings.Join(where, " AND ") + " ORDER BY " + order + " LIMIT 1"
+		"WHERE p.id = $1 AND t.deleted_at IS NULL AND " + strings.Join(where, " AND ") + " ORDER BY " + order + " LIMIT 1"
 	var row catalogRow
 	if err := sqlx.GetContext(ctx, database.Executor(ctx, r.db), &row, query, args...); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {

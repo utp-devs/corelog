@@ -49,7 +49,7 @@ func (r *OperationsRepository) CopyLinks(ctx context.Context, fromID, toID, acto
 		FROM issue_links l
 		JOIN issues other ON other.id = (CASE WHEN l.source_issue_id = $1 THEN l.target_issue_id ELSE l.source_issue_id END)
 		WHERE (l.source_issue_id = $1 OR l.target_issue_id = $1)
-		  AND other.deleted_at IS NULL
+		  AND other.deleted_at IS NULL AND l.deleted_at IS NULL
 		  AND l.kind <> 'clones'
 		ON CONFLICT DO NOTHING`, fromID, toID, actorID); err != nil {
 		return apperror.Wrap(apperror.KindInternal, "failed to copy links", err)

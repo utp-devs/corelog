@@ -193,7 +193,18 @@ func TestMoveLinksAndDeleteCascade(t *testing.T) {
 	if err := e.repo.Delete(e.ctx, from.ID); err != nil {
 		t.Fatal(err)
 	}
-	assertLink(t, e, issue, from.ID, "fix", false)
+	// The delete is logical: the links stay for history and the version disappears from every read.
+	assertLink(t, e, issue, from.ID, "fix", true)
+	if _, err := e.repo.FindByID(e.ctx, from.ID); apperror.CodeOf(err) != "version.not_found" {
+		t.Fatalf("deleted version visible through FindByID: %v", err)
+	}
+	if list, _ := e.repo.List(e.ctx, from.ProjectID, nil); len(list) != 1 || list[0].ID != to.ID {
+		t.Fatalf("deleted version listed: %+v", list)
+	}
+	if taken, _ := e.repo.NameTaken(e.ctx, from.ProjectID, "5.0", uuid.Nil); taken {
+		t.Fatal("the name of a deleted version must be reusable")
+	}
+	e.newVersion("5.0") // the unique name index ignores deleted rows
 	if err := e.repo.Delete(e.ctx, from.ID); apperror.CodeOf(err) != "version.not_found" {
 		t.Fatalf("second delete: %v", err)
 	}

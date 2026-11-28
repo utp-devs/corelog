@@ -89,7 +89,7 @@ func (r *TeamGrantRepository) ListTeamUsers(ctx context.Context, projectID uuid.
 func (r *TeamGrantRepository) TeamInOrganization(ctx context.Context, orgID, teamID uuid.UUID) (string, bool, error) {
 	var name string
 	err := sqlx.GetContext(ctx, database.Executor(ctx, r.db), &name,
-		`SELECT name FROM teams WHERE id = $1 AND organization_id = $2`, teamID, orgID)
+		`SELECT name FROM teams WHERE id = $1 AND organization_id = $2 AND deleted_at IS NULL`, teamID, orgID)
 	if errors.Is(err, sql.ErrNoRows) {
 		return "", false, nil
 	}

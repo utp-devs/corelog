@@ -37,7 +37,7 @@ func TestBoardRepositoryFindDefaultByProjectPostgres(t *testing.T) {
 	for _, statement := range []string{
 		`CREATE TABLE users (id UUID PRIMARY KEY, name VARCHAR(120) NOT NULL)`,
 		`CREATE TABLE projects (id UUID PRIMARY KEY, deleted_at TIMESTAMPTZ)`,
-		`CREATE TABLE boards (id UUID PRIMARY KEY, project_id UUID NOT NULL, name VARCHAR(80) NOT NULL, type VARCHAR(10) NOT NULL, is_default BOOLEAN NOT NULL)`,
+		`CREATE TABLE boards (id UUID PRIMARY KEY, project_id UUID NOT NULL, name VARCHAR(80) NOT NULL, type VARCHAR(10) NOT NULL, is_default BOOLEAN NOT NULL, deleted_at TIMESTAMPTZ)`,
 		`CREATE TABLE board_columns (id UUID PRIMARY KEY, board_id UUID NOT NULL, name VARCHAR(80) NOT NULL, status VARCHAR(20) NOT NULL, position INTEGER NOT NULL, wip_limit INTEGER)`,
 		`CREATE TABLE issues (id UUID PRIMARY KEY, project_id UUID NOT NULL, issue_type VARCHAR(20) NOT NULL, summary VARCHAR(200) NOT NULL, status VARCHAR(20) NOT NULL, priority VARCHAR(20) NOT NULL, assignee_id UUID, story_points NUMERIC(4,1), rank VARCHAR(64) NOT NULL, created_at TIMESTAMPTZ NOT NULL, deleted_at TIMESTAMPTZ, status_id UUID)`,
 		`CREATE TABLE board_column_statuses (column_id UUID NOT NULL, status_id UUID NOT NULL, PRIMARY KEY (column_id, status_id))`,

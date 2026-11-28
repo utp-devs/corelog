@@ -83,7 +83,7 @@ func (r *DashboardReader) Summary(ctx context.Context, userID uuid.UUID, now tim
 		FROM sprints s
 		JOIN projects p ON p.id = s.project_id AND p.deleted_at IS NULL
 		JOIN project_members pm ON pm.project_id = s.project_id AND pm.user_id = $1
-		WHERE s.status = 'active'
+		WHERE s.status = 'active' AND s.deleted_at IS NULL
 		ORDER BY s.end_date ASC NULLS LAST, s.id
 		LIMIT 10`, userID); err != nil {
 		return summary, apperror.Wrap(apperror.KindInternal, "failed to list active sprints", err)

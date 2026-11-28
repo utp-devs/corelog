@@ -41,7 +41,7 @@ func TestDashboardReaderSummaryPostgres(t *testing.T) {
 			status TEXT NOT NULL, priority TEXT NOT NULL DEFAULT 'medium', assignee_id UUID, due_date DATE,
 			updated_at TIMESTAMPTZ NOT NULL DEFAULT now(), deleted_at TIMESTAMPTZ)`,
 		`CREATE TABLE sprints (id UUID PRIMARY KEY, project_id UUID NOT NULL REFERENCES projects (id), name TEXT NOT NULL,
-			status TEXT NOT NULL, end_date DATE)`,
+			status TEXT NOT NULL, end_date DATE, deleted_at TIMESTAMPTZ)`,
 	} {
 		if _, err := db.Exec(statement); err != nil {
 			t.Fatal(err)

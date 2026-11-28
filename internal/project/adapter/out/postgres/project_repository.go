@@ -108,7 +108,7 @@ func (r *ProjectRepository) CreateWithMembers(ctx context.Context, p *domain.Pro
 	for _, teamID := range teamIDs {
 		var inOrg bool
 		if err := tx.GetContext(ctx, &inOrg, `
-			SELECT EXISTS (SELECT 1 FROM teams WHERE id = $1 AND organization_id = $2)`, teamID, p.OrganizationID); err != nil {
+			SELECT EXISTS (SELECT 1 FROM teams WHERE id = $1 AND organization_id = $2 AND deleted_at IS NULL)`, teamID, p.OrganizationID); err != nil {
 			return apperror.Wrap(apperror.KindInternal, "failed to check team organization", err)
 		}
 		if !inOrg {

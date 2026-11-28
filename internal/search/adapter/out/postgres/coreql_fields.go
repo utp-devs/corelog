@@ -173,13 +173,13 @@ func (b *builder) matchOne(f resolved, op coreql.Op, v coreql.Value, span coreql
 		if !ok {
 			return b.badValue(v, f)
 		}
-		return "EXISTS (SELECT 1 FROM issue_labels il JOIN labels l ON l.id = il.label_id WHERE il.issue_id = i.id AND lower(l.name) = lower(" + b.bindText(t) + "))"
+		return "EXISTS (SELECT 1 FROM issue_labels il JOIN labels l ON l.id = il.label_id AND l.deleted_at IS NULL WHERE il.issue_id = i.id AND lower(l.name) = lower(" + b.bindText(t) + "))"
 	case cComponent:
 		t, ok := textOf(v)
 		if !ok {
 			return b.badValue(v, f)
 		}
-		return "EXISTS (SELECT 1 FROM issue_components ic JOIN components c ON c.id = ic.component_id WHERE ic.issue_id = i.id AND lower(c.name) = lower(" + b.bindText(t) + "))"
+		return "EXISTS (SELECT 1 FROM issue_components ic JOIN components c ON c.id = ic.component_id AND c.deleted_at IS NULL WHERE ic.issue_id = i.id AND lower(c.name) = lower(" + b.bindText(t) + "))"
 	case cFixVersion:
 		return b.versionMatch(f, port.VersionFix, v)
 	case cAffectedVersion:
@@ -331,7 +331,7 @@ func (b *builder) userMatch(col string, textCol bool, v coreql.Value, f resolved
 				return b.badValue(v, f)
 			}
 			sel := "SELECT tm.user_id" + cast + " FROM team_members tm JOIN teams t ON t.id = tm.team_id" +
-				" WHERE lower(t.name) = lower(" + b.bindText(team) + ") AND t.organization_id = p.organization_id"
+				" WHERE t.deleted_at IS NULL AND lower(t.name) = lower(" + b.bindText(team) + ") AND t.organization_id = p.organization_id"
 			return col + " IN (" + sel + ")"
 		}
 		return b.badValue(v, f)
@@ -395,14 +395,14 @@ func (b *builder) sprintMatch(f resolved, v coreql.Value) string {
 		if status == "" {
 			return b.badValue(v, f)
 		}
-		return "i.sprint_id IN (SELECT s.id FROM sprints s WHERE s.status = " + b.bindText(status) + ")"
+		return "i.sprint_id IN (SELECT s.id FROM sprints s WHERE s.deleted_at IS NULL AND s.status = " + b.bindText(status) + ")"
 	}
 	t, ok := textOf(v)
 	if !ok {
 		return b.badValue(v, f)
 	}
 	ph := b.bindText(t)
-	return "i.sprint_id IN (SELECT s.id FROM sprints s WHERE lower(s.name) = lower(" + ph + ") OR s.id::text = lower(" + ph + "))"
+	return "i.sprint_id IN (SELECT s.id FROM sprints s WHERE s.deleted_at IS NULL AND (lower(s.name) = lower(" + ph + ") OR s.id::text = lower(" + ph + ")))"
 }
 
 // epicMatch matches the children of an issue (epic: also its grandchildren, as stories and their subtasks

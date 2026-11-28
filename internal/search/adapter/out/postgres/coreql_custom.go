@@ -23,7 +23,7 @@ func (b *builder) customMatch(f resolved, op coreql.Op, v coreql.Value) string {
 
 // optionIDs selects the ids of the select options of the field whose label or id equals the value.
 func (b *builder) optionIDs(fieldPh, valuePh string) string {
-	return "SELECT o ->> 'id' FROM custom_fields cfo, jsonb_array_elements(cfo.options) o WHERE cfo.id = " + fieldPh +
+	return "SELECT o ->> 'id' FROM custom_fields cfo, jsonb_array_elements(cfo.options) o WHERE cfo.deleted_at IS NULL AND cfo.id = " + fieldPh +
 		"::uuid AND (lower(o ->> 'label') = lower(" + valuePh + ") OR o ->> 'id' = " + valuePh + ")"
 }
 

@@ -69,7 +69,7 @@ func axis(field, suffix string) axisSQL {
 		}
 	case "label":
 		return axisSQL{
-			joins: ` LEFT JOIN issue_labels il` + suffix + ` ON il` + suffix + `.issue_id = i.id LEFT JOIN labels lb` + suffix + ` ON lb` + suffix + `.id = il` + suffix + `.label_id`,
+			joins: ` LEFT JOIN issue_labels il` + suffix + ` ON il` + suffix + `.issue_id = i.id LEFT JOIN labels lb` + suffix + ` ON lb` + suffix + `.id = il` + suffix + `.label_id  AND lb` + suffix + `.deleted_at IS NULL`,
 			key:   `COALESCE(lb` + suffix + `.name, 'Sin etiqueta')`,
 			label: `COALESCE(lb` + suffix + `.name, 'Sin etiqueta')`,
 		}
@@ -286,7 +286,7 @@ func (d *DataSource) Burndown(ctx context.Context, viewer port.Viewer, cfg domai
 	err := d.db.GetContext(ctx, &sp, `
 		SELECT s.id, s.name, p.key AS project_key, s.start_date, s.end_date, s.started_at, s.created_at
 		FROM sprints s JOIN projects p ON p.id = s.project_id AND p.deleted_at IS NULL
-		WHERE `+visible("p")+`
+		WHERE `+visible("p")+` AND s.deleted_at IS NULL
 		  AND (CASE WHEN $3::uuid IS NOT NULL THEN s.id = $3::uuid ELSE s.status = 'active' END)
 		  AND ($4::uuid IS NULL OR s.project_id = $4::uuid)
 		ORDER BY EXISTS (SELECT 1 FROM project_members pm WHERE pm.project_id = p.id AND pm.user_id = $1::uuid) DESC,
@@ -469,12 +469,12 @@ func (d *DataSource) Favorites(ctx context.Context, viewer port.Viewer, cfg doma
 			WHERE f.user_id = $1::uuid
 			UNION ALL
 			SELECT f.entity_type, f.entity_id, b.name, f.created_at FROM favorites f
-			JOIN boards b ON f.entity_type = 'board' AND b.id = f.entity_id
+			JOIN boards b ON f.entity_type = 'board' AND b.id = f.entity_id AND b.deleted_at IS NULL
 			JOIN projects p ON p.id = b.project_id AND p.deleted_at IS NULL AND `+visible("p")+`
 			WHERE f.user_id = $1::uuid
 			UNION ALL
 			SELECT f.entity_type, f.entity_id, fl.name, f.created_at FROM favorites f
-			JOIN filters fl ON f.entity_type = 'filter' AND fl.id = f.entity_id
+			JOIN filters fl ON f.entity_type = 'filter' AND fl.id = f.entity_id AND fl.deleted_at IS NULL
 			WHERE f.user_id = $1::uuid AND (fl.owner_id = $1::uuid OR EXISTS (
 				SELECT 1 FROM filter_shares fs
 				JOIN organization_members fm ON fm.organization_id = fl.organization_id AND fm.user_id = $1::uuid
@@ -484,7 +484,7 @@ func (d *DataSource) Favorites(ctx context.Context, viewer port.Viewer, cfg doma
 					OR (fs.share_type = 'organization' AND fs.target_id = fl.organization_id))))
 			UNION ALL
 			SELECT f.entity_type, f.entity_id, ds.name, f.created_at FROM favorites f
-			JOIN dashboards ds ON f.entity_type = 'dashboard' AND ds.id = f.entity_id
+			JOIN dashboards ds ON f.entity_type = 'dashboard' AND ds.id = f.entity_id AND ds.deleted_at IS NULL
 			WHERE f.user_id = $1::uuid AND (ds.owner_id = $1::uuid OR EXISTS (
 				SELECT 1 FROM dashboard_shares dsh
 				JOIN organization_members dm ON dm.organization_id = ds.organization_id AND dm.user_id = $1::uuid

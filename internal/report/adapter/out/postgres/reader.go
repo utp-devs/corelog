@@ -88,7 +88,7 @@ func (r *Reader) Sprint(ctx context.Context, projectID uuid.UUID, id *uuid.UUID)
 	err := sqlx.GetContext(ctx, r.db, &row, `
 		SELECT `+sprintColumns+`
 		FROM sprints s
-		WHERE s.project_id = $1 AND ($2::uuid IS NULL OR s.id = $2::uuid)
+		WHERE s.project_id = $1 AND s.deleted_at IS NULL AND ($2::uuid IS NULL OR s.id = $2::uuid)
 		ORDER BY (s.status = 'active') DESC, COALESCE(s.started_at, s.created_at) DESC, s.id
 		LIMIT 1`, projectID, id)
 	if errors.Is(err, sql.ErrNoRows) {
@@ -106,7 +106,7 @@ func (r *Reader) RecentSprints(ctx context.Context, projectID uuid.UUID, limit i
 	if err := sqlx.SelectContext(ctx, r.db, &rows, `
 		SELECT `+sprintColumns+`
 		FROM sprints s
-		WHERE s.project_id = $1 AND s.status = 'closed'
+		WHERE s.project_id = $1 AND s.deleted_at IS NULL AND s.status = 'closed'
 		ORDER BY s.completed_at DESC NULLS LAST, s.id
 		LIMIT $2`, projectID, limit); err != nil {
 		return nil, internalErr("failed to read the sprints", err)
@@ -157,7 +157,7 @@ func (r *Reader) Version(ctx context.Context, projectID, versionID uuid.UUID) (d
 	}
 	err := sqlx.GetContext(ctx, r.db, &row, `
 		SELECT v.id, v.name, v.description, v.status, v.start_date, v.release_date
-		FROM versions v WHERE v.id = $1 AND v.project_id = $2`, versionID, projectID)
+		FROM versions v WHERE v.id = $1 AND v.project_id = $2 AND v.deleted_at IS NULL`, versionID, projectID)
 	if errors.Is(err, sql.ErrNoRows) {
 		return domain.VersionInfo{}, domain.ErrVersionNotFound
 	}

@@ -60,7 +60,7 @@ func (r *BoardRepository) FindDefaultByProject(ctx context.Context, projectID uu
 	              THEN i.status_id IN (SELECT bcs.status_id FROM board_column_statuses bcs WHERE bcs.column_id = c.id)
 	              ELSE i.status = c.status END
 	LEFT JOIN users assignee ON assignee.id = i.assignee_id
-	WHERE b.project_id = $1 AND b.is_default = true
+	WHERE b.project_id = $1 AND b.is_default = true AND b.deleted_at IS NULL
 	ORDER BY c.position ASC, i.rank ASC NULLS LAST, i.created_at ASC, i.id ASC`
 
 	var rows []boardColumnIssueRow

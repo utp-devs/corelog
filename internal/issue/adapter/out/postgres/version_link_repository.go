@@ -40,7 +40,7 @@ func (r *VersionLinkRepository) ResolveVersions(ctx context.Context, projectID u
 		return out, nil
 	}
 	if err := sqlx.SelectContext(ctx, database.Executor(ctx, r.db), &out, `
-		SELECT id, name, status FROM versions WHERE project_id = $1 AND id = ANY($2::uuid[])`,
+		SELECT id, name, status FROM versions WHERE project_id = $1 AND deleted_at IS NULL AND id = ANY($2::uuid[])`,
 		projectID, uuidStrings(ids)); err != nil {
 		return nil, apperror.Wrap(apperror.KindInternal, "failed to resolve versions", err)
 	}
@@ -54,7 +54,7 @@ func (r *VersionLinkRepository) ResolveComponents(ctx context.Context, projectID
 		return out, nil
 	}
 	if err := sqlx.SelectContext(ctx, database.Executor(ctx, r.db), &out, `
-		SELECT id, name FROM components WHERE project_id = $1 AND id = ANY($2::uuid[])`,
+		SELECT id, name FROM components WHERE project_id = $1 AND deleted_at IS NULL AND id = ANY($2::uuid[])`,
 		projectID, uuidStrings(ids)); err != nil {
 		return nil, apperror.Wrap(apperror.KindInternal, "failed to resolve components", err)
 	}
@@ -70,7 +70,7 @@ func (r *VersionLinkRepository) ComponentDefaults(ctx context.Context, projectID
 	var rows []componentDefaultRow
 	if err := sqlx.SelectContext(ctx, database.Executor(ctx, r.db), &rows, `
 		SELECT id, name, default_assignee_policy AS policy, lead_id
-		FROM components WHERE project_id = $1 AND id = ANY($2::uuid[])
+		FROM components WHERE project_id = $1 AND deleted_at IS NULL AND id = ANY($2::uuid[])
 		ORDER BY name ASC, id ASC`,
 		projectID, uuidStrings(ids)); err != nil {
 		return nil, apperror.Wrap(apperror.KindInternal, "failed to read component defaults", err)
@@ -113,7 +113,7 @@ func (r *VersionLinkRepository) LoadLinks(ctx context.Context, issueIDs []uuid.U
 	if err := sqlx.SelectContext(ctx, exec, &versions, `
 		SELECT iv.issue_id, iv.kind, v.id, v.name
 		FROM issue_versions iv
-		JOIN versions v ON v.id = iv.version_id
+		JOIN versions v ON v.id = iv.version_id AND v.deleted_at IS NULL
 		WHERE iv.issue_id = ANY($1::uuid[])
 		ORDER BY v.name ASC, v.id ASC`, ids); err != nil {
 		return nil, apperror.Wrap(apperror.KindInternal, "failed to read issue versions", err)
@@ -133,7 +133,7 @@ func (r *VersionLinkRepository) LoadLinks(ctx context.Context, issueIDs []uuid.U
 	if err := sqlx.SelectContext(ctx, exec, &components, `
 		SELECT ic.issue_id, '' AS kind, c.id, c.name
 		FROM issue_components ic
-		JOIN components c ON c.id = ic.component_id
+		JOIN components c ON c.id = ic.component_id AND c.deleted_at IS NULL
 		WHERE ic.issue_id = ANY($1::uuid[])
 		ORDER BY c.name ASC, c.id ASC`, ids); err != nil {
 		return nil, apperror.Wrap(apperror.KindInternal, "failed to read issue components", err)

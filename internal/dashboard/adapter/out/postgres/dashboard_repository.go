@@ -73,7 +73,7 @@ SELECT d.id, d.owner_id, d.organization_id, d.name, d.description, d.layout, d.i
        EXISTS (SELECT 1 FROM favorites fav WHERE fav.user_id = $1::uuid AND fav.entity_type = 'dashboard' AND fav.entity_id = d.id) AS is_favorite,
        EXISTS (SELECT 1 FROM dashboard_shares any_share WHERE any_share.dashboard_id = d.id) AS has_shares
 FROM dashboards d
-JOIN users ou ON ou.id = d.owner_id
+JOIN users ou ON ou.id = d.owner_id AND d.deleted_at IS NULL
 LEFT JOIN (SELECT om.organization_id, om.role FROM organization_members om
            JOIN organizations o ON o.id = om.organization_id AND o.deleted_at IS NULL
            WHERE om.user_id = $1::uuid) m ON m.organization_id = d.organization_id
@@ -329,7 +329,7 @@ func (r *Repository) UpdateFields(ctx context.Context, id uuid.UUID, p port.Fiel
 	}
 	defer func() { _ = tx.Rollback() }()
 	var owner uuid.UUID
-	if err := tx.GetContext(ctx, &owner, `SELECT owner_id FROM dashboards WHERE id = $1 FOR UPDATE`, id); err != nil {
+	if err := tx.GetContext(ctx, &owner, `SELECT owner_id FROM dashboards WHERE id = $1 AND deleted_at IS NULL FOR UPDATE`, id); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return domain.ErrNotFound
 		}
@@ -347,7 +347,7 @@ func (r *Repository) UpdateFields(ctx context.Context, id uuid.UUID, p port.Fiel
 	if _, err := tx.ExecContext(ctx, `
 		UPDATE dashboards SET name = COALESCE($2, name), description = COALESCE($3, description),
 			layout = COALESCE($4::jsonb, layout), is_default = COALESCE($5, is_default), updated_at = $6
-		WHERE id = $1`, id, p.Name, p.Description, layout, p.IsDefault, at); err != nil {
+		WHERE id = $1 AND deleted_at IS NULL`, id, p.Name, p.Description, layout, p.IsDefault, at); err != nil {
 		return mapWriteError(err, "failed to update the dashboard")
 	}
 	if err := tx.Commit(); err != nil {
@@ -356,14 +356,15 @@ func (r *Repository) UpdateFields(ctx context.Context, id uuid.UUID, p port.Fiel
 	return nil
 }
 
-// Delete removes a dashboard and the stars and recents that pointed at it.
+// Delete logically deletes a dashboard (with its gadgets and shares, which stay stored) and removes the stars and
+// recents that pointed at it. A deleted default dashboard stops being the default so the owner can pick another.
 func (r *Repository) Delete(ctx context.Context, id uuid.UUID) error {
 	tx, err := r.db.BeginTxx(ctx, nil)
 	if err != nil {
 		return internal("failed to begin the dashboard transaction", err)
 	}
 	defer func() { _ = tx.Rollback() }()
-	res, err := tx.ExecContext(ctx, `DELETE FROM dashboards WHERE id = $1`, id)
+	res, err := tx.ExecContext(ctx, `UPDATE dashboards SET deleted_at = now(), is_default = FALSE WHERE id = $1 AND deleted_at IS NULL`, id)
 	if err != nil {
 		return internal("failed to delete the dashboard", err)
 	}
@@ -389,7 +390,7 @@ func (r *Repository) ReplaceGadgets(ctx context.Context, id uuid.UUID, layout *d
 	}
 	defer func() { _ = tx.Rollback() }()
 	var locked uuid.UUID
-	if err := tx.GetContext(ctx, &locked, `SELECT id FROM dashboards WHERE id = $1 FOR UPDATE`, id); err != nil {
+	if err := tx.GetContext(ctx, &locked, `SELECT id FROM dashboards WHERE id = $1 AND deleted_at IS NULL FOR UPDATE`, id); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, domain.ErrNotFound
 		}
@@ -462,7 +463,7 @@ func (r *Repository) ReplaceShares(ctx context.Context, id, organizationID uuid.
 	if err := tx.GetContext(ctx, &valid, `
 		SELECT count(*) FROM unnest($1::text[], $2::uuid[]) AS s(t, tid)
 		WHERE (t = 'user' AND EXISTS (SELECT 1 FROM organization_members om WHERE om.organization_id = $3 AND om.user_id = s.tid))
-		   OR (t = 'team' AND EXISTS (SELECT 1 FROM teams tm WHERE tm.id = s.tid AND tm.organization_id = $3))
+		   OR (t = 'team' AND EXISTS (SELECT 1 FROM teams tm WHERE tm.id = s.tid AND tm.organization_id = $3 AND tm.deleted_at IS NULL))
 		   OR (t = 'project' AND EXISTS (SELECT 1 FROM projects p WHERE p.id = s.tid AND p.organization_id = $3 AND p.deleted_at IS NULL))
 		   OR (t = 'organization' AND s.tid = $3)`, typeArr, uuidArray(targets), organizationID); err != nil {
 		return internal("failed to validate the share targets", err)

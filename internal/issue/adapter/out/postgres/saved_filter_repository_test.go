@@ -47,6 +47,16 @@ func TestSavedFilterRepositoryPostgresCRUDAndOwnership(t *testing.T) {
 	if _, err := db.Exec(`ALTER TABLE saved_filters ALTER COLUMN id SET DEFAULT gen_random_uuid()`); err != nil {
 		t.Fatal(err)
 	}
+	// Logical deletion: the name is unique only among live filters.
+	for _, stmt := range []string{
+		`ALTER TABLE saved_filters ADD COLUMN deleted_at TIMESTAMPTZ NULL`,
+		`ALTER TABLE saved_filters DROP CONSTRAINT saved_filters_owner_name_unique`,
+		`CREATE UNIQUE INDEX saved_filters_owner_name_unique ON saved_filters (owner_id, name) WHERE deleted_at IS NULL`,
+	} {
+		if _, err := db.Exec(stmt); err != nil {
+			t.Fatal(err)
+		}
+	}
 	downPath := filepath.Join("..", "..", "..", "..", "..", "migrations", "postgres", "000013_saved_filters.down.sql")
 	down, err := os.ReadFile(downPath)
 	if err != nil {
@@ -91,6 +101,14 @@ func TestSavedFilterRepositoryPostgresCRUDAndOwnership(t *testing.T) {
 	filters, err = repository.ListSavedFilters(context.Background(), ownerID)
 	if err != nil || len(filters) != 0 {
 		t.Fatalf("filters after delete=%+v err=%v", filters, err)
+	}
+	var stamped int
+	if err := db.Get(&stamped, `SELECT count(*) FROM saved_filters WHERE id = $1 AND deleted_at IS NOT NULL`, filter.ID); err != nil || stamped != 1 {
+		t.Fatalf("filter row must be kept with deleted_at set: %d %v", stamped, err)
+	}
+	reused, _ := domain.NewSavedFilter(ownerID, "My bugs", domain.SavedFilterCriteria{Status: domain.StatusOpen})
+	if err := repository.SaveSavedFilter(context.Background(), reused); err != nil {
+		t.Fatalf("name of a deleted filter must be reusable: %v", err)
 	}
 	if _, err := db.Exec(string(down)); err != nil {
 		t.Fatalf("down migration: %v", err)

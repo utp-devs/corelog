@@ -122,7 +122,7 @@ func (r *Repository) Create(ctx context.Context, rule *domain.Rule) error {
 // Get returns a rule by id.
 func (r *Repository) Get(ctx context.Context, id uuid.UUID) (domain.Rule, error) {
 	var row ruleRow
-	err := sqlx.GetContext(ctx, r.ext(ctx), &row, `SELECT `+ruleColumns+` FROM automation_rules WHERE id = $1`, id)
+	err := sqlx.GetContext(ctx, r.ext(ctx), &row, `SELECT `+ruleColumns+` FROM automation_rules WHERE id = $1 AND deleted_at IS NULL`, id)
 	if errors.Is(err, sql.ErrNoRows) {
 		return domain.Rule{}, domain.ErrNotFound
 	}
@@ -136,7 +136,7 @@ func (r *Repository) Get(ctx context.Context, id uuid.UUID) (domain.Rule, error)
 func (r *Repository) ListByProject(ctx context.Context, projectID uuid.UUID) ([]domain.Rule, error) {
 	var rows []ruleRow
 	if err := sqlx.SelectContext(ctx, r.ext(ctx), &rows,
-		`SELECT `+ruleColumns+` FROM automation_rules WHERE project_id = $1 ORDER BY created_at, id`, projectID); err != nil {
+		`SELECT `+ruleColumns+` FROM automation_rules WHERE project_id = $1 AND deleted_at IS NULL ORDER BY created_at, id`, projectID); err != nil {
 		return nil, internal("no se pudieron listar las reglas", err)
 	}
 	return rules(rows)
@@ -152,7 +152,7 @@ func (r *Repository) Update(ctx context.Context, rule *domain.Rule) error {
 	err = sqlx.GetContext(ctx, r.ext(ctx), &version, `
 		UPDATE automation_rules SET name = $3, enabled = $4, trigger = $5::jsonb, conditions = $6::jsonb, actions = $7::jsonb,
 		       version = version + 1, updated_at = $8
-		WHERE id = $1 AND version = $2 RETURNING version`,
+		WHERE id = $1 AND version = $2 AND deleted_at IS NULL RETURNING version`,
 		rule.ID, rule.Version, rule.Name, rule.Enabled, t, c, a, rule.UpdatedAt)
 	if errors.Is(err, sql.ErrNoRows) {
 		return domain.ErrVersionConflict
@@ -168,7 +168,7 @@ func (r *Repository) Update(ctx context.Context, rule *domain.Rule) error {
 func (r *Repository) SetEnabled(ctx context.Context, id uuid.UUID, enabled bool, at time.Time) (domain.Rule, error) {
 	var row ruleRow
 	err := sqlx.GetContext(ctx, r.ext(ctx), &row, `
-		UPDATE automation_rules SET enabled = $2, updated_at = $3 WHERE id = $1 RETURNING `+ruleColumns, id, enabled, at)
+		UPDATE automation_rules SET enabled = $2, updated_at = $3 WHERE id = $1 AND deleted_at IS NULL RETURNING `+ruleColumns, id, enabled, at)
 	if errors.Is(err, sql.ErrNoRows) {
 		return domain.Rule{}, domain.ErrNotFound
 	}
@@ -178,9 +178,11 @@ func (r *Repository) SetEnabled(ctx context.Context, id uuid.UUID, enabled bool,
 	return row.rule()
 }
 
-// Delete removes a rule; runs cascade.
+// Delete logically deletes a rule: it stops firing and disappears from every read, while it and its runs stay
+// stored for history and statistics.
 func (r *Repository) Delete(ctx context.Context, id uuid.UUID) error {
-	res, err := r.ext(ctx).ExecContext(ctx, `DELETE FROM automation_rules WHERE id = $1`, id)
+	res, err := r.ext(ctx).ExecContext(ctx,
+		`UPDATE automation_rules SET deleted_at = now(), enabled = FALSE WHERE id = $1 AND deleted_at IS NULL`, id)
 	if err != nil {
 		return internal("no se pudo eliminar la regla", err)
 	}
@@ -207,7 +209,7 @@ func (r *Repository) ProjectOrg(ctx context.Context, projectID uuid.UUID) (uuid.
 func (r *Repository) ActiveFor(ctx context.Context, orgID, projectID uuid.UUID) ([]domain.Rule, error) {
 	var rows []ruleRow
 	err := sqlx.SelectContext(ctx, r.ext(ctx), &rows, `SELECT `+ruleColumns+` FROM automation_rules
-		WHERE organization_id = $1 AND enabled AND (project_id = $2 OR project_id IS NULL) ORDER BY created_at, id`, orgID, projectID)
+		WHERE organization_id = $1 AND enabled AND deleted_at IS NULL AND (project_id = $2 OR project_id IS NULL) ORDER BY created_at, id`, orgID, projectID)
 	if err != nil {
 		return nil, internal("no se pudieron cargar las reglas activas", err)
 	}
@@ -218,7 +220,7 @@ func (r *Repository) ActiveFor(ctx context.Context, orgID, projectID uuid.UUID) 
 func (r *Repository) ActiveScheduled(ctx context.Context) ([]domain.Rule, error) {
 	var rows []ruleRow
 	err := sqlx.SelectContext(ctx, r.ext(ctx), &rows, `SELECT `+ruleColumns+` FROM automation_rules
-		WHERE enabled AND trigger->>'type' = 'scheduled' ORDER BY created_at, id`)
+		WHERE enabled AND deleted_at IS NULL AND trigger->>'type' = 'scheduled' ORDER BY created_at, id`)
 	if err != nil {
 		return nil, internal("no se pudieron cargar las reglas programadas", err)
 	}
@@ -277,7 +279,9 @@ func (r *Repository) ListRuns(ctx context.Context, ruleID uuid.UUID, status stri
 	}
 	err := sqlx.SelectContext(ctx, r.ext(ctx), &rows, `
 		SELECT id, rule_id, event_id, issue_id, status, detail, created_at FROM automation_runs
-		WHERE rule_id = $1 AND ($2 = '' OR status = $2) ORDER BY created_at DESC, id LIMIT $3`, ruleID, status, limit)
+		WHERE rule_id = $1 AND ($2 = '' OR status = $2)
+		  AND EXISTS (SELECT 1 FROM automation_rules ar WHERE ar.id = rule_id AND ar.deleted_at IS NULL)
+		ORDER BY created_at DESC, id LIMIT $3`, ruleID, status, limit)
 	if err != nil {
 		return nil, internal("no se pudieron listar las ejecuciones", err)
 	}

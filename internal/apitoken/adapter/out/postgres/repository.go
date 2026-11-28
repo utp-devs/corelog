@@ -72,18 +72,19 @@ func (r *Repository) CountActive(ctx context.Context, userID uuid.UUID, now time
 	var n int
 	err := sqlx.GetContext(ctx, r.ext(ctx), &n, `
 		SELECT count(*) FROM api_tokens
-		WHERE user_id = $1 AND revoked_at IS NULL AND (expires_at IS NULL OR expires_at > $2)`, userID, now)
+		WHERE user_id = $1 AND revoked_at IS NULL AND deleted_at IS NULL AND (expires_at IS NULL OR expires_at > $2)`, userID, now)
 	if err != nil {
 		return 0, internal("no se pudieron contar los tokens", err)
 	}
 	return n, nil
 }
 
-// List returns the tokens of a user, newest first.
-func (r *Repository) List(ctx context.Context, userID uuid.UUID) ([]domain.Token, error) {
+// List returns the tokens of a user, newest first. Revoked tokens are logically deleted and only listed on request.
+func (r *Repository) List(ctx context.Context, userID uuid.UUID, includeRevoked bool) ([]domain.Token, error) {
 	var rows []row
 	if err := sqlx.SelectContext(ctx, r.ext(ctx), &rows,
-		`SELECT `+columns+` FROM api_tokens WHERE user_id = $1 ORDER BY created_at DESC, id`, userID); err != nil {
+		`SELECT `+columns+` FROM api_tokens WHERE user_id = $1 AND ($2 OR deleted_at IS NULL) ORDER BY created_at DESC, id`,
+		userID, includeRevoked); err != nil {
 		return nil, internal("no se pudieron listar los tokens", err)
 	}
 	out := make([]domain.Token, len(rows))
@@ -93,11 +94,11 @@ func (r *Repository) List(ctx context.Context, userID uuid.UUID) ([]domain.Token
 	return out, nil
 }
 
-// Revoke sets revoked_at once; a second call keeps the first instant.
+// Revoke sets revoked_at and deleted_at once; a second call keeps the first instants.
 func (r *Repository) Revoke(ctx context.Context, userID, id uuid.UUID, at time.Time) (domain.Token, error) {
 	var rw row
 	err := sqlx.GetContext(ctx, r.ext(ctx), &rw, `
-		UPDATE api_tokens SET revoked_at = COALESCE(revoked_at, $3)
+		UPDATE api_tokens SET revoked_at = COALESCE(revoked_at, $3), deleted_at = COALESCE(deleted_at, $3)
 		WHERE id = $1 AND user_id = $2 RETURNING `+columns, id, userID, at)
 	if errors.Is(err, sql.ErrNoRows) {
 		return domain.Token{}, domain.ErrNotFound

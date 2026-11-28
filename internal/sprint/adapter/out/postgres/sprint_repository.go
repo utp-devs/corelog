@@ -103,7 +103,7 @@ func (r *SprintRepository) Save(ctx context.Context, sprint *domain.Sprint) erro
 
 func (r *SprintRepository) find(ctx context.Context, id uuid.UUID, suffix string) (*domain.Sprint, error) {
 	var row sprintRow
-	err := sqlx.GetContext(ctx, r.ext(ctx), &row, `SELECT `+sprintColumns+` FROM sprints WHERE id = $1`+suffix, id)
+	err := sqlx.GetContext(ctx, r.ext(ctx), &row, `SELECT `+sprintColumns+` FROM sprints WHERE id = $1 AND deleted_at IS NULL`+suffix, id)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, domain.ErrSprintNotFound
 	}
@@ -125,7 +125,7 @@ func (r *SprintRepository) ListByProject(ctx context.Context, projectID uuid.UUI
 	var rows []sprintRow
 	if err := sqlx.SelectContext(ctx, r.ext(ctx), &rows, `
 		SELECT `+sprintColumns+` FROM sprints
-		WHERE project_id = $1
+		WHERE project_id = $1 AND deleted_at IS NULL
 		ORDER BY start_date ASC NULLS LAST, created_at ASC, id ASC`, projectID); err != nil {
 		return nil, internal("failed to list sprints", err)
 	}
@@ -142,7 +142,7 @@ func (r *SprintRepository) Update(ctx context.Context, sprint *domain.Sprint) er
 		SET name = :name, goal = :goal, status = :status, start_date = :start_date, end_date = :end_date,
 		    started_at = :started_at, completed_at = :completed_at, closed_at = :closed_at,
 		    committed_points = :committed_points, completed_points = :completed_points, updated_at = :updated_at
-		WHERE id = :id`
+		WHERE id = :id AND deleted_at IS NULL`
 	result, err := sqlx.NamedExecContext(ctx, r.ext(ctx), query, fromDomain(sprint))
 	if err != nil {
 		var pgErr *pgconn.PgError
@@ -165,7 +165,7 @@ func (r *SprintRepository) Delete(ctx context.Context, id uuid.UUID) error {
 	if _, err := r.ext(ctx).ExecContext(ctx, `UPDATE issues SET sprint_id = NULL, updated_at = now() WHERE sprint_id = $1`, id); err != nil {
 		return internal("failed to release sprint issues", err)
 	}
-	result, err := r.ext(ctx).ExecContext(ctx, `DELETE FROM sprints WHERE id = $1`, id)
+	result, err := r.ext(ctx).ExecContext(ctx, `UPDATE sprints SET deleted_at = now() WHERE id = $1 AND deleted_at IS NULL`, id)
 	if err != nil {
 		return internal("failed to delete sprint", err)
 	}
@@ -178,7 +178,7 @@ func (r *SprintRepository) Delete(ctx context.Context, id uuid.UUID) error {
 func (r *SprintRepository) HasActive(ctx context.Context, projectID, exceptID uuid.UUID) (bool, error) {
 	var exists bool
 	if err := sqlx.GetContext(ctx, r.ext(ctx), &exists, `
-		SELECT EXISTS (SELECT 1 FROM sprints WHERE project_id = $1 AND status = 'active' AND id <> $2)`,
+		SELECT EXISTS (SELECT 1 FROM sprints WHERE project_id = $1 AND deleted_at IS NULL AND status = 'active' AND id <> $2)`,
 		projectID, exceptID,
 	); err != nil {
 		return false, internal("failed to check active sprint", err)
@@ -487,7 +487,7 @@ func (r *SprintRepository) Velocity(ctx context.Context, projectID uuid.UUID, li
 		FROM sprints s
 		JOIN projects p ON p.id = s.project_id AND p.deleted_at IS NULL
 		LEFT JOIN issues i ON i.sprint_id = s.id AND i.deleted_at IS NULL
-		WHERE s.project_id = $1 AND s.status = 'closed'
+		WHERE s.project_id = $1 AND s.deleted_at IS NULL AND s.status = 'closed'
 		GROUP BY s.id, s.name, s.closed_at, s.completed_points
 		ORDER BY s.closed_at DESC NULLS LAST
 		LIMIT $2`,

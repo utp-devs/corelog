@@ -108,7 +108,7 @@ func (r *BoardRepository) ListByProject(ctx context.Context, projectID uuid.UUID
 	var rows []boardRow
 	if err := sqlx.SelectContext(ctx, r.q, &rows, `SELECT `+boardColumnsSQL+`
 		FROM boards b JOIN projects p ON p.id = b.project_id AND p.deleted_at IS NULL
-		WHERE b.project_id = $1 ORDER BY b.is_default DESC, b.created_at, b.id`, projectID); err != nil {
+		WHERE b.project_id = $1 AND b.deleted_at IS NULL ORDER BY b.is_default DESC, b.created_at, b.id`, projectID); err != nil {
 		return nil, internalErr("failed to list boards", err)
 	}
 	boards := make([]domain.Board, len(rows))
@@ -123,7 +123,7 @@ func (r *BoardRepository) ListByProject(ctx context.Context, projectID uuid.UUID
 	}
 	var columns []columnRow
 	if err := sqlx.SelectContext(ctx, r.q, &columns, columnsSQL+`
-		JOIN boards b ON b.id = c.board_id WHERE b.project_id = $1
+		JOIN boards b ON b.id = c.board_id WHERE b.project_id = $1 AND b.deleted_at IS NULL
 		GROUP BY c.id ORDER BY c.board_id, c.position`, projectID); err != nil {
 		return nil, internalErr("failed to list board columns", err)
 	}
@@ -139,7 +139,7 @@ func (r *BoardRepository) ListByProject(ctx context.Context, projectID uuid.UUID
 func (r *BoardRepository) FindByID(ctx context.Context, id uuid.UUID) (*domain.Board, error) {
 	var row boardRow
 	err := sqlx.GetContext(ctx, r.q, &row, `SELECT `+boardColumnsSQL+`
-		FROM boards b JOIN projects p ON p.id = b.project_id AND p.deleted_at IS NULL WHERE b.id = $1`, id)
+		FROM boards b JOIN projects p ON p.id = b.project_id AND p.deleted_at IS NULL WHERE b.id = $1 AND b.deleted_at IS NULL`, id)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, domain.ErrBoardNotFound
 	}
@@ -236,7 +236,7 @@ func (r *BoardRepository) UpdateSettings(ctx context.Context, board *domain.Boar
 	result, err := r.db.ExecContext(ctx, `
 		UPDATE boards SET name = $2, swimlane_mode = $3, estimation = $4, card_fields = $5::jsonb, show_unmapped_lane = $6,
 		       done_retention_days = $7, updated_at = $8
-		WHERE id = $1`, board.ID, board.Name, string(board.SwimlaneMode), string(board.Estimation), string(cardFields),
+		WHERE id = $1 AND deleted_at IS NULL`, board.ID, board.Name, string(board.SwimlaneMode), string(board.Estimation), string(cardFields),
 		board.ShowUnmappedLane, board.DoneRetentionDays, board.UpdatedAt)
 	if err != nil {
 		if isUniqueViolation(err) {
@@ -250,9 +250,10 @@ func (r *BoardRepository) UpdateSettings(ctx context.Context, board *domain.Boar
 	return nil
 }
 
-// Delete removes a board; columns, bindings, quick filters and swimlanes go with it.
+// Delete logically deletes a board; its columns, bindings, quick filters and swimlanes stay stored and are hidden
+// with it. A deleted board is never the default.
 func (r *BoardRepository) Delete(ctx context.Context, id uuid.UUID) error {
-	result, err := r.db.ExecContext(ctx, `DELETE FROM boards WHERE id = $1`, id)
+	result, err := r.db.ExecContext(ctx, `UPDATE boards SET deleted_at = now(), is_default = FALSE WHERE id = $1 AND deleted_at IS NULL`, id)
 	if err != nil {
 		return internalErr("failed to delete board", err)
 	}
@@ -271,7 +272,7 @@ func (r *BoardRepository) ReplaceColumns(ctx context.Context, boardID uuid.UUID,
 	}
 	defer func() { _ = tx.Rollback() }()
 	var locked uuid.UUID
-	if err := tx.GetContext(ctx, &locked, `SELECT id FROM boards WHERE id = $1 FOR UPDATE`, boardID); err != nil {
+	if err := tx.GetContext(ctx, &locked, `SELECT id FROM boards WHERE id = $1 AND deleted_at IS NULL FOR UPDATE`, boardID); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return domain.ErrBoardNotFound
 		}
@@ -415,7 +416,7 @@ SELECT i.id, p.key || '-' || i.key_number AS key, i.summary,
        COALESCE(pr.name, '') AS priority_name, COALESCE(pr.legacy_key, '') AS priority_key, COALESCE(pr.icon, '') AS priority_icon, COALESCE(pr.color, '') AS priority_color,
        i.status_id, st.name AS status_name, st.category AS status_category,
        i.assignee_id, COALESCE(NULLIF(u.display_name, ''), u.name, '') AS assignee_name,
-       COALESCE((SELECT string_agg(l.name, E'\x1f' ORDER BY l.name) FROM issue_labels il JOIN labels l ON l.id = il.label_id WHERE il.issue_id = i.id), '') AS labels,
+       COALESCE((SELECT string_agg(l.name, E'\x1f' ORDER BY l.name) FROM issue_labels il JOIN labels l ON l.id = il.label_id AND l.deleted_at IS NULL WHERE il.issue_id = i.id), '') AS labels,
        i.story_points, i.remaining_estimate_seconds, i.flagged, i.rank, i.sprint_id,
        CASE WHEN pt.hierarchy_level = 1 THEN par.id WHEN gt.hierarchy_level = 1 THEN gp.id END AS epic_id,
        CASE WHEN pt.hierarchy_level = 1 THEN p.key || '-' || par.key_number WHEN gt.hierarchy_level = 1 THEN p.key || '-' || gp.key_number END AS epic_key,
@@ -436,7 +437,7 @@ LEFT JOIN issues gp ON gp.id = par.parent_id AND gp.deleted_at IS NULL
 LEFT JOIN issue_types gt ON gt.id = gp.issue_type_id
 WHERE i.project_id = $1 AND i.deleted_at IS NULL AND COALESCE(it.hierarchy_level, 0) <> 1
   AND ($2::text = 'all'
-       OR ($2::text = 'active' AND i.sprint_id IN (SELECT s.id FROM sprints s WHERE s.project_id = $1 AND s.status = 'active'))
+       OR ($2::text = 'active' AND i.sprint_id IN (SELECT s.id FROM sprints s WHERE s.project_id = $1 AND s.status = 'active' AND s.deleted_at IS NULL))
        OR ($2::text = 'none' AND i.sprint_id IS NULL)
        OR ($2::text = 'id' AND i.sprint_id = $3::uuid))
   AND ($4::int IS NULL OR st.category <> 'done' OR i.updated_at >= $5::timestamptz - make_interval(days => $4::int))
@@ -469,7 +470,7 @@ func (r *BoardRepository) Cards(ctx context.Context, q port.CardQuery) ([]domain
 			ID   uuid.UUID `db:"id"`
 			Name string    `db:"name"`
 		}
-		err := sqlx.GetContext(ctx, r.q, &s, `SELECT id, name FROM sprints WHERE project_id = $1 AND (($2::text = 'active' AND status = 'active') OR ($2::text = 'id' AND id = $3::uuid)) LIMIT 1`,
+		err := sqlx.GetContext(ctx, r.q, &s, `SELECT id, name FROM sprints WHERE project_id = $1 AND deleted_at IS NULL AND (($2::text = 'active' AND status = 'active') OR ($2::text = 'id' AND id = $3::uuid)) LIMIT 1`,
 			q.ProjectID, mode, sprintID)
 		switch {
 		case err == nil:

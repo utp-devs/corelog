@@ -45,12 +45,12 @@ func (r *CalendarRepository) Events(ctx context.Context, projectID uuid.UUID, fr
 	const query = `
 		SELECT 'sprint_start' AS kind, id AS source_id, name AS title, start_date AS day
 		FROM sprints
-		WHERE project_id = $1 AND start_date BETWEEN $2::date AND $3::date
+		WHERE project_id = $1 AND deleted_at IS NULL AND start_date BETWEEN $2::date AND $3::date
 		  AND EXISTS (SELECT 1 FROM projects p WHERE p.id = $1 AND p.deleted_at IS NULL)
 		UNION ALL
 		SELECT 'sprint_end', id, name, end_date
 		FROM sprints
-		WHERE project_id = $1 AND end_date BETWEEN $2::date AND $3::date
+		WHERE project_id = $1 AND deleted_at IS NULL AND end_date BETWEEN $2::date AND $3::date
 		  AND EXISTS (SELECT 1 FROM projects p WHERE p.id = $1 AND p.deleted_at IS NULL)
 		UNION ALL
 		SELECT 'issue_due', id, summary, (due_date)::date

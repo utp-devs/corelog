@@ -72,7 +72,7 @@ func (r *Repository) Create(ctx context.Context, w *port.Stored) error {
 func (r *Repository) Get(ctx context.Context, orgID, id uuid.UUID) (port.Stored, error) {
 	var row webhookRow
 	err := sqlx.GetContext(ctx, r.ext(ctx), &row,
-		`SELECT `+webhookColumns+` FROM webhooks WHERE id = $1 AND organization_id = $2`, id, orgID)
+		`SELECT `+webhookColumns+` FROM webhooks WHERE id = $1 AND organization_id = $2 AND deleted_at IS NULL`, id, orgID)
 	if errors.Is(err, sql.ErrNoRows) {
 		return port.Stored{}, domain.ErrNotFound
 	}
@@ -85,7 +85,7 @@ func (r *Repository) Get(ctx context.Context, orgID, id uuid.UUID) (port.Stored,
 // StoredByID returns a webhook by id only (delivery worker).
 func (r *Repository) StoredByID(ctx context.Context, id uuid.UUID) (port.Stored, error) {
 	var row webhookRow
-	err := sqlx.GetContext(ctx, r.ext(ctx), &row, `SELECT `+webhookColumns+` FROM webhooks WHERE id = $1`, id)
+	err := sqlx.GetContext(ctx, r.ext(ctx), &row, `SELECT `+webhookColumns+` FROM webhooks WHERE id = $1 AND deleted_at IS NULL`, id)
 	if errors.Is(err, sql.ErrNoRows) {
 		return port.Stored{}, domain.ErrNotFound
 	}
@@ -99,7 +99,7 @@ func (r *Repository) StoredByID(ctx context.Context, id uuid.UUID) (port.Stored,
 func (r *Repository) List(ctx context.Context, orgID uuid.UUID, projectID *uuid.UUID) ([]domain.Webhook, error) {
 	var rows []webhookRow
 	err := sqlx.SelectContext(ctx, r.ext(ctx), &rows, `SELECT `+webhookColumns+` FROM webhooks
-		WHERE organization_id = $1 AND ($2::uuid IS NULL OR project_id = $2) ORDER BY created_at, id`, orgID, projectID)
+		WHERE organization_id = $1 AND deleted_at IS NULL AND ($2::uuid IS NULL OR project_id = $2) ORDER BY created_at, id`, orgID, projectID)
 	if err != nil {
 		return nil, internal("no se pudieron listar los webhooks", err)
 	}
@@ -115,7 +115,7 @@ func (r *Repository) Update(ctx context.Context, w domain.Webhook) error {
 	res, err := r.ext(ctx).ExecContext(ctx, `
 		UPDATE webhooks SET name = $3, url = $4, events = ARRAY(SELECT jsonb_array_elements_text($5::jsonb)),
 		       filter_query = $6, enabled = $7, updated_at = $8
-		WHERE id = $1 AND organization_id = $2`,
+		WHERE id = $1 AND organization_id = $2 AND deleted_at IS NULL`,
 		w.ID, w.OrgID, w.Name, w.URL, database.TextList(w.Events), w.FilterQuery, w.Enabled, w.UpdatedAt)
 	return affected(res, err, "no se pudo actualizar el webhook")
 }
@@ -123,13 +123,15 @@ func (r *Repository) Update(ctx context.Context, w domain.Webhook) error {
 // UpdateSecret replaces the sealed secret.
 func (r *Repository) UpdateSecret(ctx context.Context, orgID, id uuid.UUID, sealed []byte, at time.Time) error {
 	res, err := r.ext(ctx).ExecContext(ctx,
-		`UPDATE webhooks SET secret_encrypted = $3, updated_at = $4 WHERE id = $1 AND organization_id = $2`, id, orgID, sealed, at)
+		`UPDATE webhooks SET secret_encrypted = $3, updated_at = $4 WHERE id = $1 AND organization_id = $2 AND deleted_at IS NULL`, id, orgID, sealed, at)
 	return affected(res, err, "no se pudo rotar el secreto")
 }
 
-// Delete removes a webhook; deliveries cascade.
+// Delete logically deletes a webhook; it and its deliveries stay stored for history and statistics, and no
+// further delivery is attempted.
 func (r *Repository) Delete(ctx context.Context, orgID, id uuid.UUID) error {
-	res, err := r.ext(ctx).ExecContext(ctx, `DELETE FROM webhooks WHERE id = $1 AND organization_id = $2`, id, orgID)
+	res, err := r.ext(ctx).ExecContext(ctx,
+		`UPDATE webhooks SET deleted_at = now(), enabled = FALSE WHERE id = $1 AND organization_id = $2 AND deleted_at IS NULL`, id, orgID)
 	return affected(res, err, "no se pudo eliminar el webhook")
 }
 
@@ -158,7 +160,7 @@ func (r *Repository) ProjectInOrg(ctx context.Context, orgID, projectID uuid.UUI
 func (r *Repository) Matching(ctx context.Context, orgID uuid.UUID, projectID *uuid.UUID, eventType string) ([]domain.Webhook, error) {
 	var rows []webhookRow
 	err := sqlx.SelectContext(ctx, r.ext(ctx), &rows, `SELECT `+webhookColumns+` FROM webhooks
-		WHERE organization_id = $1 AND enabled
+		WHERE organization_id = $1 AND enabled AND deleted_at IS NULL
 		  AND (project_id IS NULL OR project_id = $2)
 		  AND ('*' = ANY(events) OR $3 = ANY(events))
 		ORDER BY created_at, id`, orgID, projectID, eventType)
@@ -253,7 +255,7 @@ func (r *Repository) ClaimDue(ctx context.Context, now time.Time, limit int, lea
 	err := sqlx.SelectContext(ctx, r.ext(ctx), &rows, `
 		WITH due AS (
 			SELECT d.id FROM webhook_deliveries d JOIN webhooks w ON w.id = d.webhook_id
-			WHERE d.status IN ('pending', 'failed') AND d.next_attempt_at IS NOT NULL AND d.next_attempt_at <= $1 AND w.enabled
+			WHERE d.status IN ('pending', 'failed') AND d.next_attempt_at IS NOT NULL AND d.next_attempt_at <= $1 AND w.enabled AND w.deleted_at IS NULL
 			ORDER BY d.next_attempt_at LIMIT $2 FOR UPDATE OF d SKIP LOCKED
 		), claimed AS (
 			UPDATE webhook_deliveries d SET next_attempt_at = $3 FROM due WHERE d.id = due.id

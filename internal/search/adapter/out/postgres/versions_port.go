@@ -35,7 +35,7 @@ func (VersionTables) Condition(kind port.VersionKind, spec port.VersionSpec) (SQ
 	if kind == port.VersionAffects {
 		k = "affects"
 	}
-	base := "EXISTS (SELECT 1 FROM issue_versions iv JOIN versions v ON v.id = iv.version_id WHERE iv.issue_id = i.id AND iv.kind = '" + k + "'"
+	base := "EXISTS (SELECT 1 FROM issue_versions iv JOIN versions v ON v.id = iv.version_id AND v.deleted_at IS NULL WHERE iv.issue_id = i.id AND iv.kind = '" + k + "'"
 	switch {
 	case spec.Empty:
 		return SQLFragment{SQL: "NOT EXISTS (SELECT 1 FROM issue_versions iv WHERE iv.issue_id = i.id AND iv.kind = '" + k + "')"}, nil

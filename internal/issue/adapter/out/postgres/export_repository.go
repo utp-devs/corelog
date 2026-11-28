@@ -23,8 +23,8 @@ func (r *OperationsRepository) LabelNamesByIssue(ctx context.Context, issueIDs [
 	}
 	if err := sqlx.SelectContext(ctx, database.Executor(ctx, r.db), &rows, `
 		SELECT il.issue_id, l.name
-		FROM issue_labels il JOIN labels l ON l.id = il.label_id
-		WHERE il.issue_id IN (`+list+`)
+		FROM issue_labels il JOIN labels l ON l.id = il.label_id AND l.deleted_at IS NULL
+		WHERE il.issue_id IN (`+list+`) AND l.deleted_at IS NULL
 		ORDER BY il.issue_id, l.name`, args...); err != nil {
 		return nil, apperror.Wrap(apperror.KindInternal, "failed to read labels of the export", err)
 	}

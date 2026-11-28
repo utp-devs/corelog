@@ -18,14 +18,14 @@ func addCatalogFixtures(t *testing.T, db *sqlx.DB) {
 			id UUID PRIMARY KEY DEFAULT gen_random_uuid(), organization_id UUID NOT NULL, name TEXT NOT NULL,
 			icon TEXT NOT NULL DEFAULT 'task', color TEXT NOT NULL DEFAULT 'blue',
 			hierarchy_level SMALLINT NOT NULL DEFAULT 0, position INT NOT NULL DEFAULT 0,
-			is_default BOOLEAN NOT NULL DEFAULT FALSE, legacy_key TEXT)`,
+			is_default BOOLEAN NOT NULL DEFAULT FALSE, legacy_key TEXT, deleted_at TIMESTAMPTZ)`,
 		`CREATE TABLE priorities (
 			id UUID PRIMARY KEY DEFAULT gen_random_uuid(), organization_id UUID NOT NULL, name TEXT NOT NULL,
 			icon TEXT NOT NULL DEFAULT 'minus', color TEXT NOT NULL DEFAULT 'gray',
-			position INT NOT NULL DEFAULT 0, is_default BOOLEAN NOT NULL DEFAULT FALSE, legacy_key TEXT)`,
+			position INT NOT NULL DEFAULT 0, is_default BOOLEAN NOT NULL DEFAULT FALSE, legacy_key TEXT, deleted_at TIMESTAMPTZ)`,
 		`CREATE TABLE resolutions (
 			id UUID PRIMARY KEY DEFAULT gen_random_uuid(), organization_id UUID NOT NULL, name TEXT NOT NULL,
-			position INT NOT NULL DEFAULT 0, is_default BOOLEAN NOT NULL DEFAULT FALSE)`,
+			position INT NOT NULL DEFAULT 0, is_default BOOLEAN NOT NULL DEFAULT FALSE, deleted_at TIMESTAMPTZ)`,
 		`ALTER TABLE projects ADD COLUMN organization_id UUID NOT NULL DEFAULT '` + fixtureOrgID + `'`,
 		`ALTER TABLE issues ADD COLUMN issue_type_id UUID, ADD COLUMN priority_id UUID,
 			ADD COLUMN resolution_id UUID, ADD COLUMN resolved_at TIMESTAMPTZ,

@@ -15,8 +15,9 @@ type Repository interface {
 	Insert(ctx context.Context, t *domain.Token, hash string) error
 	// CountActive counts the tokens of a user that are neither revoked nor expired at now.
 	CountActive(ctx context.Context, userID uuid.UUID, now time.Time) (int, error)
-	List(ctx context.Context, userID uuid.UUID) ([]domain.Token, error)
-	// Revoke marks a token of the user as revoked. Missing or foreign tokens return domain.ErrNotFound.
+	// List returns the tokens of a user that are not logically deleted; includeRevoked also returns the revoked ones.
+	List(ctx context.Context, userID uuid.UUID, includeRevoked bool) ([]domain.Token, error)
+	// Revoke marks a token of the user as revoked and logically deleted. Missing or foreign tokens return domain.ErrNotFound.
 	Revoke(ctx context.Context, userID, id uuid.UUID, at time.Time) (domain.Token, error)
 	// FindByHash returns the token, its owner and the stored hash. A missing hash returns an error.
 	FindByHash(ctx context.Context, hash string) (domain.Token, Owner, string, error)
@@ -55,7 +56,8 @@ type CreateInput struct {
 type Service interface {
 	// Create returns the stored token and the plaintext, which is never available again.
 	Create(ctx context.Context, userID uuid.UUID, in CreateInput) (domain.Token, string, error)
-	List(ctx context.Context, userID uuid.UUID) ([]domain.Token, error)
+	// List hides revoked tokens (logically deleted) unless includeRevoked is set.
+	List(ctx context.Context, userID uuid.UUID, includeRevoked bool) ([]domain.Token, error)
 	Revoke(ctx context.Context, userID, id uuid.UUID) error
 	// Authenticate resolves a bearer plaintext to an identity: hash lookup, constant-time compare, expiry,
 	// revocation, deactivated owners and per-token rate limit.

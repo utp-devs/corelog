@@ -177,7 +177,7 @@ func (g *GlobalIndex) teams(ctx context.Context, req port.GlobalRequest, terms [
 	}
 	err := g.db.SelectContext(ctx, &rows, `
 		SELECT t.id, t.name FROM teams t
-		WHERE t.organization_id IN `+viewerOrgsSQL+` AND t.name ILIKE $4::text ESCAPE '\'
+		WHERE t.deleted_at IS NULL AND t.organization_id IN `+viewerOrgsSQL+` AND t.name ILIKE $4::text ESCAPE '\'
 		ORDER BY (lower(t.name) = lower($3::text)) DESC, (t.name ILIKE $5::text ESCAPE '\') DESC, lower(t.name), t.id
 		LIMIT $6::int`,
 		req.Viewer.UserID, req.Viewer.PlatformAdmin, req.Query, likePattern(req.Query), prefixPattern(req.Query), req.Limit)

@@ -228,7 +228,7 @@ func TestFilterAccessMatrix(t *testing.T) {
 	if _, err := f.svc.Get(f.ctx, f.bob, id); !errors.Is(err, domain.ErrFilterNotFound) {
 		t.Fatalf("former member keeps access: %v", err)
 	}
-	// Delete by the owner removes shares, subscriptions and favorites.
+	// Delete by the owner is logical: the filter, its shares and subscriptions stay stored and hidden; favorites go.
 	f.exec(`INSERT INTO favorites (user_id, entity_type, entity_id) VALUES ($1, 'filter', $2)`, f.carol, id)
 	if _, err := f.svc.Subscribe(f.ctx, f.viewer(f.carol), id, domain.Schedule{Frequency: domain.FrequencyDaily, Hour: 9}); err != nil {
 		t.Fatal(err)
@@ -236,11 +236,18 @@ func TestFilterAccessMatrix(t *testing.T) {
 	if err := f.svc.Delete(f.ctx, f.alice, id); err != nil {
 		t.Fatal(err)
 	}
-	for _, q := range []string{`SELECT count(*) FROM filter_shares`, `SELECT count(*) FROM filter_subscriptions`, `SELECT count(*) FROM favorites WHERE entity_type = 'filter'`} {
-		var n int
-		if err := f.db.Get(&n, q); err != nil || n != 0 {
-			t.Fatalf("%s = %d (%v)", q, n, err)
-		}
+	var n int
+	if err := f.db.Get(&n, `SELECT count(*) FROM favorites WHERE entity_type = 'filter'`); err != nil || n != 0 {
+		t.Fatalf("favorites left = %d (%v)", n, err)
+	}
+	if err := f.db.Get(&n, `SELECT count(*) FROM filters WHERE id = $1 AND deleted_at IS NOT NULL`, id); err != nil || n != 1 {
+		t.Fatalf("filter row must be kept with deleted_at set: %d (%v)", n, err)
+	}
+	if err := f.db.Get(&n, `SELECT count(*) FROM filter_shares WHERE filter_id = $1`, id); err != nil || n == 0 {
+		t.Fatalf("shares must be kept for history: %d (%v)", n, err)
+	}
+	if due, err := f.repo.ListSubscriptions(f.ctx, uuid.Nil, 10); err != nil || len(due) != 0 {
+		t.Fatalf("subscriptions of a deleted filter must be hidden: %d (%v)", len(due), err)
 	}
 	if err := f.svc.Delete(f.ctx, f.alice, id); !errors.Is(err, domain.ErrFilterNotFound) {
 		t.Fatalf("second delete: %v", err)

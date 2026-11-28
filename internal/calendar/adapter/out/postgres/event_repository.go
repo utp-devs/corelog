@@ -433,15 +433,15 @@ func (r *CalendarRepository) Derived(ctx context.Context, q port.DerivedQuery) (
 			UNION ALL
 			SELECT 'sprint_start', s.id, s.name, s.start_date, vis.id, vis.key
 			FROM sprints s JOIN vis ON vis.id = s.project_id
-			WHERE 'sprint_start' = ANY($6::text[]) AND s.start_date BETWEEN $3::date AND $4::date
+			WHERE 'sprint_start' = ANY($6::text[]) AND s.deleted_at IS NULL AND s.start_date BETWEEN $3::date AND $4::date
 			UNION ALL
 			SELECT 'sprint_end', s.id, s.name, s.end_date, vis.id, vis.key
 			FROM sprints s JOIN vis ON vis.id = s.project_id
-			WHERE 'sprint_end' = ANY($6::text[]) AND s.end_date BETWEEN $3::date AND $4::date
+			WHERE 'sprint_end' = ANY($6::text[]) AND s.deleted_at IS NULL AND s.end_date BETWEEN $3::date AND $4::date
 			UNION ALL
 			SELECT 'version_release', v.id, v.name, v.release_date, vis.id, vis.key
 			FROM versions v JOIN vis ON vis.id = v.project_id
-			WHERE 'version_release' = ANY($6::text[]) AND v.archived_at IS NULL AND v.release_date BETWEEN $3::date AND $4::date
+			WHERE 'version_release' = ANY($6::text[]) AND v.deleted_at IS NULL AND v.archived_at IS NULL AND v.release_date BETWEEN $3::date AND $4::date
 		) d ORDER BY day, kind, title LIMIT ` + fmt.Sprint(derivedCap)
 	var rows []derivedRow
 	err := r.db.SelectContext(ctx, &rows, query, q.Viewer.UserID, q.Viewer.PlatformAdmin(),

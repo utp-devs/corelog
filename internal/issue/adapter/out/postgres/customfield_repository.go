@@ -89,7 +89,7 @@ func (r *CustomFieldRepository) ListFields(ctx context.Context, orgID uuid.UUID)
 	if err := sqlx.SelectContext(ctx, exec, &rows, `
 		SELECT `+customFieldColumns+`
 		FROM custom_fields
-		WHERE organization_id = $1
+		WHERE organization_id = $1 AND deleted_at IS NULL
 		ORDER BY position, lower(name)`, orgID); err != nil {
 		return nil, apperror.Wrap(apperror.KindInternal, "failed to list custom fields", err)
 	}
@@ -101,7 +101,7 @@ func (r *CustomFieldRepository) ListFields(ctx context.Context, orgID uuid.UUID)
 		SELECT c.id, c.field_id, c.project_id, c.issue_type_id, c.required, c.default_value, c.position
 		FROM custom_field_contexts c
 		JOIN custom_fields f ON f.id = c.field_id
-		WHERE f.organization_id = $1
+		WHERE f.organization_id = $1 AND f.deleted_at IS NULL
 		ORDER BY c.position, c.id`, orgID); err != nil {
 		return nil, apperror.Wrap(apperror.KindInternal, "failed to list custom field contexts", err)
 	}
@@ -132,7 +132,7 @@ func (r *CustomFieldRepository) FindField(ctx context.Context, orgID, fieldID uu
 	err := sqlx.GetContext(ctx, exec, &row, `
 		SELECT `+customFieldColumns+`
 		FROM custom_fields
-		WHERE id = $1 AND organization_id = $2`, fieldID, orgID)
+		WHERE id = $1 AND organization_id = $2 AND deleted_at IS NULL`, fieldID, orgID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, domain.ErrCustomFieldNotFound
@@ -190,7 +190,7 @@ func (r *CustomFieldRepository) UpdateField(ctx context.Context, field *domain.C
 		UPDATE custom_fields
 		SET name = $3, description = $4, options = CAST($5 AS JSONB), settings = CAST($6 AS JSONB),
 		    position = $7, updated_at = $8
-		WHERE id = $1 AND organization_id = $2`,
+		WHERE id = $1 AND organization_id = $2 AND deleted_at IS NULL`,
 		field.ID, field.OrganizationID, field.Name, field.Description, options, settings, field.Position, field.UpdatedAt)
 	if err != nil {
 		if isUniqueViolation(err, constraintCustomFieldName) {
@@ -201,10 +201,10 @@ func (r *CustomFieldRepository) UpdateField(ctx context.Context, field *domain.C
 	return requireAffected(result)
 }
 
-// DeleteField removes a definition; its contexts go with it through the foreign key.
+// DeleteField logically deletes a definition; its contexts and stored values stay for history and are hidden with it.
 func (r *CustomFieldRepository) DeleteField(ctx context.Context, field *domain.CustomField) error {
 	result, err := database.Executor(ctx, r.db).ExecContext(ctx, `
-		DELETE FROM custom_fields WHERE id = $1 AND organization_id = $2`, field.ID, field.OrganizationID)
+		UPDATE custom_fields SET deleted_at = now() WHERE id = $1 AND organization_id = $2 AND deleted_at IS NULL`, field.ID, field.OrganizationID)
 	if err != nil {
 		return apperror.Wrap(apperror.KindInternal, "failed to delete custom field", err)
 	}
@@ -289,7 +289,7 @@ func (r *CustomFieldRepository) ProjectOrganization(ctx context.Context, project
 func (r *CustomFieldRepository) IssueTypeInOrganization(ctx context.Context, orgID, issueTypeID uuid.UUID) (bool, error) {
 	var exists bool
 	err := database.Executor(ctx, r.db).QueryRowxContext(ctx, `
-		SELECT EXISTS (SELECT 1 FROM issue_types WHERE id = $1 AND organization_id = $2)`, issueTypeID, orgID).Scan(&exists)
+		SELECT EXISTS (SELECT 1 FROM issue_types WHERE id = $1 AND organization_id = $2 AND deleted_at IS NULL)`, issueTypeID, orgID).Scan(&exists)
 	if err != nil {
 		return false, apperror.Wrap(apperror.KindInternal, "failed to check issue type", err)
 	}

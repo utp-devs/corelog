@@ -3405,7 +3405,7 @@ paths:
       tags: [issues]
       operationId: listNotifications
       summary: Notificaciones del usuario, las mas recientes primero
-      description: Devuelve hasta 50 avisos in-app del usuario autenticado. La interfaz consulta el contador cada 30 segundos (sondeo).
+      description: Devuelve hasta 50 avisos in-app del usuario autenticado. La interfaz consulta el contador cada 30 segundos (sondeo) ademas del canal en vivo `GET /notifications/stream`. Cada aviso puede traer `data` con detalle estructurado (por ejemplo las acciones de `security.new_login`).
       security:
         - bearerAuth: []
       responses:
@@ -3413,6 +3413,67 @@ paths:
           description: Notificaciones
         '401':
           $ref: '#/components/responses/Unauthorized'
+  /notifications/stream:
+    get:
+      tags: [issues]
+      operationId: streamNotifications
+      summary: Canal en vivo de notificaciones y eventos de seguridad (Server-Sent Events)
+      description: |
+        Un unico canal de larga duracion por cliente, abierto con `fetch` en modo streaming y la cabecera
+        `Authorization: Bearer <token de sesion>` (no se admiten tokens de API ni WebSockets). El servidor
+        empuja los eventos; el cliente solo escucha.
+
+        Formato (`Content-Type: text/event-stream`, `Cache-Control: no-store`). La primera linea es `retry: 3000`
+        (milisegundos de espera antes de reconectar). Cada 20 segundos llega un comentario `: ping` como latido.
+
+        Evento `notification`: un aviso in-app nuevo, con el mismo JSON que `GET /notifications`; su `id` SSE es el id
+        de la notificacion.
+
+        ```
+        id: 6b1f0c2e-1d1e-4a35-9a54-0f6f4f7a2c11
+        event: notification
+        data: {"id":"6b1f0c2e-1d1e-4a35-9a54-0f6f4f7a2c11","kind":"issue.assigned","message":"Te asignaron CL-12","link":"/browse/CL-12","read":false,"created_at":"2026-11-27T22:41:03Z"}
+        ```
+
+        Evento `session`: eventos de seguridad, sin id SSE. `type` es `new_login` (otra sesion de la cuenta se abrio
+        desde un dispositivo nuevo; acompana a una notificacion `security.new_login`), `session_revoked` (la sesion de
+        este canal se cerro: el cliente debe cerrar la sesion local y no reconectar) o `stream_replaced` (la cuenta
+        supero 5 canales abiertos y este era el mas antiguo: no reconectar automaticamente).
+
+        ```
+        event: session
+        data: {"type":"new_login","session_id":"0d9c6e0a-2f3b-4c55-8d5e-1a2b3c4d5e6f","notification_id":"6b1f0c2e-1d1e-4a35-9a54-0f6f4f7a2c11","message":"Se inició sesión desde Chrome en Windows (IP 203.0.113.x) el 27/11/2026 22:41 UTC","at":"2026-11-27T22:41:03Z","data":{"title":"Nuevo inicio de sesión","device":"Chrome en Windows","ip":"203.0.113.x"}}
+        ```
+
+        Reconexion: ante cualquier cierre o error de red el cliente espera lo indicado en `retry` y vuelve a abrir el
+        canal enviando `Last-Event-ID` con el id de la ultima notificacion recibida; el servidor reenvia hasta 50
+        avisos creados despues. Un cliente lento, cuyo buffer se llena, es desconectado y debe reconectar. El servidor
+        revalida la sesion cada 60 segundos y cierra el canal con `session_revoked` si fue revocada. La sesion que
+        acaba de iniciar sesion no recibe el aviso de su propio inicio.
+
+        Notificacion `security.new_login`: `message` = "Se inició sesión desde Chrome en Windows (IP 203.0.113.x) el
+        27/11/2026 22:41 UTC", `link` = `/profile/security` y `data` con `title`, `session_id` (la sesion nueva),
+        `device`, `browser`, `os`, `ip` (anonimizada: ultimo octeto IPv4 oculto, IPv6 al prefijo /64), `at` (UTC) y
+        `actions`: "No fui yo" (`DELETE /users/me/sessions/{session_id}`) y "Ver mis sesiones" (`/profile/security`).
+        Se genera siempre (ignora la preferencia in-app) salvo que el mismo navegador y direccion anonimizada ya
+        hubieran iniciado sesion en los ultimos 30 dias o sea el primer inicio de la cuenta; tambien se envia por
+        correo si la preferencia de correo no es `off`.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Flujo de eventos abierto
+          content:
+            text/event-stream:
+              schema: {type: string}
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: La peticion uso un token de API en lugar de una sesion (notification.stream_session_only)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /notifications/preferences:
     get:
       tags: [issues]
@@ -9023,8 +9084,14 @@ paths:
     get:
       tags: [integrations]
       summary: "Listar los tokens de acceso personales"
-      description: "Requiere una sesion: un token de acceso no puede gestionar tokens. Nunca devuelve el valor secreto."
+      description: "Requiere una sesion: un token de acceso no puede gestionar tokens. Nunca devuelve el valor secreto. Los tokens revocados se eliminan de forma logica y no aparecen en la lista; con include_revoked=true se incluyen para consultar el historial."
       operationId: listApiTokens
+      parameters:
+        - name: include_revoked
+          in: query
+          required: false
+          description: "Incluir los tokens revocados (eliminados de forma logica)"
+          schema: {type: boolean, default: false}
       responses:
         '200':
           description: "Tokens del usuario, el mas reciente primero"

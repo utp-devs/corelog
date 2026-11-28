@@ -195,6 +195,21 @@ func TestTeamRepository_MemberLifecycle(t *testing.T) {
 	if err := repo.Delete(ctx, org, team.ID); err != nil {
 		t.Fatalf("delete: %v", err)
 	}
+	// Logical delete: the row stays, reads hide it, a second delete is not found and the name is reusable.
+	var stamped int
+	if err := db.Get(&stamped, `SELECT count(*) FROM teams WHERE id = $1 AND deleted_at IS NOT NULL`, team.ID); err != nil || stamped != 1 {
+		t.Fatalf("team row must be kept with deleted_at set: %d %v", stamped, err)
+	}
+	if _, err := repo.FindByID(ctx, team.ID, member); !errors.Is(err, domain.ErrTeamNotFound) {
+		t.Fatalf("deleted team visible through FindByID: %v", err)
+	}
+	if err := repo.Delete(ctx, org, team.ID); !errors.Is(err, domain.ErrTeamNotFound) {
+		t.Fatalf("second delete: %v", err)
+	}
+	again := newTeam(t, org, member, team.Name)
+	if err := repo.Save(ctx, again); err != nil {
+		t.Fatalf("name of a deleted team must be reusable: %v", err)
+	}
 }
 
 // TestTeamRepository_FindByOrganizationAndMember checks the member filter: only teams of the organization

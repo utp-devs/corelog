@@ -48,7 +48,7 @@ SELECT f.id, f.owner_id, f.organization_id, f.name, f.description, f.query_text,
        EXISTS (SELECT 1 FROM favorites fav WHERE fav.user_id = $1::uuid AND fav.entity_type = 'filter' AND fav.entity_id = f.id) AS is_favorite,
        EXISTS (SELECT 1 FROM filter_subscriptions sub WHERE sub.filter_id = f.id AND sub.user_id = $1::uuid) AS has_subscription
 FROM filters f
-JOIN users ou ON ou.id = f.owner_id`
+JOIN users ou ON ou.id = f.owner_id AND f.deleted_at IS NULL`
 
 func viewSQL() string {
 	return strings.ReplaceAll(filterViewSQL, "%VISIBLE%", visibleProjectSQL("sp", "$1::uuid", "FALSE"))
@@ -189,7 +189,7 @@ func (r *FilterRepository) List(ctx context.Context, viewerID uuid.UUID, q port.
 func (r *FilterRepository) Update(ctx context.Context, id uuid.UUID, f domain.FilterFields, now time.Time) error {
 	res, err := r.db.ExecContext(ctx, `
 		UPDATE filters SET name = $2, description = $3, query_text = $4, columns = $5::jsonb, sort = $6, updated_at = $7
-		WHERE id = $1`, id, f.Name, f.Description, f.QueryText, string(columnsJSON(f.Columns)), f.Sort, now)
+		WHERE id = $1 AND deleted_at IS NULL`, id, f.Name, f.Description, f.QueryText, string(columnsJSON(f.Columns)), f.Sort, now)
 	if isUniqueViolation(err) {
 		return domain.ErrFilterNameTaken
 	}
@@ -202,14 +202,15 @@ func (r *FilterRepository) Update(ctx context.Context, id uuid.UUID, f domain.Fi
 	return nil
 }
 
-// Delete removes a filter; shares and subscriptions go with it. Favorites of the filter are cleaned too.
+// Delete logically deletes a filter: its shares and subscriptions stay stored but are hidden with it. Favorites and
+// recents of the filter are ephemeral and are removed.
 func (r *FilterRepository) Delete(ctx context.Context, id uuid.UUID) error {
 	tx, err := r.db.BeginTxx(ctx, nil)
 	if err != nil {
 		return apperror.Wrap(apperror.KindInternal, "failed to delete the filter", err)
 	}
 	defer func() { _ = tx.Rollback() }()
-	res, err := tx.ExecContext(ctx, `DELETE FROM filters WHERE id = $1`, id)
+	res, err := tx.ExecContext(ctx, `UPDATE filters SET deleted_at = now() WHERE id = $1 AND deleted_at IS NULL`, id)
 	if err != nil {
 		return apperror.Wrap(apperror.KindInternal, "failed to delete the filter", err)
 	}
@@ -276,7 +277,7 @@ func (r *FilterRepository) ReplaceShares(ctx context.Context, id, orgID uuid.UUI
 	if err := tx.GetContext(ctx, &valid, `
 		SELECT count(*) FROM unnest($1::text[], $2::uuid[]) AS t(kind, target)
 		WHERE (t.kind = 'user' AND EXISTS (SELECT 1 FROM organization_members m WHERE m.organization_id = $3::uuid AND m.user_id = t.target))
-		   OR (t.kind = 'team' AND EXISTS (SELECT 1 FROM teams x WHERE x.id = t.target AND x.organization_id = $3::uuid))
+		   OR (t.kind = 'team' AND EXISTS (SELECT 1 FROM teams x WHERE x.id = t.target AND x.organization_id = $3::uuid AND x.deleted_at IS NULL))
 		   OR (t.kind = 'project' AND EXISTS (SELECT 1 FROM projects x WHERE x.id = t.target AND x.organization_id = $3::uuid AND x.deleted_at IS NULL))
 		   OR (t.kind = 'organization' AND t.target = $3::uuid)`, types, ids, orgID); err != nil {
 		return apperror.Wrap(apperror.KindInternal, "failed to validate filter shares", err)
@@ -366,7 +367,9 @@ func (r *FilterRepository) DeleteSubscription(ctx context.Context, filterID, use
 // ListSubscriptions pages through subscriptions ordered by id.
 func (r *FilterRepository) ListSubscriptions(ctx context.Context, after uuid.UUID, limit int) ([]domain.Subscription, error) {
 	var rows []subscriptionRow
-	err := r.db.SelectContext(ctx, &rows, `SELECT `+subscriptionColumns+` FROM filter_subscriptions WHERE id > $1 ORDER BY id LIMIT $2`, after, limit)
+	err := r.db.SelectContext(ctx, &rows, `SELECT `+subscriptionColumns+` FROM filter_subscriptions
+		WHERE id > $1 AND EXISTS (SELECT 1 FROM filters f WHERE f.id = filter_subscriptions.filter_id AND f.deleted_at IS NULL)
+		ORDER BY id LIMIT $2`, after, limit)
 	if err != nil {
 		return nil, apperror.Wrap(apperror.KindInternal, "failed to list subscriptions", err)
 	}

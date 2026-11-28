@@ -36,7 +36,7 @@ func TestCalendarRepositoryEventsPostgres(t *testing.T) {
 	}
 	for _, statement := range []string{
 		`CREATE TABLE projects (id UUID PRIMARY KEY, deleted_at TIMESTAMPTZ)`,
-		`CREATE TABLE sprints (id UUID PRIMARY KEY, project_id UUID NOT NULL, name TEXT NOT NULL, start_date DATE, end_date DATE)`,
+		`CREATE TABLE sprints (id UUID PRIMARY KEY, project_id UUID NOT NULL, name TEXT NOT NULL, start_date DATE, end_date DATE, deleted_at TIMESTAMPTZ)`,
 		`CREATE TABLE issues (id UUID PRIMARY KEY, project_id UUID NOT NULL, summary TEXT NOT NULL, due_date TIMESTAMPTZ, deleted_at TIMESTAMPTZ)`,
 	} {
 		if _, err := db.Exec(statement); err != nil {
