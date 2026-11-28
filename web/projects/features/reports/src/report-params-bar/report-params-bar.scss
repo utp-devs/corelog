@@ -1,0 +1,134 @@
+@use '../../../../ui/styles/mixins' as m;
+
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.report-params {
+  @include m.flex-column(3);
+  min-width: 0;
+  padding: var(--cl-space-4);
+  border: 1px solid var(--cl-border);
+  border-radius: var(--cl-radius-lg);
+  background: var(--cl-bg-surface);
+
+  &__row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: var(--cl-space-3) var(--cl-space-4);
+  }
+
+  &__field {
+    @include m.flex-column(1);
+    min-width: 0;
+
+    @include m.respond-down(768px) {
+      flex: 1 1 100%;
+    }
+  }
+
+  &__label {
+    font-size: var(--cl-font-small);
+    font-weight: var(--cl-weight-semibold);
+    color: var(--cl-text-subtle);
+  }
+
+  &__control {
+    display: block;
+    min-width: calc(var(--cl-space-12) * 3);
+
+    @include m.respond-down(768px) {
+      min-width: 0;
+    }
+  }
+
+  &__presets {
+    @include m.flex-row(0);
+    overflow: hidden;
+    border: 1px solid var(--cl-border-strong);
+    border-radius: var(--cl-radius-md);
+  }
+
+  &__preset {
+    min-height: calc(var(--cl-control-h-md) - 2px);
+    padding: 0 var(--cl-space-3);
+    border: 0;
+    border-inline-end: 1px solid var(--cl-border-strong);
+    background: var(--cl-bg-surface);
+    color: var(--cl-text);
+    font: inherit;
+    font-size: var(--cl-font-body);
+    cursor: pointer;
+
+    &:last-child {
+      border-inline-end: 0;
+    }
+
+    &:hover {
+      background: var(--cl-bg-hover);
+    }
+
+    &:focus-visible {
+      outline: none;
+      box-shadow: inset var(--cl-shadow-focus);
+    }
+
+    &--active {
+      background: var(--cl-bg-selected);
+      color: var(--cl-brand);
+      font-weight: var(--cl-weight-semibold);
+    }
+
+    @media (pointer: coarse) {
+      @include m.touch-target;
+    }
+  }
+
+  &__filter {
+    @include m.flex-column(1);
+  }
+
+  &__filter-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: var(--cl-space-3);
+  }
+
+  &__filter-input {
+    flex: 1 1 24rem;
+    min-width: 0;
+  }
+
+  &__apply {
+    min-height: var(--cl-control-h-md);
+    padding: 0 var(--cl-space-4);
+    border: 1px solid var(--cl-border-strong);
+    border-radius: var(--cl-radius-md);
+    background: var(--cl-bg-surface);
+    color: var(--cl-text);
+    font: inherit;
+    font-weight: var(--cl-weight-medium);
+    cursor: pointer;
+
+    &:hover:not(:disabled) {
+      background: var(--cl-bg-hover);
+    }
+
+    &:focus-visible {
+      outline: none;
+      box-shadow: var(--cl-shadow-focus);
+    }
+
+    &:disabled {
+      color: var(--cl-text-disabled);
+      cursor: not-allowed;
+    }
+
+    @media (pointer: coarse) {
+      @include m.touch-target;
+    }
+  }
+}

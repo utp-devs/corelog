@@ -1,0 +1,122 @@
+@use '../../../../ui/styles/mixins' as m;
+
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.reports-hub {
+  @include m.flex-column(6);
+  min-width: 0;
+
+  &__group {
+    @include m.flex-column(3);
+    min-width: 0;
+  }
+
+  &__group-title {
+    margin: 0;
+    font-size: var(--cl-font-body-strong);
+    font-weight: var(--cl-weight-semibold);
+    line-height: var(--cl-lh-tight);
+    color: var(--cl-text);
+  }
+
+  &__grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr));
+    gap: var(--cl-space-4);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  &__item {
+    display: flex;
+    min-width: 0;
+  }
+
+  &__card {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-areas:
+      'icon text'
+      'icon open';
+    grid-template-rows: auto 1fr;
+    gap: var(--cl-space-1) var(--cl-space-4);
+    align-items: start;
+    flex: 1 1 auto;
+    min-width: 0;
+    padding: var(--cl-space-4);
+    border: 1px solid var(--cl-border);
+    border-radius: var(--cl-radius-lg);
+    background: var(--cl-bg-surface);
+    box-shadow: var(--cl-elev-raised);
+    color: var(--cl-text);
+    text-decoration: none;
+    transition:
+      border-color var(--cl-motion) var(--cl-ease),
+      box-shadow var(--cl-motion) var(--cl-ease);
+
+    &:hover {
+      border-color: var(--cl-brand);
+      box-shadow: var(--cl-elev-overlay);
+    }
+
+    &:focus-visible {
+      outline: none;
+      box-shadow: var(--cl-shadow-focus);
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      transition: none;
+    }
+  }
+
+  &__icon {
+    @include m.flex-row(0, center, center);
+    grid-area: icon;
+    width: var(--cl-control-h-lg);
+    height: var(--cl-control-h-lg);
+    border-radius: var(--cl-radius-md);
+    background: var(--cl-bg-selected);
+    color: var(--cl-brand);
+    font-size: var(--cl-font-body-strong);
+  }
+
+  &__text {
+    @include m.flex-column(1);
+    grid-area: text;
+    min-width: 0;
+  }
+
+  &__title {
+    font-size: var(--cl-font-body-strong);
+    font-weight: var(--cl-weight-semibold);
+    line-height: var(--cl-lh-tight);
+  }
+
+  &__description {
+    font-size: var(--cl-font-body);
+    color: var(--cl-text-subtle);
+  }
+
+  &__open {
+    @include m.flex-row(1);
+    grid-area: open;
+    align-self: end;
+    margin-top: var(--cl-space-2);
+    font-size: var(--cl-font-body);
+    font-weight: var(--cl-weight-medium);
+    color: var(--cl-brand);
+  }
+
+  &__empty {
+    margin: 0;
+    padding: var(--cl-space-6);
+    border: 1px dashed var(--cl-border-strong);
+    border-radius: var(--cl-radius-lg);
+    color: var(--cl-text-subtle);
+    text-align: center;
+  }
+}

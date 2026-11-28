@@ -1,0 +1,69 @@
+<div class="report-table" data-testid="report-table">
+  <div
+    class="report-table__scroll"
+    data-scroll-x
+    tabindex="0"
+    role="region"
+    [attr.aria-labelledby]="captionId"
+  >
+    <table class="report-table__table">
+      <caption class="report-table__caption" [id]="captionId">
+        Datos de
+        {{
+          title()
+        }}
+      </caption>
+      <thead>
+        <tr>
+          @for (column of table().columns; track column.key; let index = $index) {
+            <th
+              scope="col"
+              class="report-table__th"
+              [class.report-table__th--numeric]="isNumeric(column)"
+              [attr.aria-sort]="ariaSort(index)"
+            >
+              <button
+                type="button"
+                class="report-table__sort"
+                [attr.data-testid]="'report-sort-' + column.key"
+                (click)="sortBy(index)"
+              >
+                <span>{{ column.label }}</span>
+                <i
+                  class="pi report-table__arrow"
+                  [class.pi-sort-alt]="ariaSort(index) === 'none'"
+                  [class.pi-sort-amount-up-alt]="ariaSort(index) === 'ascending'"
+                  [class.pi-sort-amount-down]="ariaSort(index) === 'descending'"
+                  aria-hidden="true"
+                ></i>
+              </button>
+            </th>
+          }
+        </tr>
+      </thead>
+      <tbody>
+        @for (row of shown(); track $index) {
+          <tr class="report-table__row">
+            @for (column of table().columns; track column.key; let index = $index) {
+              <td class="report-table__td" [class.report-table__td--numeric]="isNumeric(column)">
+                {{ cell(row, index) }}
+              </td>
+            }
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+  @if (hiddenCount() > 0) {
+    <div class="report-table__more">
+      <button
+        type="button"
+        class="report-table__more-button"
+        data-testid="report-show-more"
+        (click)="showMore()"
+      >
+        Mostrar más ({{ hiddenCount() }} filas restantes)
+      </button>
+    </div>
+  }
+</div>

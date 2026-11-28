@@ -1,0 +1,152 @@
+<div
+  class="report-params"
+  role="group"
+  aria-label="Parámetros del informe"
+  data-testid="report-params"
+>
+  <div class="report-params__row">
+    @if (hasRange()) {
+      <div class="report-params__field">
+        <span class="report-params__label" [id]="id('presets')">Periodo</span>
+        <div class="report-params__presets" role="group" [attr.aria-labelledby]="id('presets')">
+          @for (days of presets; track days) {
+            <button
+              type="button"
+              class="report-params__preset"
+              [class.report-params__preset--active]="preset() === days"
+              [attr.aria-pressed]="preset() === days"
+              [attr.data-testid]="'report-preset-' + days"
+              (click)="applyPreset(days)"
+            >
+              {{ days }} días
+            </button>
+          }
+        </div>
+      </div>
+      <div class="report-params__field">
+        <label class="report-params__label" [for]="id('from')">Desde</label>
+        <app-date-field
+          class="report-params__control"
+          [inputId]="id('from')"
+          [showClear]="false"
+          [max]="range().to"
+          [ngModel]="range().from"
+          (ngModelChange)="patch({ from: $event, to: range().to })"
+        />
+      </div>
+      <div class="report-params__field">
+        <label class="report-params__label" [for]="id('to')">Hasta</label>
+        <app-date-field
+          class="report-params__control"
+          [inputId]="id('to')"
+          [showClear]="false"
+          [min]="range().from"
+          [ngModel]="range().to"
+          (ngModelChange)="patch({ from: range().from, to: $event })"
+        />
+      </div>
+    }
+
+    @if (has('sprint')) {
+      <div class="report-params__field">
+        <label class="report-params__label" [for]="id('sprint')">Sprint</label>
+        <app-select-field
+          class="report-params__control"
+          [inputId]="id('sprint')"
+          ariaLabel="Sprint"
+          [options]="sprints()"
+          [placeholder]="sprintPlaceholder()"
+          [showClear]="true"
+          [ngModel]="query().sprint ?? null"
+          (ngModelChange)="patch({ sprint: $event })"
+        />
+      </div>
+    }
+
+    @if (has('version')) {
+      <div class="report-params__field">
+        <label class="report-params__label" [for]="id('version')">Versión</label>
+        <app-select-field
+          class="report-params__control"
+          [inputId]="id('version')"
+          ariaLabel="Versión"
+          placeholder="Elige una versión"
+          [options]="versions()"
+          [ngModel]="query().version ?? null"
+          (ngModelChange)="patch({ version: $event })"
+        />
+      </div>
+    }
+
+    @if (has('group_by') && groupOptions().length > 0) {
+      <div class="report-params__field">
+        <label class="report-params__label" [for]="id('group')">Agrupar por</label>
+        <app-select-field
+          class="report-params__control"
+          [inputId]="id('group')"
+          ariaLabel="Agrupar por"
+          filter="off"
+          [options]="groupOptions()"
+          [ngModel]="groupValue()"
+          (ngModelChange)="patch({ groupBy: $event })"
+        />
+      </div>
+    }
+
+    @if (has('interval')) {
+      <div class="report-params__field">
+        <label class="report-params__label" [for]="id('interval')">Periodo de agrupación</label>
+        <app-select-field
+          class="report-params__control"
+          [inputId]="id('interval')"
+          ariaLabel="Periodo de agrupación"
+          filter="off"
+          [options]="intervalOptions"
+          [ngModel]="intervalValue()"
+          (ngModelChange)="patch({ interval: $event })"
+        />
+      </div>
+    }
+
+    @if (has('limit')) {
+      <div class="report-params__field">
+        <label class="report-params__label" [for]="id('limit')">Sprints</label>
+        <app-select-field
+          class="report-params__control"
+          [inputId]="id('limit')"
+          ariaLabel="Número de sprints"
+          filter="off"
+          [options]="limitOptions"
+          [ngModel]="limitValue()"
+          (ngModelChange)="setLimit($event)"
+        />
+      </div>
+    }
+
+    <ng-content />
+  </div>
+
+  @if (has('filter')) {
+    <div class="report-params__filter">
+      <span class="report-params__label" [id]="id('filter')">Filtro (CoreQL, opcional)</span>
+      <div class="report-params__filter-row">
+        <app-coreql-input
+          class="report-params__filter-input"
+          ariaLabel="Filtro CoreQL"
+          placeholder="Por ejemplo: type = bug AND priority = high"
+          [(value)]="filterDraft"
+          (run)="applyFilter()"
+        />
+        <button
+          type="button"
+          class="report-params__apply"
+          data-testid="report-apply-filter"
+          [disabled]="!filterDirty()"
+          (click)="applyFilter()"
+        >
+          Aplicar filtro
+        </button>
+      </div>
+    </div>
+  }
+</div>

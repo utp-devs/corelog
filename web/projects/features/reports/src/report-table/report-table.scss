@@ -1,0 +1,122 @@
+@use '../../../../ui/styles/mixins' as m;
+
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.report-table {
+  min-width: 0;
+
+  &__scroll {
+    overflow-x: auto;
+
+    &:focus-visible {
+      outline: none;
+      box-shadow: var(--cl-shadow-focus);
+    }
+  }
+
+  &__table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--cl-font-body);
+    color: var(--cl-text);
+  }
+
+  &__caption {
+    @include m.visually-hidden;
+  }
+
+  &__th {
+    padding: 0;
+    border-bottom: 1px solid var(--cl-border-strong);
+    background: var(--cl-bg-sunken);
+    text-align: left;
+    white-space: nowrap;
+
+    &--numeric {
+      text-align: right;
+    }
+  }
+
+  &__sort {
+    @include m.flex-row(2, center, flex-start);
+    width: 100%;
+    min-height: var(--cl-control-h-md);
+    padding: 0 var(--cl-space-3);
+    border: 0;
+    background: transparent;
+    color: var(--cl-text-subtle);
+    font: inherit;
+    font-size: var(--cl-font-small);
+    font-weight: var(--cl-weight-semibold);
+    cursor: pointer;
+
+    &:hover {
+      color: var(--cl-text);
+    }
+
+    &:focus-visible {
+      outline: none;
+      box-shadow: inset var(--cl-shadow-focus);
+    }
+
+    @media (pointer: coarse) {
+      @include m.touch-target;
+    }
+  }
+
+  &__th--numeric &__sort {
+    justify-content: flex-end;
+  }
+
+  &__arrow {
+    font-size: var(--cl-font-caption);
+  }
+
+  &__td {
+    padding: var(--cl-space-2) var(--cl-space-3);
+    border-bottom: 1px solid var(--cl-divider);
+    vertical-align: top;
+
+    &--numeric {
+      font-variant-numeric: tabular-nums;
+      text-align: right;
+      white-space: nowrap;
+    }
+  }
+
+  &__row:hover &__td {
+    background: var(--cl-bg-hover);
+  }
+
+  &__more {
+    @include m.flex-row(0, center, center);
+    padding: var(--cl-space-3);
+  }
+
+  &__more-button {
+    min-height: var(--cl-control-h-md);
+    padding: 0 var(--cl-space-4);
+    border: 1px solid var(--cl-border-strong);
+    border-radius: var(--cl-radius-md);
+    background: var(--cl-bg-surface);
+    color: var(--cl-text);
+    font: inherit;
+    cursor: pointer;
+
+    &:hover {
+      background: var(--cl-bg-hover);
+    }
+
+    &:focus-visible {
+      outline: none;
+      box-shadow: var(--cl-shadow-focus);
+    }
+
+    @media (pointer: coarse) {
+      @include m.touch-target;
+    }
+  }
+}

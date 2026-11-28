@@ -1,0 +1,56 @@
+@if (accessVariant(); as variant) {
+  <app-page-container variant="wide" pageName="reports" [ready]="true" [fill]="true">
+    <app-error-page [variant]="variant" [framed]="true" />
+  </app-page-container>
+} @else {
+  <app-page-container variant="wide" pageName="reports" [ready]="!loading()" [fill]="true">
+    <app-page-header
+      banner="reports"
+      title="Reportes"
+      subtitle="Mide el avance, el ritmo y la carga de trabajo del proyecto."
+    />
+
+    @if (failed()) {
+      <app-error-state [message]="loadFailedMessage" [canRetry]="true" (retry)="retry()" />
+    } @else if (loading()) {
+      <app-loading-skeleton variant="card" [rows]="6" />
+    } @else {
+      <div class="reports-hub" data-testid="reports-hub">
+        @for (group of groups(); track group.id) {
+          <section class="reports-hub__group" [attr.aria-labelledby]="'reports-group-' + group.id">
+            <h2 class="reports-hub__group-title" [id]="'reports-group-' + group.id">
+              {{ group.title }}
+            </h2>
+            <ul class="reports-hub__grid">
+              @for (card of group.cards; track card.kind) {
+                <li class="reports-hub__item">
+                  <a
+                    class="reports-hub__card"
+                    [routerLink]="card.path"
+                    [attr.data-testid]="'report-card-' + card.kind"
+                  >
+                    <span class="reports-hub__icon" aria-hidden="true">
+                      <i [class]="card.icon"></i>
+                    </span>
+                    <span class="reports-hub__text">
+                      <span class="reports-hub__title">{{ card.title }}</span>
+                      <span class="reports-hub__description">{{ card.description }}</span>
+                    </span>
+                    <span class="reports-hub__open">
+                      Abrir
+                      <i class="pi pi-arrow-right" aria-hidden="true"></i>
+                    </span>
+                  </a>
+                </li>
+              }
+            </ul>
+          </section>
+        } @empty {
+          <p class="reports-hub__empty" role="status">
+            Este proyecto aún no tiene reportes disponibles.
+          </p>
+        }
+      </div>
+    }
+  </app-page-container>
+}

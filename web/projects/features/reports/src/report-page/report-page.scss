@@ -1,0 +1,112 @@
+@use '../../../../ui/styles/mixins' as m;
+
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.report-page {
+  @include m.flex-column(4);
+  min-width: 0;
+
+  &__back {
+    @include m.flex-row(2);
+    align-self: flex-start;
+    min-height: var(--cl-control-h-md);
+    color: var(--cl-brand);
+    font-size: var(--cl-font-body);
+    font-weight: var(--cl-weight-medium);
+    text-decoration: none;
+
+    &:hover {
+      text-decoration: underline;
+    }
+
+    &:focus-visible {
+      outline: none;
+      box-shadow: var(--cl-shadow-focus);
+    }
+
+    @media (pointer: coarse) {
+      @include m.touch-target;
+    }
+  }
+
+  &__actions {
+    @include m.cluster(2);
+  }
+
+  &__toggle {
+    @include m.flex-row(2);
+    min-height: var(--cl-control-h-md);
+    font-size: var(--cl-font-body);
+    color: var(--cl-text);
+    cursor: pointer;
+  }
+
+  &__checkbox {
+    width: var(--cl-space-4);
+    height: var(--cl-space-4);
+    accent-color: var(--cl-brand);
+
+    @media (pointer: coarse) {
+      width: var(--cl-control-h-md);
+      height: var(--cl-control-h-md);
+    }
+  }
+
+  &__tiles {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr));
+    gap: var(--cl-space-3);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  &__tile {
+    display: flex;
+    min-width: 0;
+
+    > * {
+      flex: 1 1 auto;
+    }
+  }
+
+  &__chart {
+    display: block;
+    min-width: 0;
+  }
+
+  &__panel {
+    @include m.flex-column(3);
+    min-width: 0;
+    padding: var(--cl-space-4);
+    border: 1px solid var(--cl-border);
+    border-radius: var(--cl-radius-lg);
+    background: var(--cl-bg-surface);
+    box-shadow: var(--cl-elev-raised);
+  }
+
+  &__panel-title {
+    margin: 0;
+    font-size: var(--cl-font-body-strong);
+    font-weight: var(--cl-weight-semibold);
+    color: var(--cl-text);
+  }
+
+  // The parameters and the buttons make no sense on paper: the title, tiles, chart and table print.
+  @media print {
+    &__back,
+    &__actions,
+    &__params {
+      display: none;
+    }
+
+    &__panel {
+      border: 0;
+      box-shadow: none;
+      break-inside: avoid-page;
+    }
+  }
+}

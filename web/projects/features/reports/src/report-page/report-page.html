@@ -1,0 +1,121 @@
+@if (accessVariant(); as variant) {
+  <app-page-container variant="wide" pageName="report" [ready]="true" [fill]="true">
+    <app-error-page [variant]="variant" [framed]="true" />
+  </app-page-container>
+} @else {
+  <app-page-container variant="wide" pageName="report" [ready]="!loading()" [fill]="true">
+    <div class="report-page">
+      <a class="report-page__back" [routerLink]="hubPath()" data-testid="report-back">
+        <i class="pi pi-arrow-left" aria-hidden="true"></i>
+        Todos los reportes
+      </a>
+
+      <app-page-header [title]="title()" [subtitle]="description()">
+        <div appPageHeaderActions class="report-page__actions">
+          <p-button
+            label="Exportar CSV"
+            icon="pi pi-download"
+            severity="secondary"
+            [loading]="exporting()"
+            [disabled]="!report() || isEmpty()"
+            (onClick)="exportCsv()"
+            data-testid="report-export"
+          />
+        </div>
+      </app-page-header>
+
+      <div class="report-page__params">
+        <app-report-params-bar
+          [kind]="kind()"
+          [params]="params()"
+          [query]="query()"
+          [sprints]="sprints()"
+          [versions]="versions()"
+          [today]="today"
+          (queryChange)="setQuery($event)"
+        >
+          @if (kind() === 'created-vs-resolved') {
+            <label class="report-page__toggle">
+              <input
+                type="checkbox"
+                class="report-page__checkbox"
+                data-testid="report-cumulative"
+                [ngModel]="cumulative()"
+                (ngModelChange)="cumulative.set($event)"
+              />
+              Mostrar acumulado
+            </label>
+          }
+        </app-report-params-bar>
+      </div>
+
+      @if (reportError()) {
+        <app-error-state
+          [message]="errorMessage()"
+          [canRetry]="canRetry()"
+          (retry)="retry()"
+          data-testid="report-error"
+        />
+      } @else if (noVersions()) {
+        <div class="report-page__panel">
+          <app-empty-state
+            image="empty-search"
+            title="Este proyecto aún no tiene versiones"
+            description="Crea una versión en la configuración del proyecto para ver su progreso."
+          />
+        </div>
+      } @else if (loading()) {
+        <app-loading-skeleton variant="detail" [rows]="6" />
+      } @else if (report(); as current) {
+        @if (tiles().length > 0 && !isEmpty()) {
+          <ul class="report-page__tiles" aria-label="Resumen" data-testid="report-summary">
+            @for (tile of tiles(); track tile.key) {
+              <li class="report-page__tile">
+                <app-stat-tile [label]="tile.label" [value]="tile.value" [hint]="tile.hint" />
+              </li>
+            }
+          </ul>
+        }
+
+        @if (isEmpty()) {
+          <div class="report-page__panel" data-testid="report-empty">
+            <app-empty-state
+              image="empty-search"
+              title="Sin datos en este periodo"
+              description="Prueba con otro rango de fechas, otro sprint o quita el filtro."
+            />
+          </div>
+        } @else {
+          @if (chart(); as spec) {
+            <div class="report-page__chart" data-testid="report-chart">
+              <app-chart-card
+                [title]="current.title"
+                [description]="
+                  subject()
+                    ? subject() + ' - generado el ' + generated()
+                    : 'Generado el ' + generated()
+                "
+                [table]="emptyTable"
+                [chartType]="spec.chartType"
+                [labels]="spec.labels"
+                [series]="spec.series"
+                [stacked]="spec.stacked"
+                [horizontal]="spec.horizontal"
+                [xTitle]="spec.xTitle"
+                [yTitle]="spec.yTitle"
+                [ariaLabel]="spec.ariaLabel"
+                [showDataToggle]="false"
+                [zeroBased]="true"
+                size="lg"
+              />
+            </div>
+          }
+          <section class="report-page__panel" aria-labelledby="report-data-title">
+            <h2 class="report-page__panel-title" id="report-data-title">Datos</h2>
+            <app-report-table [table]="current.table" [title]="current.title" />
+          </section>
+        }
+      }
+    </div>
+  </app-page-container>
+}
