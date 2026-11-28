@@ -38,6 +38,7 @@ type lastRunResponse struct {
 	FinishedAt *time.Time `json:"finished_at"`
 	DurationMS *int64     `json:"duration_ms"`
 	Error      string     `json:"error"`
+	Result     string     `json:"result"`
 }
 
 type jobResponse struct {
@@ -59,6 +60,7 @@ type jobRow struct {
 	RunFinishedAt *time.Time `db:"run_finished_at"`
 	RunDuration   *int64     `db:"run_duration_ms"`
 	RunError      *string    `db:"run_error"`
+	RunResult     *string    `db:"run_result"`
 	LastSuccessAt *time.Time `db:"last_success_at"`
 }
 
@@ -68,11 +70,11 @@ func (h *AdminHandler) List(w http.ResponseWriter, r *http.Request) {
 	err := h.db.SelectContext(r.Context(), &rows, `
 		SELECT j.name, j.schedule, j.registered_at, j.last_seen_at,
 		       lr.status AS run_status, lr.started_at AS run_started_at, lr.finished_at AS run_finished_at,
-		       lr.duration_ms AS run_duration_ms, lr.error AS run_error,
+		       lr.duration_ms AS run_duration_ms, lr.error AS run_error, lr.result AS run_result,
 		       (SELECT max(finished_at) FROM scheduler_runs ok WHERE ok.job = j.name AND ok.status = 'ok') AS last_success_at
 		FROM scheduler_jobs j
 		LEFT JOIN LATERAL (
-			SELECT status, started_at, finished_at, duration_ms, error
+			SELECT status, started_at, finished_at, duration_ms, error, result
 			FROM scheduler_runs WHERE job = j.name ORDER BY id DESC LIMIT 1
 		) lr ON true
 		ORDER BY j.name`)
@@ -87,6 +89,9 @@ func (h *AdminHandler) List(w http.ResponseWriter, r *http.Request) {
 			run := &lastRunResponse{Status: *row.RunStatus, StartedAt: *row.RunStartedAt, FinishedAt: row.RunFinishedAt, DurationMS: row.RunDuration}
 			if row.RunError != nil {
 				run.Error = *row.RunError
+			}
+			if row.RunResult != nil {
+				run.Result = *row.RunResult
 			}
 			item.LastRun = run
 		}

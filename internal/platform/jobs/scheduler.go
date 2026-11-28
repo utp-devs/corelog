@@ -310,10 +310,11 @@ func (s *Scheduler) run(ctx context.Context, j job, store *runStore) {
 		runID = id
 	}
 	began := time.Now()
-	err := safeCall(ctx, j.fn)
+	sink := &resultSink{}
+	err := safeCall(withResultSink(ctx, sink), j.fn)
 	elapsed := time.Since(began)
 	if store != nil && runID != 0 {
-		store.finish(runID, s.clock.Now(), elapsed, err, s.logger)
+		store.finish(runID, s.clock.Now(), elapsed, err, sink.get(), s.logger)
 	}
 	attrs := []any{slog.String("job", j.name), slog.Duration("duration", elapsed)}
 	if err != nil {

@@ -15,6 +15,8 @@ type Config struct {
 	Legal    LegalConfig
 	Security SecurityConfig
 	Mail     MailConfig
+	// Retention drives the data lifecycle jobs.
+	Retention RetentionConfig
 }
 
 type ServerConfig struct {
@@ -72,6 +74,10 @@ func Load() (*Config, error) {
 	cfg := &Config{}
 	if err := env.Parse(cfg); err != nil {
 		return nil, fmt.Errorf("config: parse: %w", err)
+	}
+
+	if err := cfg.Retention.Validate(); err != nil {
+		return nil, err
 	}
 
 	return cfg, nil

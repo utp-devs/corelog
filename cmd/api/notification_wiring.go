@@ -2,8 +2,10 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -130,16 +132,50 @@ func registerNotificationJobs(s *jobs.Scheduler, d jobDeps) {
 		return err
 	})
 
-	if os.Getenv("PURGE_ENABLED") == "true" {
-		dryRun := os.Getenv("PURGE_DRY_RUN") != "false"
-		purger := retention.NewPurger(d.DB, clk, 30*24*time.Hour, dryRun)
-		mustRegister(s, d.Log, "soft-delete-purge", "daily at 04:00 UTC", func(ctx context.Context) error {
-			res, err := purger.Run(ctx)
-			d.Log.Info("soft-delete purge", "dry_run", dryRun, "issues_found", res.IssuesFound, "issues_purged", res.IssuesPurged,
-				"projects_found", res.ProjectsFound, "projects_purged", res.ProjectsPurged, "blocked", res.Blocked)
-			return err
-		})
+	registerRetentionJobs(s, d, clk)
+}
+
+// registerRetentionJobs adds the data lifecycle jobs when PURGE_ENABLED is true. Each one reports what it found
+// or removed as the result of its run.
+func registerRetentionJobs(s *jobs.Scheduler, d jobDeps, clk clock.Clock) {
+	cfg := d.Cfg.Retention
+	if !cfg.Enabled {
+		return
 	}
+	day := 24 * time.Hour
+	attachmentsDir := os.Getenv("ATTACHMENTS_DIR")
+	if attachmentsDir == "" {
+		attachmentsDir = filepath.Join("data", "attachments")
+	}
+	purger := retention.NewPurger(d.DB, clk, time.Duration(cfg.SoftDeletedDays)*day, cfg.DryRun)
+	mustRegister(s, d.Log, "soft-delete-purge", "daily at 04:00 UTC", func(ctx context.Context) error {
+		res, err := purger.Run(ctx)
+		jobs.ReportResult(ctx, fmt.Sprintf("dry_run=%t issues_found=%d issues_purged=%d projects_found=%d projects_purged=%d blocked=%d",
+			cfg.DryRun, res.IssuesFound, res.IssuesPurged, res.ProjectsFound, res.ProjectsPurged, res.Blocked))
+		d.Log.Info("soft-delete purge", "dry_run", cfg.DryRun, "issues_found", res.IssuesFound, "issues_purged", res.IssuesPurged,
+			"projects_found", res.ProjectsFound, "projects_purged", res.ProjectsPurged, "blocked", res.Blocked)
+		return err
+	})
+
+	life := retention.NewLifecycle(d.DB, clk, retention.Options{
+		SoftDeletedAfter:       time.Duration(cfg.SoftDeletedDays) * day,
+		ReadNotificationsAfter: time.Duration(cfg.ReadNotificationDays) * day,
+		FingerprintsAfter:      time.Duration(cfg.FingerprintDays) * day,
+		DryRun:                 cfg.DryRun,
+		AttachmentsDir:         attachmentsDir,
+		DeleteOrphans:          cfg.DeleteOrphans,
+	})
+	lifecycleJob := func(name string, run func(ctx context.Context) (retention.Report, error)) func(ctx context.Context) error {
+		return func(ctx context.Context) error {
+			rep, err := run(ctx)
+			jobs.ReportResult(ctx, rep.Summary())
+			d.Log.Info(name, "dry_run", rep.DryRun, "skipped", rep.Skipped, "summary", rep.Summary())
+			return err
+		}
+	}
+	mustRegister(s, d.Log, "retention-soft-deleted", "daily at 04:15 UTC", lifecycleJob("retention soft-deleted", life.PurgeSoftDeleted))
+	mustRegister(s, d.Log, "retention-housekeeping", "daily at 04:30 UTC", lifecycleJob("retention housekeeping", life.Prune))
+	mustRegister(s, d.Log, "retention-orphan-files", "daily at 04:45 UTC", lifecycleJob("retention orphan files", life.CheckOrphanFiles))
 }
 
 // filterSubscriptions adapts the saved filter module to the subscription job.

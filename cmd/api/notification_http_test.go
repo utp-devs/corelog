@@ -206,8 +206,7 @@ func TestFilterSubscriptionJobEmailsTheResults(t *testing.T) {
 
 func TestRegisterNotificationJobs(t *testing.T) {
 	env := newTransitionEnv(t, "kanban")
-	cfg := &config.Config{}
-	t.Setenv("PURGE_ENABLED", "true")
+	cfg := &config.Config{Retention: config.RetentionConfig{Enabled: true, DryRun: true}}
 	scheduler := jobs.NewScheduler(nil, nil)
 	registerNotificationJobs(scheduler, jobDeps{Cfg: cfg, DB: env.db, Log: slog.New(slog.NewTextHandler(io.Discard, nil))})
 	registerSecurityJobs(scheduler, jobDeps{Cfg: cfg, DB: env.db, Log: slog.New(slog.NewTextHandler(io.Discard, nil))})
@@ -218,6 +217,7 @@ func TestRegisterNotificationJobs(t *testing.T) {
 	for name, schedule := range map[string]string{
 		"email-outbox": "every 10s", "email-digest": "daily at 08:00 UTC", "filter-subscriptions": "every 1m",
 		"notification-cleanup": "daily at 03:30 UTC", "soft-delete-purge": "daily at 04:00 UTC",
+		"retention-soft-deleted": "daily at 04:15 UTC", "retention-housekeeping": "daily at 04:30 UTC", "retention-orphan-files": "daily at 04:45 UTC",
 		"audit-retention": "every 24h", "security-cleanup": "every 1h",
 	} {
 		if names[name] != schedule {

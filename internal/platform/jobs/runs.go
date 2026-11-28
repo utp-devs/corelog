@@ -8,7 +8,17 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
-const maxErrorLength = 500
+const (
+	maxErrorLength  = 500
+	maxResultLength = 1000
+)
+
+func truncate(v string, n int) string {
+	if len(v) > n {
+		return v[:n]
+	}
+	return v
+}
 
 // runStore persists the job registry and the run history.
 type runStore struct {
@@ -36,7 +46,7 @@ func (s *runStore) begin(ctx context.Context, job string, at time.Time) (int64, 
 	return id, err
 }
 
-func (s *runStore) finish(id int64, at time.Time, elapsed time.Duration, runErr error, logger *slog.Logger) {
+func (s *runStore) finish(id int64, at time.Time, elapsed time.Duration, runErr error, result string, logger *slog.Logger) {
 	status, message := "ok", ""
 	if runErr != nil {
 		status, message = "error", runErr.Error()
@@ -48,8 +58,8 @@ func (s *runStore) finish(id int64, at time.Time, elapsed time.Duration, runErr 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	if _, err := s.db.ExecContext(ctx, `
-		UPDATE scheduler_runs SET status = $2, error = $3, finished_at = $4, duration_ms = $5 WHERE id = $1`,
-		id, status, message, at, elapsed.Milliseconds()); err != nil {
+		UPDATE scheduler_runs SET status = $2, error = $3, finished_at = $4, duration_ms = $5, result = $6 WHERE id = $1`,
+		id, status, message, at, elapsed.Milliseconds(), truncate(result, maxResultLength)); err != nil {
 		logger.Error("job run outcome not recorded", slog.String("error", err.Error()))
 	}
 }

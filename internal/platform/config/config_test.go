@@ -32,3 +32,23 @@ func TestConfig(t *testing.T) {
 		}
 	})
 }
+
+func TestRetentionDefaultsAndValidation(t *testing.T) {
+	cfg, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	r := cfg.Retention
+	if r.Enabled || !r.DryRun || r.DeleteOrphans || r.SoftDeletedDays != 30 || r.ReadNotificationDays != 180 || r.FingerprintDays != 90 {
+		t.Fatalf("unexpected defaults: %+v", r)
+	}
+	t.Setenv("PURGE_RETENTION_DAYS", "0")
+	if _, err := Load(); err == nil {
+		t.Fatal("a zero retention window must be rejected")
+	}
+	t.Setenv("PURGE_RETENTION_DAYS", "45")
+	t.Setenv("PURGE_NOTIFICATION_RETENTION_DAYS", "99999")
+	if _, err := Load(); err == nil {
+		t.Fatal("an out of range notification window must be rejected")
+	}
+}

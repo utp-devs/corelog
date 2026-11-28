@@ -3374,9 +3374,9 @@ paths:
         - bearerAuth: []
       parameters:
         - {name: project, in: path, required: true, schema: {type: string, format: uuid}}
-        - {name: kind, in: path, required: true, description: Tipo de informe, con el sufijo .csv opcional, schema: {type: string}}
+        - {name: kind, in: path, required: true, description: "Tipo de informe, con el sufijo .csv opcional", schema: {type: string}}
         - {name: from, in: query, required: false, description: Inicio del rango (por defecto 29 dias antes de to), schema: {type: string, format: date}}
-        - {name: to, in: query, required: false, description: Fin del rango, inclusivo (por defecto hoy), schema: {type: string, format: date}}
+        - {name: to, in: query, required: false, description: "Fin del rango, inclusivo (por defecto hoy)", schema: {type: string, format: date}}
         - {name: group_by, in: query, required: false, description: 'burndown y burnup: points o issues; time-tracking: issue o user; resolution-time: type o priority', schema: {type: string}}
         - {name: filter, in: query, required: false, description: Texto CoreQL (maximo 2000 caracteres), schema: {type: string}}
         - {name: sprint, in: query, required: false, description: Sprint del informe; sin valor se usa el activo o el ultimo iniciado, schema: {type: string, format: uuid}}
@@ -3387,7 +3387,7 @@ paths:
         '200':
           description: Informe (JSON) o su tabla (CSV)
           headers:
-            Cache-Control: {schema: {type: string}, description: private, max-age=30}
+            Cache-Control: {schema: {type: string}, description: "private, max-age=30"}
           content:
             application/json:
               schema:
@@ -4592,7 +4592,7 @@ paths:
         - {name: from, in: query, required: true, schema: {type: string}, description: Fecha AAAA-MM-DD o RFC 3339}
         - {name: to, in: query, required: true, schema: {type: string}, description: Fecha AAAA-MM-DD (inclusiva) o RFC 3339 (exclusiva)}
         - {name: projects, in: query, required: false, schema: {type: string}, description: Ids de proyecto separados por comas}
-        - {name: types, in: query, required: false, schema: {type: string}, description: Lista separada por comas de event, issue_due, issue_start, sprint_start, sprint_end, version_release o los grupos events, issues, sprints y versions}
+        - {name: types, in: query, required: false, schema: {type: string}, description: "Lista separada por comas de event, issue_due, issue_start, sprint_start, sprint_end, version_release o los grupos events, issues, sprints y versions"}
       responses:
         '200':
           description: Elementos ordenados por inicio
@@ -4916,7 +4916,7 @@ paths:
         - {name: assignee_id, in: query, description: UUID o "unassigned", schema: {type: string}}
         - {name: due_from, in: query, schema: {type: string, format: date-time}}
         - {name: due_to, in: query, schema: {type: string, format: date-time}}
-        - {name: columns, in: query, description: Columnas separadas por coma, en el orden de salida, schema: {type: string}}
+        - {name: columns, in: query, description: "Columnas separadas por coma, en el orden de salida", schema: {type: string}}
       responses:
         '200':
           description: Archivo CSV (text/csv) con Content-Disposition attachment y nombre incidencias-AAAA-MM-DD.csv
@@ -10166,6 +10166,7 @@ components:
             finished_at: {type: string, format: date-time, nullable: true}
             duration_ms: {type: integer, nullable: true}
             error: {type: string}
+            result: {type: string, description: Resumen de lo que hizo la ejecucion (por ejemplo las filas depuradas)}
     DashboardCreateRequest:
       type: object
       required: [name]
@@ -10306,7 +10307,7 @@ components:
         summary: {type: string, description: Resumen en espanol}
         before: {type: object, nullable: true, additionalProperties: true}
         after: {type: object, nullable: true, additionalProperties: true}
-        ip: {type: string, description: Direccion anonimizada (IPv4 /24, IPv6 /48)}
+        ip: {type: string, description: "Direccion anonimizada (IPv4 /24, IPv6 /48)"}
         user_agent: {type: string}
         request_id: {type: string}
         created_at: {type: string, format: date-time}
@@ -10351,7 +10352,7 @@ components:
       type: object
       properties:
         sprint: {$ref: '#/components/schemas/Sprint'}
-        next_sprint: {allOf: [{$ref: '#/components/schemas/Sprint'}], nullable: true, description: Sprint de destino cuando destination es new o sprint:<id>}
+        next_sprint: {type: object, allOf: [{$ref: '#/components/schemas/Sprint'}], nullable: true, description: Sprint de destino cuando destination es new o sprint:<id>}
         completed_issues: {type: integer}
         moved_issues: {type: integer}
         completed_points: {type: number}
@@ -10457,7 +10458,7 @@ components:
       type: object
       properties:
         kind: {type: string, enum: [active, planned, backlog]}
-        sprint: {allOf: [{$ref: '#/components/schemas/Sprint'}], nullable: true, description: Null en la seccion backlog}
+        sprint: {type: object, allOf: [{$ref: '#/components/schemas/Sprint'}], nullable: true, description: Null en la seccion backlog}
         issues: {type: array, items: {$ref: '#/components/schemas/BacklogIssue'}}
         totals: {$ref: '#/components/schemas/BacklogTotals'}
     Backlog:
@@ -10478,7 +10479,7 @@ components:
               done: {type: integer}
               points: {type: number}
               done_points: {type: number}
-              progress: {type: number, description: Fraccion de hijas terminadas, de 0 a 1}
+              progress: {type: number, description: "Fraccion de hijas terminadas, de 0 a 1"}
         can_manage_sprints: {type: boolean}
         can_move_cards: {type: boolean}
         truncated: {type: boolean}
@@ -10782,6 +10783,7 @@ components:
           type: string
           maxLength: 120
         phone:
+          type: object
           allOf:
             - $ref: '#/components/schemas/PhoneInput'
           nullable: true
@@ -11331,7 +11333,7 @@ components:
       type: object
       properties:
         name: {type: string}
-        key: {type: string, description: Clave heredada (bug, task, high...) cuando existe.}
+        key: {type: string, description: "Clave heredada (bug, task, high...) cuando existe."}
         icon: {type: string}
         color: {type: string}
     BoardViewCard:
@@ -11358,9 +11360,11 @@ components:
         rank: {type: string}
         sprint_id: {type: string, format: uuid, nullable: true}
         epic:
+          type: object
           nullable: true
           allOf: [{$ref: '#/components/schemas/BoardViewRef'}]
         parent:
+          type: object
           nullable: true
           allOf: [{$ref: '#/components/schemas/BoardViewRef'}]
         subtasks:
@@ -11376,7 +11380,7 @@ components:
           properties:
             count: {type: integer, description: Tarjetas mostradas tras los filtros rapidos.}
             total: {type: integer, description: Tarjetas de la columna sin filtros rapidos.}
-            estimate: {type: number, description: Suma segun la estimacion del tablero (puntos, incidencias u horas restantes).}
+            estimate: {type: number, description: "Suma segun la estimacion del tablero (puntos, incidencias u horas restantes)."}
             wip_state: {type: string, enum: [ok, below_min, at_max, over_max]}
             cards:
               type: array
@@ -11921,8 +11925,9 @@ components:
       type: object
       additionalProperties: false
       properties:
-        release_date: {type: string, format: date, nullable: true, description: Por defecto, hoy (UTC)}
+        release_date: {type: string, format: date, nullable: true, description: "Por defecto, hoy (UTC)"}
         move_unresolved_to:
+          type: string
           nullable: true
           description: Null deja las incidencias en la version; "new" crea la siguiente version; un UUID elige una version sin publicar del proyecto.
           oneOf:
@@ -11937,6 +11942,7 @@ components:
         moved_issues: {type: integer}
         unresolved_issues: {type: integer, description: Incidencias no terminadas que siguen en la version}
         next_version:
+          type: object
           nullable: true
           allOf:
             - $ref: '#/components/schemas/Version'
@@ -12194,7 +12200,7 @@ components:
       type: object
       required: [summary, description]
       properties:
-        components: {type: array, items: {type: string, format: uuid}, description: Componentes del proyecto. Si no se indica responsable, el componente con politica component_lead o project_lead decide el asignado por defecto.}
+        components: {type: array, items: {type: string, format: uuid}, description: "Componentes del proyecto. Si no se indica responsable, el componente con politica component_lead o project_lead decide el asignado por defecto."}
         custom:
           type: object
           additionalProperties: true
@@ -13084,7 +13090,7 @@ components:
         project_id: {type: string, format: uuid, nullable: true, description: Proyecto del contexto; null = todos los proyectos de la organizacion.}
         issue_type_id: {type: string, format: uuid, nullable: true, description: Tipo de incidencia del contexto; null = todos los tipos.}
         required: {type: boolean}
-        default_value: {nullable: true, description: Valor por defecto aplicado al crear, con la forma del tipo de campo.}
+        default_value: {description: "Valor por defecto aplicado al crear, con la forma del tipo de campo (puede ser null)."}
     CustomField:
       type: object
       required: [id, name, description, type, options, position, contexts, created_at, updated_at]
@@ -13173,7 +13179,7 @@ components:
               project_id: {type: string, format: uuid, nullable: true}
               issue_type_id: {type: string, format: uuid, nullable: true}
               required: {type: boolean}
-              default_value: {nullable: true}
+              default_value: {}
     IssueCustomField:
       type: object
       description: Campo personalizado que aplica a la incidencia, para renderizar su valor.
@@ -13297,7 +13303,7 @@ components:
     TimeSummaryGroup:
       type: object
       properties:
-        key: {type: string, description: Identificador del grupo (usuario, incidencia o fecha AAAA-MM-DD)}
+        key: {type: string, description: "Identificador del grupo (usuario, incidencia o fecha AAAA-MM-DD)"}
         label: {type: string}
         total_seconds: {type: integer}
         total: {type: string}
@@ -13316,7 +13322,7 @@ components:
         kind: {type: string}
         title: {type: string}
         generated_at: {type: string, format: date-time}
-        params: {type: object, additionalProperties: true, description: Parametros usados, con la zona horaria aplicada}
+        params: {type: object, additionalProperties: true, description: "Parametros usados, con la zona horaria aplicada"}
         series:
           type: array
           items:
@@ -13328,7 +13334,7 @@ components:
                 items:
                   type: object
                   properties:
-                    x: {type: string, description: Fecha AAAA-MM-DD, periodo o etiqueta}
+                    x: {type: string, description: "Fecha AAAA-MM-DD, periodo o etiqueta"}
                     y: {type: number}
         table:
           type: object
@@ -13563,11 +13569,13 @@ components:
           description: Tamaño máximo de adjuntos en bytes (100 MiB como máximo).
         hours_per_day:
           type: number
-          exclusiveMinimum: 0
+          minimum: 0
+          exclusiveMinimum: true
           maximum: 24
         days_per_week:
           type: number
-          exclusiveMinimum: 0
+          minimum: 0
+          exclusiveMinimum: true
           maximum: 7
         timezone:
           type: string
