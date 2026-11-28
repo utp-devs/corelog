@@ -1,0 +1,100 @@
+@use '../../styles/mixins' as m;
+
+/* A strip under the top bar: it takes its own row, so it never covers page content. */
+:host {
+  display: block;
+}
+
+.verify-email-banner {
+  @include m.flex-row(3, flex-start);
+  padding: var(--cl-space-2) var(--cl-space-4);
+  border-block-end: 1px solid var(--cl-border);
+  border-inline-start: var(--cl-space-1) solid var(--cl-warning);
+  background: var(--cl-warning-bg);
+  color: var(--cl-text);
+
+  &__icon {
+    margin-block-start: var(--cl-space-2);
+    color: var(--cl-warning-text);
+  }
+
+  &__body {
+    @include m.cluster(2, center, flex-start);
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__title {
+    margin: 0;
+    font-weight: var(--cl-weight-semibold);
+  }
+
+  &__text,
+  &__feedback {
+    margin: 0;
+    font-size: var(--cl-font-small);
+    overflow-wrap: anywhere;
+  }
+
+  &__text {
+    flex: 1 1 16rem;
+    min-width: 0;
+  }
+
+  &__feedback {
+    flex: 1 1 100%;
+    color: var(--cl-success-text);
+
+    &--error {
+      color: var(--cl-danger-text);
+    }
+  }
+
+  &__action {
+    @include m.touch-target;
+    padding: var(--cl-space-1) var(--cl-space-3);
+    border: 1px solid var(--cl-brand);
+    border-radius: var(--cl-radius-md);
+    background: var(--cl-bg-surface);
+    color: var(--cl-brand);
+    font: inherit;
+    font-weight: var(--cl-weight-semibold);
+    cursor: pointer;
+
+    &:hover:not(:disabled) {
+      background: var(--cl-brand-subtle);
+    }
+
+    &:disabled {
+      cursor: progress;
+      opacity: 0.7;
+    }
+
+    &:focus-visible {
+      outline: none;
+      box-shadow: var(--cl-shadow-focus);
+    }
+  }
+
+  &__close {
+    @include m.touch-target;
+    @include m.flex-row(0, center, center);
+    flex: none;
+    padding: 0;
+    border: 0;
+    border-radius: var(--cl-radius-full);
+    background: transparent;
+    color: var(--cl-text-subtle);
+    cursor: pointer;
+
+    &:hover {
+      background: var(--cl-bg-hover);
+      color: var(--cl-text);
+    }
+
+    &:focus-visible {
+      outline: none;
+      box-shadow: var(--cl-shadow-focus);
+    }
+  }
+}

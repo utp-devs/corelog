@@ -1,0 +1,23 @@
+<div class="project-notifications">
+  @if (!loaded()) {
+    <app-loading-skeleton variant="detail" [rows]="4" />
+  } @else if (!canEdit()) {
+    <app-section title="Notificaciones" ariaLabel="Notificaciones del proyecto">
+      <p-message severity="info" [closable]="false" data-testid="scheme-forbidden">
+        Solo los líderes del proyecto pueden ver y cambiar quién recibe los avisos. Tus propias
+        preferencias están en tu perfil, en «Notificaciones».
+      </p-message>
+    </app-section>
+  } @else {
+    @let projectScope = scope();
+    @if (projectScope) {
+      <app-section
+        title="Notificaciones"
+        description="Quién recibe un aviso cuando ocurre algo en el proyecto y por qué canal."
+        ariaLabel="Notificaciones del proyecto"
+      >
+        <app-scheme-editor [scope]="projectScope" [canEdit]="editable()" />
+      </app-section>
+    }
+  }
+</div>

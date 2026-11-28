@@ -1,0 +1,249 @@
+<div class="scheme-editor" data-testid="scheme-editor">
+  @if (loading()) {
+    <app-loading-skeleton variant="table" [rows]="6" />
+  } @else if (store.status() === 'error') {
+    <app-error-state
+      [status]="store.error()?.status"
+      [message]="store.error()?.message"
+      [canRetry]="true"
+      (retry)="reload()"
+    />
+  } @else {
+    @if (!canEdit()) {
+      <p-message severity="info" [closable]="false" data-testid="scheme-readonly">
+        <span class="scheme-editor__notice">
+          <strong>Solo lectura</strong>
+          <span>
+            @if (organizationScope()) {
+              Solo los administradores de la organización pueden cambiar estos valores.
+            } @else {
+              Solo los líderes del proyecto pueden cambiar las notificaciones.
+            }
+          </span>
+        </span>
+      </p-message>
+    }
+
+    <p class="scheme-editor__intro">
+      @if (organizationScope()) {
+        Estos son los avisos por defecto de todos los proyectos de la organización. Cada proyecto
+        puede personalizar los suyos. Las preferencias de cada persona siempre tienen la última
+        palabra.
+      } @else {
+        Elige quién recibe un aviso y por qué canal cuando ocurre algo en este proyecto. Las filas
+        «Heredado» siguen el esquema de la organización; al cambiar una, pasa a ser propia del
+        proyecto. Las preferencias de cada persona siempre tienen la última palabra.
+      }
+    </p>
+
+    @if (generalFailure(); as message) {
+      <div role="alert" data-testid="scheme-error">
+        <p-message severity="error" [closable]="true" (onClose)="generalFailure.set(null)">{{
+          message
+        }}</p-message>
+      </div>
+    }
+
+    <div class="scheme-editor__footer" [class.scheme-editor__footer--dirty]="dirty()">
+      @if (dirty()) {
+        <p class="scheme-editor__dirty" role="status" data-testid="scheme-dirty">
+          <i class="pi pi-info-circle" aria-hidden="true"></i>
+          Tienes cambios sin guardar.
+        </p>
+      } @else {
+        <p class="scheme-editor__saved" role="status">
+          @if (ownedRows() > 0) {
+            {{ ownedRows() }} de 13 avisos personalizados.
+          } @else if (organizationScope()) {
+            Se usa el esquema base de CoreLog.
+          } @else {
+            Este proyecto sigue el esquema de la organización.
+          }
+        </p>
+      }
+      @if (canEdit()) {
+        <div class="scheme-editor__actions">
+          <p-button
+            label="Restablecer"
+            icon="pi pi-replay"
+            severity="secondary"
+            [outlined]="true"
+            [disabled]="!canReset() || store.saving()"
+            data-testid="scheme-reset"
+            (onClick)="confirmReset.set(true)"
+          />
+          <p-button
+            label="Descartar"
+            severity="secondary"
+            [text]="true"
+            [disabled]="!dirty() || store.saving()"
+            data-testid="scheme-discard"
+            (onClick)="discard()"
+          />
+          <p-button
+            label="Guardar cambios"
+            icon="pi pi-check"
+            [disabled]="!dirty()"
+            [loading]="store.saving()"
+            data-testid="scheme-save"
+            (onClick)="save()"
+          />
+        </div>
+      }
+    </div>
+    <div class="scheme-editor__legend" aria-hidden="true">
+      <span class="scheme-editor__legend-event">Cuando...</span>
+      <span class="scheme-editor__legend-channels">Avisar por</span>
+      <span class="scheme-editor__legend-recipients">A quién</span>
+    </div>
+
+    @for (group of groups; track group.id) {
+      <section class="scheme-editor__group" [attr.aria-labelledby]="'scheme-group-' + group.id">
+        <h3 class="scheme-editor__group-title" [id]="'scheme-group-' + group.id">
+          {{ group.title }}
+        </h3>
+        <ul class="scheme-editor__rows">
+          @for (info of group.events; track info.event) {
+            @let row = rule(info.event);
+            @if (row) {
+              <li
+                class="scheme-editor__row"
+                [class.scheme-editor__row--inherited]="!row.overridden"
+                [class.scheme-editor__row--invalid]="rowFailures().has(info.event)"
+                [attr.data-testid]="'scheme-row-' + info.event"
+              >
+                <div class="scheme-editor__event">
+                  <span class="scheme-editor__event-name" [id]="'scheme-event-' + info.event">
+                    {{ info.label }}
+                  </span>
+                  <span class="scheme-editor__event-hint">{{ info.hint }}</span>
+                  <span class="scheme-editor__origin">
+                    @if (row.overridden) {
+                      <app-tone-tag
+                        label="Personalizado"
+                        tone="blue"
+                        data-testid="scheme-badge-own"
+                      />
+                    } @else {
+                      <app-tone-tag
+                        label="Heredado"
+                        tone="neutral"
+                        data-testid="scheme-badge-inherited"
+                      />
+                      @if (canEdit()) {
+                        <p-button
+                          label="Personalizar"
+                          [text]="true"
+                          [attr.aria-label]="'Personalizar: ' + info.label"
+                          [attr.data-testid]="'scheme-customize-' + info.event"
+                          (onClick)="customizeRow(info.event)"
+                        />
+                      }
+                    }
+                  </span>
+                </div>
+
+                <div class="scheme-editor__channels" role="group" aria-label="Canales">
+                  @for (channel of channels; track channel) {
+                    <label class="scheme-editor__channel">
+                      <p-toggleswitch
+                        [ngModel]="hasChannel(info.event, channel)"
+                        [disabled]="!canEdit()"
+                        [ariaLabel]="channelLabels[channel] + ': ' + info.label"
+                        [attr.data-testid]="'scheme-channel-' + info.event + '-' + channel"
+                        (onChange)="toggleChannel(info.event, channel, $event.checked)"
+                      />
+                      <span class="scheme-editor__channel-name">{{ channelLabels[channel] }}</span>
+                    </label>
+                  }
+                </div>
+
+                <div class="scheme-editor__recipients">
+                  <ul
+                    class="scheme-editor__chips"
+                    [attr.aria-label]="'Destinatarios: ' + info.label"
+                  >
+                    @for (recipient of row.recipients; track keyOf(recipient)) {
+                      <li class="scheme-editor__chip">
+                        <span class="scheme-editor__chip-label">{{ labelOf(recipient) }}</span>
+                        @if (canEdit()) {
+                          <button
+                            type="button"
+                            class="scheme-editor__chip-remove"
+                            [attr.aria-label]="'Quitar a ' + labelOf(recipient)"
+                            (click)="remove(info.event, recipient)"
+                          >
+                            <i class="pi pi-times" aria-hidden="true"></i>
+                          </button>
+                        }
+                      </li>
+                    } @empty {
+                      <li class="scheme-editor__none">Nadie recibe este aviso</li>
+                    }
+                  </ul>
+
+                  @if (canEdit()) {
+                    <div class="scheme-editor__add">
+                      <app-select-field
+                        [options]="addOptions"
+                        [placeholder]="addPlaceholder"
+                        [ariaLabel]="'Añadir destinatario: ' + info.label"
+                        [ngModel]="null"
+                        (ngModelChange)="choose(info.event, $event)"
+                      />
+                      @let pending = adding();
+                      @if (pending && pending.event === info.event) {
+                        <div class="scheme-editor__picker">
+                          @if (pending.mode === 'user') {
+                            <app-user-picker
+                              placeholder="Buscar persona"
+                              [users]="people().slice()"
+                              (valueChange)="addPerson(info.event, $event)"
+                            />
+                          } @else {
+                            <app-select-field
+                              placeholder="Elegir equipo"
+                              ariaLabel="Equipo"
+                              [options]="teamOptions()"
+                              [ngModel]="null"
+                              (ngModelChange)="addTeam(info.event, $event)"
+                            />
+                          }
+                          <p-button
+                            label="Cancelar"
+                            size="small"
+                            [text]="true"
+                            (onClick)="cancelAdding()"
+                          />
+                        </div>
+                      }
+                    </div>
+                  }
+
+                  @if (rowFailures().get(info.event); as message) {
+                    <p class="scheme-editor__row-error" role="alert">{{ message }}</p>
+                  }
+                </div>
+              </li>
+            }
+          }
+        </ul>
+      </section>
+    }
+  }
+</div>
+
+<app-confirm-modal
+  [open]="confirmReset()"
+  title="Restablecer las notificaciones"
+  [description]="
+    organizationScope()
+      ? 'Se eliminan los cambios de la organización y vuelve el esquema base de CoreLog. Los proyectos que no tengan reglas propias lo usarán.'
+      : 'Se eliminan las reglas propias del proyecto y vuelve a seguir el esquema de la organización.'
+  "
+  confirmText="Restablecer"
+  [danger]="true"
+  [loading]="store.saving()"
+  (confirmed)="reset()"
+  (cancelled)="confirmReset.set(false)"
+/>

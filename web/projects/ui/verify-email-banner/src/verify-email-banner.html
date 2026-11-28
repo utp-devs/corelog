@@ -1,0 +1,44 @@
+@if (visible()) {
+  <section
+    class="verify-email-banner"
+    aria-label="Verificación del correo"
+    data-testid="verify-email-banner"
+  >
+    <i class="verify-email-banner__icon pi pi-envelope" aria-hidden="true"></i>
+    <div class="verify-email-banner__body">
+      <p class="verify-email-banner__title">Verifica tu correo</p>
+      <p class="verify-email-banner__text">
+        Aún no confirmaste <strong>{{ email() }}</strong
+        >. Hasta que lo confirmes no podrás recuperar tu contraseña ni recibir avisos por correo.
+      </p>
+      @if (feedback(); as message) {
+        <p
+          class="verify-email-banner__feedback"
+          [class.verify-email-banner__feedback--error]="message.kind === 'error'"
+          [attr.role]="message.kind === 'error' ? 'alert' : 'status'"
+          data-testid="verify-email-feedback"
+        >
+          {{ message.text }}
+        </p>
+      }
+      <button
+        type="button"
+        class="verify-email-banner__action"
+        [disabled]="sending()"
+        data-testid="verify-email-resend"
+        (click)="resend()"
+      >
+        {{ sending() ? 'Enviando...' : 'Reenviar correo' }}
+      </button>
+    </div>
+    <button
+      type="button"
+      class="verify-email-banner__close"
+      aria-label="Cerrar el aviso de verificación"
+      data-testid="verify-email-dismiss"
+      (click)="dismiss()"
+    >
+      <i class="pi pi-times" aria-hidden="true"></i>
+    </button>
+  </section>
+}

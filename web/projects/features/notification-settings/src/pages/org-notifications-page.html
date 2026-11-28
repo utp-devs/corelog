@@ -1,0 +1,11 @@
+<app-page-container variant="wide" pageName="org-notifications" [ready]="true">
+  <app-page-header
+    banner="settings"
+    title="Notificaciones"
+    subtitle="Avisos por defecto de los proyectos de la organización."
+  />
+  @let organizationScope = scope();
+  @if (organizationScope) {
+    <app-scheme-editor [scope]="organizationScope" [canEdit]="canEdit()" />
+  }
+</app-page-container>

@@ -121,6 +121,12 @@ export const test = base.extend<E2eFixtures>({
           THEME_STORAGE_KEY,
         );
       }
+      // The seeded accounts have no verified email: keep the reminder out of every page unless a spec asks for it.
+      await context.addInitScript(() => {
+        if (!window.localStorage.getItem('e2e.verify-banner')) {
+          window.sessionStorage.setItem('corelog.verify-email-banner.dismissed', '1');
+        }
+      });
       contexts.push(context);
       const page = await context.newPage();
       trackHygiene(page);
