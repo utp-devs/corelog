@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -13,6 +14,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 )
 
 // syncBuffer is a log sink that can be written from the request goroutines and read by the test.
@@ -61,6 +63,11 @@ func TestSecurityHeadersOnEveryRoute(t *testing.T) {
 		req := httptest.NewRequest(method, target, nil)
 		if token != "" {
 			req.Header.Set("Authorization", "Bearer "+token)
+		}
+		if strings.Contains(target, "/notifications/stream") { // never ends by itself
+			ctx, cancel := context.WithTimeout(req.Context(), 300*time.Millisecond)
+			defer cancel()
+			req = req.WithContext(ctx)
 		}
 		rec := httptest.NewRecorder()
 		f.router.ServeHTTP(rec, req)

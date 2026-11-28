@@ -19,6 +19,13 @@ type Handler struct {
 	jwtSecret string
 	schemes   port.SchemeService
 	outbox    port.OutboxAdmin
+	stream    http.Handler
+}
+
+// WithStream mounts the live notification stream at GET /notifications/stream.
+func (h *Handler) WithStream(stream http.Handler) *Handler {
+	h.stream = stream
+	return h
 }
 
 func NewHandler(service port.Service, jwtSecret string) *Handler {
@@ -30,6 +37,9 @@ func (h *Handler) RegisterRoutes(r chi.Router) {
 	r.Route("/notifications", func(r chi.Router) {
 		r.Use(appmw.Authenticate(h.jwtSecret))
 		r.Get("/", h.List)
+		if h.stream != nil {
+			r.Get("/stream", h.stream.ServeHTTP)
+		}
 		r.Get("/unread-count", h.UnreadCount)
 		r.Post("/read-all", h.MarkAllRead)
 		r.Get("/preferences", h.GetPreferences)
@@ -38,13 +48,23 @@ func (h *Handler) RegisterRoutes(r chi.Router) {
 	})
 }
 
-type notificationResponse struct {
-	ID        string `json:"id"`
-	Kind      string `json:"kind"`
-	Message   string `json:"message"`
-	Link      string `json:"link"`
-	Read      bool   `json:"read"`
-	CreatedAt string `json:"created_at"`
+// NotificationResponse is the JSON of a notification, shared by the list endpoint and the live stream.
+type NotificationResponse struct {
+	ID        string         `json:"id"`
+	Kind      string         `json:"kind"`
+	Message   string         `json:"message"`
+	Link      string         `json:"link"`
+	Read      bool           `json:"read"`
+	CreatedAt string         `json:"created_at"`
+	Data      map[string]any `json:"data,omitempty"`
+}
+
+// ToNotificationResponse renders a notification.
+func ToNotificationResponse(item *domain.Notification) NotificationResponse {
+	return NotificationResponse{
+		ID: item.ID.String(), Kind: item.Kind, Message: item.Message, Link: item.Link,
+		Read: item.ReadAt != nil, CreatedAt: item.CreatedAt.Format("2006-01-02T15:04:05Z07:00"), Data: item.Data,
+	}
 }
 
 func (h *Handler) actor(w http.ResponseWriter, r *http.Request) (uuid.UUID, bool) {
@@ -66,12 +86,9 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 		httpresponse.Error(w, err)
 		return
 	}
-	response := make([]notificationResponse, 0, len(items))
+	response := make([]NotificationResponse, 0, len(items))
 	for _, item := range items {
-		response = append(response, notificationResponse{
-			ID: item.ID.String(), Kind: item.Kind, Message: item.Message, Link: item.Link,
-			Read: item.ReadAt != nil, CreatedAt: item.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
-		})
+		response = append(response, ToNotificationResponse(item))
 	}
 	httpresponse.JSON(w, http.StatusOK, response)
 }

@@ -57,7 +57,7 @@ func NewRouterWith(cfg config.ServerConfig, opts RouterOptions) *chi.Mux {
 	r.Use(appmw.RequestMeta(opts.TrustedProxies))
 	r.Use(appmw.RequestLogger(opts.Logger))
 	r.Use(appmw.Recoverer(opts.Logger))
-	r.Use(middleware.Timeout(30 * time.Second))
+	r.Use(timeoutExceptStreams(30 * time.Second))
 	r.Use(appmw.BodyLimit(opts.MaxJSONBodyBytes))
 	// With no valid origin no CORS headers are sent at all (the library would default to every origin).
 	if origins := SafeOrigins(cfg.Origins()); len(origins) > 0 {
@@ -77,6 +77,22 @@ func NewRouterWith(cfg config.ServerConfig, opts RouterOptions) *chi.Mux {
 	})
 
 	return r
+}
+
+// timeoutExceptStreams applies the request timeout to every route but the live event streams, which stay open
+// for hours (each write of a stream carries its own deadline).
+func timeoutExceptStreams(d time.Duration) func(http.Handler) http.Handler {
+	limited := middleware.Timeout(d)
+	return func(next http.Handler) http.Handler {
+		withTimeout := limited(next)
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.Method == http.MethodGet && strings.HasSuffix(r.URL.Path, "/notifications/stream") {
+				next.ServeHTTP(w, r)
+				return
+			}
+			withTimeout.ServeHTTP(w, r)
+		})
+	}
 }
 
 func Mount(r chi.Router, registrars ...RouteRegistrar) {

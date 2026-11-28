@@ -27,6 +27,14 @@ type Handler struct {
 	consents port.ConsentGate
 	// sec holds the optional recovery, rate limit and lockout collaborators.
 	sec Security
+	// events is nil when the security notifications are not wired.
+	events port.SessionEvents
+}
+
+// WithSessionEvents enables the new login alert and the live closing of revoked sessions.
+func (h *Handler) WithSessionEvents(e port.SessionEvents) *Handler {
+	h.events = e
+	return h
 }
 
 func NewHandler(service port.Service, jwtSecret string, jwtExpiration time.Duration) *Handler {
@@ -142,6 +150,7 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	h.recordLogin(r, user)
+	h.announceLogin(r, user.ID, sessionID)
 
 	token, err := authtoken.GenerateWithSession(h.jwtSecret, h.jwtExpiration, user.ID, string(user.Role), sessionID)
 	if err != nil {
@@ -364,6 +373,9 @@ func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
 		httpresponse.Error(w, err)
 		return
 	}
+	if h.events != nil {
+		h.events.SessionRevoked(r.Context(), userID, currentSession(r))
+	}
 	httpresponse.JSON(w, http.StatusNoContent, nil)
 }
 
@@ -400,6 +412,9 @@ func (h *Handler) RevokeSession(w http.ResponseWriter, r *http.Request) {
 		httpresponse.Error(w, err)
 		return
 	}
+	if h.events != nil {
+		h.events.SessionRevoked(r.Context(), userID, sessionID)
+	}
 	httpresponse.JSON(w, http.StatusNoContent, nil)
 }
 
@@ -412,6 +427,9 @@ func (h *Handler) RevokeOtherSessions(w http.ResponseWriter, r *http.Request) {
 	if err := h.service.RevokeOtherSessions(r.Context(), userID, currentSession(r)); err != nil {
 		httpresponse.Error(w, err)
 		return
+	}
+	if h.events != nil {
+		h.events.OthersRevoked(r.Context(), userID, currentSession(r))
 	}
 	httpresponse.JSON(w, http.StatusNoContent, nil)
 }
@@ -434,6 +452,9 @@ func (h *Handler) DeactivateAccount(w http.ResponseWriter, r *http.Request) {
 	if err := h.service.DeactivateAccount(r.Context(), userID, req.Password); err != nil {
 		httpresponse.Error(w, err)
 		return
+	}
+	if h.events != nil {
+		h.events.OthersRevoked(r.Context(), userID, uuid.Nil)
 	}
 	httpresponse.JSON(w, http.StatusNoContent, nil)
 }

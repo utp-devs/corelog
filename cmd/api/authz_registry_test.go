@@ -193,6 +193,7 @@ GET /api/v1/notifications/preferences self
 PUT /api/v1/notifications/preferences self
 POST /api/v1/notifications/read-all self
 GET /api/v1/notifications/unread-count self
+GET /api/v1/notifications/stream self
 POST /api/v1/notifications/{}/read self
 GET /api/v1/organizations scoped
 POST /api/v1/organizations self

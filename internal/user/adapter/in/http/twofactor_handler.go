@@ -268,6 +268,7 @@ func (h *Handler) LoginSecondFactor(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	h.recordLogin(r, user)
+	h.announceLogin(r, user.ID, sessionID)
 	token, err := authtoken.GenerateWithSession(h.jwtSecret, h.jwtExpiration, user.ID, string(user.Role), sessionID)
 	if err != nil {
 		httpresponse.Error(w, apperror.Wrap(apperror.KindInternal, "failed to issue token", err))

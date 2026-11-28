@@ -9,6 +9,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
+
 	"github.com/jhonsferg/corelog/internal/platform/apperror"
 	"github.com/jhonsferg/corelog/internal/platform/httpresponse"
 	appmw "github.com/jhonsferg/corelog/internal/platform/middleware"
@@ -210,4 +212,12 @@ func (h *Handler) recordLogin(r *http.Request, user *domain.User) {
 		return
 	}
 	_ = h.sec.Guard.RecordSuccess(r.Context(), user)
+}
+
+// announceLogin raises the new login alert once the session is open. It never blocks or fails the login.
+func (h *Handler) announceLogin(r *http.Request, userID, sessionID uuid.UUID) {
+	if h.events == nil {
+		return
+	}
+	h.events.NewLogin(r.Context(), port.LoginInfo{UserID: userID, SessionID: sessionID, UserAgent: r.UserAgent(), IP: h.clientIP(r)})
 }

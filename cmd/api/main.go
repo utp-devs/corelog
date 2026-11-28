@@ -84,6 +84,11 @@ func run() error {
 	go startJobs(dispatchCtx, cfg, db, log)
 
 	server := httpserver.New(cfg.Server, router)
+	if rt := currentStream.Load(); rt != nil {
+		// Open streams never end by themselves: close them on shutdown or Shutdown would wait for them.
+		server.HTTPServer().RegisterOnShutdown(rt.hub.Close)
+		go rt.bus.Run(dispatchCtx)
+	}
 
 	serverErrors := make(chan error, 1)
 	go func() {

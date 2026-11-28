@@ -77,7 +77,7 @@ func (r *FactsRepository) Issue(ctx context.Context, issueID uuid.UUID) (*port.I
 		return nil, internal("no se pudieron leer los observadores", err)
 	}
 	if err := sqlx.SelectContext(ctx, r.ext(ctx), &facts.ComponentLeadIDs, `
-		SELECT DISTINCT c.lead_id FROM issue_components ic JOIN components c ON c.id = ic.component_id
+		SELECT DISTINCT c.lead_id FROM issue_components ic JOIN components c ON c.id = ic.component_id AND c.deleted_at IS NULL
 		WHERE ic.issue_id = $1 AND c.lead_id IS NOT NULL ORDER BY c.lead_id`, issueID); err != nil {
 		return nil, internal("no se pudieron leer los responsables de componente", err)
 	}

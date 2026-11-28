@@ -144,6 +144,7 @@ func buildRouter(cfg *config.Config, db *sqlx.DB, log *slog.Logger) (chi.Router,
 	})
 	notificationModule := notification.NewModule(notificationpostgres.NewNotificationRepository(db), cfg.Auth.JWTSecret)
 	wireNotifications(cfg, db, notificationModule, authorizer, projectAuthorizer, orgModule.Service)
+	wireStream(cfg, db, log, notificationModule, userModule.Handler)
 	issueModule := issue.NewModule(issueRepo, userDirectory, collaborationRepo, issueLinkRepo, watcherRepo, savedFilterRepo, cfg.Auth.JWTSecret, projectAuthorizer, notificationModule.Service, projectMemberRepo).WithTxManager(database.NewTxManager(db))
 	searchModule := search.NewModule(searchpostgres.NewSearchIndex(db), cfg.Auth.JWTSecret)
 	dashboardModule := dashboard.NewModule(dashboardpostgres.NewDashboardReader(db), cfg.Auth.JWTSecret)

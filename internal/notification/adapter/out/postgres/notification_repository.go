@@ -3,7 +3,9 @@ package postgres
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -34,30 +36,65 @@ type notificationRow struct {
 	Link      string     `db:"link"`
 	ReadAt    *time.Time `db:"read_at"`
 	CreatedAt time.Time  `db:"created_at"`
+	Data      []byte     `db:"data"`
 }
 
 func (r notificationRow) toDomain() *domain.Notification {
-	return &domain.Notification{ID: r.ID, UserID: r.UserID, Kind: r.Kind, Message: r.Message, Link: r.Link, ReadAt: r.ReadAt, CreatedAt: r.CreatedAt}
+	n := &domain.Notification{ID: r.ID, UserID: r.UserID, Kind: r.Kind, Message: r.Message, Link: r.Link, ReadAt: r.ReadAt, CreatedAt: r.CreatedAt}
+	if len(r.Data) > 0 {
+		var data map[string]any
+		if json.Unmarshal(r.Data, &data) == nil && len(data) > 0 {
+			n.Data = data
+		}
+	}
+	return n
+}
+
+// SaveHook runs after a notification row is inserted, inside the transaction of the insert when there is one.
+// It is the single choke point that pushes new notifications to the live streams.
+type SaveHook func(ctx context.Context, n *domain.Notification)
+
+var saveHooks sync.Map // *sqlx.DB -> SaveHook
+
+// SetSaveHook registers the hook for every repository built over db (several are built per process: the
+// service, the scheme engine and the jobs). It is called once at startup; nil removes it.
+func SetSaveHook(db *sqlx.DB, h SaveHook) {
+	if h == nil {
+		saveHooks.Delete(db)
+		return
+	}
+	saveHooks.Store(db, h)
 }
 
 func (r *NotificationRepository) Save(ctx context.Context, n *domain.Notification) error {
 	const query = `
-		INSERT INTO notifications (user_id, kind, message, link, created_at)
-		VALUES (:user_id, :kind, :message, :link, :created_at)
+		INSERT INTO notifications (user_id, kind, message, link, created_at, data)
+		VALUES (:user_id, :kind, :message, :link, :created_at, CAST(:data AS jsonb))
 		RETURNING id`
-	row := notificationRow{UserID: n.UserID, Kind: n.Kind, Message: n.Message, Link: n.Link, CreatedAt: n.CreatedAt}
+	data := []byte("{}")
+	if len(n.Data) > 0 {
+		encoded, err := json.Marshal(n.Data)
+		if err != nil {
+			return apperror.Wrap(apperror.KindInternal, "failed to encode notification data", err)
+		}
+		data = encoded
+	}
+	row := notificationRow{UserID: n.UserID, Kind: n.Kind, Message: n.Message, Link: n.Link, CreatedAt: n.CreatedAt, Data: data}
 	id, err := database.InsertReturningID(ctx, database.Executor(ctx, r.db), query, row)
 	if err != nil {
 		return apperror.Wrap(apperror.KindInternal, "failed to save notification", err)
 	}
 	n.ID = id
+	if hook, ok := saveHooks.Load(r.db); ok {
+		hook.(SaveHook)(ctx, n)
+	}
 	return nil
 }
 
 func (r *NotificationRepository) ListByUser(ctx context.Context, userID uuid.UUID, limit int) ([]*domain.Notification, error) {
 	var rows []notificationRow
 	if err := r.db.SelectContext(ctx, &rows, `
-		SELECT id, user_id, kind, message, link, read_at, created_at
+		SELECT id, user_id, kind, message, link, read_at, created_at, data
 		FROM notifications WHERE user_id = $1
 		ORDER BY created_at DESC, id DESC LIMIT $2`, userID, limit); err != nil {
 		return nil, apperror.Wrap(apperror.KindInternal, "failed to list notifications", err)

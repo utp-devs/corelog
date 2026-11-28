@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"io"
 	"log"
@@ -89,6 +90,12 @@ func (f *authzFixture) call(method, target, token string, body any) (int, []byte
 	}
 	if token != "" {
 		req.Header.Set("Authorization", "Bearer "+token)
+	}
+	// The live stream never ends by itself: the audit only needs its status line.
+	if strings.Contains(target, "/notifications/stream") {
+		ctx, cancel := context.WithTimeout(req.Context(), 300*time.Millisecond)
+		defer cancel()
+		req = req.WithContext(ctx)
 	}
 	rec := httptest.NewRecorder()
 	f.router.ServeHTTP(rec, req)

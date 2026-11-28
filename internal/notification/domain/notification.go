@@ -25,6 +25,8 @@ type Notification struct {
 	Link      string
 	ReadAt    *time.Time
 	CreatedAt time.Time
+	// Data is optional structured detail for the interface (for example the actions of a security alert).
+	Data map[string]any
 }
 
 // New valida una notificacion nueva. El id lo asigna la base de datos.

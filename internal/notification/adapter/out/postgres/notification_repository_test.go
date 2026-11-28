@@ -42,7 +42,7 @@ func TestNotificationRepositoryPostgres(t *testing.T) {
 			id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
 			user_id UUID NOT NULL REFERENCES users (id) ON DELETE CASCADE,
 			kind VARCHAR(40) NOT NULL, message VARCHAR(300) NOT NULL, link VARCHAR(300) NOT NULL DEFAULT '',
-			read_at TIMESTAMPTZ, created_at TIMESTAMPTZ NOT NULL DEFAULT now())`,
+			read_at TIMESTAMPTZ, created_at TIMESTAMPTZ NOT NULL DEFAULT now(), data JSONB NOT NULL DEFAULT '{}'::jsonb)`,
 	} {
 		if _, err := db.Exec(statement); err != nil {
 			t.Fatal(err)
