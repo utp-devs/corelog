@@ -1,0 +1,200 @@
+<app-section title="Tiempo" class="issue-worklogs" data-testid="issue-worklogs">
+  <div appSectionActions>
+    @if (canLog()) {
+      <p-button
+        label="Registrar tiempo"
+        icon="pi pi-clock"
+        severity="secondary"
+        [outlined]="true"
+        class="touch-target"
+        data-testid="log-work-open"
+        (onClick)="openLog()"
+      />
+    }
+  </div>
+
+  @if (loading()) {
+    <app-loading-skeleton variant="card" />
+  } @else if (loadError(); as message) {
+    <p-message severity="error" [closable]="false" role="alert">{{ message }}</p-message>
+  } @else {
+    @if (totals(); as totals) {
+      <div class="issue-worklogs__summary">
+        <app-progress-bar
+          label="Tiempo registrado"
+          tone="brand"
+          [value]="percent()"
+          data-testid="time-progress"
+        />
+        <dl class="issue-worklogs__totals">
+          <div class="issue-worklogs__total">
+            <dt>Estimado</dt>
+            <dd>
+              <app-inline-edit
+                label="Estimación original"
+                type="text"
+                placeholder="Sin estimar"
+                [value]="totals.originalEstimate"
+                [locked]="!canEditEstimates()"
+                [onSave]="saveOriginal"
+              />
+            </dd>
+          </div>
+          <div class="issue-worklogs__total">
+            <dt>Registrado</dt>
+            <dd data-testid="time-spent">{{ totals.timeSpent }}</dd>
+          </div>
+          <div class="issue-worklogs__total">
+            <dt>Restante</dt>
+            <dd>
+              <app-inline-edit
+                label="Estimación restante"
+                type="text"
+                placeholder="Sin estimar"
+                [value]="totals.remainingEstimate"
+                [locked]="!canEditEstimates()"
+                [onSave]="saveRemaining"
+              />
+            </dd>
+          </div>
+        </dl>
+      </div>
+    }
+
+    @if (worklogs().length === 0) {
+      <p class="issue-worklogs__empty">Aún no hay tiempo registrado</p>
+    } @else {
+      <ul class="issue-worklogs__list">
+        @for (worklog of worklogs(); track worklog.id) {
+          <li class="issue-worklogs__item" data-testid="worklog-item">
+            <div class="issue-worklogs__main">
+              <span class="issue-worklogs__duration">{{ worklog.timeSpent }}</span>
+              <span class="issue-worklogs__author">{{ worklog.authorName }}</span>
+              <time class="issue-worklogs__when" [attr.datetime]="worklog.startedAt">{{
+                exact(worklog.startedAt)
+              }}</time>
+            </div>
+            @if (worklog.description) {
+              <p class="issue-worklogs__description">{{ worklog.description }}</p>
+            }
+            @if (canChange(worklog)) {
+              <div class="issue-worklogs__actions">
+                <p-button
+                  icon="pi pi-pencil"
+                  severity="secondary"
+                  [text]="true"
+                  class="touch-target"
+                  ariaLabel="Editar registro"
+                  appTooltip="Editar registro"
+                  (onClick)="openEdit(worklog)"
+                />
+                <p-button
+                  icon="pi pi-trash"
+                  severity="danger"
+                  [text]="true"
+                  class="touch-target"
+                  ariaLabel="Eliminar registro"
+                  appTooltip="Eliminar registro"
+                  (onClick)="deleting.set(worklog)"
+                />
+              </div>
+            }
+          </li>
+        }
+      </ul>
+    }
+  }
+</app-section>
+
+<app-dialog
+  size="md"
+  [heading]="editing() ? 'Editar registro de tiempo' : 'Registrar tiempo'"
+  [open]="dialogOpen()"
+  (closeRequested)="closeDialog()"
+>
+  <form class="issue-worklogs__form" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+    @if (formError(); as message) {
+      <p-message severity="error" [closable]="false" role="alert" data-testid="worklog-error">{{
+        message
+      }}</p-message>
+    }
+    <app-field-row #timeRow label="Tiempo dedicado" [required]="true">
+      <app-duration-input
+        data-autofocus
+        formControlName="timeSpent"
+        [inputId]="timeRow.controlId"
+        [maxSeconds]="maxSeconds"
+      />
+    </app-field-row>
+    <div class="issue-worklogs__when-row">
+      <app-field-row #dateRow label="Fecha">
+        <app-date-field [inputId]="dateRow.controlId" [showClear]="false" formControlName="date" />
+      </app-field-row>
+      <app-field-row #hourRow label="Hora">
+        <input
+          class="issue-worklogs__time"
+          type="time"
+          [id]="hourRow.controlId"
+          formControlName="time"
+        />
+      </app-field-row>
+    </div>
+    <app-field-row #descRow label="Descripción" [optional]="true">
+      <textarea
+        class="issue-worklogs__text"
+        rows="3"
+        maxlength="5000"
+        [id]="descRow.controlId"
+        formControlName="description"
+      ></textarea>
+    </app-field-row>
+    @if (!editing()) {
+      <app-field-row #modeRow label="Estimación restante">
+        <app-select-field
+          [inputId]="modeRow.controlId"
+          [options]="modeOptions"
+          ariaLabel="Estimación restante"
+          formControlName="mode"
+        />
+      </app-field-row>
+      @if (showRemainingValue()) {
+        <app-field-row #valueRow label="Cantidad">
+          <app-duration-input
+            ariaLabel="Cantidad de la estimación restante"
+            [allowZero]="true"
+            [inputId]="valueRow.controlId"
+            formControlName="value"
+          />
+        </app-field-row>
+      }
+    }
+  </form>
+  <p-button
+    dialogFooter
+    label="Cancelar"
+    severity="secondary"
+    [text]="true"
+    class="touch-target"
+    [disabled]="saving()"
+    (onClick)="closeDialog()"
+  />
+  <p-button
+    dialogFooter
+    [label]="editing() ? 'Guardar' : 'Registrar'"
+    class="touch-target"
+    data-testid="log-work-submit"
+    [loading]="saving()"
+    (onClick)="submit()"
+  />
+</app-dialog>
+
+<app-confirm-modal
+  title="Eliminar el registro de tiempo"
+  description="Se devolverá a la estimación restante el tiempo que este registro le quitó."
+  confirmText="Eliminar"
+  [danger]="true"
+  [open]="deleting() !== null"
+  [loading]="saving()"
+  (confirmed)="confirmDelete()"
+  (cancelled)="deleting.set(null)"
+/>

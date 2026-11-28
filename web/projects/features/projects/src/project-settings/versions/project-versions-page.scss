@@ -1,0 +1,96 @@
+@use '../../../../../ui/styles/mixins' as m;
+
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.project-versions {
+  min-width: 0;
+
+  &__list {
+    @include m.flex-column(var(--cl-space-4));
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  &__item {
+    @include m.flex-column(var(--cl-space-2));
+    padding: var(--cl-space-4);
+    border: 1px solid var(--cl-border);
+    border-radius: var(--cl-radius-md);
+    background: var(--cl-bg-surface);
+    min-width: 0;
+  }
+
+  &__head {
+    @include m.cluster(var(--cl-space-3));
+  }
+
+  &__name {
+    margin: 0;
+    font-size: var(--cl-font-body-strong);
+    font-weight: var(--cl-weight-semibold);
+    overflow-wrap: anywhere;
+  }
+
+  &__dates,
+  &__counts,
+  &__hint,
+  &__empty {
+    margin: 0;
+    color: var(--cl-text-subtle);
+    font-size: var(--cl-font-small);
+  }
+
+  &__description {
+    margin: 0;
+    overflow-wrap: anywhere;
+  }
+
+  &__actions {
+    @include m.cluster(var(--cl-space-2));
+    margin-block-start: var(--cl-space-2);
+  }
+
+  &__form,
+  &__release,
+  &__choices {
+    @include m.flex-column(var(--cl-space-4));
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+
+  &__field {
+    @include m.flex-column(var(--cl-space-1));
+    min-width: 0;
+  }
+
+  &__label {
+    font-size: var(--cl-font-small);
+    font-weight: var(--cl-weight-medium);
+  }
+
+  &__dates-row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--cl-space-3);
+
+    @include m.respond-down(768px) {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+
+  &__radio {
+    @include m.flex-row(var(--cl-space-2));
+    min-height: var(--cl-control-h-md);
+  }
+
+  &__error {
+    margin: 0;
+    color: var(--cl-danger-text);
+    font-size: var(--cl-font-small);
+  }
+}

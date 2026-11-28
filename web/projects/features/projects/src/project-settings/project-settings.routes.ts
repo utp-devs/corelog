@@ -46,6 +46,24 @@ export const PROJECT_SETTINGS_ROUTES: Routes = [
           import('./issue-types/project-issue-types-page').then((m) => m.ProjectIssueTypesPage),
       },
       {
+        path: 'versions',
+        title: 'Versiones',
+        loadComponent: () =>
+          import('./versions/project-versions-page').then((m) => m.ProjectVersionsPage),
+      },
+      {
+        path: 'components',
+        title: 'Componentes',
+        loadComponent: () =>
+          import('./components/project-components-page').then((m) => m.ProjectComponentsPage),
+      },
+      {
+        path: 'fields',
+        title: 'Campos',
+        loadComponent: () =>
+          import('./fields/project-fields-page').then((m) => m.ProjectFieldsPage),
+      },
+      {
         path: 'workflow',
         title: 'Flujo de trabajo',
         canDeactivate: [unsavedChangesGuard],

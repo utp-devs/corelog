@@ -43,10 +43,27 @@ const NARROW_TABLE_QUERY = '(max-width: 1023.98px)';
 const ALL_COLUMNS: DataTableColumn[] = [
   { key: 'key', title: 'Clave', hideable: true },
   { key: 'summary', title: 'Resumen', field: 'summary', ellipsis: true },
+  { key: 'type', title: 'Tipo', hideable: true },
   { key: 'status', title: 'Estado', hideable: true },
   { key: 'priority', title: 'Prioridad', hideable: true },
   { key: 'assignee', title: 'Responsable', hideable: true },
+  { key: 'reporter', title: 'Informante', hideable: true },
+  { key: 'project', title: 'Proyecto', hideable: true },
+  { key: 'labels', title: 'Etiquetas', hideable: true },
+  { key: 'points', title: 'Puntos', hideable: true, align: 'right' },
+  { key: 'due', title: 'Vencimiento', hideable: true },
+  { key: 'created', title: 'Creada', hideable: true },
   { key: 'updated', title: 'Actualizado', hideable: true },
+];
+
+/** The columns shown when the caller does not choose them. */
+const DEFAULT_COLUMN_KEYS: readonly string[] = [
+  'key',
+  'summary',
+  'status',
+  'priority',
+  'assignee',
+  'updated',
 ];
 
 /** Issue list on DataTable: a table on desktop, cards below 768 px. */
@@ -85,14 +102,21 @@ export class IssueList {
   readonly selectable = input(false);
   readonly selectedKeys = model<string[]>([]);
   readonly bulkActions = input<BulkAction[]>([]);
+  /** Keys of the columns to show, in table order. The caller owns the choice, so the table has no chooser. */
+  readonly columnKeys = input<readonly string[] | null>(null);
 
   readonly open = output<Issue>();
   readonly retry = output<void>();
   readonly pageChange = output<DataTablePageChange>();
 
-  protected readonly columns = computed<DataTableColumn[]>(() =>
-    this.narrow() ? ALL_COLUMNS.filter((column) => column.key !== 'updated') : ALL_COLUMNS,
-  );
+  protected readonly columns = computed<DataTableColumn[]>(() => {
+    const chosen = this.columnKeys();
+    const wanted = new Set(chosen ?? DEFAULT_COLUMN_KEYS);
+    return ALL_COLUMNS.filter(
+      (column) =>
+        wanted.has(column.key) && !(chosen === null && this.narrow() && column.key === 'updated'),
+    ).map((column) => (chosen === null ? column : { ...column, hideable: false }));
+  });
 
   protected statusLabel(issue: Issue): string {
     return issueStatusView(issue).label;
@@ -120,6 +144,14 @@ export class IssueList {
 
   protected pathOf(issue: Issue): string {
     return issuePath(issue.key);
+  }
+
+  protected dateText(value: string | null): string {
+    return value ? (this.datePipe.transform(value, 'dd/MM/yyyy') ?? value) : '';
+  }
+
+  protected labelsText(issue: Issue): string {
+    return ((issue as { labels?: readonly string[] }).labels ?? []).join(', ');
   }
 
   protected isResolved(issue: Issue): boolean {

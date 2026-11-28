@@ -1,0 +1,99 @@
+@use '../../../../ui/styles/mixins' as m;
+@use '../../../../ui/field-row/src/control' as c;
+
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.issue-worklogs {
+  &__summary {
+    @include m.flex-column(3);
+    margin-bottom: var(--cl-space-4);
+  }
+
+  &__totals {
+    @include m.cluster(4, flex-start);
+    margin: 0;
+  }
+
+  &__total {
+    @include m.flex-column(1);
+    min-width: 0;
+
+    dt {
+      color: var(--cl-text-subtle);
+      font-size: var(--cl-font-small);
+    }
+
+    dd {
+      margin: 0;
+      font-weight: var(--cl-weight-semibold);
+    }
+  }
+
+  &__empty {
+    margin: 0;
+    color: var(--cl-text-subtle);
+  }
+
+  &__list {
+    @include m.flex-column(0);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  &__item {
+    @include m.flex-column(1);
+    position: relative;
+    padding: var(--cl-space-3) 0;
+    border-top: 1px solid var(--cl-border);
+  }
+
+  &__main {
+    @include m.cluster(3);
+  }
+
+  &__duration {
+    font-weight: var(--cl-weight-semibold);
+  }
+
+  &__author {
+    color: var(--cl-text);
+  }
+
+  &__when {
+    color: var(--cl-text-subtle);
+    font-size: var(--cl-font-small);
+  }
+
+  &__description {
+    margin: 0;
+    color: var(--cl-text);
+    overflow-wrap: anywhere;
+    white-space: pre-wrap;
+  }
+
+  &__actions {
+    @include m.flex-row(1);
+  }
+
+  &__form {
+    @include m.flex-column(4);
+  }
+
+  &__when-row {
+    @include m.grid-auto(10rem, 3);
+  }
+
+  &__time {
+    @include c.control-box;
+  }
+
+  &__text {
+    @include c.control-box;
+    padding: var(--cl-space-2) var(--cl-space-3);
+    resize: vertical;
+  }
+}

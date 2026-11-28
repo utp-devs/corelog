@@ -1,0 +1,88 @@
+<app-dialog
+  size="sm"
+  heading="Suscripción al filtro"
+  [subtitle]="filter()?.name ?? ''"
+  [open]="open()"
+  (closeRequested)="closeRequested.emit()"
+>
+  <div class="filter-subscription-dialog">
+    <label class="filter-subscription-dialog__field">
+      <span class="filter-subscription-dialog__label">Frecuencia</span>
+      <p-select
+        inputId="subscription-frequency"
+        ariaLabel="Frecuencia"
+        optionLabel="label"
+        optionValue="value"
+        appendTo="body"
+        [options]="frequencies"
+        [ngModel]="frequency()"
+        (ngModelChange)="frequency.set($event)"
+      />
+    </label>
+
+    @if (frequency() === 'weekly') {
+      <label class="filter-subscription-dialog__field">
+        <span class="filter-subscription-dialog__label">Día de la semana</span>
+        <p-select
+          ariaLabel="Día de la semana"
+          optionLabel="label"
+          optionValue="value"
+          appendTo="body"
+          [options]="weekdays"
+          [ngModel]="weekday()"
+          (ngModelChange)="weekday.set($event)"
+        />
+      </label>
+    }
+
+    <label class="filter-subscription-dialog__field">
+      <span class="filter-subscription-dialog__label">Hora</span>
+      <p-select
+        ariaLabel="Hora"
+        optionLabel="label"
+        optionValue="value"
+        appendTo="body"
+        [options]="hours"
+        [ngModel]="hour()"
+        (ngModelChange)="hour.set($event)"
+      />
+    </label>
+
+    <label class="filter-subscription-dialog__field">
+      <span class="filter-subscription-dialog__label">Zona horaria</span>
+      <p-select
+        ariaLabel="Zona horaria"
+        optionLabel="label"
+        optionValue="value"
+        appendTo="body"
+        [filter]="true"
+        [options]="zones()"
+        [ngModel]="timezone()"
+        (ngModelChange)="timezone.set($event)"
+      />
+    </label>
+
+    @if (error(); as message) {
+      <p class="filter-subscription-dialog__error" role="alert">{{ message }}</p>
+    }
+  </div>
+
+  @if (subscribed()) {
+    <p-button
+      dialogFooter
+      label="Cancelar suscripción"
+      severity="danger"
+      [outlined]="true"
+      [disabled]="busy()"
+      (onClick)="cancel()"
+    />
+  }
+  <p-button dialogFooter label="Cerrar" severity="secondary" (onClick)="closeRequested.emit()" />
+  <p-button
+    dialogFooter
+    label="Guardar"
+    data-testid="subscription-save"
+    [loading]="busy()"
+    (onClick)="save()"
+  />
+</app-dialog>

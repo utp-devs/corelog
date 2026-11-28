@@ -35,3 +35,12 @@ export const ISSUE_BROWSE_ROUTES: Routes = [
       import('./issue-detail-page/issue-detail-page').then((m) => m.IssueDetailPage),
   },
 ];
+
+/** Personal timesheet, mounted by the workspace app under /workspace/timesheet. */
+export const TIMESHEET_ROUTES: Routes = [
+  {
+    path: '',
+    title: 'Mi hoja de horas',
+    loadComponent: () => import('./timesheet-page/timesheet-page').then((m) => m.TimesheetPage),
+  },
+];

@@ -2,107 +2,191 @@
   <app-page-header
     banner="issues"
     title="Incidencias"
-    subtitle="Consulta y administra las incidencias registradas."
-  />
-
-  <app-toolbar>
-    <div appToolbarLeft class="issues-list-page__filters">
-      <app-filter-bar
-        searchPlaceholder="Buscar incidencias"
-        [searchValue]="search()"
-        (searchValueChange)="onSearch($event)"
-        [filters]="filterDefinitions()"
-        (clear)="clearFilters()"
-      />
-    </div>
-
-    <div appToolbarRight>
-      <p-button label="Nueva incidencia" icon="pi pi-plus" (onClick)="openNew()" />
-    </div>
-
-    <div appToolbarSecondary>
-      <p-button
-        label="Filtros avanzados"
-        [icon]="advancedVisible() ? 'pi pi-chevron-up' : 'pi pi-chevron-down'"
-        iconPos="right"
-        severity="secondary"
-        [outlined]="true"
-        [attr.aria-expanded]="advancedVisible()"
-        (onClick)="toggleAdvanced()"
-      />
-    </div>
-  </app-toolbar>
-
-  @if (advancedVisible()) {
-    <div class="issues-list-page__saved-row">
-      <p-select
-        class="issues-list-page__filter-select"
-        [options]="savedFilterOptions()"
-        optionLabel="label"
-        optionValue="value"
-        placeholder="Cargar filtro guardado"
-        ariaLabel="Cargar filtro guardado"
-        [showClear]="true"
-        [ngModel]="selectedSavedFilter() ?? null"
-        (ngModelChange)="applySavedFilter($event)"
-      />
-      <p-button
-        label="Guardar filtro actual"
-        severity="secondary"
-        [outlined]="true"
-        (onClick)="openSaveDialog()"
-      />
-      <p-button
-        label="Eliminar filtro"
-        severity="danger"
-        [outlined]="true"
-        [disabled]="!selectedSavedFilter()"
-        (onClick)="deleteSelectedFilter()"
-      />
-      <p-datepicker
-        placeholder="Fecha desde"
-        ariaLabel="Fecha desde"
-        dateFormat="dd/mm/yy"
-        [showIcon]="true"
-        [ngModel]="dueFromDate()"
-        (ngModelChange)="onDueFrom($event)"
-      />
-      <p-datepicker
-        placeholder="Fecha hasta"
-        ariaLabel="Fecha hasta"
-        dateFormat="dd/mm/yy"
-        [showIcon]="true"
-        [ngModel]="dueToDate()"
-        (ngModelChange)="onDueTo($event)"
-      />
-    </div>
-  }
-
-  @if (savedFilterError(); as message) {
-    <div role="alert" class="issues-list-page__alert">
-      <p-message severity="error" [closable]="true" (onClose)="dismissSavedFilterError()">{{
-        message
-      }}</p-message>
-    </div>
-  }
-
-  <app-section flush [fill]="true" ariaLabel="Lista de incidencias">
-    <app-issue-list
-      [fill]="true"
-      [issues]="issues()"
-      [loading]="loading()"
-      [error]="error()"
-      [pagination]="pagination()"
-      [emptyState]="emptyTpl"
-      [rowActions]="rowActions"
-      [selectable]="true"
-      [(selectedKeys)]="selectedKeys"
-      [bulkActions]="bulkActions()"
-      (open)="openIssue($event)"
-      (retry)="retry()"
-      (pageChange)="changePage($event)"
+    subtitle="Busca incidencias con filtros sencillos o con una consulta avanzada."
+  >
+    <p-button
+      appPageHeaderActions
+      label="Nueva incidencia"
+      icon="pi pi-plus"
+      (onClick)="openNew()"
     />
-  </app-section>
+  </app-page-header>
+
+  <div class="issues-list-page__layout">
+    <aside
+      class="issues-list-page__sidebar"
+      [class.issues-list-page__sidebar--open]="sidebarOpen()"
+    >
+      <app-filters-sidebar
+        [filters]="savedFilters()"
+        [activeId]="filterId()"
+        [loading]="savedLoading()"
+        [error]="savedError()"
+        (select)="selectSaved($event)"
+        (toggleSubscription)="toggleSubscription($event)"
+      />
+    </aside>
+
+    <div class="issues-list-page__main">
+      <div class="issues-list-page__bar">
+        <p-button
+          class="issues-list-page__saved-toggle"
+          label="Filtros guardados"
+          icon="pi pi-bookmark"
+          severity="secondary"
+          [outlined]="true"
+          [attr.aria-expanded]="sidebarOpen()"
+          (onClick)="sidebarOpen.set(!sidebarOpen())"
+        />
+        <p-selectbutton
+          class="issues-list-page__modes"
+          optionLabel="label"
+          optionValue="value"
+          ariaLabelledBy="issues-mode-label"
+          [options]="modes"
+          [allowEmpty]="false"
+          [ngModel]="mode()"
+          (ngModelChange)="setMode($event)"
+          data-testid="navigator-mode"
+        />
+        <span id="issues-mode-label" class="issues-list-page__mode-label">Modo de búsqueda</span>
+        <span class="issues-list-page__spacer"></span>
+        @if (currentFilter(); as filter) {
+          <span class="issues-list-page__current" data-testid="current-filter"
+            >Filtro: {{ filter.name }}</span
+          >
+        }
+        <p-button
+          label="Guardar filtro"
+          icon="pi pi-save"
+          severity="secondary"
+          [outlined]="true"
+          [disabled]="!hasQuery()"
+          data-testid="save-filter"
+          (onClick)="openSave()"
+        />
+        <p-button
+          label="Exportar"
+          icon="pi pi-download"
+          severity="secondary"
+          [outlined]="true"
+          [disabled]="issues().length === 0"
+          data-testid="export-csv"
+          (onClick)="exportCsv()"
+        />
+      </div>
+
+      @if (mode() === 'basic') {
+        <app-basic-filters [filters]="filters()" (filtersChange)="setFilters($event)" />
+        <app-query-chips
+          [chips]="chips()"
+          (remove)="removeFilterChip($event)"
+          (clear)="clearFilters()"
+        />
+      } @else {
+        <div class="issues-list-page__advanced">
+          <app-coreql-input
+            [value]="draft()"
+            [problems]="problems()"
+            [provider]="provider"
+            (valueChange)="onDraft($event)"
+            (run)="runAdvanced()"
+          />
+          <div class="issues-list-page__advanced-actions">
+            <p-button
+              label="Buscar"
+              icon="pi pi-search"
+              data-testid="run-query"
+              (onClick)="runAdvanced()"
+            />
+            <span class="issues-list-page__hint"
+              >Ctrl + Enter para buscar. Ctrl + Espacio para ver sugerencias.</span
+            >
+          </div>
+        </div>
+      }
+
+      @if (showQueryBanner() && queryError(); as message) {
+        <p-message severity="error" data-testid="query-error">{{ message }}</p-message>
+      }
+      @for (warning of warnings(); track warning.code) {
+        <p-message severity="warn">{{ warning.message }}</p-message>
+      }
+
+      <div class="issues-list-page__tools">
+        <span class="issues-list-page__count" aria-live="polite" data-testid="result-count">
+          @if (loading()) {
+            Buscando...
+          } @else {
+            {{ total() === 1 ? '1 incidencia' : total() + ' incidencias' }}
+          }
+        </span>
+        <span class="issues-list-page__spacer"></span>
+        <p-select
+          class="issues-list-page__sort"
+          ariaLabel="Ordenar por"
+          optionLabel="label"
+          optionValue="value"
+          placeholder="Ordenar por"
+          appendTo="body"
+          [options]="sortFields"
+          [ngModel]="sort()?.field ?? null"
+          (ngModelChange)="setSortField($event)"
+        />
+        <p-button
+          icon="pi"
+          [class.issues-list-page__direction]="true"
+          [icon]="
+            sort()?.direction === 'ASC' ? 'pi pi-sort-amount-up-alt' : 'pi pi-sort-amount-down'
+          "
+          severity="secondary"
+          [outlined]="true"
+          [ariaLabel]="sort()?.direction === 'ASC' ? 'Orden ascendente' : 'Orden descendente'"
+          (onClick)="toggleSortDirection()"
+        />
+        <p-multiselect
+          class="issues-list-page__columns"
+          ariaLabel="Columnas"
+          placeholder="Columnas"
+          optionLabel="title"
+          optionValue="key"
+          display="comma"
+          appendTo="body"
+          [options]="columnOptions"
+          [maxSelectedLabels]="0"
+          selectedItemsLabel="Columnas ({0})"
+          [ngModel]="selectedColumns()"
+          (ngModelChange)="setColumns($event)"
+        />
+      </div>
+
+      <app-section flush [fill]="true" ariaLabel="Lista de incidencias">
+        <app-issue-list
+          [fill]="true"
+          [issues]="issues()"
+          [loading]="loading()"
+          [error]="loadError()"
+          [pagination]="pagination()"
+          [columnKeys]="visibleColumns()"
+          [emptyState]="emptyTpl"
+          [rowActions]="rowActions"
+          [selectable]="true"
+          [(selectedKeys)]="selectedKeys"
+          [bulkActions]="bulkActions()"
+          (open)="openIssue($event)"
+          (retry)="refresh()"
+          (pageChange)="changePage($event)"
+        />
+      </app-section>
+    </div>
+  </div>
+
+  <app-issue-bulk-dialog
+    [kind]="bulkKind()"
+    [issues]="selectedKeys()"
+    (closed)="bulkKind.set(null)"
+    (done)="onBulkDone()"
+  />
 
   <app-issue-status-dialog
     [open]="statusOpen()"
@@ -111,42 +195,60 @@
     (changed)="onStatusChanged()"
   />
 
+  <app-save-filter-dialog
+    [open]="saveOpen()"
+    [current]="editableFilter()"
+    [busy]="saveBusy()"
+    [error]="saveError()"
+    (save)="save($event)"
+    (closeRequested)="saveOpen.set(false)"
+  />
+
+  <app-filter-subscription-dialog
+    [open]="subscriptionTarget() !== null"
+    [filter]="subscriptionTarget()"
+    (closeRequested)="subscriptionTarget.set(null)"
+  />
+
   <app-dialog
     size="sm"
-    heading="Guardar filtro"
-    subtitle="Ponle un nombre para volver a usarlo cuando quieras."
-    [open]="saveDialogOpen()"
-    (closeRequested)="closeSaveDialog()"
+    heading="Volver a los filtros básicos"
+    subtitle="La consulta avanzada puede tener condiciones que los filtros básicos no pueden mostrar."
+    [open]="switchWarningOpen()"
+    (closeRequested)="switchWarningOpen.set(false)"
   >
-    <input
-      pInputText
-      class="issues-list-page__name-input"
-      data-autofocus
-      maxlength="80"
-      aria-label="Nombre del filtro"
-      placeholder="Nombre del filtro"
-      [ngModel]="savedFilterName()"
-      (ngModelChange)="onSavedFilterName($event)"
-      (keydown.enter)="saveCurrentFilter()"
-    />
-    <p-button dialogFooter label="Cancelar" severity="secondary" (onClick)="closeSaveDialog()" />
+    <p>Si continúas, la consulta escrita se descarta y empiezas de nuevo con filtros vacíos.</p>
     <p-button
       dialogFooter
-      label="Guardar"
-      [disabled]="!canSaveName()"
-      (onClick)="saveCurrentFilter()"
+      label="Seguir en avanzado"
+      severity="secondary"
+      (onClick)="switchWarningOpen.set(false)"
+    />
+    <p-button
+      dialogFooter
+      label="Descartar la consulta"
+      data-testid="confirm-basic"
+      (onClick)="confirmBasicMode()"
     />
   </app-dialog>
 </app-page-container>
 
 <ng-template #emptyTpl>
-  @if (hasActiveFilters()) {
+  @if (queryError()) {
     <app-empty-state
       image="empty-search"
-      title="Ninguna incidencia coincide con los filtros"
+      title="La consulta tiene un problema"
+      description="Corrígela y vuelve a buscar."
+    />
+  } @else if (hasQuery()) {
+    <app-empty-state
+      image="empty-search"
+      title="Ninguna incidencia coincide con la búsqueda"
       description="Cambia o limpia los filtros para ver más resultados."
     >
-      <p-button action label="Limpiar filtros" severity="secondary" (onClick)="clearFilters()" />
+      @if (mode() === 'basic') {
+        <p-button action label="Limpiar filtros" severity="secondary" (onClick)="clearFilters()" />
+      }
     </app-empty-state>
   } @else {
     <app-empty-state

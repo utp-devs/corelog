@@ -1,0 +1,104 @@
+<app-page-container variant="wide" pageName="timesheet" [ready]="!loading() || sheet() !== null">
+  <app-page-header
+    title="Mi hoja de horas"
+    subtitle="El tiempo que registraste cada día de la semana."
+  />
+
+  <div class="timesheet__toolbar">
+    <p-button
+      icon="pi pi-chevron-left"
+      severity="secondary"
+      [outlined]="true"
+      class="touch-target"
+      ariaLabel="Semana anterior"
+      data-testid="timesheet-prev"
+      (onClick)="previous()"
+    />
+    <p-button
+      label="Esta semana"
+      severity="secondary"
+      [outlined]="true"
+      class="touch-target"
+      [disabled]="isCurrentWeek()"
+      (onClick)="current()"
+    />
+    <p-button
+      icon="pi pi-chevron-right"
+      severity="secondary"
+      [outlined]="true"
+      class="touch-target"
+      ariaLabel="Semana siguiente"
+      data-testid="timesheet-next"
+      (onClick)="next()"
+    />
+    <h2 class="timesheet__range" data-testid="timesheet-range">{{ rangeLabel() }}</h2>
+  </div>
+
+  @if (error(); as message) {
+    <p-message severity="error" [closable]="false" role="alert">{{ message }}</p-message>
+  } @else if (loading() && !sheet()) {
+    <app-loading-skeleton variant="card" />
+  } @else if (grid().rows.length === 0) {
+    <app-empty-state
+      title="Sin tiempo registrado esta semana"
+      description="Registra tiempo desde una incidencia con la acción «Registrar tiempo»."
+    />
+  } @else {
+    <div class="timesheet__scroll">
+      <table class="timesheet__table" data-testid="timesheet-table">
+        <caption class="timesheet__caption">
+          Tiempo registrado por incidencia y día
+        </caption>
+        <thead>
+          <tr>
+            <th scope="col" class="timesheet__head timesheet__head--issue">Incidencia</th>
+            @for (column of grid().columns; track column.date) {
+              <th
+                scope="col"
+                class="timesheet__head"
+                [class.timesheet__head--today]="column.date === today"
+              >
+                {{ label(column.date) }}
+              </th>
+            }
+            <th scope="col" class="timesheet__head">Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of grid().rows; track row.issueId) {
+            <tr data-testid="timesheet-row">
+              <th scope="row" class="timesheet__issue">
+                <a class="timesheet__key" [routerLink]="pathOf(row.issueKey)">{{ row.issueKey }}</a>
+                <span class="timesheet__title">{{ row.issueTitle }}</span>
+              </th>
+              @for (cell of row.cells; track $index) {
+                <td class="timesheet__cell">{{ format(cell) }}</td>
+              }
+              <td class="timesheet__cell timesheet__cell--total">{{ format(row.totalSeconds) }}</td>
+            </tr>
+          }
+        </tbody>
+        <tfoot>
+          <tr>
+            <th scope="row" class="timesheet__issue">Total del día</th>
+            @for (column of grid().columns; track column.date) {
+              <td class="timesheet__cell timesheet__cell--day-total">
+                <span>{{ format(column.totalSeconds) || '0m' }}</span>
+                @if (column.capacitySeconds > 0) {
+                  <app-progress-bar
+                    [label]="'Capacidad del ' + label(column.date)"
+                    [tone]="tone(column.totalSeconds, column.capacitySeconds)"
+                    [value]="percent(column.totalSeconds, column.capacitySeconds)"
+                  />
+                }
+              </td>
+            }
+            <td class="timesheet__cell timesheet__cell--total" data-testid="timesheet-total">
+              {{ format(grid().totalSeconds) || '0m' }}
+            </td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  }
+</app-page-container>

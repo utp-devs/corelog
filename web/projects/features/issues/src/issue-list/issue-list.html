@@ -52,6 +52,20 @@
     <ng-container *ngTemplateOutlet="assigneeTpl; context: { $implicit: row }" />
   </ng-template>
 
+  <ng-template appDataTableCell="type" let-row>{{ row.issueType.name }}</ng-template>
+
+  <ng-template appDataTableCell="reporter" let-row>{{ row.reporterName }}</ng-template>
+
+  <ng-template appDataTableCell="project" let-row>{{ row.projectKey }}</ng-template>
+
+  <ng-template appDataTableCell="labels" let-row>{{ labelsText(row) }}</ng-template>
+
+  <ng-template appDataTableCell="points" let-row>{{ row.storyPoints ?? '' }}</ng-template>
+
+  <ng-template appDataTableCell="due" let-row>{{ dateText(row.dueDate) }}</ng-template>
+
+  <ng-template appDataTableCell="created" let-row>{{ dateText(row.createdAt) }}</ng-template>
+
   <ng-template appDataTableCell="updated" let-row>
     <time
       class="issue-list__time"

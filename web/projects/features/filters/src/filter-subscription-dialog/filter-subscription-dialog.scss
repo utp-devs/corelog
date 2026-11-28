@@ -1,0 +1,20 @@
+@use '../../../../ui/styles/mixins' as m;
+
+.filter-subscription-dialog {
+  @include m.flex-column(var(--cl-space-4));
+
+  &__field {
+    @include m.flex-column(var(--cl-space-1));
+  }
+
+  &__label {
+    font-size: var(--cl-font-small);
+    font-weight: var(--cl-weight-medium);
+  }
+
+  &__error {
+    margin: 0;
+    color: var(--cl-danger-text);
+    font-size: var(--cl-font-small);
+  }
+}

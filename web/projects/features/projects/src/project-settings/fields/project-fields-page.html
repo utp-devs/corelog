@@ -1,0 +1,121 @@
+<app-section
+  title="Campos"
+  description="Elige qué campos pide la creación de incidencias de cada tipo, en qué orden y cuáles son obligatorios."
+  ariaLabel="Campos de las incidencias del proyecto"
+  class="project-fields"
+>
+  @if (failed()) {
+    <app-error-state
+      message="No se pudieron cargar los campos."
+      [canRetry]="true"
+      (retry)="retry()"
+    />
+  } @else {
+    <div class="project-fields__type">
+      <label class="project-fields__label" for="project-fields-type">Tipo de incidencia</label>
+      <app-select-field
+        inputId="project-fields-type"
+        ariaLabel="Tipo de incidencia"
+        [options]="typeOptions()"
+        [ngModel]="typeId()"
+        (ngModelChange)="typeId.set($event ?? '')"
+      />
+    </div>
+
+    @if (error(); as message) {
+      <p-message severity="error" [closable]="false" role="alert">{{ message }}</p-message>
+    }
+
+    @if (loading()) {
+      <app-loading-skeleton variant="detail" [rows]="4" />
+    } @else {
+      <ol
+        class="project-fields__list"
+        cdkDropList
+        data-testid="project-fields-list"
+        (cdkDropListDropped)="drop($event)"
+      >
+        @for (row of rows(); track row.kind + row.key; let i = $index) {
+          <li
+            class="project-fields__row"
+            cdkDrag
+            [cdkDragDisabled]="!canEdit()"
+            data-testid="project-field-row"
+          >
+            <i class="pi pi-bars project-fields__handle" aria-hidden="true"></i>
+            <span class="project-fields__name">
+              {{ row.name }}
+              @if (row.kind === 'custom') {
+                <span class="project-fields__muted">Campo personalizado</span>
+              }
+            </span>
+            <label class="project-fields__required">
+              <input
+                type="checkbox"
+                [checked]="row.required || isLocked(row)"
+                [disabled]="!canEdit() || isLocked(row)"
+                (change)="setRequired(i, $any($event.target).checked)"
+              />
+              <span>Obligatorio</span>
+            </label>
+            @if (canEdit()) {
+              <div class="project-fields__actions">
+                <p-button
+                  icon="pi pi-arrow-up"
+                  severity="secondary"
+                  [text]="true"
+                  class="touch-target"
+                  [ariaLabel]="'Subir ' + row.name"
+                  [disabled]="i === 0"
+                  (onClick)="move(i, -1)"
+                />
+                <p-button
+                  icon="pi pi-arrow-down"
+                  severity="secondary"
+                  [text]="true"
+                  class="touch-target"
+                  [ariaLabel]="'Bajar ' + row.name"
+                  [disabled]="i === rows().length - 1"
+                  (onClick)="move(i, 1)"
+                />
+                @if (!isLocked(row)) {
+                  <p-button
+                    icon="pi pi-times"
+                    severity="secondary"
+                    [text]="true"
+                    class="touch-target"
+                    [ariaLabel]="'Quitar ' + row.name"
+                    (onClick)="remove(i)"
+                  />
+                }
+              </div>
+            }
+          </li>
+        }
+      </ol>
+
+      @if (canEdit()) {
+        <div class="project-fields__footer">
+          @if (addable().length > 0) {
+            <app-select-field
+              class="project-fields__add"
+              ariaLabel="Añadir un campo"
+              placeholder="Añadir un campo"
+              [options]="addable()"
+              [ngModel]="addPick()"
+              (ngModelChange)="add($event)"
+            />
+          }
+          <p-button
+            label="Guardar campos"
+            class="touch-target"
+            data-testid="project-fields-save"
+            [disabled]="!dirty()"
+            [loading]="saving()"
+            (onClick)="save()"
+          />
+        </div>
+      }
+    }
+  }
+</app-section>

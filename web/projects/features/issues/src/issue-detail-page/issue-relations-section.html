@@ -1,0 +1,150 @@
+@if (hierarchyLevel() !== -1) {
+  <app-section title="Incidencias hijas" class="issue-relations" data-testid="issue-children">
+    @if (loading()) {
+      <app-loading-skeleton variant="card" />
+    } @else if (error(); as message) {
+      <p-message severity="error" [closable]="false" role="alert">{{ message }}</p-message>
+    } @else {
+      @if (children(); as data) {
+        @if (data.total > 0) {
+          <app-progress-bar
+            label="Completado"
+            tone="success"
+            [value]="data.percent"
+            data-testid="children-progress"
+          />
+          <p class="issue-relations__count">{{ data.done }} de {{ data.total }} hechas</p>
+          <ul class="issue-relations__list">
+            @for (child of data.children; track child.id) {
+              <li class="issue-relations__item" data-testid="child-item">
+                <a class="issue-relations__key" [routerLink]="pathOf(child.key)">{{ child.key }}</a>
+                <span class="issue-relations__summary">{{ child.summary }}</span>
+                <span class="issue-relations__muted">{{
+                  child.assigneeName ?? 'Sin asignar'
+                }}</span>
+                <app-status-tag [status]="statusOf(child.status)" />
+              </li>
+            }
+          </ul>
+        } @else {
+          <p class="issue-relations__empty">Esta incidencia no tiene hijas</p>
+        }
+      }
+      @if (canAddChild()) {
+        <form class="issue-relations__quick" (submit)="$event.preventDefault(); addSubtask()">
+          <input
+            class="issue-relations__input"
+            type="text"
+            name="subtask"
+            maxlength="255"
+            placeholder="Resumen de la nueva subtarea"
+            aria-label="Resumen de la nueva subtarea"
+            [ngModel]="newSubtask()"
+            (ngModelChange)="newSubtask.set($event)"
+            [disabled]="adding()"
+          />
+          <p-button
+            type="submit"
+            label="Agregar subtarea"
+            icon="pi pi-plus"
+            severity="secondary"
+            [outlined]="true"
+            class="touch-target"
+            [disabled]="newSubtask().trim() === ''"
+            [loading]="adding()"
+          />
+        </form>
+      }
+    }
+  </app-section>
+}
+
+<app-section title="Vínculos" class="issue-relations" data-testid="issue-links">
+  <div appSectionActions>
+    @if (canLink()) {
+      <p-button
+        label="Vincular incidencia"
+        icon="pi pi-link"
+        severity="secondary"
+        [outlined]="true"
+        class="touch-target"
+        data-testid="link-open"
+        (onClick)="openLink()"
+      />
+    }
+  </div>
+  @if (loading()) {
+    <app-loading-skeleton variant="card" />
+  } @else if (groups().length === 0) {
+    <p class="issue-relations__empty">Aún no hay vínculos</p>
+  } @else {
+    @for (group of groups(); track group.label) {
+      <h3 class="issue-relations__group">{{ group.label }}</h3>
+      <ul class="issue-relations__list">
+        @for (link of group.links; track link.id) {
+          <li class="issue-relations__item" data-testid="link-item">
+            <a class="issue-relations__key" [routerLink]="pathOf(link.issue.key)">{{
+              link.issue.key
+            }}</a>
+            <span class="issue-relations__summary">{{ link.issue.summary }}</span>
+            <app-status-tag [status]="statusOf(link.issue.status)" />
+            @if (canLink()) {
+              <p-button
+                icon="pi pi-times"
+                severity="secondary"
+                [text]="true"
+                class="touch-target"
+                ariaLabel="Quitar vínculo con {{ link.issue.key }}"
+                appTooltip="Quitar vínculo"
+                (onClick)="removeLink(link)"
+              />
+            }
+          </li>
+        }
+      </ul>
+    }
+  }
+</app-section>
+
+<app-dialog
+  size="md"
+  heading="Vincular incidencia"
+  [open]="linkOpen()"
+  (closeRequested)="closeLink()"
+>
+  <form class="issue-relations__form" (submit)="$event.preventDefault(); createLink()">
+    @if (linkError(); as message) {
+      <p-message severity="error" [closable]="false" role="alert">{{ message }}</p-message>
+    }
+    <app-field-row #kindRow label="Tipo de vínculo" [required]="true">
+      <app-select-field
+        [inputId]="kindRow.controlId"
+        [options]="kindOptions"
+        ariaLabel="Tipo de vínculo"
+        [ngModel]="linkKind()"
+        [ngModelOptions]="{ standalone: true }"
+        (ngModelChange)="linkKind.set($event)"
+      />
+    </app-field-row>
+    <app-field-row label="Incidencia" [required]="true">
+      <app-issue-picker [excludeId]="issueId()" [(value)]="linkTarget" />
+    </app-field-row>
+  </form>
+  <p-button
+    dialogFooter
+    label="Cancelar"
+    severity="secondary"
+    [text]="true"
+    class="touch-target"
+    [disabled]="linkSaving()"
+    (onClick)="closeLink()"
+  />
+  <p-button
+    dialogFooter
+    label="Vincular"
+    class="touch-target"
+    data-testid="link-submit"
+    [loading]="linkSaving()"
+    (onClick)="createLink()"
+  />
+</app-dialog>

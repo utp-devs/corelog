@@ -1,0 +1,257 @@
+<app-section title="Actividad" class="issue-conversation" data-testid="issue-conversation">
+  <div class="issue-conversation__tabs" role="tablist" aria-label="Actividad de la incidencia">
+    @for (item of tabs; track item.id) {
+      <button
+        type="button"
+        role="tab"
+        class="issue-conversation__tab"
+        [class.issue-conversation__tab--active]="tab() === item.id"
+        [id]="tabId(item.id)"
+        [attr.aria-selected]="tab() === item.id ? 'true' : 'false'"
+        aria-controls="conversation-panel"
+        [attr.tabindex]="tab() === item.id ? 0 : -1"
+        (click)="selectTab(item.id)"
+        (keydown)="onTabKeydown($event)"
+      >
+        {{ item.label }}
+        @if (item.id === 'comments') {
+          <span class="issue-conversation__count">{{ counts() }}</span>
+        }
+      </button>
+    }
+  </div>
+
+  <div
+    class="issue-conversation__panel"
+    role="tabpanel"
+    id="conversation-panel"
+    [attr.aria-labelledby]="tabId(tab())"
+  >
+    @if (canComment() && tab() !== 'history') {
+      @if (me(); as user) {
+        <div class="issue-conversation__composer">
+          <app-user-avatar [id]="user.id" [name]="user.name" [size]="32" />
+          @if (composerOpen()) {
+            <div class="issue-conversation__composer-body">
+              @if (composerError(); as message) {
+                <p-message severity="error" [closable]="false" role="alert">{{
+                  message
+                }}</p-message>
+              }
+              <app-rich-text-editor
+                ariaLabel="Nuevo comentario"
+                placeholder="Escribe un comentario. Usa @ para mencionar."
+                [formControl]="composer"
+                [minRows]="3"
+                [searchUsers]="searchUsers"
+                [submittable]="true"
+                [disabled]="sending()"
+                (submitted)="submitComposer()"
+              />
+              <div class="issue-conversation__composer-actions">
+                <label class="issue-conversation__internal">
+                  <input
+                    type="checkbox"
+                    data-testid="comment-internal-toggle"
+                    [checked]="internal()"
+                    (change)="internal.set($any($event.target).checked)"
+                  />
+                  <span>Comentario interno</span>
+                </label>
+                @if (internal()) {
+                  <app-select-field
+                    class="issue-conversation__role"
+                    ariaLabel="Quién puede leerlo"
+                    [options]="roleOptions"
+                    [ngModel]="internalRole()"
+                    (ngModelChange)="internalRole.set($event)"
+                  />
+                }
+                <span class="issue-conversation__spacer"></span>
+                <p-button
+                  label="Cancelar"
+                  severity="secondary"
+                  [text]="true"
+                  class="touch-target"
+                  [disabled]="sending()"
+                  (onClick)="cancelComposer()"
+                />
+                <p-button
+                  label="Comentar"
+                  class="touch-target"
+                  data-testid="comment-submit"
+                  [disabled]="!canSend()"
+                  [loading]="sending()"
+                  (onClick)="submitComposer()"
+                />
+              </div>
+            </div>
+          } @else {
+            <button
+              type="button"
+              class="issue-conversation__collapsed"
+              aria-label="Nuevo comentario"
+              data-testid="comment-open"
+              (click)="openComposer()"
+            >
+              Escribe un comentario…
+            </button>
+          }
+        </div>
+      }
+    }
+
+    @if (loadError(); as message) {
+      <p-message severity="error" [closable]="false" role="alert">{{ message }}</p-message>
+    } @else if (tab() === 'comments') {
+      @if (loading()) {
+        <app-loading-skeleton variant="card" />
+      } @else if (threadViews().length === 0) {
+        <p class="issue-conversation__empty">Aún no hay comentarios</p>
+      } @else {
+        <div class="issue-conversation__threads">
+          @for (thread of threadViews(); track thread.id) {
+            <app-comment-thread
+              [thread]="thread"
+              [reactionChoices]="reactionChoices"
+              [editingId]="editingId()"
+              [replyingId]="replyingId()"
+              [editor]="editorTpl"
+              [composer]="replyTpl"
+              [canReply]="canComment()"
+              [canReact]="canComment()"
+              (react)="toggleReaction($event)"
+              (edit)="startEdit($event)"
+              (remove)="deletingId.set($event)"
+              (reply)="startReply($event)"
+              (history)="showRevisions($event)"
+            />
+          }
+        </div>
+        @if (hasMore()) {
+          <button
+            type="button"
+            class="issue-conversation__more"
+            data-testid="comments-more"
+            [disabled]="loadingMore()"
+            (click)="loadMore()"
+          >
+            {{ loadingMore() ? 'Cargando…' : 'Cargar más comentarios' }}
+          </button>
+        }
+      }
+    } @else {
+      <app-activity-feed
+        [items]="feedItems()"
+        [loading]="loading()"
+        [loadingMore]="loadingMore()"
+        [hasMore]="hasMore()"
+        [emptyText]="tab() === 'history' ? 'Aún no hay cambios' : 'Aún no hay actividad'"
+        (loadMore)="loadMore()"
+      />
+    }
+  </div>
+</app-section>
+
+<ng-template #editorTpl let-comment>
+  <div class="issue-conversation__edit">
+    <app-rich-text-editor
+      ariaLabel="Editar comentario"
+      [formControl]="editControl"
+      [minRows]="3"
+      [searchUsers]="searchUsers"
+      [submittable]="true"
+      [disabled]="busyId() === comment.id"
+      (submitted)="saveEdit(comment.id)"
+    />
+    <div class="issue-conversation__composer-actions">
+      <span class="issue-conversation__spacer"></span>
+      <p-button
+        label="Cancelar"
+        severity="secondary"
+        [text]="true"
+        class="touch-target"
+        (onClick)="cancelEdit()"
+      />
+      <p-button
+        label="Guardar"
+        class="touch-target"
+        [loading]="busyId() === comment.id"
+        (onClick)="saveEdit(comment.id)"
+      />
+    </div>
+  </div>
+</ng-template>
+
+<ng-template #replyTpl let-thread>
+  <div class="issue-conversation__edit">
+    <app-rich-text-editor
+      ariaLabel="Responder al comentario"
+      placeholder="Escribe una respuesta"
+      [formControl]="replyControl"
+      [minRows]="2"
+      [searchUsers]="searchUsers"
+      [submittable]="true"
+      (submitted)="submitReply(thread)"
+    />
+    <div class="issue-conversation__composer-actions">
+      <span class="issue-conversation__spacer"></span>
+      <p-button
+        label="Cancelar"
+        severity="secondary"
+        [text]="true"
+        class="touch-target"
+        (onClick)="cancelReply()"
+      />
+      <p-button
+        label="Responder"
+        class="touch-target"
+        [disabled]="replyControl.value.trim() === ''"
+        [loading]="busyId() === thread.id"
+        (onClick)="submitReply(thread)"
+      />
+    </div>
+  </div>
+</ng-template>
+
+<app-confirm-modal
+  [open]="deletingId() !== null"
+  title="Eliminar comentario"
+  description="El comentario se eliminará de la incidencia y no se podrá recuperar."
+  confirmText="Eliminar"
+  [danger]="true"
+  [loading]="busyId() !== null && busyId() === deletingId()"
+  (confirmed)="confirmDelete()"
+  (cancelled)="deletingId.set(null)"
+/>
+
+<app-dialog
+  size="md"
+  heading="Historial de ediciones"
+  [open]="revisionsFor() !== null"
+  (closeRequested)="closeRevisions()"
+>
+  @if (revisions(); as list) {
+    @if (list.length === 0) {
+      <p class="issue-conversation__empty">No hay versiones anteriores.</p>
+    } @else {
+      <ol class="issue-conversation__revisions">
+        @for (revision of list; track revision.id) {
+          <li class="issue-conversation__revision">
+            <time class="issue-conversation__muted">{{ revision.editedAt }}</time>
+            <app-rich-text-view [value]="revision.body" />
+          </li>
+        }
+      </ol>
+    }
+  } @else {
+    <app-loading-skeleton variant="card" />
+  }
+  <p-button
+    dialogFooter
+    label="Cerrar"
+    severity="secondary"
+    class="touch-target"
+    (onClick)="closeRevisions()"
+  />
+</app-dialog>

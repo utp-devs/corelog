@@ -1,0 +1,41 @@
+@use '../../../../ui/styles/mixins' as m;
+@use '../../../../ui/field-row/src/control' as c;
+
+.issue-operations {
+  @include m.flex-column(4);
+
+  &__input {
+    @include c.control-box;
+  }
+
+  &__group {
+    @include m.flex-column(2);
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+
+  &__legend {
+    margin-bottom: var(--cl-space-2);
+    padding: 0;
+    font-weight: var(--cl-weight-semibold);
+  }
+
+  &__check {
+    @include m.flex-row(2);
+    min-height: var(--cl-control-h-md);
+    cursor: pointer;
+  }
+
+  &__note {
+    margin: 0;
+    color: var(--cl-text-subtle);
+    font-size: var(--cl-font-small);
+  }
+
+  &__list {
+    margin: 0;
+    padding-left: var(--cl-space-4);
+    color: var(--cl-text);
+  }
+}

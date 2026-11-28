@@ -1,0 +1,95 @@
+<app-dialog
+  size="md"
+  heading="Compartir filtro"
+  [subtitle]="filter()?.name ?? ''"
+  [open]="open()"
+  (closeRequested)="closeRequested.emit()"
+>
+  <div class="filter-share-dialog">
+    <div class="filter-share-dialog__add">
+      <input
+        pInputText
+        type="search"
+        class="filter-share-dialog__search"
+        aria-label="Buscar personas, equipos o proyectos"
+        placeholder="Buscar personas, equipos o proyectos"
+        data-testid="share-search"
+        autocomplete="off"
+        [ngModel]="query()"
+        (ngModelChange)="onQuery($event)"
+      />
+      <p-button
+        label="Toda la organización"
+        severity="secondary"
+        [outlined]="true"
+        [disabled]="organizationShared() || !organization()"
+        (onClick)="shareOrganization()"
+      />
+    </div>
+
+    @if (candidates().length > 0) {
+      <ul class="filter-share-dialog__candidates" aria-label="Resultados">
+        @for (candidate of candidates(); track candidate.type + candidate.targetId) {
+          <li>
+            <button
+              type="button"
+              class="filter-share-dialog__candidate"
+              data-testid="share-candidate"
+              [disabled]="isShared(candidate)"
+              (click)="add(candidate)"
+            >
+              <span class="filter-share-dialog__kind">{{ typeLabel(candidate.type) }}</span>
+              <span class="filter-share-dialog__name">{{ candidate.name }}</span>
+              <span class="filter-share-dialog__detail">{{ candidate.detail }}</span>
+            </button>
+          </li>
+        }
+      </ul>
+    }
+
+    @if (shares().length === 0) {
+      <p class="filter-share-dialog__empty">
+        Este filtro no está compartido. Solo tú puedes verlo.
+      </p>
+    } @else {
+      <ul class="filter-share-dialog__shares" aria-label="Compartido con">
+        @for (share of shares(); track share.type + share.targetId; let index = $index) {
+          <li class="filter-share-dialog__share" data-testid="share-row">
+            <span class="filter-share-dialog__kind">{{ typeLabel(share.type) }}</span>
+            <span class="filter-share-dialog__name">{{ share.targetName }}</span>
+            <p-select
+              class="filter-share-dialog__permission"
+              optionLabel="label"
+              optionValue="value"
+              appendTo="body"
+              [ariaLabel]="'Permiso de ' + share.targetName"
+              [options]="permissions"
+              [ngModel]="share.permission"
+              (ngModelChange)="setPermission(index, $event)"
+            />
+            <p-button
+              icon="pi pi-times"
+              severity="secondary"
+              [text]="true"
+              [attr.aria-label]="'Dejar de compartir con ' + share.targetName"
+              (onClick)="remove(index)"
+            />
+          </li>
+        }
+      </ul>
+    }
+
+    @if (error(); as message) {
+      <p class="filter-share-dialog__error" role="alert">{{ message }}</p>
+    }
+  </div>
+
+  <p-button dialogFooter label="Cancelar" severity="secondary" (onClick)="closeRequested.emit()" />
+  <p-button
+    dialogFooter
+    label="Guardar"
+    data-testid="share-save"
+    [loading]="busy()"
+    (onClick)="save()"
+  />
+</app-dialog>

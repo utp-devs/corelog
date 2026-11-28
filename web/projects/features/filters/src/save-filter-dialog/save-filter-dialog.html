@@ -1,0 +1,61 @@
+<app-dialog
+  size="sm"
+  heading="Guardar filtro"
+  subtitle="Ponle un nombre para volver a usarlo cuando quieras."
+  [open]="open()"
+  (closeRequested)="closeRequested.emit()"
+>
+  <form class="save-filter-dialog" (ngSubmit)="submit()">
+    @if (current()) {
+      <fieldset class="save-filter-dialog__choice">
+        <legend class="save-filter-dialog__legend">Qué hacer</legend>
+        <label class="save-filter-dialog__radio">
+          <input type="radio" name="mode" [checked]="replace()" (change)="setReplace(true)" />
+          Actualizar el filtro actual
+        </label>
+        <label class="save-filter-dialog__radio">
+          <input type="radio" name="mode" [checked]="!replace()" (change)="setReplace(false)" />
+          Guardar como filtro nuevo
+        </label>
+      </fieldset>
+    }
+
+    <label class="save-filter-dialog__field">
+      <span class="save-filter-dialog__label">Nombre</span>
+      <input
+        pInputText
+        data-autofocus
+        data-testid="filter-name"
+        autocomplete="off"
+        [attr.maxlength]="nameMax"
+        [value]="name()"
+        (input)="name.set($any($event.target).value)"
+      />
+    </label>
+
+    <label class="save-filter-dialog__field">
+      <span class="save-filter-dialog__label">Descripción (opcional)</span>
+      <textarea
+        pTextarea
+        rows="2"
+        [attr.maxlength]="descriptionMax"
+        [value]="description()"
+        (input)="description.set($any($event.target).value)"
+      ></textarea>
+    </label>
+
+    @if (error(); as message) {
+      <p class="save-filter-dialog__error" role="alert">{{ message }}</p>
+    }
+  </form>
+
+  <p-button dialogFooter label="Cancelar" severity="secondary" (onClick)="closeRequested.emit()" />
+  <p-button
+    dialogFooter
+    label="Guardar"
+    data-testid="filter-save"
+    [disabled]="!valid()"
+    [loading]="busy()"
+    (onClick)="submit()"
+  />
+</app-dialog>

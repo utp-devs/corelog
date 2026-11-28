@@ -1,0 +1,27 @@
+@use '../../../../ui/styles/mixins' as m;
+
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.filters-page {
+  &__scopes {
+    margin-bottom: var(--cl-space-4);
+    overflow-x: auto;
+  }
+
+  &__name {
+    font-weight: var(--cl-weight-medium);
+    white-space: nowrap;
+  }
+
+  &__on {
+    @include m.flex-row(var(--cl-space-1));
+    color: var(--cl-brand);
+  }
+
+  &__off {
+    color: var(--cl-text-subtle);
+  }
+}

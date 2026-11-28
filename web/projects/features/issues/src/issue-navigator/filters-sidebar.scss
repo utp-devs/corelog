@@ -1,0 +1,102 @@
+@use '../../../../ui/styles/mixins' as m;
+@use '../../../../ui/field-row/src/control' as c;
+
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.filters-sidebar {
+  @include m.flex-column(var(--cl-space-3));
+
+  &__title {
+    margin: 0;
+    font-size: var(--cl-font-body-strong);
+    font-weight: var(--cl-weight-semibold);
+  }
+
+  &__note {
+    margin: 0;
+    color: var(--cl-text-subtle);
+    font-size: var(--cl-font-small);
+  }
+
+  &__group {
+    @include m.flex-column(var(--cl-space-1));
+  }
+
+  &__group-title {
+    margin: 0;
+    color: var(--cl-text-subtle);
+    font-size: var(--cl-font-small);
+    font-weight: var(--cl-weight-semibold);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  &__list {
+    @include m.flex-column(var(--cl-space-1));
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  &__item {
+    @include m.flex-row(var(--cl-space-1));
+    border-radius: var(--cl-radius-md);
+
+    &:hover {
+      background: var(--cl-bg-hover);
+    }
+
+    &--active {
+      background: var(--cl-bg-selected);
+    }
+  }
+
+  &__select {
+    @include m.flex-column(0, flex-start);
+    flex: 1 1 auto;
+    min-width: 0;
+    min-height: var(--cl-control-h-md);
+    padding: var(--cl-space-1) var(--cl-space-2);
+    border: 0;
+    border-radius: var(--cl-radius-md);
+    background: transparent;
+    color: var(--cl-text);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+    justify-content: center;
+
+    &:focus-visible {
+      @include c.focus-ring;
+    }
+  }
+
+  &__name {
+    @include m.truncate;
+    max-width: 100%;
+  }
+
+  &__owner {
+    @include m.truncate;
+    max-width: 100%;
+    color: var(--cl-text-subtle);
+    font-size: var(--cl-font-caption);
+  }
+
+  &__bell {
+    @include c.icon-button;
+    color: var(--cl-text-subtle);
+
+    &--on {
+      color: var(--cl-brand);
+    }
+  }
+
+  &__manage {
+    color: var(--cl-brand);
+    font-size: var(--cl-font-small);
+  }
+}

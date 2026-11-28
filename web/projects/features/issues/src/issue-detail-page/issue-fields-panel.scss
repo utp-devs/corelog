@@ -1,0 +1,59 @@
+@use '../../../../ui/styles/mixins' as m;
+
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.issue-fields {
+  &__list {
+    @include m.flex-column(3);
+    min-width: 0;
+  }
+
+  &__parent {
+    @include m.flex-column(1, flex-start);
+    min-width: 0;
+  }
+
+  &__inline-actions {
+    @include m.cluster(1);
+  }
+
+  &__link {
+    color: var(--cl-brand);
+    font-weight: var(--cl-weight-semibold);
+    text-decoration: none;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+
+  &__muted {
+    color: var(--cl-text-subtle);
+    overflow-wrap: anywhere;
+  }
+
+  &__facts {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    gap: var(--cl-space-2) var(--cl-space-4);
+    margin: var(--cl-space-4) 0 0;
+    padding-top: var(--cl-space-4);
+    border-top: 1px solid var(--cl-border);
+
+    dt {
+      color: var(--cl-text-subtle);
+    }
+
+    dd {
+      min-width: 0;
+      margin: 0;
+    }
+  }
+
+  &__person {
+    @include m.flex-row(2);
+  }
+}

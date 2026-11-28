@@ -1,0 +1,92 @@
+<app-dialog
+  size="md"
+  [heading]="heading()"
+  [subtitle]="countText()"
+  [open]="kind() !== null"
+  (closeRequested)="close()"
+>
+  <form class="issue-bulk" (submit)="$event.preventDefault(); submit()" novalidate>
+    @if (error(); as message) {
+      <p-message severity="error" [closable]="false" role="alert" data-testid="bulk-error">{{
+        message
+      }}</p-message>
+    }
+
+    @switch (kind()) {
+      @case ('assign') {
+        <app-field-row label="Responsable" helper="Déjalo vacío para quitar el responsable.">
+          <app-user-picker
+            ariaLabel="Responsable"
+            placeholder="Sin asignar"
+            [users]="users()"
+            [value]="assignee()"
+            (valueChange)="assignee.set($event)"
+            (search)="teammates.search($event)"
+          />
+        </app-field-row>
+      }
+      @case ('set_priority') {
+        <app-field-row #prioRow label="Prioridad" [required]="true">
+          <app-select-field
+            [inputId]="prioRow.controlId"
+            ariaLabel="Prioridad"
+            [options]="priorityOptions()"
+            [ngModel]="priority()"
+            [ngModelOptions]="{ standalone: true }"
+            (ngModelChange)="priority.set($event ?? '')"
+          />
+        </app-field-row>
+      }
+      @case ('move') {
+        <app-field-row #projRow label="Proyecto de destino" [required]="true">
+          <app-select-field
+            [inputId]="projRow.controlId"
+            ariaLabel="Proyecto de destino"
+            [options]="projectOptions()"
+            [ngModel]="project()"
+            [ngModelOptions]="{ standalone: true }"
+            (ngModelChange)="project.set($event ?? '')"
+          />
+        </app-field-row>
+        <p class="issue-bulk__note">
+          Si el destino no admite el tipo, la prioridad o el estado de una incidencia, se indicará
+          abajo y esa incidencia no se moverá.
+        </p>
+      }
+      @case ('delete') {
+        <p class="issue-bulk__note">
+          Las incidencias dejarán de aparecer en listas, tableros y búsquedas.
+        </p>
+      }
+    }
+
+    @if (failures().length > 0) {
+      <ul class="issue-bulk__failures" data-testid="bulk-failures">
+        @for (failure of failures(); track failure.issue) {
+          <li class="issue-bulk__failure">
+            <strong>{{ failure.issue }}</strong>
+            <span>{{ bulkFailureText(failure) }}</span>
+          </li>
+        }
+      </ul>
+    }
+  </form>
+  <p-button
+    dialogFooter
+    [label]="failures().length > 0 ? 'Cerrar' : 'Cancelar'"
+    severity="secondary"
+    [text]="true"
+    class="touch-target"
+    [disabled]="saving()"
+    (onClick)="close()"
+  />
+  <p-button
+    dialogFooter
+    [label]="submitLabel()"
+    [severity]="kind() === 'delete' ? 'danger' : undefined"
+    class="touch-target"
+    data-testid="bulk-submit"
+    [loading]="saving()"
+    (onClick)="submit()"
+  />
+</app-dialog>

@@ -1,0 +1,71 @@
+@use '../../../../../ui/styles/mixins' as m;
+
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.project-components {
+  min-width: 0;
+
+  &__list {
+    @include m.flex-column(0);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  &__item {
+    @include m.flex-row(var(--cl-space-3), center, space-between);
+    flex-wrap: wrap;
+    min-width: 0;
+    padding-block: var(--cl-space-3);
+
+    & + & {
+      border-top: 1px solid var(--cl-divider);
+    }
+  }
+
+  &__text {
+    @include m.flex-column(var(--cl-space-1));
+    flex: 1 1 16rem;
+    min-width: 0;
+  }
+
+  &__name {
+    font-weight: var(--cl-weight-semibold);
+    overflow-wrap: anywhere;
+  }
+
+  &__hint,
+  &__empty {
+    margin: 0;
+    color: var(--cl-text-subtle);
+    font-size: var(--cl-font-small);
+    overflow-wrap: anywhere;
+  }
+
+  &__actions {
+    @include m.cluster(var(--cl-space-2));
+  }
+
+  &__form {
+    @include m.flex-column(var(--cl-space-4));
+  }
+
+  &__field {
+    @include m.flex-column(var(--cl-space-1));
+    min-width: 0;
+  }
+
+  &__label {
+    font-size: var(--cl-font-small);
+    font-weight: var(--cl-weight-medium);
+  }
+
+  &__error {
+    margin: 0;
+    color: var(--cl-danger-text);
+    font-size: var(--cl-font-small);
+  }
+}

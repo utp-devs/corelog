@@ -1,0 +1,70 @@
+@use '../../../../../ui/styles/mixins' as m;
+
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.project-fields {
+  &__type {
+    @include m.flex-column(1);
+    max-width: var(--cl-popover-w);
+    margin-bottom: var(--cl-space-4);
+  }
+
+  &__label {
+    font-weight: var(--cl-weight-semibold);
+  }
+
+  &__list {
+    @include m.flex-column(2);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  &__row {
+    @include m.flex-row(3);
+    padding: var(--cl-space-2) var(--cl-space-3);
+    border: 1px solid var(--cl-border);
+    border-radius: var(--cl-radius-md);
+    background: var(--cl-bg-surface);
+  }
+
+  &__handle {
+    color: var(--cl-text-subtle);
+    cursor: grab;
+  }
+
+  &__name {
+    @include m.flex-column(0);
+    flex: 1;
+    min-width: 0;
+    font-weight: var(--cl-weight-semibold);
+  }
+
+  &__muted {
+    color: var(--cl-text-subtle);
+    font-size: var(--cl-font-small);
+    font-weight: var(--cl-weight-regular);
+  }
+
+  &__required {
+    @include m.flex-row(2);
+    min-height: var(--cl-control-h-md);
+    cursor: pointer;
+  }
+
+  &__actions {
+    @include m.flex-row(0);
+  }
+
+  &__footer {
+    @include m.cluster(3, center, space-between);
+    margin-top: var(--cl-space-4);
+  }
+
+  &__add {
+    min-width: var(--cl-popover-w);
+  }
+}

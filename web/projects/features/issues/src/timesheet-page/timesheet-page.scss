@@ -1,0 +1,101 @@
+@use '../../../../ui/styles/mixins' as m;
+
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.timesheet {
+  &__toolbar {
+    @include m.cluster(2);
+    margin-bottom: var(--cl-space-4);
+  }
+
+  &__range {
+    margin: 0 0 0 var(--cl-space-2);
+    font-size: var(--cl-font-body-strong);
+    font-weight: var(--cl-weight-semibold);
+  }
+
+  &__scroll {
+    overflow-x: auto;
+    border: 1px solid var(--cl-border);
+    border-radius: var(--cl-radius-lg);
+    background: var(--cl-bg-surface);
+  }
+
+  &__table {
+    width: 100%;
+    border-collapse: collapse;
+    font-variant-numeric: tabular-nums;
+  }
+
+  &__caption {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  &__head {
+    padding: var(--cl-space-3);
+    border-bottom: 1px solid var(--cl-border);
+    color: var(--cl-text-subtle);
+    font-size: var(--cl-font-small);
+    font-weight: var(--cl-weight-semibold);
+    text-align: right;
+    text-transform: capitalize;
+    white-space: nowrap;
+
+    &--issue {
+      text-align: left;
+    }
+
+    &--today {
+      color: var(--cl-brand);
+    }
+  }
+
+  &__issue {
+    min-width: 14rem;
+    padding: var(--cl-space-3);
+    font-weight: var(--cl-weight-regular);
+    text-align: left;
+  }
+
+  &__key {
+    display: block;
+    color: var(--cl-brand);
+    font-weight: var(--cl-weight-semibold);
+    text-decoration: none;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+
+  &__title {
+    @include m.truncate;
+    display: block;
+    max-width: 24rem;
+    color: var(--cl-text-subtle);
+    font-size: var(--cl-font-small);
+  }
+
+  &__cell {
+    min-width: 5rem;
+    padding: var(--cl-space-3);
+    border-top: 1px solid var(--cl-border);
+    text-align: right;
+    vertical-align: top;
+
+    &--total {
+      font-weight: var(--cl-weight-semibold);
+    }
+
+    &--day-total {
+      font-weight: var(--cl-weight-semibold);
+    }
+  }
+}

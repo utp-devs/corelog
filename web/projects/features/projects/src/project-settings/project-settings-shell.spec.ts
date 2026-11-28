@@ -30,6 +30,9 @@ describe('ProjectSettingsShell', () => {
       'Roles',
       'Permisos',
       'Tipos de incidencia',
+      'Versiones',
+      'Componentes',
+      'Campos',
       'Flujo de trabajo',
       'Zona de peligro',
     ]);
@@ -42,7 +45,7 @@ describe('ProjectSettingsShell', () => {
     expect(element.querySelector('[data-testid="settings-readonly"]')?.textContent).toContain(
       'Solo lectura',
     );
-    expect(element.querySelectorAll('a')).toHaveLength(7);
+    expect(element.querySelectorAll('a')).toHaveLength(10);
   });
 
   it('shows the forbidden state to viewers', async () => {

@@ -1,0 +1,158 @@
+<div class="project-components">
+  <app-section
+    title="Componentes"
+    description="Divide el proyecto en partes. Cada componente puede tener un responsable y asignar sus incidencias por defecto."
+    ariaLabel="Componentes del proyecto"
+  >
+    @if (canManage()) {
+      <p-button
+        appSectionActions
+        label="Nuevo componente"
+        icon="pi pi-plus"
+        data-testid="component-new"
+        (onClick)="openForm()"
+      />
+    }
+
+    @if (status() === 'error') {
+      <app-error-state
+        message="No se pudieron cargar los componentes."
+        [canRetry]="true"
+        (retry)="retry()"
+      />
+    } @else if (status() === 'loading') {
+      <app-loading-skeleton variant="detail" [rows]="3" />
+    } @else if (components().length === 0) {
+      <p class="project-components__empty">Aún no hay componentes.</p>
+    } @else {
+      <ul class="project-components__list" data-testid="component-list">
+        @for (component of components(); track component.id) {
+          <li class="project-components__item" data-testid="component-item">
+            <div class="project-components__text">
+              <span class="project-components__name">{{ component.name }}</span>
+              @if (component.description) {
+                <span class="project-components__hint">{{ component.description }}</span>
+              }
+              <span class="project-components__hint">
+                Responsable: {{ component.leadName ?? 'Sin responsable' }} · Asignación por defecto:
+                {{ policyLabel(component.policy) }} · {{ component.issuesCount }} incidencias
+              </span>
+            </div>
+            @if (canManage()) {
+              <div class="project-components__actions">
+                <p-button
+                  label="Editar"
+                  severity="secondary"
+                  [outlined]="true"
+                  (onClick)="openForm(component)"
+                />
+                <p-button
+                  label="Eliminar"
+                  severity="danger"
+                  [text]="true"
+                  (onClick)="openDelete(component)"
+                />
+              </div>
+            }
+          </li>
+        }
+      </ul>
+    }
+  </app-section>
+</div>
+
+<app-dialog
+  size="sm"
+  [heading]="editing() ? 'Editar componente' : 'Nuevo componente'"
+  [open]="formOpen()"
+  (closeRequested)="formOpen.set(false)"
+>
+  <form class="project-components__form" [formGroup]="form" (ngSubmit)="save()">
+    <label class="project-components__field">
+      <span class="project-components__label">Nombre</span>
+      <input pInputText formControlName="name" maxlength="80" data-autofocus />
+    </label>
+    <label class="project-components__field">
+      <span class="project-components__label">Descripción (opcional)</span>
+      <textarea pTextarea formControlName="description" rows="2"></textarea>
+    </label>
+    <label class="project-components__field">
+      <span class="project-components__label">Responsable</span>
+      <p-select
+        ariaLabel="Responsable del componente"
+        placeholder="Sin responsable"
+        optionLabel="label"
+        optionValue="value"
+        appendTo="body"
+        [showClear]="true"
+        [filter]="true"
+        [options]="leads()"
+        [ngModel]="leadId()"
+        [ngModelOptions]="{ standalone: true }"
+        (ngModelChange)="leadId.set($event)"
+      />
+    </label>
+    <label class="project-components__field">
+      <span class="project-components__label">Asignar por defecto a</span>
+      <p-select
+        ariaLabel="Asignación por defecto"
+        optionLabel="label"
+        optionValue="value"
+        appendTo="body"
+        [options]="policies"
+        [ngModel]="policy()"
+        [ngModelOptions]="{ standalone: true }"
+        (ngModelChange)="policy.set($event)"
+      />
+    </label>
+    @if (error(); as message) {
+      <p class="project-components__error" role="alert">{{ message }}</p>
+    }
+  </form>
+  <p-button dialogFooter label="Cancelar" severity="secondary" (onClick)="formOpen.set(false)" />
+  <p-button
+    dialogFooter
+    label="Guardar"
+    [disabled]="form.invalid"
+    [loading]="busy()"
+    (onClick)="save()"
+  />
+</app-dialog>
+
+<app-dialog
+  size="sm"
+  heading="Eliminar componente"
+  [open]="deleting() !== null"
+  (closeRequested)="deleting.set(null)"
+>
+  <p>
+    Se eliminará «{{ deleting()?.name }}».
+    @if ((deleting()?.issuesCount ?? 0) > 0) {
+      Puedes pasar sus {{ deleting()?.issuesCount }} incidencias a otro componente.
+    }
+  </p>
+  @if ((deleting()?.issuesCount ?? 0) > 0) {
+    <p-select
+      ariaLabel="Componente que recibe las incidencias"
+      placeholder="Quitar el componente de las incidencias"
+      optionLabel="label"
+      optionValue="value"
+      appendTo="body"
+      [showClear]="true"
+      [options]="moveTargets()"
+      [ngModel]="moveTo()"
+      (ngModelChange)="moveTo.set($event)"
+    />
+  }
+  @if (error(); as message) {
+    <p class="project-components__error" role="alert">{{ message }}</p>
+  }
+  <p-button dialogFooter label="Cancelar" severity="secondary" (onClick)="deleting.set(null)" />
+  <p-button
+    dialogFooter
+    label="Eliminar"
+    severity="danger"
+    [loading]="busy()"
+    (onClick)="confirmDelete()"
+  />
+</app-dialog>

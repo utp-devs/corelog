@@ -1,9 +1,9 @@
-import { DatePipe, NgTemplateOutlet } from '@angular/common';
+import { NgTemplateOutlet } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
   DestroyRef,
-  Signal,
+  ElementRef,
   computed,
   effect,
   inject,
@@ -12,19 +12,16 @@ import {
   viewChild,
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import {
-  AsyncState,
   AuthStore,
   CatalogStore,
   BreakpointService,
   ISSUES_PATH,
-  IssueActivity,
   IssueAttachment,
-  IssueComment,
-  IssueLink,
-  IssueLinkKind,
+  IssuePermission,
+  IssueViewApiService,
+  IssueViewStore,
   IssueTransition,
   NotificationService,
   ProjectApiService,
@@ -47,7 +44,6 @@ import { ArchivedNotice } from '@corelog/ui/archived-notice';
 import { BreadcrumbItem, Breadcrumbs } from '@corelog/ui/breadcrumbs';
 import { trackRecent } from '@corelog/ui/command-palette';
 import { CatalogIcon } from '@corelog/ui/catalog-icon';
-import { IssueTypeIcon } from '@corelog/ui/issue-type-icon';
 import { ErrorState } from '@corelog/ui/error-state';
 import { FieldRow } from '@corelog/ui/field-row';
 import { InlineEdit, InlineEditOption } from '@corelog/ui/inline-edit';
@@ -55,13 +51,11 @@ import { IssueKey } from '@corelog/ui/issue-key';
 import { LoadingSkeleton } from '@corelog/ui/loading-skeleton';
 import { PageContainer, PageSidebar } from '@corelog/ui/page-container';
 import { Section } from '@corelog/ui/section';
-import { SelectField } from '@corelog/ui/select-field';
 import { StatusTag } from '@corelog/ui/status-tag';
 import { TransitionButton } from '@corelog/ui/transition-button';
 import { TransitionRunner } from '@corelog/ui/transition-dialog';
 import { AppTooltip } from '@corelog/ui/tooltip';
 import { PickableUser, UserPicker } from '@corelog/ui/user-picker';
-import { UserAvatar } from '@corelog/ui/user-avatar';
 import { MenuItem } from 'primeng/api';
 import { Button } from 'primeng/button';
 import { Menu } from 'primeng/menu';
@@ -70,32 +64,25 @@ import { Subscription, firstValueFrom, map } from 'rxjs';
 
 import { injectMemberNames } from '../hooks/member-names';
 import { injectTeammateSearch } from '../hooks/teammate-search';
-import { IssuePicker } from '../issue-picker/issue-picker';
 import { errorMessage } from '../shared/error-message';
 import { payloadFrom } from '../shared/issue-payload';
 import { MentionSearch } from '../shared/mention-search';
 import { exactDate, timeAgo } from '../shared/time';
-import { IssueActivityFeed } from './issue-activity';
+import { ConfirmModal } from '@corelog/ui/confirm-modal';
+import { IssueOperation, IssueOperationDialogs } from './issue-operation-dialogs';
+import { IssueConversationSection } from './issue-conversation-section';
+import { IssueFieldsPanel } from './issue-fields-panel';
+import { IssueRelationsSection } from './issue-relations-section';
+import { IssueWorklogsSection } from './issue-worklogs-section';
 import { IssueDescriptionSection } from './issue-description-section';
 import { IssueNotesSection } from './issue-notes-section';
 
-const COLLABORATION_ERROR = 'No se pudo cargar toda la información de colaboración.';
 const ARCHIVED_REASON = 'El proyecto está archivado y es de solo lectura.';
 const NO_PERMISSION_TO_ASSIGN = 'No tienes permiso para cambiar el responsable.';
 /** Same breakpoints as the page container: the side panel stacks below 992 px, phones are below 768 px. */
 const STACKED_QUERY = '(max-width: 991.98px)';
 const PHONE_QUERY = '(max-width: 767.98px)';
 
-const LINK_KIND_LABELS: Record<IssueLinkKind, string> = {
-  blocks: 'Bloquea a',
-  relates: 'Se relaciona con',
-  duplicates: 'Duplica a',
-};
-const LINK_KIND_OPTIONS: { value: IssueLinkKind; label: string }[] = [
-  { value: 'blocks', label: 'Bloquea' },
-  { value: 'relates', label: 'Se relaciona con' },
-  { value: 'duplicates', label: 'Duplica' },
-];
 interface ProjectMembership {
   readonly projectId: string;
   readonly members: ProjectMember[];
@@ -115,14 +102,10 @@ interface ProjectMembership {
     Breadcrumbs,
     Button,
     CatalogIcon,
-    DatePipe,
     ErrorState,
     FieldRow,
-    FormsModule,
     InlineEdit,
     IssueKey,
-    IssuePicker,
-    IssueTypeIcon,
     LoadingSkeleton,
     Menu,
     Message,
@@ -131,22 +114,28 @@ interface ProjectMembership {
     PageSidebar,
     RouterLink,
     Section,
-    SelectField,
     StatusTag,
     TransitionButton,
     TransitionRunner,
-    IssueActivityFeed,
+    ConfirmModal,
+    IssueConversationSection,
+    IssueOperationDialogs,
+    IssueFieldsPanel,
+    IssueRelationsSection,
+    IssueWorklogsSection,
     IssueDescriptionSection,
     IssueNotesSection,
-    UserAvatar,
     UserPicker,
   ],
   templateUrl: './issue-detail-page.html',
   styleUrl: './issue-detail-page.scss',
+  providers: [IssueViewStore],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class IssueDetailPage {
   private readonly store = inject(IssueStore);
+  protected readonly viewStore = inject(IssueViewStore);
+  private readonly viewApi = inject(IssueViewApiService);
   private readonly auth = inject(AuthStore);
   private readonly projectApi = inject(ProjectApiService);
   private readonly projects = inject(ProjectStore);
@@ -159,7 +148,6 @@ export class IssueDetailPage {
   protected readonly names = injectMemberNames();
   protected readonly teammates = injectTeammateSearch();
   protected readonly mentionSearch = inject(MentionSearch).search;
-  protected readonly nameOf = (userId: string): string => this.names.nameOf(userId);
 
   /** What the route names: the issue key (CORE-12) or its UUID. */
   protected readonly ref = toSignal(
@@ -202,7 +190,6 @@ export class IssueDetailPage {
   protected readonly priorityOptions = computed<InlineEditOption[]>(() =>
     this.catalog.priorities().map((item) => ({ value: item.id, label: item.name })),
   );
-  protected readonly linkKindOptions = LINK_KIND_OPTIONS;
   protected readonly noAssignPermission = NO_PERMISSION_TO_ASSIGN;
 
   // Workflow transitions of the issue: loaded again whenever its status changes.
@@ -252,15 +239,71 @@ export class IssueDetailPage {
       { label: this.shortKeyOf(issue) },
     ];
   });
+  protected readonly linkRequest = signal(0);
+  protected readonly operation = signal<IssueOperation | null>(null);
+  protected readonly deleteOpen = signal(false);
+  protected readonly deleteBusy = signal(false);
+  protected readonly voteBusy = signal(false);
+  private readonly fileInput = viewChild<ElementRef<HTMLInputElement>>('fileInput');
+
+  protected readonly canVote = computed(() => !this.archived() && this.viewStore.can('vote_issue'));
   protected readonly menuItems = computed<MenuItem[]>(() => {
     const issue = this.detail();
     if (!issue) return [];
+    const writable = !this.archived();
+    const can = (permission: IssuePermission): boolean =>
+      writable && this.viewStore.can(permission);
     return [
+      { label: 'Copiar enlace', icon: 'pi pi-link', command: () => void this.copyLink() },
       { label: 'Copiar clave', icon: 'pi pi-copy', command: () => void this.copyKey(issue) },
+      { separator: true },
+      {
+        label: 'Adjuntar archivo',
+        icon: 'pi pi-paperclip',
+        visible: can('add_attachment'),
+        command: () => this.fileInput()?.nativeElement.click(),
+      },
+      {
+        label: 'Añadir subtarea',
+        icon: 'pi pi-sitemap',
+        visible: can('edit_issue') && issue.issueType.hierarchyLevel !== -1,
+        command: () => this.focusSubtask(),
+      },
+      {
+        label: 'Vincular incidencia',
+        icon: 'pi pi-share-alt',
+        visible: can('link_issue'),
+        command: () => this.linkRequest.update((n) => n + 1),
+      },
+      {
+        label: 'Clonar',
+        icon: 'pi pi-clone',
+        visible: writable,
+        command: () => this.operation.set('clone'),
+      },
+      {
+        label: 'Mover a otro proyecto',
+        icon: 'pi pi-arrow-right-arrow-left',
+        visible: can('edit_issue'),
+        command: () => this.operation.set('move'),
+      },
+      {
+        label: 'Convertir tipo',
+        icon: 'pi pi-sync',
+        visible: can('edit_issue'),
+        command: () => this.operation.set('convert'),
+      },
+      { separator: true },
       {
         label: 'Ver el proyecto',
         icon: 'pi pi-folder-open',
         command: () => void this.router.navigateByUrl(this.projectPath()),
+      },
+      {
+        label: 'Eliminar incidencia',
+        icon: 'pi pi-trash',
+        visible: can('delete_issue'),
+        command: () => this.deleteOpen.set(true),
       },
       { separator: true },
       {
@@ -352,41 +395,6 @@ export class IssueDetailPage {
   protected readonly watcherCount = computed(() => this.watcherState()?.count ?? 0);
   protected readonly watcherBusy = signal(false);
 
-  // Collaboration: each list is shown only once its request for this issue has settled.
-  protected readonly collaborationLoading = computed(
-    () =>
-      !(
-        this.settled(this.store.comments, this.store.commentsIssueId) &&
-        this.settled(this.store.activities, this.store.activitiesIssueId) &&
-        this.settled(this.store.links, this.store.linksIssueId)
-      ),
-  );
-  protected readonly collaborationError = computed(() =>
-    [this.store.comments, this.store.activities, this.store.links].some(
-      (state) => state.error() !== null,
-    )
-      ? COLLABORATION_ERROR
-      : undefined,
-  );
-  private readonly collaborationReady = computed(
-    () => !this.collaborationLoading() && this.collaborationError() === undefined,
-  );
-  protected readonly visibleLinks = computed<readonly IssueLink[]>(() =>
-    this.collaborationReady() && this.store.linksIssueId() === this.loadedId()
-      ? (this.store.links.value() ?? [])
-      : [],
-  );
-  protected readonly visibleComments = computed<readonly IssueComment[]>(() =>
-    this.collaborationReady() && this.store.commentsIssueId() === this.loadedId()
-      ? (this.store.comments.value() ?? [])
-      : [],
-  );
-  protected readonly visibleActivities = computed<readonly IssueActivity[]>(() =>
-    this.collaborationReady() && this.store.activitiesIssueId() === this.loadedId()
-      ? (this.store.activities.value() ?? [])
-      : [],
-  );
-
   // Attachments.
   protected readonly attachmentsLoading = computed(
     () =>
@@ -403,14 +411,27 @@ export class IssueDetailPage {
       : (this.store.attachments.value() ?? []),
   );
 
-  // Links.
-  protected readonly linkTarget = signal('');
-  protected readonly linkKind = signal<IssueLinkKind>('relates');
-
   constructor() {
     effect(() => {
       const ref = this.ref();
-      if (ref) untracked(() => this.store.fetchIssue(ref));
+      if (ref) {
+        untracked(() => {
+          this.store.fetchIssue(ref);
+          void this.viewStore.load(ref);
+        });
+      }
+    });
+
+    // The view store is the source of the editable fields: keep the shared issue in step with it.
+    effect(() => {
+      const view = this.viewStore.view();
+      if (!view) return;
+      untracked(() => {
+        const current = this.store.selected.value();
+        if (current && current.id === view.id && current.updatedAt !== view.updatedAt) {
+          this.store.selected.set({ ...current, ...view });
+        }
+      });
     });
 
     this.catalog.ensureLoaded();
@@ -556,6 +577,57 @@ export class IssueDetailPage {
     });
   }
 
+  // Votes, delete and operations.
+
+  protected async toggleVote(): Promise<void> {
+    const view = this.viewStore.view();
+    if (!view || this.voteBusy()) return;
+    const next = !view.viewerHasVoted;
+    this.voteBusy.set(true);
+    this.viewStore.setVoted(next);
+    try {
+      await firstValueFrom(this.viewApi.vote(view.id, next));
+    } catch (error) {
+      this.viewStore.setVoted(!next);
+      this.notify.error(errorMessage(error, 'No se pudo registrar el voto'));
+    } finally {
+      this.voteBusy.set(false);
+    }
+  }
+
+  protected async confirmDelete(): Promise<void> {
+    const issue = this.detail();
+    if (!issue) return;
+    this.deleteBusy.set(true);
+    try {
+      await firstValueFrom(this.viewApi.delete(issue.id));
+      this.deleteOpen.set(false);
+      this.notify.success('Incidencia eliminada');
+      void this.router.navigateByUrl(this.projectPath());
+    } catch (error) {
+      this.deleteOpen.set(false);
+      this.notify.error(errorMessage(error, 'No se pudo eliminar la incidencia'));
+    } finally {
+      this.deleteBusy.set(false);
+    }
+  }
+
+  protected onOperationDone(operation: IssueOperation): void {
+    if (operation === 'convert') {
+      void this.viewStore.refresh();
+      const id = this.loadedId();
+      if (id) this.store.fetchIssue(id);
+    }
+  }
+
+  private focusSubtask(): void {
+    const input = document.querySelector<HTMLInputElement>(
+      '[data-testid="issue-children"] input[name="subtask"]',
+    );
+    input?.scrollIntoView({ block: 'center' });
+    input?.focus();
+  }
+
   // Follow.
 
   protected toggleWatch(): void {
@@ -577,88 +649,6 @@ export class IssueDetailPage {
       },
     });
   }
-
-  // Links.
-
-  protected onLinkKind(kind: string | null): void {
-    if (kind) this.linkKind.set(kind as IssueLinkKind);
-  }
-
-  protected createLink(): void {
-    const issue = this.detail();
-    const target = this.linkTarget();
-    if (!issue || !target) return;
-    this.store.createLink(issue.id, target, this.linkKind()).subscribe({
-      next: () => {
-        this.linkTarget.set('');
-        this.notify.success('Vínculo creado');
-      },
-      error: (error: unknown) =>
-        this.notify.error(errorMessage(error, 'No se pudo crear el vínculo')),
-    });
-  }
-
-  protected removeLink(linkId: string): void {
-    const issue = this.detail();
-    if (!issue) return;
-    this.store.deleteLink(issue.id, linkId).subscribe({
-      error: (error: unknown) => this.notify.error(errorMessage(error, 'No se pudo eliminar')),
-    });
-  }
-
-  protected linkKindLabel(link: IssueLink): string {
-    return LINK_KIND_LABELS[link.kind];
-  }
-
-  protected linkKey(link: IssueLink): string {
-    return shortIssueKeyOf({ id: this.otherIssueId(link) });
-  }
-
-  protected linkPath(link: IssueLink): string {
-    return issuePath(this.otherIssueId(link));
-  }
-
-  // Comments. The activity block calls these and reads the result to close its forms.
-
-  protected readonly createComment = async (body: string): Promise<boolean> => {
-    const issue = this.detail();
-    if (!issue) return false;
-    try {
-      await firstValueFrom(this.store.createComment(issue.id, body));
-    } catch (error) {
-      this.notify.error(errorMessage(error, 'No se pudo agregar el comentario'));
-      return false;
-    }
-    this.store.fetchWatchers(issue.id);
-    this.notify.success('Comentario agregado');
-    return true;
-  };
-
-  protected readonly updateComment = async (commentId: string, body: string): Promise<boolean> => {
-    const issue = this.detail();
-    if (!issue) return false;
-    try {
-      await firstValueFrom(this.store.updateComment(issue.id, commentId, body));
-    } catch (error) {
-      this.notify.error(errorMessage(error, 'No se pudo guardar el comentario'));
-      return false;
-    }
-    this.notify.success('Comentario actualizado');
-    return true;
-  };
-
-  protected readonly deleteComment = async (commentId: string): Promise<boolean> => {
-    const issue = this.detail();
-    if (!issue) return false;
-    try {
-      await firstValueFrom(this.store.deleteComment(issue.id, commentId));
-    } catch (error) {
-      this.notify.error(errorMessage(error, 'No se pudo eliminar'));
-      return false;
-    }
-    this.notify.success('Comentario eliminado');
-    return true;
-  };
 
   // Attachments.
 
@@ -692,6 +682,7 @@ export class IssueDetailPage {
 
   protected retry(): void {
     this.store.fetchIssue(this.ref());
+    void this.viewStore.load(this.ref());
   }
 
   protected back(): void {
@@ -737,8 +728,7 @@ export class IssueDetailPage {
     const id = this.loadedId();
     if (!id) return;
     // The change adds activity and may add a comment; the available transitions depend on the new status.
-    this.store.fetchActivities(id);
-    this.store.fetchComments(id);
+    void this.viewStore.refresh();
     this.loadTransitions(id);
   }
 
@@ -791,18 +781,7 @@ export class IssueDetailPage {
     this.notify.success(done);
   }
 
-  private settled<T>(state: AsyncState<T>, issueId: Signal<string | null>): boolean {
-    return !state.loading() && (issueId() === this.loadedId() || state.error() !== null);
-  }
-
-  private otherIssueId(link: IssueLink): string {
-    return link.sourceIssueId === this.loadedId() ? link.targetIssueId : link.sourceIssueId;
-  }
-
   private loadCollaboration(id: string): void {
-    this.store.fetchComments(id);
-    this.store.fetchActivities(id);
-    this.store.fetchLinks(id);
     this.store.fetchAttachments(id);
     this.store.fetchWatchers(id);
   }

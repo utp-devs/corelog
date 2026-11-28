@@ -1,0 +1,82 @@
+<app-page-container variant="wide" pageName="filters" [ready]="!loading()" [fill]="true">
+  <app-page-header
+    title="Filtros"
+    subtitle="Tus búsquedas guardadas y las que comparten contigo."
+  />
+
+  <div class="filters-page__scopes">
+    <p-selectbutton
+      ariaLabelledBy=""
+      optionLabel="label"
+      optionValue="value"
+      [options]="scopes"
+      [allowEmpty]="false"
+      [ngModel]="scope()"
+      (ngModelChange)="setScope($event)"
+    />
+  </div>
+
+  <app-section flush [fill]="true" ariaLabel="Lista de filtros">
+    <app-data-table
+      tableKey="filters"
+      rowKey="id"
+      [columns]="columns"
+      [data]="rows()"
+      [loading]="loading()"
+      [error]="error()"
+      [emptyState]="emptyTpl"
+      [rowOpenable]="true"
+      [rowActions]="rowActions"
+      (rowOpen)="open($event)"
+      (retry)="retry()"
+    >
+      <ng-template appDataTableCell="name" let-row>
+        <span class="filters-page__name" data-testid="filter-row-name">{{ row.name }}</span>
+      </ng-template>
+      <ng-template appDataTableCell="owner" let-row>{{ row.ownerName }}</ng-template>
+      <ng-template appDataTableCell="access" let-row>{{ accessLabel(row) }}</ng-template>
+      <ng-template appDataTableCell="subscription" let-row>
+        @if (row.isSubscribed) {
+          <span class="filters-page__on"><i class="pi pi-bell" aria-hidden="true"></i> Activa</span>
+        } @else {
+          <span class="filters-page__off">-</span>
+        }
+      </ng-template>
+    </app-data-table>
+  </app-section>
+
+  <app-filter-share-dialog
+    [open]="shareTarget() !== null"
+    [filter]="shareTarget()"
+    (closeRequested)="shareTarget.set(null)"
+  />
+  <app-filter-subscription-dialog
+    [open]="subscriptionTarget() !== null"
+    [filter]="subscriptionTarget()"
+    (closeRequested)="subscriptionTarget.set(null)"
+  />
+  <app-confirm-modal
+    title="Eliminar filtro"
+    [description]="
+      'Se eliminará «' +
+      (deleteTarget()?.name ?? '') +
+      '» junto con sus comparticiones y suscripciones.'
+    "
+    confirmText="Eliminar"
+    [danger]="true"
+    [open]="deleteTarget() !== null"
+    [loading]="deleting()"
+    (confirmed)="confirmDelete()"
+    (cancelled)="deleteTarget.set(null)"
+  />
+</app-page-container>
+
+<ng-template #emptyTpl>
+  <app-empty-state
+    image="empty-search"
+    title="Aún no hay filtros"
+    description="Guarda una búsqueda desde el navegador de incidencias para verla aquí."
+  >
+    <p-button action label="Ir a incidencias" icon="pi pi-search" (onClick)="goToIssues()" />
+  </app-empty-state>
+</ng-template>

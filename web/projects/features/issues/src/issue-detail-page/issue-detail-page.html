@@ -101,23 +101,12 @@
 
       <app-section title="Más información">
         <dl class="issue-detail__facts">
-          <dt>Reportado por</dt>
-          <dd class="issue-detail__person">
-            <app-user-avatar
-              [id]="selected.reporterId"
-              [name]="selected.reporterName"
-              [size]="24"
-            />
-            {{ selected.reporterName }}
-          </dd>
           <dt>Proyecto</dt>
           <dd>
             <a class="issue-detail__link" [routerLink]="projectPath()">{{
               project()?.name ?? 'Ver el proyecto'
             }}</a>
           </dd>
-          <dt>Tipo</dt>
-          <dd><app-issue-type-icon [type]="selected.issueType" [showLabel]="true" /></dd>
           @if (selected.resolution; as resolution) {
             <dt>Resolución</dt>
             <dd data-testid="issue-resolution">
@@ -129,34 +118,18 @@
               }
             </dd>
           }
-          <dt>Fecha límite</dt>
-          <dd>
-            {{ selected.dueDate ? (selected.dueDate | date: 'dd/MM/yyyy') : 'Sin fecha límite' }}
-          </dd>
-          <dt>Puntos de historia</dt>
-          <dd>{{ selected.storyPoints ?? 'Sin estimar' }}</dd>
-          <dt>Incidencia padre</dt>
-          <dd>
-            {{ selected.parentId ? shortKeyOf({ id: selected.parentId }) : 'Sin incidencia padre' }}
-          </dd>
           <dt>Seguimiento</dt>
           <dd>
             {{ watcherCount() }}
             {{ watcherCount() === 1 ? 'persona sigue' : 'personas siguen' }} esta incidencia
           </dd>
-          <dt>Creado</dt>
-          <dd [appTooltip]="exact(selected.createdAt)">{{ ago(selected.createdAt) }}</dd>
-          <dt>Actualizado</dt>
-          <dd [appTooltip]="exact(selected.updatedAt)">{{ ago(selected.updatedAt) }}</dd>
         </dl>
       </app-section>
+
+      <app-issue-fields-panel [archived]="archived()" />
     </ng-template>
 
     <app-page-container variant="wide" pageName="issue-detail" [ready]="true">
-      @if (collaborationError(); as message) {
-        <p-message severity="error" [closable]="false">{{ message }}</p-message>
-      }
-
       <app-archived-notice
         [archived]="archived()"
         [projectId]="projectId() ?? null"
@@ -208,6 +181,20 @@
               [disabled]="watcherLoading() || !watcherState()"
               (onClick)="toggleWatch()"
             />
+            @if (viewStore.view(); as view) {
+              <p-button
+                icon="pi pi-thumbs-up"
+                severity="secondary"
+                [outlined]="!view.viewerHasVoted"
+                class="touch-target"
+                data-testid="issue-vote"
+                [label]="'' + view.counts.votes"
+                [ariaLabel]="view.viewerHasVoted ? 'Quitar mi voto' : 'Votar esta incidencia'"
+                [appTooltip]="view.viewerHasVoted ? 'Quitar mi voto' : 'Votar esta incidencia'"
+                [disabled]="!canVote() || voteBusy()"
+                (onClick)="toggleVote()"
+              />
+            }
             <p-button
               icon="pi pi-link"
               severity="secondary"
@@ -337,72 +324,19 @@
         }
       </app-section>
 
-      <app-section title="Vínculos">
-        @if (!archived()) {
-          <div class="issue-detail__link-form">
-            <app-issue-picker
-              class="issue-detail__link-picker"
-              [excludeId]="selected.id"
-              [(value)]="linkTarget"
-            />
-            <app-select-field
-              ariaLabel="Tipo de vínculo"
-              class="issue-detail__link-kind"
-              [options]="linkKindOptions"
-              [ngModel]="linkKind()"
-              (ngModelChange)="onLinkKind($event)"
-            />
-            <p-button
-              label="Vincular"
-              class="touch-target"
-              [disabled]="collaborationLoading() || !linkTarget()"
-              (onClick)="createLink()"
-            />
-          </div>
-        }
+      <app-issue-worklogs-section [issueId]="selected.id" [archived]="archived()" />
 
-        @if (collaborationLoading()) {
-          <app-loading-skeleton variant="card" />
-        } @else if (visibleLinks().length === 0 && !collaborationError()) {
-          <p class="issue-detail__empty">Aún no hay vínculos</p>
-        } @else {
-          <ul class="issue-detail__list">
-            @for (link of visibleLinks(); track link.id) {
-              <li class="issue-detail__list-item">
-                <span class="issue-detail__link-text">
-                  <span class="issue-detail__muted">{{ linkKindLabel(link) }}</span>
-                  <a class="issue-detail__link" [routerLink]="linkPath(link)">{{
-                    linkKey(link)
-                  }}</a>
-                </span>
-                @if (!archived()) {
-                  <p-button
-                    label="Eliminar"
-                    severity="danger"
-                    [text]="true"
-                    class="touch-target"
-                    (onClick)="removeLink(link.id)"
-                  />
-                }
-              </li>
-            }
-          </ul>
-        }
-      </app-section>
+      <app-issue-relations-section
+        [issueId]="selected.id"
+        [projectId]="selected.projectId"
+        [hierarchyLevel]="selected.issueType.hierarchyLevel"
+        [archived]="archived()"
+        [linkRequest]="linkRequest()"
+      />
 
       <app-issue-notes-section [issueId]="selected.id" />
 
-      <app-issue-activity
-        [comments]="visibleComments()"
-        [activities]="visibleActivities()"
-        [loading]="collaborationLoading()"
-        [currentUser]="archived() ? null : currentUser()"
-        [nameOf]="nameOf"
-        [searchUsers]="mentionSearch"
-        [onCreate]="createComment"
-        [onUpdate]="updateComment"
-        [onDelete]="deleteComment"
-      />
+      <app-issue-conversation-section [issueId]="selected.id" [archived]="archived()" />
 
       @if (!compact()) {
         <div appPageSidebar class="issue-detail__stack">
@@ -410,5 +344,24 @@
         </div>
       }
     </app-page-container>
+
+    @if (viewStore.view(); as view) {
+      <app-issue-operation-dialogs
+        [kind]="operation()"
+        [issue]="view"
+        (closed)="operation.set(null)"
+        (completed)="onOperationDone($event)"
+      />
+    }
+    <app-confirm-modal
+      [open]="deleteOpen()"
+      title="Eliminar incidencia"
+      description="La incidencia dejará de aparecer en listas, tableros y búsquedas."
+      confirmText="Eliminar"
+      [danger]="true"
+      [loading]="deleteBusy()"
+      (confirmed)="confirmDelete()"
+      (cancelled)="deleteOpen.set(false)"
+    />
   }
 }

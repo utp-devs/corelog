@@ -1,0 +1,36 @@
+@use '../../../../ui/styles/mixins' as m;
+
+.save-filter-dialog {
+  @include m.flex-column(var(--cl-space-4));
+
+  &__choice {
+    @include m.flex-column(var(--cl-space-2));
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+
+  &__legend {
+    @include m.visually-hidden;
+  }
+
+  &__radio {
+    @include m.flex-row(var(--cl-space-2));
+    min-height: var(--cl-control-h-md);
+  }
+
+  &__field {
+    @include m.flex-column(var(--cl-space-1));
+  }
+
+  &__label {
+    font-size: var(--cl-font-small);
+    font-weight: var(--cl-weight-medium);
+  }
+
+  &__error {
+    margin: 0;
+    color: var(--cl-danger-text);
+    font-size: var(--cl-font-small);
+  }
+}

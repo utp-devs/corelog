@@ -11,269 +11,270 @@ import {
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { Button } from 'primeng/button';
-import { DatePicker } from 'primeng/datepicker';
-import { InputText } from 'primeng/inputtext';
-import { Message } from 'primeng/message';
-import { Select } from 'primeng/select';
-import { forkJoin, switchMap } from 'rxjs';
 import {
-  ISSUE_STATUS_META,
-  IssueStatus,
-  AuthStore,
-  CatalogStore,
-  ListIssuesFilter,
-  NotificationService,
-  SavedFilter,
-  SavedFilterApiService,
-  SavedFilterCriteria,
-  Issue,
-  IssueStore,
+  BasicFilters,
+  CoreqlProblem,
+  FilterStore,
   ISSUES_PATH,
-  UNASSIGNED_FILTER,
-  findPriorityByLegacyKey,
-  findTypeByLegacyKey,
+  IssueSearchPage,
+  NotificationService,
+  OrganizationStore,
+  SearchQueryApiService,
+  AsyncState,
+  asApiError,
+  basicFilterChips,
+  basicFiltersToJql,
+  EMPTY_BASIC_FILTERS,
+  formatOrder,
+  hasBasicFilters,
   issueKeyOf,
   issuePath,
-  legacyPriorityKeyOf,
-  legacyTypeKeyOf,
+  parseOrder,
+  removeChip,
+  splitOrderBy,
+  withOrderBy,
+  type QueryChip,
+  type SavedQuery,
+  type Issue,
+  type SortSpec,
 } from '@corelog/core';
+import { SaveFilterDialog, type SaveFilterRequest } from '@corelog/features/filters';
+import { FilterSubscriptionDialog } from '@corelog/features/filters';
 import { BulkAction } from '@corelog/ui/bulk-bar';
+import {
+  CoreqlInput,
+  type CoreqlSuggestProvider,
+  type CoreqlSuggestion,
+} from '@corelog/ui/coreql-input';
 import { DataTablePageChange, DataTablePagination, RowMenuItem } from '@corelog/ui/data-table';
 import { Dialog } from '@corelog/ui/dialog';
 import { EmptyState } from '@corelog/ui/empty-state';
-import { FilterBar, FilterDefinition } from '@corelog/ui/filter-bar';
 import { PageContainer } from '@corelog/ui/page-container';
 import { PageHeader } from '@corelog/ui/page-header';
+import { QueryChips } from '@corelog/ui/query-chips';
 import { Section } from '@corelog/ui/section';
-import { Toolbar, ToolbarLeft, ToolbarRight, ToolbarSecondary } from '@corelog/ui/toolbar';
+import { Button } from 'primeng/button';
+import { Message } from 'primeng/message';
+import { MultiSelect } from 'primeng/multiselect';
+import { Select } from 'primeng/select';
+import { SelectButton } from 'primeng/selectbutton';
+import { Subject, debounceTime, forkJoin, map, of, switchMap, catchError } from 'rxjs';
 
-import { injectMemberNames } from '../hooks/member-names';
+import { BasicFiltersPanel } from '../issue-navigator/basic-filters';
+import { FiltersSidebar } from '../issue-navigator/filters-sidebar';
+import {
+  BASIC_PARAM_NAMES,
+  DEFAULT_ORDER,
+  NAVIGATOR_COLUMNS,
+  NavigatorMode,
+  SORT_FIELDS,
+  csvCell,
+  filtersToParams,
+  orderedColumns,
+  parseColumns,
+  paramsToFilters,
+} from '../issue-navigator/navigator-state';
 import { IssueList } from '../issue-list/issue-list';
+import { BulkKind, IssueBulkDialog } from '../issue-bulk/issue-bulk-dialog';
 import { IssueStatusDialog } from '../status-change/issue-status-dialog';
 
-const DEFAULT_PAGE_SIZE = 20;
-const SAVED_FILTER_NAME_MAX = 80;
-const NEW_ISSUE_PATH = `${ISSUES_PATH}/new`;
-/** Query parameter that keeps the assignee filter in the address. */
-const ASSIGNEE_PARAM = 'assignee';
-/** Value of the assignee filter for the issues assigned to the signed-in user. */
-const ASSIGNED_TO_ME = 'me';
+const DEFAULT_PAGE_SIZE = 50;
+/** Delay between the last keystroke of the advanced query and its validation, in milliseconds. */
+export const VALIDATE_DEBOUNCE_MS = 400;
 
-const STATUS_OPTIONS = (Object.keys(ISSUE_STATUS_META) as IssueStatus[]).map((value) => ({
-  value,
-  label: ISSUE_STATUS_META[value].label,
-}));
+const MODES: Array<{ value: NavigatorMode; label: string }> = [
+  { value: 'basic', label: 'Básico' },
+  { value: 'advanced', label: 'Avanzado' },
+];
 
-/** Padded rank, so that ranks sort as strings in the same order as the list positions. */
-function rankOf(index: number): string {
-  return index.toString().padStart(8, '0');
-}
+/** Basic parameters cleared when the query moves to the advanced text, and the other way around. */
+const CLEAR_BASIC: Readonly<Record<string, null>> = Object.fromEntries(
+  BASIC_PARAM_NAMES.map((name) => [name, null]),
+);
 
-/** Start of the local day of a date, as an ISO string. */
-function startOfDayIso(date: Date): string {
-  const copy = new Date(date);
-  copy.setHours(0, 0, 0, 0);
-  return copy.toISOString();
-}
-
-/** End of the local day of a date, as an ISO string. */
-function endOfDayIso(date: Date): string {
-  const copy = new Date(date);
-  copy.setHours(23, 59, 59, 999);
-  return copy.toISOString();
-}
-
-/** Issue list with filters, server-side pagination, saved filters and manual ordering. */
+/**
+ * Issue navigator: basic filters or a CoreQL query, results with a column chooser, sorting, pagination,
+ * selection, export and saved filters. The state lives in the address so a reload keeps the search.
+ */
 @Component({
   selector: 'app-issues-list-page',
   imports: [
+    BasicFiltersPanel,
     Button,
-    DatePicker,
+    CoreqlInput,
     Dialog,
     EmptyState,
-    FilterBar,
+    FilterSubscriptionDialog,
+    FiltersSidebar,
     FormsModule,
-    InputText,
+    IssueList,
+    IssueBulkDialog,
+    IssueStatusDialog,
     Message,
+    MultiSelect,
     PageContainer,
     PageHeader,
+    QueryChips,
+    SaveFilterDialog,
     Section,
     Select,
-    IssueList,
-    IssueStatusDialog,
-    Toolbar,
-    ToolbarLeft,
-    ToolbarRight,
-    ToolbarSecondary,
+    SelectButton,
   ],
   templateUrl: './issues-list-page.html',
   styleUrl: './issues-list-page.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class IssuesListPage {
-  private readonly store = inject(IssueStore);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
-  private readonly auth = inject(AuthStore);
-  private readonly members = injectMemberNames();
+  private readonly api = inject(SearchQueryApiService);
+  private readonly filterStore = inject(FilterStore);
+  private readonly organizations = inject(OrganizationStore);
   private readonly notify = inject(NotificationService);
-  private readonly savedFilterApi = inject(SavedFilterApiService);
   private readonly destroyRef = inject(DestroyRef);
-  private readonly catalog = inject(CatalogStore);
+  private readonly validateRequests = new Subject<string>();
 
-  protected readonly statusFilter = signal<IssueStatus | undefined>(undefined);
-  /** Catalog id of the selected priority and type. */
-  protected readonly priorityFilter = signal<string | undefined>(undefined);
-  protected readonly issueTypeFilter = signal<string | undefined>(undefined);
-  /** Kept in the address (`?assignee=`): `me`, `none` or a member id. */
-  private readonly queryParams = toSignal(this.route.queryParamMap, {
+  private readonly params = toSignal(this.route.queryParamMap, {
     initialValue: this.route.snapshot.queryParamMap,
   });
-  protected readonly assigneeFilter = computed(
-    () => this.queryParams().get(ASSIGNEE_PARAM) || undefined,
-  );
-  protected readonly dueFrom = signal<string | undefined>(undefined);
-  protected readonly dueTo = signal<string | undefined>(undefined);
-  protected readonly page = signal(1);
-  protected readonly pageSize = signal(DEFAULT_PAGE_SIZE);
-  protected readonly search = signal('');
+  private readonly results = new AsyncState<IssueSearchPage>();
+  private lastRunKey = '';
+  private loadedFilterId: string | null = null;
 
-  protected readonly advancedOpen = signal(false);
-  protected readonly savedFilters = signal<SavedFilter[]>([]);
-  protected readonly selectedSavedFilter = signal<string | undefined>(undefined);
-  protected readonly savedFilterName = signal('');
-  protected readonly saveDialogOpen = signal(false);
-  protected readonly savedFilterError = signal<string | undefined>(undefined);
+  protected readonly modes = MODES;
+  protected readonly sortFields = [...SORT_FIELDS];
+  protected readonly columnOptions = [...NAVIGATOR_COLUMNS];
 
-  protected readonly statusOptions = STATUS_OPTIONS;
-  protected readonly priorityOptions = computed(() =>
-    this.catalog.priorities().map((item) => ({ value: item.id, label: item.name })),
+  // State kept in the address.
+  protected readonly mode = computed<NavigatorMode>(() =>
+    this.params().has('jql') || this.params().get('mode') === 'advanced' ? 'advanced' : 'basic',
   );
-  protected readonly issueTypeOptions = computed(() =>
-    this.catalog.issueTypes().map((item) => ({ value: item.id, label: item.name })),
-  );
-  /**
-   * The list endpoint filters by the legacy keys. A selected catalog item narrows the request through its
-   * legacy key when it has one, and the loaded page is always filtered by the exact item id, so renamed
-   * or custom items and shared legacy keys still show the right rows (totals may count the extras).
-   */
-  private readonly priorityLegacyKey = computed(() => {
-    const item = this.catalog.priorities().find((entry) => entry.id === this.priorityFilter());
-    return item ? legacyPriorityKeyOf(item) : undefined;
-  });
-  private readonly typeLegacyKey = computed(() => {
-    const item = this.catalog.issueTypes().find((entry) => entry.id === this.issueTypeFilter());
-    return item ? legacyTypeKeyOf(item) : undefined;
-  });
-
-  protected readonly query = computed(() => this.search().trim() || undefined);
-  protected readonly hasActiveFilters = computed(() =>
-    Boolean(
-      this.search().trim() ||
-      this.statusFilter() ||
-      this.priorityFilter() ||
-      this.issueTypeFilter() ||
-      this.assigneeFilter() ||
-      this.dueFrom() ||
-      this.dueTo(),
+  protected readonly filters = computed<BasicFilters>(() =>
+    paramsToFilters(
+      Object.fromEntries(this.params().keys.map((key) => [key, this.params().get(key)])),
     ),
   );
-  protected readonly advancedVisible = computed(
-    () =>
-      this.advancedOpen() || Boolean(this.dueFrom() || this.dueTo() || this.selectedSavedFilter()),
+  private readonly appliedJql = computed(() => this.params().get('jql') ?? '');
+  private readonly order = computed(() => this.params().get('order') ?? DEFAULT_ORDER);
+  protected readonly page = computed(() => Math.max(1, Number(this.params().get('page')) || 1));
+  protected readonly pageSize = computed(
+    () => Number(this.params().get('size')) || DEFAULT_PAGE_SIZE,
   );
-  protected readonly criteria = computed<SavedFilterCriteria>(() => ({
-    status: this.statusFilter(),
-    priority: this.priorityLegacyKey(),
-    issueType: this.typeLegacyKey(),
-    query: this.query(),
-    dueFrom: this.dueFrom(),
-    dueTo: this.dueTo(),
-  }));
-  /** The value sent to the API: `me` becomes the signed-in user's id. */
-  private readonly assigneeIdForApi = computed(() => {
-    const value = this.assigneeFilter();
-    return value === ASSIGNED_TO_ME ? this.auth.user()?.id : value;
-  });
-  private readonly assigneeOptions = computed(() => [
-    { value: ASSIGNED_TO_ME, label: 'Asignadas a mí' },
-    { value: UNASSIGNED_FILTER, label: 'Sin asignar' },
-    ...this.members.members().map((member) => ({ value: member.id, label: member.name })),
-  ]);
-  protected readonly filter = computed<ListIssuesFilter>(() => ({
-    status: this.statusFilter(),
-    priority: this.priorityLegacyKey(),
-    issueType: this.typeLegacyKey(),
-    assigneeId: this.assigneeIdForApi(),
-    query: this.query(),
-    dueFrom: this.dueFrom(),
-    dueTo: this.dueTo(),
-    page: this.page(),
-    pageSize: this.pageSize(),
-  }));
+  protected readonly columnKeys = computed(() => parseColumns(this.params().get('cols')));
+  protected readonly filterId = computed(() => this.params().get('filter'));
 
-  protected readonly issues = computed<Issue[]>(() => {
-    const priorityId = this.priorityFilter();
-    const typeId = this.issueTypeFilter();
-    return this.store
-      .issues()
-      .filter(
-        (issue) =>
-          (!priorityId || issue.priority.id === priorityId) &&
-          (!typeId || issue.issueType.id === typeId),
-      )
-      .sort((a, b) => a.rank.localeCompare(b.rank));
+  // Advanced editor.
+  protected readonly draft = signal('');
+  protected readonly problems = signal<readonly CoreqlProblem[]>([]);
+  protected readonly switchWarningOpen = signal(false);
+
+  // Saved filters.
+  protected readonly savedFilters = this.filterStore.filters;
+  protected readonly savedLoading = this.filterStore.list.loading;
+  protected readonly savedError = computed(() => this.filterStore.list.error()?.message ?? null);
+  protected readonly currentFilter = computed(() => this.filterStore.find(this.filterId()));
+  protected readonly editableFilter = computed(() => {
+    const filter = this.currentFilter();
+    return filter && filter.access !== 'view' ? filter : null;
   });
-  protected readonly loading = this.store.list.loading;
-  protected readonly error = computed(() => this.store.list.error()?.message ?? null);
+  protected readonly saveOpen = signal(false);
+  protected readonly saveBusy = signal(false);
+  protected readonly saveError = signal<string | null>(null);
+  protected readonly subscriptionTarget = signal<SavedQuery | null>(null);
+  protected readonly sidebarOpen = signal(false);
+
+  // Results.
+  protected readonly issues = computed<Issue[]>(() => [...(this.results.value()?.items ?? [])]);
+  protected readonly total = computed(() => this.results.value()?.total ?? 0);
+  protected readonly warnings = computed(() => this.results.value()?.warnings ?? []);
+  protected readonly loading = this.results.loading;
+  protected readonly runError = computed(() => {
+    const error = this.results.error();
+    if (!error) return null;
+    return error.code.startsWith('search.')
+      ? error.message
+      : 'No se pudieron cargar las incidencias.';
+  });
+  protected readonly queryError = computed(() => this.runError());
+  /** Errors that are not about the query itself (network, server): the list offers a retry. */
+  protected readonly loadError = computed(() => {
+    const error = this.results.error();
+    return error && !error.code.startsWith('search.')
+      ? 'No se pudieron cargar las incidencias.'
+      : null;
+  });
+  /** The advanced editor already lists the problems of the query; the banner is for the rest. */
+  protected readonly showQueryBanner = computed(
+    () => this.queryError() !== null && !(this.mode() === 'advanced' && this.problems().length > 0),
+  );
   protected readonly pagination = computed<DataTablePagination | null>(() =>
-    this.store.total() > 0
-      ? { page: this.page(), pageSize: this.pageSize(), total: this.store.total() }
-      : null,
+    this.total() > 0 ? { page: this.page(), pageSize: this.pageSize(), total: this.total() } : null,
   );
+  protected readonly selectedKeys = signal<string[]>([]);
+  protected readonly bulkKind = signal<BulkKind | null>(null);
+  protected readonly statusIssues = signal<readonly Issue[]>([]);
+  protected readonly statusOpen = signal(false);
 
-  protected readonly filterDefinitions = computed<FilterDefinition[]>(() => [
+  // Derived views of the query.
+  protected readonly effectiveJql = computed(() =>
+    this.mode() === 'advanced' ? this.appliedJql() : basicFiltersToJql(this.filters()),
+  );
+  protected readonly effectiveOrder = computed(() =>
+    this.mode() === 'advanced' ? '' : this.order(),
+  );
+  protected readonly chips = computed(() => basicFilterChips(this.filters()));
+  protected readonly hasQuery = computed(() =>
+    this.mode() === 'advanced' ? this.appliedJql().trim() !== '' : hasBasicFilters(this.filters()),
+  );
+  protected readonly sort = computed<SortSpec | null>(() => {
+    const order = this.mode() === 'advanced' ? splitOrderBy(this.appliedJql()).order : this.order();
+    return parseOrder(order)[0] ?? null;
+  });
+  protected readonly visibleColumns = computed(() => orderedColumns(this.columnKeys()));
+  protected readonly selectedColumns = computed(() => this.columnKeys());
+
+  protected readonly bulkActions = computed<BulkAction[]>(() => [
     {
       key: 'status',
-      label: 'Filtrar por estado',
-      options: this.statusOptions,
-      value: this.statusFilter(),
-      onChange: (value) =>
-        this.changeFilter(() => this.statusFilter.set(value as IssueStatus | undefined)),
+      label: 'Cambiar estado',
+      icon: 'pi pi-arrow-right-arrow-left',
+      onClick: () => {
+        const keys = new Set(this.selectedKeys());
+        this.openStatusDialog(this.issues().filter((issue) => keys.has(issue.id)));
+      },
+    },
+    {
+      key: 'assign',
+      label: 'Asignar',
+      icon: 'pi pi-user',
+      onClick: () => this.bulkKind.set('assign'),
     },
     {
       key: 'priority',
-      label: 'Filtrar por prioridad',
-      options: this.priorityOptions(),
-      value: this.priorityFilter(),
-      onChange: (value) => this.changeFilter(() => this.priorityFilter.set(value)),
+      label: 'Prioridad',
+      icon: 'pi pi-flag',
+      onClick: () => this.bulkKind.set('set_priority'),
     },
     {
-      key: 'issueType',
-      label: 'Filtrar por tipo',
-      options: this.issueTypeOptions(),
-      value: this.issueTypeFilter(),
-      onChange: (value) => this.changeFilter(() => this.issueTypeFilter.set(value)),
+      key: 'move',
+      label: 'Mover',
+      icon: 'pi pi-arrow-right',
+      onClick: () => this.bulkKind.set('move'),
     },
     {
-      key: 'assignee',
-      label: 'Filtrar por asignado',
-      options: this.assigneeOptions(),
-      value: this.assigneeFilter(),
-      onChange: (value) => this.changeFilter(() => this.setAssignee(value)),
+      key: 'delete',
+      label: 'Eliminar',
+      icon: 'pi pi-trash',
+      danger: true,
+      onClick: () => this.bulkKind.set('delete'),
+    },
+    {
+      key: 'export',
+      label: 'Exportar selección',
+      icon: 'pi pi-download',
+      onClick: () => this.exportCsv(true),
     },
   ]);
-
-  protected readonly savedFilterOptions = computed(() =>
-    this.savedFilters().map((filter) => ({ value: filter.id, label: filter.name })),
-  );
-  protected readonly dueFromDate = computed(() => this.toDate(this.dueFrom()));
-  protected readonly dueToDate = computed(() => this.toDate(this.dueTo()));
-  protected readonly canSaveName = computed(() => {
-    const name = this.savedFilterName();
-    return name.trim().length > 0 && name.length <= SAVED_FILTER_NAME_MAX;
-  });
 
   protected readonly rowActions = (issue: Issue): RowMenuItem[] => [
     {
@@ -294,35 +295,168 @@ export class IssuesListPage {
       icon: 'pi pi-arrow-right-arrow-left',
       onClick: () => this.openStatusDialog([issue]),
     },
-    {
-      key: 'up',
-      label: 'Mover arriba',
-      icon: 'pi pi-arrow-up',
-      onClick: () => this.moveIssue(issue, -1),
-    },
-    {
-      key: 'down',
-      label: 'Mover abajo',
-      icon: 'pi pi-arrow-down',
-      onClick: () => this.moveIssue(issue, 1),
-    },
   ];
 
-  // Status change of one issue (row action) or of the ticked ones (bulk action).
-  protected readonly selectedKeys = signal<string[]>([]);
-  protected readonly statusIssues = signal<readonly Issue[]>([]);
-  protected readonly statusOpen = signal(false);
-  protected readonly bulkActions = computed<BulkAction[]>(() => [
-    {
-      key: 'status',
-      label: 'Cambiar estado',
-      icon: 'pi pi-arrow-right-arrow-left',
-      onClick: () => {
-        const keys = new Set(this.selectedKeys());
-        this.openStatusDialog(this.issues().filter((issue) => keys.has(issue.id)));
-      },
-    },
-  ]);
+  /** Autocomplete of the advanced editor: values of the field being written, or completions at the cursor. */
+  protected readonly provider: CoreqlSuggestProvider = ({ text, cursor, context }) => {
+    const completions = this.api.complete(text, cursor, 10);
+    if (context.kind === 'value' && context.field) {
+      return forkJoin([this.api.values(context.field, context.prefix, 10), completions]).pipe(
+        map(([found, rest]) => [
+          ...found.values.map((option): CoreqlSuggestion => ({
+            label:
+              option.value === option.label ? option.label : `${option.label} (${option.value})`,
+            insert: option.value,
+            kind: 'value',
+            detail: option.detail && option.detail !== option.value ? option.detail : 'Valor',
+          })),
+          ...rest.completions
+            .filter((item) => item.kind === 'function')
+            .map((item) => ({
+              label: item.label,
+              insert: item.label,
+              kind: 'function',
+              detail: 'Función',
+            })),
+        ]),
+      );
+    }
+    return completions.pipe(
+      map((found) =>
+        found.completions.map((item) => ({
+          label: item.label,
+          insert: item.label,
+          kind: item.kind,
+          detail: item.detail,
+        })),
+      ),
+    );
+  };
+
+  constructor() {
+    this.filterStore.load('all');
+
+    // The editor follows the address (a saved filter, the browser buttons).
+    effect(() => {
+      const applied = this.appliedJql();
+      untracked(() => {
+        if (this.draft() !== applied) this.draft.set(applied);
+      });
+    });
+
+    // Runs the query whenever what is searched, the page or the page size changes.
+    effect(() => {
+      const request = {
+        jql: this.effectiveJql(),
+        order: this.effectiveOrder(),
+        page: this.page(),
+        pageSize: this.pageSize(),
+      };
+      untracked(() => this.run(request));
+    });
+
+    // A saved filter in the address is loaded into the advanced editor.
+    effect(() => {
+      const id = this.filterId();
+      const known = this.savedFilters();
+      untracked(() => this.loadSavedFilter(id, known));
+    });
+
+    this.validateRequests
+      .pipe(
+        debounceTime(VALIDATE_DEBOUNCE_MS),
+        switchMap((text) =>
+          text.trim() === '' ? of(null) : this.api.validate(text).pipe(catchError(() => of(null))),
+        ),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe((result) => this.problems.set(result?.errors ?? []));
+  }
+
+  // Mode.
+  protected setMode(mode: NavigatorMode): void {
+    if (mode === this.mode()) return;
+    if (mode === 'advanced') {
+      const jql = withOrderBy(basicFiltersToJql(this.filters()), this.order());
+      this.go({ ...CLEAR_BASIC, mode: 'advanced', jql, order: null, page: null, filter: null });
+    } else if (this.appliedJql().trim() === '') {
+      this.go({ mode: null, jql: null, page: null, filter: null });
+    } else {
+      this.switchWarningOpen.set(true);
+    }
+  }
+
+  protected confirmBasicMode(): void {
+    this.switchWarningOpen.set(false);
+    this.problems.set([]);
+    this.go({ mode: null, jql: null, order: null, page: null, filter: null });
+  }
+
+  // Basic filters.
+  protected setFilters(filters: BasicFilters): void {
+    this.go({ ...filtersToParams(filters), page: null, filter: null });
+  }
+
+  protected removeFilterChip(chip: QueryChip): void {
+    this.setFilters(removeChip(this.filters(), chip));
+  }
+
+  protected clearFilters(): void {
+    this.setFilters(EMPTY_BASIC_FILTERS);
+  }
+
+  // Advanced query.
+  protected onDraft(text: string): void {
+    this.draft.set(text);
+    this.validateRequests.next(text);
+  }
+
+  protected runAdvanced(): void {
+    const text = this.draft().trim();
+    this.go({ jql: text, mode: 'advanced', page: null, filter: this.filterId() });
+    if (text === this.appliedJql().trim()) this.refresh();
+  }
+
+  // Results.
+  protected setSortField(field: string | null): void {
+    if (!field) return;
+    this.applySort(field, this.sort()?.direction ?? 'DESC');
+  }
+
+  protected toggleSortDirection(): void {
+    const sort = this.sort();
+    this.applySort(sort?.field ?? 'updated', sort?.direction === 'ASC' ? 'DESC' : 'ASC');
+  }
+
+  protected setColumns(keys: string[] | null): void {
+    const chosen = keys && keys.length > 0 ? keys : ['summary'];
+    this.go({ cols: chosen.join(',') });
+  }
+
+  protected changePage(change: DataTablePageChange): void {
+    this.go({
+      page: change.page > 1 ? String(change.page) : null,
+      size: change.pageSize !== DEFAULT_PAGE_SIZE ? String(change.pageSize) : null,
+    });
+  }
+
+  protected refresh(): void {
+    this.lastRunKey = '';
+    this.run({
+      jql: this.effectiveJql(),
+      order: this.effectiveOrder(),
+      page: this.page(),
+      pageSize: this.pageSize(),
+    });
+  }
+
+  protected openIssue(issue: Issue): void {
+    void this.router.navigateByUrl(issuePath(issue.key));
+  }
+
+  protected openNew(): void {
+    void this.router.navigateByUrl(`${ISSUES_PATH}/new`);
+  }
 
   protected openStatusDialog(issues: readonly Issue[]): void {
     if (issues.length === 0) return;
@@ -330,35 +464,150 @@ export class IssuesListPage {
     this.statusOpen.set(true);
   }
 
+  /** A bulk change finished for some issues: the list is reloaded and the selection cleared. */
+  protected onBulkDone(): void {
+    this.selectedKeys.set([]);
+    this.refresh();
+  }
+
   protected onStatusChanged(): void {
     this.selectedKeys.set([]);
-    this.store.fetchIssues(this.filter());
+    this.refresh();
   }
 
-  constructor() {
-    this.catalog.ensureLoaded();
-    // The list reloads whenever a filter, the search text, the page or the page size changes.
-    effect(() => {
-      const filter = this.filter();
-      untracked(() => this.store.fetchIssues(filter));
-    });
+  /** Downloads the rows of the page (or the ticked ones) as a CSV file with the visible columns. */
+  protected exportCsv(onlySelected = false): void {
+    const keys = new Set(this.selectedKeys());
+    const rows = this.issues().filter((issue) => !onlySelected || keys.has(issue.id));
+    const columns = this.visibleColumns();
+    const titles = new Map(NAVIGATOR_COLUMNS.map((column) => [column.key, column.title]));
+    const lines = [
+      columns.map((key) => csvCell(titles.get(key) ?? key)).join(','),
+      ...rows.map((issue) => columns.map((key) => csvCell(this.cellText(issue, key))).join(',')),
+    ];
+    const blob = new Blob([`﻿${lines.join('\r\n')}\r\n`], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'incidencias.csv';
+    link.click();
+    URL.revokeObjectURL(url);
+  }
 
-    this.savedFilterApi
-      .list()
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: (filters) => this.savedFilters.set(filters),
-        error: () => this.savedFilterError.set('No se pudieron cargar los filtros guardados.'),
+  // Saved filters.
+  protected selectSaved(filter: SavedQuery): void {
+    this.sidebarOpen.set(false);
+    this.loadedFilterId = null;
+    this.go({ filter: filter.id });
+    this.loadSavedFilter(filter.id, [filter]);
+  }
+
+  protected openSave(): void {
+    this.saveError.set(null);
+    this.saveOpen.set(true);
+  }
+
+  protected async save(request: SaveFilterRequest): Promise<void> {
+    this.saveBusy.set(true);
+    this.saveError.set(null);
+    const query = withOrderBy(this.effectiveJql(), this.mode() === 'advanced' ? '' : this.order());
+    const sort = this.sort();
+    const payload = {
+      name: request.name,
+      description: request.description,
+      query: this.mode() === 'advanced' ? this.appliedJql() : query,
+      columns: this.columnKeys(),
+      sort: sort ? formatOrder([sort]) : '',
+    };
+    const current = this.editableFilter();
+    try {
+      const saved =
+        request.replace && current
+          ? await this.filterStore.update(current.id, payload)
+          : await this.filterStore.save({
+              ...payload,
+              organizationId: this.organizations.currentOrgId() ?? undefined,
+            });
+      this.loadedFilterId = saved.id;
+      this.saveOpen.set(false);
+      this.notify.success('Filtro guardado');
+      this.go({
+        mode: 'advanced',
+        jql: saved.query,
+        filter: saved.id,
+        order: null,
+        page: null,
+        ...CLEAR_BASIC,
       });
+    } catch (error) {
+      this.saveError.set(asApiError(error).message);
+    } finally {
+      this.saveBusy.set(false);
+    }
   }
 
-  protected onSearch(value: string): void {
-    this.search.set(value);
-    this.page.set(1);
+  protected toggleSubscription(filter: SavedQuery): void {
+    this.subscriptionTarget.set(filter);
   }
 
-  protected openIssue(issue: Issue): void {
-    void this.router.navigateByUrl(issuePath(issue.key));
+  private applySort(field: string, direction: 'ASC' | 'DESC'): void {
+    const order = formatOrder([{ field, direction }]);
+    if (this.mode() === 'advanced') {
+      this.go({ jql: withOrderBy(this.appliedJql(), order), page: null });
+    } else {
+      this.go({ order: order === DEFAULT_ORDER ? null : order, page: null });
+    }
+  }
+
+  private loadSavedFilter(id: string | null, known: readonly SavedQuery[]): void {
+    if (!id) {
+      this.loadedFilterId = null;
+      return;
+    }
+    if (this.loadedFilterId === id) return;
+    const filter = known.find((item) => item.id === id);
+    if (!filter) return;
+    this.loadedFilterId = id;
+    const jql =
+      filter.sort && !splitOrderBy(filter.query).order
+        ? withOrderBy(filter.query, filter.sort)
+        : filter.query;
+    this.go({
+      ...CLEAR_BASIC,
+      mode: 'advanced',
+      jql,
+      order: null,
+      cols: filter.columns.length > 0 ? filter.columns.join(',') : null,
+      page: null,
+    });
+  }
+
+  private run(request: { jql: string; order: string; page: number; pageSize: number }): void {
+    const key = JSON.stringify(request);
+    if (key === this.lastRunKey) return;
+    this.lastRunKey = key;
+    this.selectedKeys.set([]);
+    this.results.load(
+      this.api.searchIssues({
+        jql: request.jql,
+        order: request.order || undefined,
+        page: request.page,
+        pageSize: request.pageSize,
+      }),
+    );
+    // A rejected query shows its problems (position, message, fixes) next to the editor.
+    if (this.mode() === 'advanced' && request.jql.trim() !== '')
+      this.validateRequests.next(request.jql);
+  }
+
+  /** Merges parameters into the address, replacing the history entry so Back does not step through every edit. */
+  private go(changes: Record<string, string | null>): void {
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: changes,
+      queryParamsHandling: 'merge',
+      replaceUrl: true,
+    });
   }
 
   private async copyKey(issue: Issue): Promise<void> {
@@ -370,151 +619,36 @@ export class IssuesListPage {
     this.notify.success('Clave copiada');
   }
 
-  protected openNew(): void {
-    void this.router.navigateByUrl(NEW_ISSUE_PATH);
-  }
-
-  protected changePage(change: DataTablePageChange): void {
-    this.page.set(change.page);
-    this.pageSize.set(change.pageSize);
-  }
-
-  protected retry(): void {
-    this.store.fetchIssues(this.filter());
-  }
-
-  protected toggleAdvanced(): void {
-    this.advancedOpen.update((open) => !open);
-  }
-
-  protected onDueFrom(value: Date | null): void {
-    this.changeFilter(() => this.dueFrom.set(value ? startOfDayIso(value) : undefined));
-  }
-
-  protected onDueTo(value: Date | null): void {
-    this.changeFilter(() => this.dueTo.set(value ? endOfDayIso(value) : undefined));
-  }
-
-  protected clearFilters(): void {
-    this.search.set('');
-    this.statusFilter.set(undefined);
-    this.priorityFilter.set(undefined);
-    this.issueTypeFilter.set(undefined);
-    this.setAssignee(undefined);
-    this.dueFrom.set(undefined);
-    this.dueTo.set(undefined);
-    this.selectedSavedFilter.set(undefined);
-    this.page.set(1);
-  }
-
-  /** Loads a saved filter's criteria into the issue filters. Clearing the selection resets the filters. */
-  protected applySavedFilter(filterId: string | null): void {
-    const id = filterId ?? undefined;
-    this.selectedSavedFilter.set(id);
-    const criteria = this.savedFilters().find((filter) => filter.id === id)?.criteria;
-    this.statusFilter.set(criteria?.status);
-    this.priorityFilter.set(
-      criteria?.priority
-        ? findPriorityByLegacyKey(this.catalog.priorities(), criteria.priority)?.id
-        : undefined,
-    );
-    this.issueTypeFilter.set(
-      criteria?.issueType
-        ? findTypeByLegacyKey(this.catalog.issueTypes(), criteria.issueType)?.id
-        : undefined,
-    );
-    this.search.set(criteria?.query ?? '');
-    this.dueFrom.set(criteria?.dueFrom);
-    this.dueTo.set(criteria?.dueTo);
-    this.page.set(1);
-  }
-
-  protected openSaveDialog(): void {
-    this.saveDialogOpen.set(true);
-  }
-
-  protected closeSaveDialog(): void {
-    this.saveDialogOpen.set(false);
-  }
-
-  protected onSavedFilterName(value: string): void {
-    this.savedFilterName.set(value);
-  }
-
-  protected saveCurrentFilter(): void {
-    if (!this.canSaveName()) return;
-    this.savedFilterApi.create(this.savedFilterName(), this.criteria()).subscribe({
-      next: (filter) => {
-        this.savedFilters.update((current) =>
-          [...current, filter].sort((a, b) => a.name.localeCompare(b.name)),
-        );
-        this.selectedSavedFilter.set(filter.id);
-        this.savedFilterName.set('');
-        this.saveDialogOpen.set(false);
-        this.savedFilterError.set(undefined);
-        this.notify.success('Filtro guardado');
-      },
-      error: () =>
-        this.savedFilterError.set(
-          'No se pudo guardar el filtro. Comprueba que el nombre no esté repetido.',
-        ),
-    });
-  }
-
-  protected deleteSelectedFilter(): void {
-    const id = this.selectedSavedFilter();
-    if (!id) return;
-    this.savedFilterApi.delete(id).subscribe({
-      next: () => {
-        this.savedFilters.update((current) => current.filter((filter) => filter.id !== id));
-        this.selectedSavedFilter.set(undefined);
-        this.savedFilterError.set(undefined);
-        this.notify.success('Filtro eliminado');
-      },
-      error: () => this.savedFilterError.set('No se pudo eliminar el filtro guardado.'),
-    });
-  }
-
-  protected dismissSavedFilterError(): void {
-    this.savedFilterError.set(undefined);
-  }
-
-  /** Swaps the rank of a issue with its neighbour. Every issue first receives a dense rank by position. */
-  private moveIssue(issue: Issue, direction: -1 | 1): void {
-    const ordered = this.issues();
-    const currentIndex = ordered.findIndex((item) => item.id === issue.id);
-    const targetIndex = currentIndex + direction;
-    if (currentIndex < 0 || targetIndex < 0 || targetIndex >= ordered.length) return;
-
-    forkJoin(ordered.map((item, index) => this.store.updateRank(item.id, rankOf(index))))
-      .pipe(
-        switchMap(() =>
-          forkJoin([
-            this.store.updateRank(issue.id, rankOf(targetIndex)),
-            this.store.updateRank(ordered[targetIndex].id, rankOf(currentIndex)),
-          ]),
-        ),
-        takeUntilDestroyed(this.destroyRef),
-      )
-      .subscribe({ error: () => this.notify.error('No se pudo actualizar la incidencia') });
-  }
-
-  /** Writes the assignee filter to the address, replacing the history entry so Back does not step through filters. */
-  private setAssignee(value: string | undefined): void {
-    void this.router.navigate([], {
-      relativeTo: this.route,
-      queryParams: { [ASSIGNEE_PARAM]: value ?? null },
-      queryParamsHandling: 'merge',
-      replaceUrl: true,
-    });
-  }
-
-  private changeFilter(apply: () => void): void {
-    apply();
-    this.page.set(1);
-  }
-
-  private toDate(value: string | undefined): Date | null {
-    return value ? new Date(value) : null;
+  private cellText(issue: Issue, key: string): string {
+    switch (key) {
+      case 'key':
+        return issueKeyOf(issue);
+      case 'summary':
+        return issue.summary;
+      case 'type':
+        return issue.issueType.name;
+      case 'status':
+        return issue.workflowStatus?.name ?? issue.status;
+      case 'priority':
+        return issue.priority.name;
+      case 'assignee':
+        return issue.assigneeName ?? '';
+      case 'reporter':
+        return issue.reporterName;
+      case 'project':
+        return issue.projectKey;
+      case 'labels':
+        return ((issue as { labels?: readonly string[] }).labels ?? []).join('; ');
+      case 'points':
+        return issue.storyPoints === null ? '' : String(issue.storyPoints);
+      case 'due':
+        return issue.dueDate ?? '';
+      case 'created':
+        return issue.createdAt;
+      case 'updated':
+        return issue.updatedAt;
+      default:
+        return '';
+    }
   }
 }

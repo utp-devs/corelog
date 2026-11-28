@@ -2,7 +2,7 @@ import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { Router, Routes } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
-import { IssueActivity, IssueComment, IssueWatcherState, NotificationService } from '@corelog/core';
+import { IssueWatcherState, NotificationService } from '@corelog/core';
 import { guardConsole, installViewport } from '@corelog/core/testing';
 import { NEVER, of, throwError } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -100,12 +100,17 @@ describe('IssueDetailPage', () => {
     setupIssues({ user: userOf({ role: 'admin' }) });
     const harness = await renderDetail();
 
-    for (const heading of ['Detalles', 'Más información', 'Vínculos', 'Adjuntos', 'Actividad']) {
+    for (const heading of [
+      'Detalles',
+      'Más información',
+      'Vínculos',
+      'Adjuntos',
+      'Tiempo',
+      'Actividad',
+    ]) {
       expect(sectionOf(heading)).toBeDefined();
     }
     expect(document.body.textContent).toContain('Aún no hay archivos');
-    expect(document.body.textContent).toContain('Aún no hay comentarios');
-    expect(document.body.textContent).toContain('Aún no hay vínculos');
     harness.fixture.detectChanges();
   });
 
@@ -132,7 +137,7 @@ describe('IssueDetailPage', () => {
     expect(document.querySelector('[data-testid="issue-resolution"]')?.textContent).toContain(
       'No se reproduce',
     );
-    expect(sectionOf('Más información').textContent).toContain('Error');
+    expect(sectionOf('Más información').textContent).toContain('Proyecto');
   });
 
   it('does not show a resolution for an open issue', async () => {
@@ -210,33 +215,10 @@ describe('IssueDetailPage', () => {
     guard.expectNoConsoleOutput();
   });
 
-  it('shows the member name of comment authors, history actors and attachment uploaders', async () => {
-    const comment: IssueComment = {
-      id: 'c1',
-      issueId: ISSUE_ID,
-      authorId: 'user-2',
-      body: 'Hola equipo',
-      createdAt: AT,
-      updatedAt: AT,
-      deletedAt: null,
-    };
-    const activity: IssueActivity = {
-      id: 'a1',
-      issueId: ISSUE_ID,
-      actorId: 'user-2',
-      action: 'status_changed',
-      fieldName: 'status',
-      oldValue: 'open',
-      newValue: 'in_progress',
-      createdAt: AT,
-    };
+  it('shows the member name of attachment uploaders', async () => {
     setupIssues({
       user: userOf({ role: 'admin' }),
       memberSource: { listMembers: () => of([LUIS]) },
-      issueApi: {
-        listComments: () => of([comment]),
-        listActivities: () => of([activity]),
-      },
       attachmentApi: {
         list: () =>
           of([
@@ -254,9 +236,6 @@ describe('IssueDetailPage', () => {
     });
     await renderDetail();
 
-    expect(sectionOf('Actividad').querySelector('.issue-activity__author')?.textContent).toBe(
-      'Luis Pérez',
-    );
     expect(document.body.textContent).not.toMatch(/Usuario [0-9a-f]{8}/);
     expect(document.body.textContent).toContain('Subido por Usuario desconocido');
   });
@@ -561,128 +540,5 @@ describe('IssueDetailPage', () => {
       'No tienes permiso para cambiar el responsable.',
     );
     expect(buttonIn(rowOf('Responsable'), 'Asignarme a mí')).toBeUndefined();
-  });
-
-  it('writes the history in Spanish with the actor name', async () => {
-    const activities: IssueActivity[] = [
-      {
-        id: 'a1',
-        issueId: ISSUE_ID,
-        actorId: 'user-2',
-        action: 'created',
-        fieldName: null,
-        oldValue: null,
-        newValue: null,
-        createdAt: AT,
-      },
-      {
-        id: 'a2',
-        issueId: ISSUE_ID,
-        actorId: 'user-2',
-        action: 'status_changed',
-        fieldName: 'status',
-        oldValue: 'open',
-        newValue: 'in_progress',
-        createdAt: '2026-01-02T11:00:00Z',
-      },
-    ];
-    setupIssues({
-      user: userOf({ role: 'admin' }),
-      memberSource: { listMembers: () => of([LUIS]) },
-      issueApi: { listActivities: () => of(activities) },
-    });
-    const harness = await renderDetail();
-    const tab = Array.from(document.querySelectorAll<HTMLElement>('[role="tab"]')).find((item) =>
-      item.textContent?.includes('Historial'),
-    );
-    tab?.click();
-    harness.fixture.detectChanges();
-
-    const text = sectionOf('Actividad').textContent ?? '';
-    expect(text).toContain('Luis Pérez creó la incidencia');
-    expect(text).toContain('Luis Pérez cambió el estado de Abierto a En progreso');
-    expect(text).not.toContain('created');
-    expect(text).not.toContain('status_changed');
-  });
-
-  it('keeps the comment composer to one line until it is focused and clears it after sending', async () => {
-    const saved: IssueComment = {
-      id: 'c9',
-      issueId: ISSUE_ID,
-      authorId: 'user-1',
-      body: 'Mi comentario',
-      createdAt: AT,
-      updatedAt: AT,
-      deletedAt: null,
-    };
-    const ctx = setupIssues({
-      user: userOf({ role: 'admin' }),
-      issueApi: { createComment: () => of(saved) },
-    });
-    const harness = await renderDetail();
-
-    expect(document.querySelector('app-issue-activity textarea')).toBeNull();
-    document.querySelector<HTMLButtonElement>('.issue-activity__collapsed')?.click();
-    harness.fixture.detectChanges();
-
-    const textarea = document.querySelector<HTMLTextAreaElement>('app-issue-activity textarea');
-    expect(textarea).not.toBeNull();
-    if (!textarea) return;
-    textarea.value = 'Mi comentario';
-    textarea.dispatchEvent(new Event('input'));
-    harness.fixture.detectChanges();
-    clickIn(document, 'Comentar');
-    await settle(harness);
-
-    expect(ctx.issueApi.createComment).toHaveBeenCalledWith(ISSUE_ID, 'Mi comentario');
-    expect(document.querySelector('app-issue-activity textarea')).toBeNull();
-  });
-
-  it('lets the author edit a comment and asks before deleting it', async () => {
-    const own: IssueComment = {
-      id: 'c1',
-      issueId: ISSUE_ID,
-      authorId: 'user-1',
-      body: 'Primer texto',
-      createdAt: AT,
-      updatedAt: AT,
-      deletedAt: null,
-    };
-    const other: IssueComment = { ...own, id: 'c2', authorId: 'user-2', body: 'Ajeno' };
-    const ctx = setupIssues({
-      user: userOf({ role: 'admin' }),
-      issueApi: { listComments: () => of([own, other]) },
-    });
-    const harness = await renderDetail();
-
-    const items = Array.from(document.querySelectorAll<HTMLElement>('.issue-activity__item'));
-    expect(items).toHaveLength(2);
-    const mine = items.find((item) => item.textContent?.includes('Primer texto'));
-    const theirs = items.find((item) => item.textContent?.includes('Ajeno'));
-    if (!mine || !theirs) throw new Error('comments not rendered');
-    expect(buttonIn(theirs, 'Editar')).toBeUndefined();
-
-    clickIn(mine, 'Editar');
-    harness.fixture.detectChanges();
-    const editor = document.querySelector<HTMLTextAreaElement>(
-      'textarea[aria-label="Editar comentario"]',
-    );
-    if (!editor) throw new Error('no editor');
-    editor.value = 'Texto corregido';
-    editor.dispatchEvent(new Event('input'));
-    harness.fixture.detectChanges();
-    clickIn(document, 'Guardar');
-    await settle(harness);
-    expect(ctx.issueApi.updateComment).toHaveBeenCalledWith(ISSUE_ID, 'c1', 'Texto corregido');
-    expect(document.body.textContent).toContain('Texto corregido');
-
-    const edited = Array.from(document.querySelectorAll<HTMLElement>('.issue-activity__item')).find(
-      (item) => item.textContent?.includes('Texto corregido'),
-    );
-    if (!edited) throw new Error('edited comment missing');
-    clickIn(edited, 'Eliminar');
-    harness.fixture.detectChanges();
-    expect(ctx.issueApi.deleteComment).not.toHaveBeenCalled();
-    expect(document.body.textContent).toContain('Eliminar comentario');
   });
 });

@@ -1,0 +1,287 @@
+<div class="project-versions">
+  <app-section
+    title="Versiones"
+    description="Agrupa las incidencias que se entregan juntas y sigue su avance hasta la publicación."
+    ariaLabel="Versiones del proyecto"
+  >
+    @if (canManage()) {
+      <p-button
+        appSectionActions
+        label="Nueva versión"
+        icon="pi pi-plus"
+        data-testid="version-new"
+        (onClick)="openForm()"
+      />
+    }
+
+    @if (status() === 'error') {
+      <app-error-state
+        message="No se pudieron cargar las versiones."
+        [canRetry]="true"
+        (retry)="retry()"
+      />
+    } @else if (status() === 'loading') {
+      <app-loading-skeleton variant="detail" [rows]="3" />
+    } @else if (versions().length === 0) {
+      <p class="project-versions__empty">
+        Aún no hay versiones. Crea la primera para planificar una entrega.
+      </p>
+    } @else {
+      <ul class="project-versions__list" data-testid="version-list">
+        @for (version of versions(); track version.id) {
+          <li
+            class="project-versions__item"
+            data-testid="version-item"
+            [attr.data-name]="version.name"
+          >
+            <div class="project-versions__head">
+              <h3 class="project-versions__name">{{ version.name }}</h3>
+              <app-tone-tag
+                [label]="statusLabel(version.status)"
+                [tone]="statusTone(version.status)"
+              />
+              <span class="project-versions__dates">
+                @if (version.releasedAt) {
+                  Publicada el {{ version.releasedAt | date: 'dd/MM/yyyy' }}
+                } @else if (version.releaseDate) {
+                  Prevista para el {{ version.releaseDate | date: 'dd/MM/yyyy' }}
+                }
+              </span>
+            </div>
+            @if (version.description) {
+              <p class="project-versions__description">{{ version.description }}</p>
+            }
+            <app-progress-bar
+              [value]="percent(version)"
+              label="Avance"
+              [tone]="version.status === 'released' ? 'success' : 'brand'"
+              data-testid="version-progress"
+            />
+            <p class="project-versions__counts">
+              {{ version.progress.done }} de {{ version.progress.total }} incidencias terminadas
+              @if (version.progress.inProgress > 0) {
+                · {{ version.progress.inProgress }} en curso
+              }
+            </p>
+            <div class="project-versions__actions">
+              <p-button
+                label="Notas de la versión"
+                icon="pi pi-file"
+                severity="secondary"
+                [outlined]="true"
+                (onClick)="openNotes(version)"
+              />
+              @if (canManage()) {
+                @if (version.status === 'unreleased') {
+                  <p-button
+                    label="Publicar"
+                    icon="pi pi-send"
+                    data-testid="version-release"
+                    (onClick)="openRelease(version)"
+                  />
+                  <p-button
+                    label="Editar"
+                    severity="secondary"
+                    [text]="true"
+                    (onClick)="openForm(version)"
+                  />
+                }
+                @if (version.status === 'released') {
+                  <p-button
+                    label="Archivar"
+                    severity="secondary"
+                    [outlined]="true"
+                    data-testid="version-archive"
+                    (onClick)="archive(version)"
+                  />
+                  <p-button
+                    label="Reabrir"
+                    severity="secondary"
+                    [text]="true"
+                    (onClick)="reopen(version)"
+                  />
+                }
+                @if (version.status !== 'archived') {
+                  <p-button
+                    label="Eliminar"
+                    severity="danger"
+                    [text]="true"
+                    (onClick)="deleting.set(version)"
+                  />
+                }
+              }
+            </div>
+          </li>
+        }
+      </ul>
+    }
+  </app-section>
+</div>
+
+<app-dialog
+  size="sm"
+  [heading]="editing() ? 'Editar versión' : 'Nueva versión'"
+  [open]="formOpen()"
+  (closeRequested)="formOpen.set(false)"
+>
+  <form class="project-versions__form" [formGroup]="form" (ngSubmit)="saveForm()">
+    <label class="project-versions__field">
+      <span class="project-versions__label">Nombre</span>
+      <input
+        pInputText
+        formControlName="name"
+        maxlength="80"
+        data-autofocus
+        data-testid="version-name"
+      />
+    </label>
+    <label class="project-versions__field">
+      <span class="project-versions__label">Descripción (opcional)</span>
+      <textarea pTextarea formControlName="description" rows="2"></textarea>
+    </label>
+    <div class="project-versions__dates-row">
+      <label class="project-versions__field">
+        <span class="project-versions__label">Inicio</span>
+        <input pInputText type="date" formControlName="startDate" />
+      </label>
+      <label class="project-versions__field">
+        <span class="project-versions__label">Publicación prevista</span>
+        <input pInputText type="date" formControlName="releaseDate" />
+      </label>
+    </div>
+    @if (error(); as message) {
+      <p class="project-versions__error" role="alert">{{ message }}</p>
+    }
+  </form>
+  <p-button dialogFooter label="Cancelar" severity="secondary" (onClick)="formOpen.set(false)" />
+  <p-button
+    dialogFooter
+    label="Guardar"
+    data-testid="version-save"
+    [disabled]="form.invalid"
+    [loading]="busy()"
+    (onClick)="saveForm()"
+  />
+</app-dialog>
+
+<app-dialog
+  size="md"
+  [heading]="'Publicar ' + (releasing()?.name ?? '')"
+  subtitle="Al publicar, la versión pasa a estar entregada."
+  [open]="releasing() !== null"
+  (closeRequested)="releasing.set(null)"
+>
+  <div class="project-versions__release">
+    <label class="project-versions__field">
+      <span class="project-versions__label">Fecha de publicación</span>
+      <input pInputText type="date" [formControl]="releaseDate" />
+    </label>
+
+    @if (unresolved() > 0) {
+      <fieldset class="project-versions__choices">
+        <legend class="project-versions__label">
+          Quedan {{ unresolved() }} incidencias sin terminar. ¿Qué hacemos con ellas?
+        </legend>
+        <label class="project-versions__radio">
+          <input
+            type="radio"
+            name="move"
+            [checked]="moveChoice() === 'keep'"
+            (change)="moveChoice.set('keep')"
+          />
+          Dejarlas en esta versión
+        </label>
+        <label class="project-versions__radio">
+          <input
+            type="radio"
+            name="move"
+            data-testid="move-new"
+            [checked]="moveChoice() === 'new'"
+            (change)="moveChoice.set('new')"
+          />
+          Moverlas a una versión nueva
+        </label>
+        <label class="project-versions__radio">
+          <input
+            type="radio"
+            name="move"
+            [checked]="moveChoice() === 'other'"
+            (change)="moveChoice.set('other')"
+          />
+          Moverlas a otra versión sin publicar
+        </label>
+        @if (moveChoice() === 'other') {
+          <p-select
+            ariaLabel="Versión de destino"
+            placeholder="Elige una versión"
+            optionLabel="label"
+            optionValue="value"
+            appendTo="body"
+            [options]="targets()"
+            [ngModel]="moveTarget()"
+            (ngModelChange)="moveTarget.set($event)"
+          />
+        }
+      </fieldset>
+    } @else {
+      <p class="project-versions__hint">Todas las incidencias de esta versión están terminadas.</p>
+    }
+
+    @if (error(); as message) {
+      <p class="project-versions__error" role="alert">{{ message }}</p>
+    }
+  </div>
+  <p-button dialogFooter label="Cancelar" severity="secondary" (onClick)="releasing.set(null)" />
+  <p-button
+    dialogFooter
+    label="Publicar"
+    data-testid="release-confirm"
+    [loading]="busy()"
+    (onClick)="confirmRelease()"
+  />
+</app-dialog>
+
+<app-dialog
+  size="lg"
+  [heading]="'Notas de ' + (notes()?.versionName ?? 'la versión')"
+  [open]="notesOpen()"
+  (closeRequested)="notesOpen.set(false)"
+>
+  @if (notesLoading()) {
+    <app-loading-skeleton variant="detail" [rows]="3" />
+  } @else if (error(); as message) {
+    <p class="project-versions__error" role="alert">{{ message }}</p>
+  } @else if (notes(); as current) {
+    @if (current.issueCount === 0) {
+      <p class="project-versions__hint">Esta versión aún no tiene incidencias.</p>
+    } @else {
+      <div data-testid="release-notes">
+        <app-rich-text-view [value]="current.markdown" />
+      </div>
+    }
+  }
+  <p-button dialogFooter label="Cerrar" severity="secondary" (onClick)="notesOpen.set(false)" />
+</app-dialog>
+
+<app-dialog
+  size="sm"
+  heading="Eliminar versión"
+  [open]="deleting() !== null"
+  (closeRequested)="deleting.set(null)"
+>
+  <p>
+    Se eliminará «{{ deleting()?.name }}». Sus incidencias dejan de tener esta versión de
+    corrección.
+  </p>
+  @if (error(); as message) {
+    <p class="project-versions__error" role="alert">{{ message }}</p>
+  }
+  <p-button dialogFooter label="Cancelar" severity="secondary" (onClick)="deleting.set(null)" />
+  <p-button
+    dialogFooter
+    label="Eliminar"
+    severity="danger"
+    [loading]="busy()"
+    (onClick)="confirmDelete()"
+  />
+</app-dialog>

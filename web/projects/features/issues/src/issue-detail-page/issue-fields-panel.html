@@ -1,0 +1,217 @@
+@if (view(); as issue) {
+  <app-section title="Campos" class="issue-fields">
+    <div class="issue-fields__list" data-testid="issue-fields">
+      <app-field-row
+        label="Tipo"
+        variant="inline"
+        [disabledReason]="canEdit() ? undefined : lockedReason()"
+      >
+        <app-inline-edit
+          label="Tipo"
+          type="select"
+          appearance="field"
+          [value]="issue.issueType.id"
+          [options]="typeOptions()"
+          [locked]="!canEdit()"
+          [disabledReason]="lockedReason()"
+          [onSave]="saveType"
+        />
+      </app-field-row>
+
+      <app-field-row
+        label="Etiquetas"
+        variant="inline"
+        [helper]="canEdit() ? labelHint() : undefined"
+      >
+        @if (canEdit()) {
+          <app-field-editor
+            type="labels"
+            label="Etiquetas"
+            [value]="labels()"
+            (valueChange)="setLabels($event)"
+          />
+        } @else {
+          <app-field-view type="labels" [value]="labels()" />
+        }
+      </app-field-row>
+
+      <app-field-row label="Componentes" variant="inline">
+        @if (canEdit()) {
+          <app-field-editor
+            type="multiselect"
+            label="Componentes"
+            [options]="componentOptions()"
+            [value]="componentIds()"
+            (valueChange)="setComponents($event)"
+          />
+        } @else {
+          <app-field-view
+            type="multiselect"
+            [options]="componentOptions()"
+            [value]="componentIds()"
+          />
+        }
+      </app-field-row>
+
+      <app-field-row label="Versión de corrección" variant="inline">
+        @if (canEdit()) {
+          <app-field-editor
+            type="multiselect"
+            label="Versión de corrección"
+            [options]="versionOptions()"
+            [value]="fixVersionIds()"
+            (valueChange)="setVersions('fix', $event)"
+          />
+        } @else {
+          <app-field-view
+            type="multiselect"
+            [options]="versionOptions()"
+            [value]="fixVersionIds()"
+          />
+        }
+      </app-field-row>
+
+      <app-field-row label="Versión afectada" variant="inline">
+        @if (canEdit()) {
+          <app-field-editor
+            type="multiselect"
+            label="Versión afectada"
+            [options]="versionOptions()"
+            [value]="affectsVersionIds()"
+            (valueChange)="setVersions('affects', $event)"
+          />
+        } @else {
+          <app-field-view
+            type="multiselect"
+            [options]="versionOptions()"
+            [value]="affectsVersionIds()"
+          />
+        }
+      </app-field-row>
+
+      <app-field-row label="Incidencia padre" variant="inline">
+        <div class="issue-fields__parent">
+          @if (issue.breadcrumb.parent; as parent) {
+            <a class="issue-fields__link" [routerLink]="issuePathOf(parent.key)">{{
+              parent.key
+            }}</a>
+            <span class="issue-fields__muted">{{ parent.summary }}</span>
+          } @else {
+            <span class="issue-fields__muted">Sin incidencia padre</span>
+          }
+          @if (canEdit()) {
+            @if (changingParent()) {
+              <app-issue-picker
+                [excludeId]="issue.id"
+                [value]="parentPick()"
+                (valueChange)="applyParent($event)"
+              />
+            } @else {
+              <div class="issue-fields__inline-actions">
+                <p-button
+                  [label]="issue.breadcrumb.parent ? 'Cambiar' : 'Elegir padre'"
+                  severity="secondary"
+                  size="small"
+                  [text]="true"
+                  class="touch-target"
+                  (onClick)="openParentPicker()"
+                />
+                @if (issue.breadcrumb.parent) {
+                  <p-button
+                    label="Quitar"
+                    severity="secondary"
+                    size="small"
+                    [text]="true"
+                    class="touch-target"
+                    (onClick)="clearParent()"
+                  />
+                }
+              </div>
+            }
+          }
+        </div>
+      </app-field-row>
+
+      <app-field-row label="Puntos de historia" variant="inline">
+        <app-inline-edit
+          label="Puntos de historia"
+          type="text"
+          placeholder="Sin estimar"
+          [value]="issue.storyPoints === null ? null : '' + issue.storyPoints"
+          [locked]="!canEdit()"
+          [disabledReason]="lockedReason()"
+          [onSave]="savePoints"
+        />
+      </app-field-row>
+
+      <app-field-row label="Fecha de inicio" variant="inline">
+        <app-inline-edit
+          label="Fecha de inicio"
+          type="date"
+          placeholder="Sin fecha"
+          [value]="issue.startDate"
+          [locked]="!canEdit()"
+          [disabledReason]="lockedReason()"
+          [onSave]="saveStart"
+        />
+      </app-field-row>
+
+      <app-field-row label="Fecha límite" variant="inline">
+        <app-inline-edit
+          label="Fecha límite"
+          type="date"
+          placeholder="Sin fecha límite"
+          [value]="issue.dueDate"
+          [locked]="!canEdit()"
+          [disabledReason]="lockedReason()"
+          [onSave]="saveDue"
+        />
+      </app-field-row>
+
+      <app-field-row label="Marcada" variant="inline">
+        <app-field-editor
+          type="checkbox"
+          label="Incidencia marcada"
+          [disabled]="!canEdit()"
+          [value]="issue.flagged"
+          (valueChange)="setFlag($event)"
+        />
+      </app-field-row>
+
+      @for (field of issue.customFields; track field.fieldId) {
+        <app-field-row [label]="field.name" variant="inline" [required]="field.required">
+          @if (canEdit()) {
+            <app-field-editor
+              [type]="field.type"
+              [label]="field.name"
+              [options]="field.options"
+              [users]="pickableUsers()"
+              [value]="customValue(field.fieldId)"
+              (valueChange)="setCustom(field.fieldId, $event)"
+              (userSearch)="teammates.search($event)"
+            />
+          } @else {
+            <app-field-view
+              [type]="field.type"
+              [options]="field.options"
+              [userName]="userName"
+              [value]="customValue(field.fieldId)"
+            />
+          }
+        </app-field-row>
+      }
+    </div>
+
+    <dl class="issue-fields__facts">
+      <dt>Reportado por</dt>
+      <dd class="issue-fields__person">
+        <app-user-avatar [id]="issue.reporterId" [name]="issue.reporterName" [size]="24" />
+        {{ issue.reporterName }}
+      </dd>
+      <dt>Creado</dt>
+      <dd [title]="exact(issue.createdAt)">{{ ago(issue.createdAt) }}</dd>
+      <dt>Actualizado</dt>
+      <dd [title]="exact(issue.updatedAt)">{{ ago(issue.updatedAt) }}</dd>
+    </dl>
+  </app-section>
+}

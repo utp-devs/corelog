@@ -1,0 +1,56 @@
+<nav class="filters-sidebar" aria-label="Filtros guardados" data-testid="filters-sidebar">
+  <h2 class="filters-sidebar__title">Filtros</h2>
+
+  @if (error(); as message) {
+    <p class="filters-sidebar__note" role="alert">{{ message }}</p>
+  } @else if (loading() && filters().length === 0) {
+    <p class="filters-sidebar__note">Cargando filtros...</p>
+  } @else if (groups().length === 0) {
+    <p class="filters-sidebar__note">
+      Aún no hay filtros guardados. Guarda una búsqueda para volver a usarla.
+    </p>
+  }
+
+  @for (group of groups(); track group.key) {
+    <section class="filters-sidebar__group" [attr.aria-label]="group.title">
+      <h3 class="filters-sidebar__group-title">{{ group.title }}</h3>
+      <ul class="filters-sidebar__list">
+        @for (filter of group.filters; track filter.id) {
+          <li
+            class="filters-sidebar__item"
+            [class.filters-sidebar__item--active]="filter.id === activeId()"
+          >
+            <button
+              type="button"
+              class="filters-sidebar__select"
+              data-testid="sidebar-filter"
+              [attr.aria-current]="filter.id === activeId() ? 'true' : null"
+              (click)="select.emit(filter)"
+            >
+              <span class="filters-sidebar__name">{{ filter.name }}</span>
+              @if (filter.access !== 'owner') {
+                <span class="filters-sidebar__owner">{{ filter.ownerName }}</span>
+              }
+            </button>
+            <button
+              type="button"
+              class="filters-sidebar__bell"
+              [class.filters-sidebar__bell--on]="filter.isSubscribed"
+              [attr.aria-pressed]="filter.isSubscribed"
+              [attr.aria-label]="
+                (filter.isSubscribed ? 'Cancelar la suscripción a ' : 'Suscribirme a ') +
+                filter.name
+              "
+              [appTooltip]="filter.isSubscribed ? 'Cancelar suscripción' : 'Suscribirme'"
+              (click)="toggleSubscription.emit(filter)"
+            >
+              <i class="pi pi-bell" aria-hidden="true"></i>
+            </button>
+          </li>
+        }
+      </ul>
+    </section>
+  }
+
+  <a class="filters-sidebar__manage" routerLink="/filters">Gestionar filtros</a>
+</nav>

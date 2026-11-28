@@ -6,45 +6,99 @@
 }
 
 .issues-list-page {
-  /* The filter bar takes the full toolbar row so the search and selectors can wrap freely. */
-  &__filters {
+  &__layout {
+    display: grid;
+    grid-template-columns: minmax(12rem, 16rem) minmax(0, 1fr);
+    gap: var(--cl-space-5);
     min-width: 0;
-    width: 100%;
   }
 
-  &__saved-row {
-    @include m.cluster(2);
-    margin-bottom: var(--cl-space-4);
+  &__sidebar {
+    min-width: 0;
+  }
 
-    @media (max-width: 767.98px) {
-      flex-direction: column;
-      align-items: stretch;
+  &__main {
+    @include m.flex-column(var(--cl-space-3));
+    min-width: 0;
+  }
 
-      :is(p-button, p-datepicker) {
-        width: 100%;
+  &__bar,
+  &__tools,
+  &__advanced-actions {
+    @include m.cluster(var(--cl-space-2));
+  }
+
+  &__advanced {
+    @include m.flex-column(var(--cl-space-2));
+  }
+
+  &__spacer {
+    flex: 1 1 auto;
+  }
+
+  // The label names the mode switch for assistive technology only.
+  &__mode-label {
+    @include m.visually-hidden;
+  }
+
+  &__saved-toggle {
+    display: none;
+  }
+
+  &__current {
+    @include m.truncate;
+    max-width: 16rem;
+    color: var(--cl-text-subtle);
+    font-size: var(--cl-font-small);
+  }
+
+  &__hint {
+    color: var(--cl-text-subtle);
+    font-size: var(--cl-font-small);
+  }
+
+  &__count {
+    font-weight: var(--cl-weight-medium);
+  }
+
+  &__sort {
+    min-width: 11rem;
+  }
+
+  &__columns {
+    min-width: 10rem;
+  }
+
+  @include m.respond-down(1024px) {
+    &__layout {
+      grid-template-columns: minmax(0, 1fr);
+      gap: var(--cl-space-3);
+    }
+
+    &__sidebar {
+      display: none;
+
+      &--open {
+        display: block;
+        padding: var(--cl-space-3);
+        border: 1px solid var(--cl-border);
+        border-radius: var(--cl-radius-md);
+        background: var(--cl-bg-surface);
       }
+    }
 
-      :is(button, input) {
-        min-height: var(--cl-control-h-lg);
-      }
+    &__saved-toggle {
+      display: inline-flex;
     }
   }
 
-  &__filter-select {
-    width: 14rem;
-    max-width: 100%;
-
-    @media (max-width: 767.98px) {
-      width: 100%;
+  @include m.respond-down(768px) {
+    &__sort {
+      flex: 1 1 8rem;
     }
-  }
 
-  &__alert {
-    margin-bottom: var(--cl-space-4);
-  }
-
-  /* Field of the save-filter dialog. */
-  &__name-input {
-    width: 100%;
+    &__columns {
+      flex: 1 1 100%;
+    }
   }
 }

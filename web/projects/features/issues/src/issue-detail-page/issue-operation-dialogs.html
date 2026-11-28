@@ -1,0 +1,137 @@
+<app-dialog size="md" [heading]="heading()" [open]="kind() !== null" (closeRequested)="close()">
+  <form class="issue-operations" (submit)="$event.preventDefault(); submit()" novalidate>
+    @if (error(); as message) {
+      <p-message severity="error" [closable]="false" role="alert" data-testid="operation-error">{{
+        message
+      }}</p-message>
+    }
+
+    @switch (kind()) {
+      @case ('clone') {
+        <app-field-row #titleRow label="Resumen" [required]="true">
+          <input
+            data-autofocus
+            class="issue-operations__input"
+            type="text"
+            name="summary"
+            maxlength="255"
+            [id]="titleRow.controlId"
+            [ngModel]="cloneSummary()"
+            (ngModelChange)="cloneSummary.set($event)"
+          />
+        </app-field-row>
+        <app-field-row #projectRow label="Proyecto de destino">
+          <app-select-field
+            [inputId]="projectRow.controlId"
+            ariaLabel="Proyecto de destino"
+            [options]="projectOptions()"
+            [ngModel]="cloneProject()"
+            [ngModelOptions]="{ standalone: true }"
+            (ngModelChange)="cloneProject.set($event ?? '')"
+          />
+        </app-field-row>
+        <fieldset class="issue-operations__group">
+          <legend class="issue-operations__legend">Copiar también</legend>
+          @for (option of cloneOptions; track option.value) {
+            <label class="issue-operations__check">
+              <input
+                type="checkbox"
+                [checked]="includes(option.value)"
+                (change)="toggleInclude(option.value, $any($event.target).checked)"
+              />
+              <span>{{ option.label }}</span>
+            </label>
+          }
+        </fieldset>
+        <p class="issue-operations__note">
+          La copia queda vinculada a la original con el vínculo «clona».
+        </p>
+      }
+      @case ('move') {
+        <app-field-row #moveRow label="Proyecto de destino" [required]="true">
+          <app-select-field
+            data-autofocus
+            [inputId]="moveRow.controlId"
+            ariaLabel="Proyecto de destino"
+            [options]="otherProjectOptions()"
+            [ngModel]="moveProject()"
+            [ngModelOptions]="{ standalone: true }"
+            (ngModelChange)="moveProject.set($event ?? '')"
+          />
+        </app-field-row>
+        @if (moveProject()) {
+          <app-field-row #typeRow label="Tipo en el destino" [optional]="true">
+            <app-select-field
+              [inputId]="typeRow.controlId"
+              ariaLabel="Tipo en el destino"
+              [showClear]="true"
+              [options]="targetTypeOptions()"
+              [ngModel]="moveType()"
+              [ngModelOptions]="{ standalone: true }"
+              (ngModelChange)="moveType.set($event ?? '')"
+            />
+          </app-field-row>
+        }
+        @if (needsMapping()) {
+          @if (mappingMessages().length > 0) {
+            <ul class="issue-operations__list" data-testid="mapping-missing">
+              @for (text of mappingMessages(); track text) {
+                <li>{{ text }}</li>
+              }
+            </ul>
+          }
+          <app-field-row #prioRow label="Prioridad equivalente">
+            <app-select-field
+              [inputId]="prioRow.controlId"
+              ariaLabel="Prioridad equivalente"
+              [showClear]="true"
+              [options]="priorityOptions()"
+              [ngModel]="priorityMap()"
+              [ngModelOptions]="{ standalone: true }"
+              (ngModelChange)="priorityMap.set($event ?? '')"
+            />
+          </app-field-row>
+        }
+        <p class="issue-operations__note">
+          Recibirá una clave nueva del proyecto de destino y la anterior seguirá funcionando. Las
+          etiquetas, los componentes y los campos que el destino no tenga se quitarán.
+        </p>
+      }
+      @case ('convert') {
+        <app-field-row #convRow label="Nuevo tipo" [required]="true">
+          <app-select-field
+            data-autofocus
+            [inputId]="convRow.controlId"
+            ariaLabel="Nuevo tipo"
+            [options]="typeOptions()"
+            [ngModel]="convertType()"
+            [ngModelOptions]="{ standalone: true }"
+            (ngModelChange)="convertType.set($event ?? '')"
+          />
+        </app-field-row>
+        @if (convertNeedsParent()) {
+          <app-field-row label="Incidencia padre" [required]="true">
+            <app-issue-picker [excludeId]="issue().id" [(value)]="convertParent" />
+          </app-field-row>
+        }
+      }
+    }
+  </form>
+  <p-button
+    dialogFooter
+    label="Cancelar"
+    severity="secondary"
+    [text]="true"
+    class="touch-target"
+    [disabled]="saving()"
+    (onClick)="close()"
+  />
+  <p-button
+    dialogFooter
+    [label]="kind() === 'clone' ? 'Clonar' : kind() === 'move' ? 'Mover' : 'Convertir'"
+    class="touch-target"
+    data-testid="operation-submit"
+    [loading]="saving()"
+    (onClick)="submit()"
+  />
+</app-dialog>

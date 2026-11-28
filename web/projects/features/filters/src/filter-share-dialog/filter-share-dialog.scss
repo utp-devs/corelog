@@ -1,0 +1,97 @@
+@use '../../../../ui/styles/mixins' as m;
+@use '../../../../ui/field-row/src/control' as c;
+
+.filter-share-dialog {
+  @include m.flex-column(var(--cl-space-4));
+
+  &__add {
+    @include m.cluster(2);
+  }
+
+  &__search {
+    flex: 1 1 14rem;
+    min-width: 0;
+  }
+
+  &__candidates,
+  &__shares {
+    @include m.flex-column(var(--cl-space-1));
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  &__candidates {
+    padding: var(--cl-space-1);
+    border: 1px solid var(--cl-border);
+    border-radius: var(--cl-radius-md);
+  }
+
+  &__candidate {
+    @include m.flex-row(var(--cl-space-3));
+    width: 100%;
+    min-height: var(--cl-control-h-md);
+    padding: 0 var(--cl-space-2);
+    border: 0;
+    border-radius: var(--cl-radius-sm);
+    background: transparent;
+    color: var(--cl-text);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+
+    &:hover:not(:disabled) {
+      background: var(--cl-bg-hover);
+    }
+
+    &:disabled {
+      color: var(--cl-text-disabled);
+      cursor: not-allowed;
+    }
+
+    &:focus-visible {
+      @include c.focus-ring;
+    }
+  }
+
+  &__share {
+    @include m.flex-row(var(--cl-space-3));
+    min-height: var(--cl-control-h-lg);
+  }
+
+  &__kind {
+    flex: none;
+    min-width: 5.5rem;
+    color: var(--cl-text-subtle);
+    font-size: var(--cl-font-small);
+  }
+
+  &__name {
+    @include m.truncate;
+    flex: 1 1 auto;
+    min-width: 0;
+    font-weight: var(--cl-weight-medium);
+  }
+
+  &__detail {
+    @include m.truncate;
+    color: var(--cl-text-subtle);
+    font-size: var(--cl-font-small);
+  }
+
+  &__permission {
+    flex: none;
+    min-width: 9rem;
+  }
+
+  &__empty {
+    margin: 0;
+    color: var(--cl-text-subtle);
+  }
+
+  &__error {
+    margin: 0;
+    color: var(--cl-danger-text);
+    font-size: var(--cl-font-small);
+  }
+}

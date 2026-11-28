@@ -1,430 +1,88 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { By } from '@angular/platform-browser';
-import { ActivatedRoute, Router } from '@angular/router';
-import { ApiError, SavedFilter, Issue } from '@corelog/core';
-import { FilterBar } from '@corelog/ui/filter-bar';
-import { guardConsole, installViewport } from '@corelog/core/testing';
-import { Observable, of, throwError } from 'rxjs';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { provideHttpClient } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { TestBed } from '@angular/core/testing';
+import { provideRouter, Router } from '@angular/router';
+import { RouterTestingHarness } from '@angular/router/testing';
+import { provideCorelogTesting } from '@corelog/core/testing';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import {
-  ME_ID,
-  PRIORITY_HIGH,
-  TYPE_BUG,
-  issueOf,
-  pageOf,
-  setupIssues,
-} from '../testing/issue-test-kit';
 import { IssuesListPage } from './issues-list-page';
 
-const SAVED_FILTER: SavedFilter = {
-  id: 'filter-1',
-  name: 'Open bugs',
-  criteria: { status: 'open', issueType: 'bug', query: 'timeout' },
-  createdAt: '2026-01-01T00:00:00Z',
-  updatedAt: '2026-01-01T00:00:00Z',
-};
+const emptyPage = { data: [], meta: { page: 1, page_size: 50, total: 0, query: '', warnings: [] } };
 
-const SEARCH_PLACEHOLDER = 'Buscar incidencias';
+describe('IssuesListPage (navigator)', () => {
+  let http: HttpTestingController;
+  let harness: RouterTestingHarness;
 
-const sampleIssue: Issue = issueOf({
-  id: 'a1b2c3d4-0000-0000-0000-000000000001',
-  summary: 'Fallo al guardar el perfil',
-  status: 'in_progress',
-  priority: PRIORITY_HIGH,
-  issueType: TYPE_BUG,
-  assigneeId: 'user-2',
-  assigneeName: 'Luis Pérez',
-  updatedAt: '2026-01-02T10:00:00Z',
-});
-
-function render(): ComponentFixture<IssuesListPage> {
-  const fixture = TestBed.createComponent(IssuesListPage);
-  fixture.detectChanges();
-  return fixture;
-}
-
-/** Finds a button by its visible text, searching the whole document (dialogs render outside the host). */
-function buttonByText(text: string): HTMLButtonElement | undefined {
-  return Array.from(document.querySelectorAll('button')).find(
-    (button) => button.textContent?.trim() === text,
-  );
-}
-
-function clickButton(text: string): void {
-  const button = buttonByText(text);
-  if (!button) throw new Error(`no button named ${text}`);
-  button.click();
-}
-
-function searchInput(): HTMLInputElement {
-  const input = document.querySelector<HTMLInputElement>(
-    `input[placeholder="${SEARCH_PLACEHOLDER}"]`,
-  );
-  if (!input) throw new Error('no search input');
-  return input;
-}
-
-function typeInSearch(value: string): void {
-  const input = searchInput();
-  input.value = value;
-  input.dispatchEvent(new Event('input'));
-}
-
-const SERVER_ERROR: ApiError = {
-  status: 0,
-  code: 'network.unreachable',
-  message: 'Sin conexión con el servidor',
-  details: [],
-};
-
-describe('IssuesListPage saved filters', () => {
-  const guard = guardConsole();
-  let restoreViewport: () => void;
-
-  beforeEach(() => {
-    restoreViewport = installViewport(1280);
+  beforeEach(async () => {
+    TestBed.configureTestingModule({
+      providers: [
+        provideCorelogTesting(),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideRouter([{ path: 'issues', component: IssuesListPage }]),
+      ],
+    });
+    http = TestBed.inject(HttpTestingController);
+    harness = await RouterTestingHarness.create();
   });
 
   afterEach(() => {
-    restoreViewport();
+    http.match(() => true);
   });
 
-  it('loads saved criteria into the issue filters and deletes the selected saved filter', async () => {
-    const setup = setupIssues({
-      savedFilterApi: { list: () => of([SAVED_FILTER]) },
-    });
-    const fixture = render();
-    clickButton('Filtros avanzados');
-    fixture.detectChanges();
-    await fixture.whenStable();
-    expect(setup.savedFilterApi.list).toHaveBeenCalled();
-
-    const savedSelect = fixture.debugElement.query(By.css('.issues-list-page__saved-row p-select'));
-    savedSelect.triggerEventHandler('ngModelChange', SAVED_FILTER.id);
-    fixture.detectChanges();
-
-    expect(searchInput().value).toBe('timeout');
-    clickButton('Eliminar filtro');
-    fixture.detectChanges();
-    await fixture.whenStable();
-    expect(setup.savedFilterApi.delete).toHaveBeenCalledWith('filter-1');
-    guard.expectNoConsoleOutput();
-  });
-
-  it('saves the active issue criteria with a personal name', async () => {
-    const setup = setupIssues({ savedFilterApi: { list: () => of([]) } });
-    const fixture = render();
-    clickButton('Filtros avanzados');
-    fixture.detectChanges();
-    clickButton('Guardar filtro actual');
-    fixture.detectChanges();
-
-    const nameInput = document.querySelector<HTMLInputElement>(
-      'input[placeholder="Nombre del filtro"]',
-    );
-    if (!nameInput) throw new Error('no name input');
-    nameInput.value = 'My current view';
-    nameInput.dispatchEvent(new Event('input'));
-    fixture.detectChanges();
-    clickButton('Guardar');
-    await fixture.whenStable();
-
-    expect(setup.savedFilterApi.create).toHaveBeenCalledWith('My current view', {
-      status: undefined,
-      priority: undefined,
-      issueType: undefined,
-      query: undefined,
-      dueFrom: undefined,
-      dueTo: undefined,
-    });
-    guard.expectNoConsoleOutput();
-  });
-});
-
-describe('IssuesListPage states', () => {
-  const guard = guardConsole();
-  let restoreViewport: () => void;
-
-  beforeEach(() => {
-    restoreViewport = installViewport(1280);
-  });
-
-  afterEach(() => {
-    restoreViewport();
-    vi.useRealTimers();
-  });
-
-  it('shows the error with a retry action that reloads the list', () => {
-    const setup = setupIssues({
-      issueApi: { list: () => throwError(() => SERVER_ERROR) },
-    });
-    const fixture = render();
-
-    const alert = document.querySelector('[role="alert"]');
-    expect(alert?.textContent).toContain('Sin conexión con el servidor');
-    clickButton('Reintentar');
-    fixture.detectChanges();
-    expect(setup.issueApi.list).toHaveBeenCalledTimes(2);
-  });
-
-  it('shows pagination based on the total across pages', () => {
-    setupIssues({ issueApi: { list: () => of(pageOf([sampleIssue], 45)) } });
-    render();
-
-    expect(document.body.textContent).toContain('Página 1 de 3');
-    expect(document.body.textContent).toContain('45 elementos');
-  });
-
-  it('hides pagination when there are no results', () => {
-    setupIssues();
-    render();
-
-    expect(document.querySelector('[aria-label="Página siguiente"]')).toBeNull();
-  });
-
-  it('shows an empty state inside the table area when there are no issues', () => {
-    setupIssues();
-    render();
-
-    // The list fills the remaining height of the page (PageContainer, Section and DataTable fill).
-    expect(document.querySelector('[data-fill="true"]')).not.toBeNull();
-    expect(document.body.textContent).toContain('Aún no hay incidencias');
-    expect(buttonByText('Nueva incidencia')).toBeDefined();
-  });
-
-  it('offers to clear filters when the active filters match nothing', () => {
-    vi.useFakeTimers();
-    setupIssues();
-    const fixture = render();
-
-    typeInSearch('zzz');
-    vi.advanceTimersByTime(300);
-    fixture.detectChanges();
-
-    expect(document.body.textContent).toContain('Ninguna incidencia coincide con los filtros');
-    expect(buttonByText('Limpiar filtros')).toBeDefined();
-  });
-
-  it('shows a loading skeleton while the first page loads', () => {
-    vi.useFakeTimers();
-    setupIssues({
-      issueApi: { list: () => new Observable<never>(() => undefined) },
-    });
-    const fixture = render();
-    // The table shows its skeleton only after a short delay, so quick loads do not flicker.
-    vi.advanceTimersByTime(2000);
-    fixture.detectChanges();
-
-    expect(document.querySelector('[role="status"][aria-label="Cargando"]')).not.toBeNull();
-  });
-
-  it('renders the table with the key, summary, status and assignee columns on desktop', () => {
-    setupIssues({ issueApi: { list: () => of(pageOf([sampleIssue])) } });
-    render();
-
-    expect(document.querySelector('table')).not.toBeNull();
-    expect(document.body.textContent).toContain('Fallo al guardar el perfil');
-    expect(document.body.textContent).toContain('En progreso');
-    expect(document.body.textContent).toContain('Luis Pérez');
-  });
-
-  it('renders cards instead of a table on mobile, with no clipped columns', () => {
-    restoreViewport();
-    restoreViewport = installViewport(390);
-    setupIssues({ issueApi: { list: () => of(pageOf([sampleIssue])) } });
-    render();
-
-    expect(document.querySelector('table')).toBeNull();
-    expect(document.body.textContent).toContain('Fallo al guardar el perfil');
-    expect(document.body.textContent).toContain('En progreso');
-    expect(document.body.textContent).toContain('Luis Pérez');
-  });
-
-  it('renders without console warnings or errors', () => {
-    setupIssues({ issueApi: { list: () => of(pageOf([sampleIssue])) } });
-    render();
-    guard.expectNoConsoleOutput();
-  });
-});
-
-describe('IssuesListPage assignee filter', () => {
-  const guard = guardConsole();
-  let restoreViewport: () => void;
-
-  beforeEach(() => {
-    restoreViewport = installViewport(1280);
-  });
-
-  afterEach(() => {
-    restoreViewport();
-  });
-
-  async function settle(fixture: ComponentFixture<IssuesListPage>): Promise<void> {
-    fixture.detectChanges();
-    await fixture.whenStable();
-    fixture.detectChanges();
+  /** Answers the requests every visit makes besides the search (saved filters, option lists). */
+  function answerSideRequests(): void {
+    for (const request of http.match((r) => r.url.endsWith('/filters'))) {
+      if (!request.cancelled)
+        request.flush({ data: [], meta: { page: 1, page_size: 100, total: 0 } });
+    }
+    for (const request of http.match((r) => r.url.endsWith('/search/suggest'))) {
+      if (!request.cancelled) request.flush({ data: { completions: [], values: [] } });
+    }
   }
 
-  function assigneeDefinition(fixture: ComponentFixture<IssuesListPage>) {
-    const bar = fixture.debugElement.query(By.directive(FilterBar)).componentInstance as FilterBar;
-    const definition = bar.filters().find((filter) => filter.key === 'assignee');
-    if (!definition) throw new Error('no assignee filter');
-    return definition;
-  }
+  it('searches with the basic filters of the address and shows the chips', async () => {
+    await harness.navigateByUrl('/issues?project=KAN,SCRUM&status=todo');
+    answerSideRequests();
+    const search = http.expectOne((r) => r.url.endsWith('/issues/search'));
+    expect(search.request.params.get('jql')).toBe(
+      'project IN ("KAN", "SCRUM") AND statusCategory = "todo"',
+    );
+    expect(search.request.params.get('order')).toBe('updated DESC');
+    search.flush(emptyPage);
+    harness.detectChanges();
 
-  it('offers assigned to me, unassigned and every member', async () => {
-    setupIssues({
-      memberSource: { listMembers: () => of([{ userId: 'user-2', name: 'Luis Pérez' }]) },
-    });
-    const fixture = render();
-    await settle(fixture);
-
-    expect(assigneeDefinition(fixture).label).toBe('Filtrar por asignado');
-    expect(assigneeDefinition(fixture).options).toEqual([
-      { value: 'me', label: 'Asignadas a mí' },
-      { value: 'none', label: 'Sin asignar' },
-      { value: 'user-2', label: 'Luis Pérez' },
-    ]);
+    const chips = Array.from(
+      (harness.routeNativeElement as HTMLElement).querySelectorAll('[data-testid="query-chip"]'),
+    ).map((chip) => chip.textContent?.trim());
+    expect(chips.some((text) => text?.includes('Proyecto: KAN'))).toBe(true);
+    expect(chips.some((text) => text?.includes('Estado: todo'))).toBe(true);
   });
 
-  it('queries by member, by unassigned and by the signed-in user, and keeps the choice in the address', async () => {
-    const setup = setupIssues({
-      memberSource: { listMembers: () => of([{ userId: 'user-2', name: 'Luis Pérez' }]) },
-    });
-    const fixture = render();
-    await settle(fixture);
-    const router = TestBed.inject(Router);
-
-    assigneeDefinition(fixture).onChange('user-2');
-    await settle(fixture);
-    expect(router.url).toContain('assignee=user-2');
-    expect(setup.issueApi.list).toHaveBeenLastCalledWith(
-      expect.objectContaining({ assigneeId: 'user-2', page: 1 }),
+  it('runs the advanced query of the address with its own ORDER BY and validates it', async () => {
+    await harness.navigateByUrl('/issues?jql=statu%20%3D%20Done');
+    answerSideRequests();
+    const search = http.expectOne((r) => r.url.endsWith('/issues/search'));
+    expect(search.request.params.get('jql')).toBe('statu = Done');
+    expect(search.request.params.has('order')).toBe(false);
+    search.flush(
+      { error: { code: 'search.unknown_field', message: "campo desconocido 'statu'" } },
+      { status: 422, statusText: 'Unprocessable Entity' },
     );
-
-    assigneeDefinition(fixture).onChange('none');
-    await settle(fixture);
-    expect(router.url).toContain('assignee=none');
-    expect(setup.issueApi.list).toHaveBeenLastCalledWith(
-      expect.objectContaining({ assigneeId: 'none' }),
-    );
-
-    assigneeDefinition(fixture).onChange('me');
-    await settle(fixture);
-    expect(router.url).toContain('assignee=me');
-    expect(setup.issueApi.list).toHaveBeenLastCalledWith(
-      expect.objectContaining({ assigneeId: ME_ID }),
-    );
-    guard.expectNoConsoleOutput();
+    harness.detectChanges();
+    expect(
+      (harness.routeNativeElement as HTMLElement).querySelector('[data-testid="query-error"]')
+        ?.textContent,
+    ).toContain("campo desconocido 'statu'");
   });
 
-  it('starts from the address, shows a chip and clears with the other filters', async () => {
-    const setup = setupIssues();
-    await TestBed.inject(Router).navigateByUrl('/?assignee=none');
-    const fixture = render();
-    await settle(fixture);
-
-    expect(setup.issueApi.list).toHaveBeenCalledWith(
-      expect.objectContaining({ assigneeId: 'none' }),
-    );
-    expect(document.body.textContent).toContain('Filtrar por asignado: Sin asignar');
-    clickButton('Limpiar filtros');
-    await settle(fixture);
-
-    expect(TestBed.inject(Router).url).not.toContain('assignee');
-    expect(TestBed.inject(ActivatedRoute).snapshot.queryParamMap.has('assignee')).toBe(false);
-    expect(document.body.textContent).not.toContain('Filtrar por asignado: Sin asignar');
-    expect(setup.issueApi.list).toHaveBeenLastCalledWith(
-      expect.objectContaining({ assigneeId: undefined }),
-    );
-  });
-
-  it('removes the filter from the chip', async () => {
-    const setup = setupIssues();
-    await TestBed.inject(Router).navigateByUrl('/?assignee=me');
-    const fixture = render();
-    await settle(fixture);
-    expect(document.body.textContent).toContain('Filtrar por asignado: Asignadas a mí');
-
-    document
-      .querySelector<HTMLButtonElement>('button[aria-label^="Quitar filtro Filtrar por asignado"]')
-      ?.click();
-    await settle(fixture);
-
-    expect(TestBed.inject(Router).url).not.toContain('assignee');
-    expect(setup.issueApi.list).toHaveBeenLastCalledWith(
-      expect.objectContaining({ assigneeId: undefined }),
-    );
-  });
-});
-
-describe('IssuesListPage catalog filters', () => {
-  let restoreViewport: () => void;
-
-  beforeEach(() => {
-    restoreViewport = installViewport(1280);
-  });
-
-  afterEach(() => {
-    restoreViewport();
-  });
-
-  function definition(fixture: ComponentFixture<IssuesListPage>, key: string) {
-    const bar = fixture.debugElement.query(By.directive(FilterBar)).componentInstance as FilterBar;
-    const found = bar.filters().find((filter) => filter.key === key);
-    if (!found) throw new Error(`no ${key} filter`);
-    return found;
-  }
-
-  it('builds the priority and type options from the organization catalogs', () => {
-    setupIssues();
-    const fixture = render();
-    expect(definition(fixture, 'priority').options).toEqual([
-      { value: 'prio-high', label: 'Alta' },
-      { value: 'prio-medium', label: 'Media' },
-    ]);
-    expect(definition(fixture, 'issueType').options.map((option) => option.label)).toEqual([
-      'Tarea',
-      'Error',
-      'Épica',
-      'Subtarea',
-    ]);
-  });
-
-  it('narrows the request with the legacy key and keeps only the rows of the chosen item', async () => {
-    const other = issueOf({
-      id: 'other',
-      summary: 'Otra',
-      priority: { id: 'prio-custom', name: 'Bloqueante', icon: 'alert', color: 'pink' },
-    });
-    const setup = setupIssues({
-      issueApi: { list: () => of(pageOf([sampleIssue, other])) },
-    });
-    const fixture = render();
-    definition(fixture, 'priority').onChange('prio-high');
-    fixture.detectChanges();
-    await fixture.whenStable();
-    fixture.detectChanges();
-
-    expect(setup.issueApi.list).toHaveBeenLastCalledWith(
-      expect.objectContaining({ priority: 'high' }),
-    );
-    expect(document.body.textContent).toContain('Fallo al guardar el perfil');
-    expect(document.body.textContent).not.toContain('Otra');
-  });
-
-  it('filters on the page only when the type has no legacy key', async () => {
-    const setup = setupIssues({
-      issueApi: { list: () => of(pageOf([sampleIssue])) },
-    });
-    const fixture = render();
-    definition(fixture, 'issueType').onChange('type-epic');
-    fixture.detectChanges();
-    await fixture.whenStable();
-
-    expect(setup.issueApi.list).toHaveBeenLastCalledWith(
-      expect.objectContaining({ issueType: 'epic' }),
-    );
+  it('keeps the page and the columns in the address', async () => {
+    await harness.navigateByUrl('/issues?page=3&cols=key,summary,reporter');
+    answerSideRequests();
+    const search = http.expectOne((r) => r.url.endsWith('/issues/search'));
+    expect(search.request.params.get('page')).toBe('3');
+    search.flush(emptyPage);
+    expect(TestBed.inject(Router).url).toContain('cols=key,summary,reporter');
   });
 });

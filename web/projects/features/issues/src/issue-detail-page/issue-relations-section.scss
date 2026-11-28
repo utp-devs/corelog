@@ -1,0 +1,79 @@
+@use '../../../../ui/styles/mixins' as m;
+@use '../../../../ui/field-row/src/control' as c;
+
+:host {
+  @include m.flex-column(4);
+  min-width: 0;
+}
+
+.issue-relations {
+  &__count {
+    margin: var(--cl-space-2) 0 0;
+    color: var(--cl-text-subtle);
+    font-size: var(--cl-font-small);
+  }
+
+  &__empty {
+    margin: 0;
+    color: var(--cl-text-subtle);
+  }
+
+  &__group {
+    margin: var(--cl-space-3) 0 var(--cl-space-1);
+    color: var(--cl-text-subtle);
+    font-size: var(--cl-font-small);
+    font-weight: var(--cl-weight-semibold);
+    text-transform: capitalize;
+  }
+
+  &__list {
+    @include m.flex-column(0);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  &__item {
+    @include m.flex-row(3);
+    min-width: 0;
+    padding: var(--cl-space-2) 0;
+    border-top: 1px solid var(--cl-border);
+  }
+
+  &__key {
+    flex: none;
+    color: var(--cl-brand);
+    font-weight: var(--cl-weight-semibold);
+    text-decoration: none;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+
+  &__summary {
+    @include m.truncate;
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__muted {
+    flex: none;
+    color: var(--cl-text-subtle);
+    font-size: var(--cl-font-small);
+  }
+
+  &__quick {
+    @include m.flex-row(2);
+    margin-top: var(--cl-space-3);
+  }
+
+  &__input {
+    @include c.control-box;
+    flex: 1;
+  }
+
+  &__form {
+    @include m.flex-column(4);
+  }
+}

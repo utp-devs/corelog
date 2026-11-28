@@ -1,0 +1,132 @@
+@use '../../../../ui/styles/mixins' as m;
+@use '../../../../ui/field-row/src/control' as c;
+
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.issue-conversation {
+  &__tabs {
+    @include m.cluster(1);
+    margin-bottom: var(--cl-space-4);
+    border-bottom: 1px solid var(--cl-border);
+  }
+
+  &__tab {
+    @include m.flex-row(2);
+    min-height: var(--cl-control-h-md);
+    padding: 0 var(--cl-space-3);
+    border: 0;
+    border-bottom: 2px solid transparent;
+    background: transparent;
+    color: var(--cl-text-subtle);
+    font: inherit;
+    font-weight: var(--cl-weight-semibold);
+    cursor: pointer;
+
+    &:hover {
+      color: var(--cl-text);
+    }
+
+    &:focus-visible {
+      @include c.focus-ring;
+    }
+
+    &--active {
+      border-bottom-color: var(--cl-brand);
+      color: var(--cl-text);
+    }
+
+    @media (pointer: coarse) {
+      min-height: var(--cl-control-h-lg);
+    }
+  }
+
+  &__count {
+    padding: 0 var(--cl-space-2);
+    border-radius: var(--cl-radius-full);
+    background: var(--cl-bg-sunken);
+    font-size: var(--cl-font-small);
+  }
+
+  &__panel {
+    @include m.flex-column(4);
+    min-width: 0;
+  }
+
+  &__composer {
+    @include m.flex-row(3, flex-start);
+  }
+
+  &__composer-body {
+    @include m.flex-column(3);
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__composer-actions {
+    @include m.cluster(2);
+  }
+
+  &__internal {
+    @include m.flex-row(2);
+    min-height: var(--cl-control-h-md);
+    cursor: pointer;
+  }
+
+  &__role {
+    min-width: var(--cl-popover-w);
+  }
+
+  &__spacer {
+    flex: 1;
+  }
+
+  &__collapsed {
+    @include c.control-box;
+    flex: 1;
+    color: var(--cl-text-placeholder);
+    text-align: left;
+    cursor: text;
+  }
+
+  &__threads {
+    @include m.flex-column(5);
+  }
+
+  &__edit {
+    @include m.flex-column(2);
+    min-width: 0;
+  }
+
+  &__empty {
+    margin: 0;
+    color: var(--cl-text-subtle);
+  }
+
+  &__more {
+    @include c.control-box;
+    width: auto;
+    align-self: flex-start;
+    cursor: pointer;
+  }
+
+  &__revisions {
+    @include m.flex-column(4);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  &__revision {
+    @include m.flex-column(1);
+    padding-bottom: var(--cl-space-3);
+    border-bottom: 1px solid var(--cl-border);
+  }
+
+  &__muted {
+    color: var(--cl-text-subtle);
+    font-size: var(--cl-font-small);
+  }
+}

@@ -23,6 +23,9 @@ export const SETTINGS_SECTIONS: readonly SettingsSection[] = [
   { path: 'roles', label: 'Roles', icon: 'pi pi-id-card' },
   { path: 'permissions', label: 'Permisos', icon: 'pi pi-lock' },
   { path: 'issue-types', label: 'Tipos de incidencia', icon: 'pi pi-tags' },
+  { path: 'versions', label: 'Versiones', icon: 'pi pi-box' },
+  { path: 'components', label: 'Componentes', icon: 'pi pi-th-large' },
+  { path: 'fields', label: 'Campos', icon: 'pi pi-list' },
   { path: 'workflow', label: 'Flujo de trabajo', icon: 'pi pi-sitemap' },
   { path: 'danger', label: 'Zona de peligro', icon: 'pi pi-exclamation-triangle', danger: true },
 ];

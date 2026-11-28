@@ -1,0 +1,171 @@
+<div class="basic-filters" role="group" aria-label="Filtros básicos">
+  <p-multiselect
+    class="basic-filters__field"
+    inputId="nav-project"
+    ariaLabel="Proyecto"
+    placeholder="Proyecto"
+    optionLabel="label"
+    optionValue="value"
+    display="comma"
+    [options]="projects()"
+    [filter]="true"
+    [showClear]="true"
+    [maxSelectedLabels]="2"
+    selectedItemsLabel="{0} proyectos"
+    [ngModel]="filters().projects"
+    (ngModelChange)="setList('projects', $event)"
+  />
+  <p-multiselect
+    class="basic-filters__field"
+    ariaLabel="Tipo"
+    placeholder="Tipo"
+    optionLabel="label"
+    optionValue="value"
+    display="comma"
+    [options]="types()"
+    [showClear]="true"
+    [maxSelectedLabels]="2"
+    selectedItemsLabel="{0} tipos"
+    [ngModel]="filters().types"
+    (ngModelChange)="setList('types', $event)"
+  />
+  <p-multiselect
+    class="basic-filters__field"
+    ariaLabel="Estado"
+    placeholder="Estado"
+    optionLabel="label"
+    optionValue="value"
+    display="comma"
+    [options]="statusCategories"
+    [showClear]="true"
+    [maxSelectedLabels]="2"
+    selectedItemsLabel="{0} estados"
+    [ngModel]="filters().statusCategories"
+    (ngModelChange)="setList('statusCategories', $event)"
+  />
+  <p-multiselect
+    class="basic-filters__field"
+    ariaLabel="Responsable"
+    placeholder="Responsable"
+    optionLabel="label"
+    optionValue="value"
+    display="comma"
+    [options]="people()"
+    [filter]="true"
+    [showClear]="true"
+    [maxSelectedLabels]="2"
+    selectedItemsLabel="{0} personas"
+    [ngModel]="filters().assignees"
+    (ngModelChange)="setList('assignees', $event)"
+  />
+  <p-multiselect
+    class="basic-filters__field"
+    ariaLabel="Informante"
+    placeholder="Informante"
+    optionLabel="label"
+    optionValue="value"
+    display="comma"
+    [options]="people()"
+    [filter]="true"
+    [showClear]="true"
+    [maxSelectedLabels]="2"
+    selectedItemsLabel="{0} personas"
+    [ngModel]="filters().reporters"
+    (ngModelChange)="setList('reporters', $event)"
+  />
+  <p-multiselect
+    class="basic-filters__field"
+    ariaLabel="Etiqueta"
+    placeholder="Etiqueta"
+    optionLabel="label"
+    optionValue="value"
+    display="comma"
+    [options]="labels()"
+    [filter]="true"
+    [showClear]="true"
+    [maxSelectedLabels]="2"
+    selectedItemsLabel="{0} etiquetas"
+    [ngModel]="filters().labels"
+    (ngModelChange)="setList('labels', $event)"
+  />
+  <p-multiselect
+    class="basic-filters__field"
+    ariaLabel="Componente"
+    placeholder="Componente"
+    optionLabel="label"
+    optionValue="value"
+    display="comma"
+    [options]="components()"
+    [filter]="true"
+    [showClear]="true"
+    [maxSelectedLabels]="2"
+    selectedItemsLabel="{0} componentes"
+    [ngModel]="filters().components"
+    (ngModelChange)="setList('components', $event)"
+  />
+  <p-multiselect
+    class="basic-filters__field"
+    ariaLabel="Versión de corrección"
+    placeholder="Versión"
+    optionLabel="label"
+    optionValue="value"
+    display="comma"
+    [options]="versions()"
+    [filter]="true"
+    [showClear]="true"
+    [maxSelectedLabels]="2"
+    selectedItemsLabel="{0} versiones"
+    [ngModel]="filters().fixVersions"
+    (ngModelChange)="setList('fixVersions', $event)"
+  />
+
+  <input
+    pInputText
+    class="basic-filters__text"
+    type="search"
+    aria-label="Buscar texto"
+    placeholder="Buscar en el título y la descripción"
+    data-testid="navigator-text"
+    [ngModel]="filters().text"
+    (ngModelChange)="onText($event)"
+    (keydown.enter)="commitText($any($event.target).value)"
+  />
+
+  <div class="basic-filters__range" role="group" aria-label="Creada">
+    <span class="basic-filters__legend" aria-hidden="true">Creada</span>
+    <input
+      pInputText
+      type="date"
+      aria-label="Creada desde"
+      [ngModel]="filters().createdFrom"
+      (ngModelChange)="setDate('createdFrom', $event)"
+    />
+    <span aria-hidden="true">-</span>
+    <input
+      pInputText
+      type="date"
+      aria-label="Creada hasta"
+      [ngModel]="filters().createdTo"
+      (ngModelChange)="setDate('createdTo', $event)"
+    />
+  </div>
+
+  <div class="basic-filters__range" role="group" aria-label="Actualizada">
+    <span class="basic-filters__legend" aria-hidden="true">Actualizada</span>
+    <input
+      pInputText
+      type="date"
+      aria-label="Actualizada desde"
+      [ngModel]="filters().updatedFrom"
+      (ngModelChange)="setDate('updatedFrom', $event)"
+    />
+    <span aria-hidden="true">-</span>
+    <input
+      pInputText
+      type="date"
+      aria-label="Actualizada hasta"
+      [ngModel]="filters().updatedTo"
+      (ngModelChange)="setDate('updatedTo', $event)"
+    />
+  </div>
+</div>
