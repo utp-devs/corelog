@@ -1,0 +1,72 @@
+@use '../../../../ui/styles/mixins' as m;
+
+.gadget-catalog {
+  @include m.flex-column(5);
+
+  &__group {
+    @include m.flex-column(2);
+  }
+
+  &__title {
+    margin: 0;
+    font-size: var(--cl-font-small);
+    font-weight: var(--cl-weight-semibold);
+    color: var(--cl-text-subtle);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  &__list {
+    @include m.grid-auto(15rem, 2);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  &__item {
+    @include m.flex-row(3, flex-start, flex-start);
+    width: 100%;
+    height: 100%;
+    padding: var(--cl-space-3);
+    border: 1px solid var(--cl-border);
+    border-radius: var(--cl-radius-lg);
+    background: var(--cl-bg-surface);
+    color: var(--cl-text);
+    text-align: left;
+    cursor: pointer;
+
+    &:hover {
+      border-color: var(--cl-brand);
+      background: var(--cl-bg-hover);
+    }
+
+    &:focus-visible {
+      outline: none;
+      box-shadow: var(--cl-shadow-focus);
+    }
+  }
+
+  &__icon {
+    @include m.flex-row(0, center, center);
+    flex: none;
+    width: var(--cl-control-h-md);
+    height: var(--cl-control-h-md);
+    border-radius: var(--cl-radius-md);
+    background: var(--cl-brand-subtle);
+    color: var(--cl-cat-progress-text);
+  }
+
+  &__text {
+    @include m.flex-column(1);
+    min-width: 0;
+  }
+
+  &__name {
+    font-weight: var(--cl-weight-semibold);
+  }
+
+  &__description {
+    font-size: var(--cl-font-small);
+    color: var(--cl-text-subtle);
+  }
+}

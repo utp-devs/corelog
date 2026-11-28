@@ -1,0 +1,38 @@
+@use '../../../../ui/styles/mixins' as m;
+
+.gadget-matrix {
+  overflow-x: auto;
+
+  &__caption {
+    @include m.visually-hidden;
+  }
+
+  &__table {
+    width: 100%;
+    border-collapse: collapse;
+
+    th,
+    td {
+      padding: var(--cl-space-2) var(--cl-space-3);
+      border-bottom: 1px solid var(--cl-divider);
+      font-size: var(--cl-font-body);
+      text-align: right;
+    }
+
+    th {
+      font-size: var(--cl-font-small);
+      font-weight: var(--cl-weight-semibold);
+      color: var(--cl-text-subtle);
+    }
+
+    tbody th {
+      text-align: left;
+      color: var(--cl-text);
+      font-weight: var(--cl-weight-medium);
+    }
+  }
+
+  &__zero {
+    color: var(--cl-text-subtle);
+  }
+}

@@ -1,0 +1,43 @@
+@if (data(); as matrix) {
+  @if (matrix.total === 0) {
+    <app-empty-state
+      title="Sin incidencias para mostrar."
+      description="Cuando haya incidencias que coincidan, verás aquí el cruce de los dos campos."
+    />
+  } @else {
+    <div class="gadget-matrix" data-scroll-x>
+      <table class="gadget-matrix__table">
+        <caption class="gadget-matrix__caption">
+          Incidencias por
+          {{
+            matrix.yAxis
+          }}
+          y
+          {{
+            matrix.xAxis
+          }}
+        </caption>
+        <thead>
+          <tr>
+            <th scope="col"></th>
+            @for (x of matrix.xKeys; track x.key) {
+              <th scope="col">{{ label(x.label) }}</th>
+            }
+          </tr>
+        </thead>
+        <tbody>
+          @for (y of matrix.yKeys; track y.key) {
+            <tr>
+              <th scope="row">{{ label(y.label) }}</th>
+              @for (x of matrix.xKeys; track x.key) {
+                <td [class.gadget-matrix__zero]="count(x.key, y.key) === 0">
+                  {{ count(x.key, y.key) }}
+                </td>
+              }
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+}

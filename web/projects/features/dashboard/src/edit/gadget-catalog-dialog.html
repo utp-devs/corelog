@@ -1,0 +1,42 @@
+<app-dialog
+  size="lg"
+  heading="Añadir un gadget"
+  subtitle="Elige qué información quieres ver en el panel."
+  [open]="open()"
+  (closeRequested)="closeRequested.emit()"
+>
+  <div class="gadget-catalog" data-testid="gadget-catalog">
+    @for (group of groups(); track group.category) {
+      <section class="gadget-catalog__group" [attr.aria-label]="group.label">
+        <h3 class="gadget-catalog__title">{{ group.label }}</h3>
+        <ul class="gadget-catalog__list">
+          @for (gadget of group.gadgets; track gadget.type) {
+            <li>
+              <button
+                type="button"
+                class="gadget-catalog__item"
+                [attr.data-testid]="'catalog-' + gadget.type"
+                (click)="picked.emit(gadget.type)"
+              >
+                <span class="gadget-catalog__icon" aria-hidden="true">
+                  <i class="pi" [class]="'pi ' + gadget.icon"></i>
+                </span>
+                <span class="gadget-catalog__text">
+                  <span class="gadget-catalog__name">{{ gadget.label }}</span>
+                  <span class="gadget-catalog__description">{{ gadget.description }}</span>
+                </span>
+              </button>
+            </li>
+          }
+        </ul>
+      </section>
+    }
+  </div>
+  <p-button
+    dialogFooter
+    type="button"
+    label="Cancelar"
+    severity="secondary"
+    (onClick)="closeRequested.emit()"
+  />
+</app-dialog>

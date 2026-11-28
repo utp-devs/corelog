@@ -1,0 +1,42 @@
+@use '../../../../ui/styles/mixins' as m;
+
+.gadget-config {
+  @include m.flex-column(4);
+
+  &__input {
+    width: 100%;
+
+    &--number {
+      max-width: 10rem;
+    }
+  }
+
+  &__check {
+    @include m.flex-row(2);
+    color: var(--cl-text);
+    cursor: pointer;
+  }
+
+  &__multi {
+    @include m.flex-column(2);
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+
+  &__legend {
+    padding: 0;
+    font-weight: var(--cl-weight-medium);
+    color: var(--cl-text);
+  }
+
+  &__options {
+    @include m.grid-auto(10rem, 2);
+  }
+
+  &__help {
+    margin: 0;
+    font-size: var(--cl-font-small);
+    color: var(--cl-text-subtle);
+  }
+}

@@ -1,0 +1,63 @@
+@use '../../../../ui/styles/mixins' as m;
+
+.gadget-lists {
+  @include m.flex-column(0);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  &__item {
+    @include m.flex-row(3, center, flex-start);
+    padding: var(--cl-space-2) 0;
+    border-bottom: 1px solid var(--cl-divider);
+
+    &:last-child {
+      border-bottom: 0;
+    }
+  }
+
+  &__main {
+    @include m.flex-column(0);
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  &__text {
+    overflow-wrap: anywhere;
+    color: var(--cl-text);
+  }
+
+  &__link {
+    display: inline-flex;
+    align-items: center;
+
+    @include m.respond-down(768px) {
+      min-height: var(--cl-control-h-md);
+    }
+
+    color: var(--cl-text);
+    font-weight: var(--cl-weight-medium);
+    text-decoration: none;
+    overflow-wrap: anywhere;
+
+    &:hover {
+      color: var(--cl-brand);
+      text-decoration: underline;
+    }
+
+    &:focus-visible {
+      outline: none;
+      box-shadow: var(--cl-shadow-focus);
+      border-radius: var(--cl-radius-sm);
+    }
+  }
+
+  &__meta {
+    font-size: var(--cl-font-small);
+    color: var(--cl-text-subtle);
+  }
+
+  &__star {
+    color: var(--cl-cat-progress);
+  }
+}

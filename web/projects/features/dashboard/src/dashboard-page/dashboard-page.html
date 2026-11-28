@@ -1,0 +1,258 @@
+<app-page-container
+  variant="wide"
+  [pageName]="isHome() ? 'dashboard' : 'dashboard-view'"
+  [ready]="ready() || !!store.loadError()"
+  [fill]="true"
+>
+  @if (store.loadError(); as message) {
+    @if (store.notFound()) {
+      <app-error-state
+        image="error-404"
+        title="Este panel no está disponible"
+        message="No existe o no tienes permiso para verlo."
+      />
+      <a class="dashboard-page__back" routerLink="/dashboards">Ir a todos los paneles</a>
+    } @else {
+      <app-error-state image="error-500" [message]="message" [canRetry]="true" (retry)="retry()" />
+    }
+  } @else if (dashboard(); as current) {
+    <app-page-header
+      [title]="isHome() ? 'Mi resumen' : current.name"
+      [subtitle]="isHome() ? undefined : current.description || undefined"
+    >
+      <div appPageHeaderActions class="dashboard-page__actions">
+        @if (editing()) {
+          <button
+            type="button"
+            class="dashboard-page__button"
+            data-testid="dashboard-add-gadget"
+            (click)="openCatalog()"
+          >
+            <i class="pi pi-plus" aria-hidden="true"></i>
+            <span>Añadir gadget</span>
+          </button>
+          <button
+            type="button"
+            class="dashboard-page__button"
+            data-testid="dashboard-cancel"
+            (click)="cancelEdit()"
+          >
+            Cancelar
+          </button>
+          <button
+            type="button"
+            class="dashboard-page__button dashboard-page__button--primary"
+            data-testid="dashboard-save"
+            [disabled]="store.saving() || !session.dirty()"
+            (click)="save()"
+          >
+            {{ store.saving() ? 'Guardando...' : 'Guardar' }}
+          </button>
+        } @else {
+          <button
+            type="button"
+            class="dashboard-page__icon-button"
+            [class.dashboard-page__icon-button--on]="current.isFavorite"
+            [attr.aria-pressed]="current.isFavorite"
+            [attr.aria-label]="current.isFavorite ? 'Quitar de favoritos' : 'Marcar como favorito'"
+            [appTooltip]="current.isFavorite ? 'Quitar de favoritos' : 'Marcar como favorito'"
+            data-testid="dashboard-favorite"
+            (click)="toggleFavorite()"
+          >
+            <i
+              class="pi"
+              [class]="current.isFavorite ? 'pi pi-star-fill' : 'pi pi-star'"
+              aria-hidden="true"
+            ></i>
+          </button>
+          @if (current.canEdit) {
+            <button
+              type="button"
+              class="dashboard-page__button"
+              data-testid="dashboard-edit"
+              (click)="startEdit()"
+            >
+              <i class="pi pi-pencil" aria-hidden="true"></i>
+              <span>Editar</span>
+            </button>
+          }
+          @if (current.canManage) {
+            <button
+              type="button"
+              class="dashboard-page__button"
+              data-testid="dashboard-share"
+              (click)="shareOpen.set(true)"
+            >
+              <i class="pi pi-share-alt" aria-hidden="true"></i>
+              <span>Compartir</span>
+            </button>
+          }
+          <button
+            type="button"
+            class="dashboard-page__icon-button"
+            aria-haspopup="menu"
+            aria-label="Más acciones del panel"
+            appTooltip="Más acciones"
+            data-testid="dashboard-more"
+            (click)="more.toggle($event)"
+          >
+            <i class="pi pi-ellipsis-h" aria-hidden="true"></i>
+          </button>
+          <p-menu #more [model]="menuItems()" [popup]="true" appendTo="body" />
+        }
+      </div>
+    </app-page-header>
+
+    @if (isHome()) {
+      <section class="dashboard-welcome" aria-label="Bienvenida">
+        <img
+          class="dashboard-welcome__image"
+          alt=""
+          width="1800"
+          height="600"
+          decoding="async"
+          fetchpriority="high"
+          src="/images/dashboard/dashboard-welcome-banner.webp"
+        />
+        <span class="dashboard-welcome__scrim" aria-hidden="true"></span>
+        <div class="dashboard-welcome__text">
+          <p class="dashboard-welcome__greeting">
+            {{ firstName() ? 'Hola, ' + firstName() : 'Hola' }}
+          </p>
+          <p class="dashboard-welcome__date">Hoy es {{ today }}.</p>
+        </div>
+      </section>
+    }
+
+    @if (!current.canEdit && !current.canManage) {
+      <p class="dashboard-page__notice" data-testid="dashboard-readonly">
+        <i class="pi pi-eye" aria-hidden="true"></i>
+        Panel de {{ current.ownerName }}. Puedes verlo y duplicarlo, pero no editarlo.
+      </p>
+    }
+
+    @if (editing()) {
+      <div class="dashboard-page__toolbar" role="group" aria-label="Diseño del panel">
+        <span class="dashboard-page__toolbar-label">Columnas</span>
+        <div class="dashboard-page__layouts">
+          @for (option of layoutOptions; track option.value) {
+            <button
+              type="button"
+              class="dashboard-page__layout"
+              [class.dashboard-page__layout--active]="layout() === option.value"
+              [attr.aria-pressed]="layout() === option.value"
+              [attr.data-testid]="'dashboard-layout-' + option.value"
+              (click)="setLayout(option.value)"
+            >
+              {{ option.label }}
+            </button>
+          }
+        </div>
+      </div>
+      @if (saveError(); as message) {
+        <p class="dashboard-page__error" role="alert" data-testid="dashboard-save-error">
+          {{ message }}
+        </p>
+      }
+    }
+
+    @if (gadgetTotal() === 0 && !editing()) {
+      <div class="dashboard-page__empty">
+        <app-empty-state
+          image="empty-issues"
+          title="Este panel aún no tiene gadgets"
+          [description]="
+            current.canEdit
+              ? 'Pulsa Editar para añadir listas, gráficos y notas.'
+              : 'Quien lo gestiona todavía no ha añadido gadgets.'
+          "
+        />
+      </div>
+    } @else {
+      <div
+        class="dashboard-page__grid"
+        [class.dashboard-page__grid--editing]="editing()"
+        [style.--dashboard-tracks]="tracks()"
+        data-testid="dashboard-grid"
+      >
+        @for (column of columns(); track $index; let c = $index) {
+          <div
+            class="dashboard-page__column"
+            cdkDropList
+            [id]="dropListIds()[c]"
+            [cdkDropListData]="c"
+            [cdkDropListConnectedTo]="dropListIds()"
+            [cdkDropListDisabled]="!editing()"
+            [attr.aria-label]="'Columna ' + (c + 1)"
+            role="group"
+            (cdkDropListDropped)="drop($event)"
+          >
+            @for (gadget of column; track gadget.id; let i = $index) {
+              <div
+                class="dashboard-page__gadget"
+                cdkDrag
+                [cdkDragData]="gadget.id"
+                [cdkDragDisabled]="!editing()"
+              >
+                <app-gadget-host
+                  [dashboardId]="current.id"
+                  [gadget]="gadget"
+                  [editing]="editing()"
+                  [unsaved]="unsavedFor(gadget.id)"
+                  [column]="c"
+                  [columnCount]="columns().length"
+                  [index]="i"
+                  [count]="column.length"
+                  (configure)="configureGadget(gadget.id)"
+                  (remove)="removeGadget(gadget.id, gadget.title)"
+                  (moveTo)="moveToColumn(gadget.id, gadget.title, $event)"
+                  (nudge)="nudge(gadget.id, gadget.title, $event)"
+                />
+              </div>
+            }
+            @if (editing() && column.length === 0) {
+              <p class="dashboard-page__drop-hint">Suelta aquí un gadget o añade uno nuevo.</p>
+            }
+          </div>
+        }
+      </div>
+    }
+
+    <app-gadget-catalog-dialog
+      [open]="catalogOpen()"
+      (picked)="pickGadget($event)"
+      (closeRequested)="catalogOpen.set(false)"
+    />
+    <app-gadget-config-dialog
+      [open]="configTarget() !== null"
+      [mode]="configTarget()?.mode ?? 'add'"
+      [type]="configTarget()?.type ?? null"
+      [title]="configTarget()?.title ?? ''"
+      [config]="configTarget()?.config ?? {}"
+      (applied)="applyConfig($event)"
+      (closeRequested)="configTarget.set(null)"
+    />
+    <app-dashboard-form-dialog
+      mode="edit"
+      [open]="renameOpen()"
+      [name]="current.name"
+      [description]="current.description"
+      [busy]="renameBusy()"
+      [error]="renameError()"
+      (submitted)="rename($event)"
+      (closeRequested)="renameOpen.set(false)"
+    />
+    <app-dashboard-share-dialog
+      [open]="shareOpen()"
+      [dashboardName]="current.name"
+      [organizationId]="current.organizationId"
+      [shares]="current.shares ?? []"
+      [busy]="shareBusy()"
+      [error]="shareError()"
+      (saved)="saveShares($event)"
+      (closeRequested)="shareOpen.set(false)"
+    />
+  } @else {
+    <app-loading-skeleton variant="detail" [rows]="6" />
+  }
+</app-page-container>

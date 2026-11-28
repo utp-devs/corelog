@@ -1,0 +1,85 @@
+@if (activity(); as items) {
+  @if (items.length === 0) {
+    <app-empty-state
+      title="Aún no hay actividad"
+      description="Los cambios en las incidencias de tus proyectos aparecerán aquí."
+    />
+  } @else {
+    <ul class="gadget-lists" aria-label="Actividad reciente">
+      @for (item of items; track item.id) {
+        <li class="gadget-lists__item">
+          <span class="gadget-lists__main">
+            <span class="gadget-lists__text"
+              ><strong>{{ item.actor }}</strong> {{ verb(item) }}
+              <a class="gadget-lists__link" [routerLink]="issueLink(item)"
+                >{{ item.issueKey }} {{ item.summary }}</a
+              ></span
+            >
+            <span class="gadget-lists__meta">{{ when(item.occurredAt) }}</span>
+          </span>
+        </li>
+      }
+    </ul>
+  }
+} @else if (projects(); as items) {
+  @if (items.length === 0) {
+    <app-empty-state
+      title="Aún no has abierto proyectos"
+      description="Los proyectos que visites aparecerán aquí."
+    />
+  } @else {
+    <ul class="gadget-lists" aria-label="Proyectos recientes">
+      @for (item of items; track item.id) {
+        <li class="gadget-lists__item">
+          <app-project-avatar [name]="item.name" [projectKey]="item.key" [size]="32" />
+          <span class="gadget-lists__main">
+            <a class="gadget-lists__link" [routerLink]="projectLink(item)">{{ item.name }}</a>
+            <span class="gadget-lists__meta">{{ item.key }} - visto {{ when(item.viewedAt) }}</span>
+          </span>
+        </li>
+      }
+    </ul>
+  }
+} @else if (favorites(); as items) {
+  @if (items.length === 0) {
+    <app-empty-state
+      title="Aún no tienes favoritos"
+      description="Marca con una estrella proyectos, filtros o paneles para tenerlos aquí."
+    />
+  } @else {
+    <ul class="gadget-lists" aria-label="Favoritos">
+      @for (item of items; track item.type + item.id) {
+        <li class="gadget-lists__item">
+          <i class="pi pi-star-fill gadget-lists__star" aria-hidden="true"></i>
+          <span class="gadget-lists__main">
+            <a class="gadget-lists__link" [routerLink]="favoriteLink(item)">{{ item.name }}</a>
+          </span>
+          <app-tone-tag [label]="favoriteType(item)" tone="neutral" />
+        </li>
+      }
+    </ul>
+  }
+} @else if (upcoming(); as items) {
+  @if (items.length === 0) {
+    <app-empty-state
+      title="Nada en los próximos días"
+      description="Los eventos del calendario y las fechas de tus sprints aparecerán aquí."
+    />
+  } @else {
+    <ul class="gadget-lists" aria-label="Próximos eventos">
+      @for (item of items; track item.title + item.startsAt) {
+        <li class="gadget-lists__item">
+          <span class="gadget-lists__main">
+            @if (upcomingLink(item); as link) {
+              <a class="gadget-lists__link" [routerLink]="link">{{ item.title }}</a>
+            } @else {
+              <span class="gadget-lists__text">{{ item.title }}</span>
+            }
+            <span class="gadget-lists__meta">{{ when(item.startsAt, item.allDay) }}</span>
+          </span>
+          <app-tone-tag [label]="upcomingKind(item)" tone="blue" />
+        </li>
+      }
+    </ul>
+  }
+}

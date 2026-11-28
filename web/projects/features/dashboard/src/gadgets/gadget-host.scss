@@ -1,0 +1,98 @@
+@use '../../../../ui/styles/mixins' as m;
+
+:host {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.gadget-host {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-width: 0;
+
+  &__controls {
+    @include m.cluster(1);
+  }
+
+  &__handle {
+    @include m.flex-row(0, center, center);
+    width: var(--cl-control-h-md);
+    height: var(--cl-control-h-md);
+    border-radius: var(--cl-radius-md);
+    color: var(--cl-text-subtle);
+    cursor: grab;
+
+    &:hover {
+      background: var(--cl-bg-hover);
+      color: var(--cl-text);
+    }
+  }
+
+  &__menu {
+    @include m.flex-row(0, center, center);
+    width: var(--cl-control-h-md);
+    height: var(--cl-control-h-md);
+    border: 0;
+    border-radius: var(--cl-radius-md);
+    background: transparent;
+    color: var(--cl-text-subtle);
+    cursor: pointer;
+
+    &:hover:not(:disabled) {
+      background: var(--cl-bg-hover);
+      color: var(--cl-text);
+    }
+
+    &:focus-visible {
+      outline: none;
+      box-shadow: var(--cl-shadow-focus);
+    }
+
+    &:disabled {
+      cursor: default;
+    }
+
+    &--busy .pi {
+      animation: gadget-host-spin 1s linear infinite;
+    }
+  }
+
+  &__preview {
+    @include m.flex-column(1, center);
+    padding: var(--cl-space-6) var(--cl-space-4);
+    border: 1px dashed var(--cl-border-strong);
+    border-radius: var(--cl-radius-md);
+    text-align: center;
+    color: var(--cl-text-subtle);
+
+    .pi {
+      font-size: var(--cl-font-h3);
+    }
+  }
+
+  &__preview-title {
+    margin: 0;
+    font-weight: var(--cl-weight-semibold);
+    color: var(--cl-text);
+  }
+
+  &__preview-text,
+  &__muted {
+    margin: 0;
+    color: var(--cl-text-subtle);
+  }
+}
+
+@keyframes gadget-host-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gadget-host__menu--busy .pi {
+    animation: none;
+  }
+}

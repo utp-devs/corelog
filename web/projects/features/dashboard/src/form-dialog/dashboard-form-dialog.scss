@@ -1,0 +1,9 @@
+@use '../../../../ui/styles/mixins' as m;
+
+.dashboard-form {
+  @include m.flex-column(4);
+
+  &__input {
+    width: 100%;
+  }
+}

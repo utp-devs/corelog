@@ -1,0 +1,72 @@
+<app-dialog
+  size="md"
+  [heading]="heading()"
+  [open]="open()"
+  (closeRequested)="closeRequested.emit()"
+>
+  <form class="dashboard-form" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+    @if (error(); as message) {
+      <p-message
+        severity="error"
+        [closable]="false"
+        role="alert"
+        data-testid="dashboard-form-error"
+        >{{ message }}</p-message
+      >
+    }
+
+    <app-field-row label="Nombre" [required]="true" [error]="nameError()">
+      <input
+        pInputText
+        appFieldControl
+        data-autofocus
+        type="text"
+        autocomplete="off"
+        class="dashboard-form__input"
+        formControlName="name"
+        [maxLength]="nameMax"
+        data-testid="dashboard-name"
+      />
+    </app-field-row>
+
+    <app-field-row label="Descripción" [optional]="true">
+      <textarea
+        pTextarea
+        appFieldControl
+        rows="3"
+        class="dashboard-form__input"
+        formControlName="description"
+        [maxLength]="descriptionMax"
+        data-testid="dashboard-description"
+      ></textarea>
+    </app-field-row>
+
+    @if (mode() === 'create') {
+      <app-field-row #layoutRow label="Columnas">
+        <app-select-field
+          [inputId]="layoutRow.controlId"
+          [options]="layoutOptions"
+          formControlName="layout"
+          data-testid="dashboard-layout"
+        />
+      </app-field-row>
+    }
+  </form>
+
+  <p-button
+    dialogFooter
+    type="button"
+    label="Cancelar"
+    severity="secondary"
+    [disabled]="busy()"
+    (onClick)="closeRequested.emit()"
+  />
+  <p-button
+    dialogFooter
+    type="button"
+    [label]="mode() === 'create' ? 'Crear panel' : 'Guardar'"
+    data-testid="dashboard-form-confirm"
+    [loading]="busy()"
+    (onClick)="submit()"
+  />
+</app-dialog>

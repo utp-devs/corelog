@@ -1,0 +1,154 @@
+<app-dialog
+  size="md"
+  [heading]="heading()"
+  [subtitle]="definition()?.description"
+  [open]="open()"
+  (closeRequested)="closeRequested.emit()"
+>
+  @if (definition(); as def) {
+    <form class="gadget-config" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+      <app-field-row label="Título" [error]="errorOf('__title')">
+        <input
+          pInputText
+          appFieldControl
+          data-autofocus
+          type="text"
+          autocomplete="off"
+          class="gadget-config__input"
+          formControlName="__title"
+          [maxLength]="titleMax"
+          data-testid="gadget-title"
+        />
+      </app-field-row>
+
+      @for (field of def.fields; track field.key) {
+        @switch (field.kind) {
+          @case ('boolean') {
+            <label class="gadget-config__check">
+              <input
+                type="checkbox"
+                [formControlName]="field.key"
+                [attr.data-testid]="'gadget-field-' + field.key"
+              />
+              <span>{{ field.label }}</span>
+            </label>
+          }
+          @case ('multi') {
+            <fieldset class="gadget-config__multi">
+              <legend class="gadget-config__legend">{{ field.label }}</legend>
+              <div class="gadget-config__options">
+                @for (option of optionsOf(field); track option.value) {
+                  <label class="gadget-config__check">
+                    <input
+                      type="checkbox"
+                      [checked]="isChecked(field.key, option.value)"
+                      (change)="toggleOption(field.key, option.value, $event)"
+                    />
+                    <span>{{ option.label }}</span>
+                  </label>
+                }
+              </div>
+              @if (field.help) {
+                <p class="gadget-config__help">{{ field.help }}</p>
+              }
+            </fieldset>
+          }
+          @case ('select') {
+            <app-field-row #selectRow [label]="field.label" [error]="errorOf(field.key)">
+              <app-select-field
+                [inputId]="selectRow.controlId"
+                [options]="optionsOf(field)"
+                [formControlName]="field.key"
+                [attr.data-testid]="'gadget-field-' + field.key"
+              />
+            </app-field-row>
+          }
+          @case ('project') {
+            <app-field-row
+              #projectRow
+              [label]="field.label"
+              [optional]="true"
+              [error]="errorOf(field.key)"
+            >
+              <app-select-field
+                [inputId]="projectRow.controlId"
+                [options]="optionsOf(field)"
+                [placeholder]="field.placeholder ?? 'Seleccionar'"
+                [formControlName]="field.key"
+                [attr.data-testid]="'gadget-field-' + field.key"
+              />
+            </app-field-row>
+          }
+          @case ('filter') {
+            <app-field-row
+              #filterRow
+              [label]="field.label"
+              [optional]="true"
+              [error]="errorOf(field.key)"
+            >
+              <app-select-field
+                [inputId]="filterRow.controlId"
+                [options]="optionsOf(field)"
+                [placeholder]="field.placeholder ?? 'Seleccionar'"
+                [formControlName]="field.key"
+                [attr.data-testid]="'gadget-field-' + field.key"
+              />
+            </app-field-row>
+          }
+          @case ('textarea') {
+            <app-field-row [label]="field.label" [helper]="field.help" [error]="errorOf(field.key)">
+              <textarea
+                pTextarea
+                appFieldControl
+                rows="5"
+                class="gadget-config__input"
+                [formControlName]="field.key"
+                [attr.data-testid]="'gadget-field-' + field.key"
+              ></textarea>
+            </app-field-row>
+          }
+          @case ('number') {
+            <app-field-row [label]="field.label" [helper]="field.help" [error]="errorOf(field.key)">
+              <input
+                pInputText
+                appFieldControl
+                type="number"
+                class="gadget-config__input gadget-config__input--number"
+                [min]="field.min ?? null"
+                [max]="field.max ?? null"
+                [formControlName]="field.key"
+                [attr.data-testid]="'gadget-field-' + field.key"
+              />
+            </app-field-row>
+          }
+          @default {
+            <app-field-row [label]="field.label" [helper]="field.help" [error]="errorOf(field.key)">
+              <input
+                pInputText
+                appFieldControl
+                type="text"
+                class="gadget-config__input"
+                [formControlName]="field.key"
+              />
+            </app-field-row>
+          }
+        }
+      }
+    </form>
+  }
+
+  <p-button
+    dialogFooter
+    type="button"
+    label="Cancelar"
+    severity="secondary"
+    (onClick)="closeRequested.emit()"
+  />
+  <p-button
+    dialogFooter
+    type="button"
+    [label]="mode() === 'add' ? 'Añadir al panel' : 'Aplicar'"
+    data-testid="gadget-config-apply"
+    (onClick)="submit()"
+  />
+</app-dialog>

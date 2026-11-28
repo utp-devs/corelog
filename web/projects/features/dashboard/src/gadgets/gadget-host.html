@@ -1,0 +1,117 @@
+<ng-template #controls>
+  @if (editing()) {
+    <span
+      class="gadget-host__handle"
+      cdkDragHandle
+      appTooltip="Arrastra para mover"
+      aria-hidden="true"
+    >
+      <i class="pi pi-arrows-alt"></i>
+    </span>
+    <button
+      type="button"
+      class="gadget-host__menu"
+      aria-haspopup="menu"
+      [attr.aria-label]="'Opciones de ' + gadget().title"
+      appTooltip="Opciones"
+      [attr.data-testid]="'gadget-menu-' + gadget().id"
+      (click)="optionsMenu.toggle($event)"
+    >
+      <i class="pi pi-ellipsis-v" aria-hidden="true"></i>
+    </button>
+    <p-menu #optionsMenu [model]="menuItems()" [popup]="true" appendTo="body" />
+  } @else {
+    <button
+      type="button"
+      class="gadget-host__menu"
+      [class.gadget-host__menu--busy]="refreshing()"
+      [attr.aria-label]="'Actualizar ' + gadget().title"
+      appTooltip="Actualizar"
+      [disabled]="refreshing()"
+      (click)="refresh()"
+    >
+      <i class="pi pi-refresh" aria-hidden="true"></i>
+    </button>
+  }
+</ng-template>
+
+<div
+  class="gadget-host"
+  [attr.data-testid]="'gadget-' + gadget().type"
+  [attr.data-gadget-id]="gadget().id"
+>
+  @if (showChartCard() && chart(); as model) {
+    <app-chart-card
+      [title]="gadget().title"
+      [description]="subtitle()"
+      [chartType]="model.chartType"
+      [labels]="model.labels"
+      [series]="model.series"
+      [table]="model.table"
+      [isEmpty]="model.isEmpty"
+      [emptyText]="model.emptyText"
+      [emptyDescription]="model.emptyDescription"
+    >
+      <span chartCardActions class="gadget-host__controls">
+        <ng-container [ngTemplateOutlet]="controls" />
+      </span>
+    </app-chart-card>
+  } @else {
+    <app-gadget-frame
+      [title]="gadget().title"
+      [state]="state()"
+      [errorMessage]="errorMessage()"
+      [subtitle]="subtitle()"
+      [refreshable]="false"
+      [editing]="editing()"
+      (refresh)="refresh()"
+    >
+      <span gadgetFrameActions class="gadget-host__controls">
+        <ng-container [ngTemplateOutlet]="controls" />
+      </span>
+
+      @if (isText()) {
+        @if (markdown().trim()) {
+          <app-rich-text-view [value]="markdown()" />
+        } @else {
+          <p class="gadget-host__muted">Este gadget no tiene texto todavía.</p>
+        }
+      } @else if (unsaved()) {
+        <div class="gadget-host__preview" data-testid="gadget-unsaved">
+          <i class="pi" [class]="'pi ' + definition().icon" aria-hidden="true"></i>
+          <p class="gadget-host__preview-title">{{ definition().label }}</p>
+          <p class="gadget-host__preview-text">
+            Guarda el panel para ver los datos de este gadget.
+          </p>
+        </div>
+      } @else if (content(); as data) {
+        @switch (gadget().type) {
+          @case ('assigned_to_me') {
+            <app-gadget-issues [content]="data" [title]="gadget().title" />
+          }
+          @case ('created_by_me') {
+            <app-gadget-issues [content]="data" [title]="gadget().title" />
+          }
+          @case ('filter_results') {
+            <app-gadget-issues [content]="data" [title]="gadget().title" />
+          }
+          @case ('two_dimensional') {
+            <app-gadget-matrix [content]="data" />
+          }
+          @case ('activity_stream') {
+            <app-gadget-lists [content]="data" />
+          }
+          @case ('recent_projects') {
+            <app-gadget-lists [content]="data" />
+          }
+          @case ('favorites') {
+            <app-gadget-lists [content]="data" />
+          }
+          @case ('calendar_upcoming') {
+            <app-gadget-lists [content]="data" />
+          }
+        }
+      }
+    </app-gadget-frame>
+  }
+</div>

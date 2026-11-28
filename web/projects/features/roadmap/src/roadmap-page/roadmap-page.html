@@ -1,0 +1,241 @@
+<app-page-container variant="wide" pageName="roadmap" [ready]="ready() || failed()" [fill]="true">
+  <app-page-header
+    title="Hoja de ruta"
+    subtitle="Planifica en el tiempo las épicas, versiones y sprints del proyecto."
+  >
+    <div appPageHeaderActions class="roadmap__header-actions">
+      <button type="button" class="roadmap__print" (click)="print()">
+        <i class="pi pi-print" aria-hidden="true"></i>
+        <span>Imprimir</span>
+      </button>
+    </div>
+  </app-page-header>
+  <app-archived-notice />
+
+  @if (failed()) {
+    <app-error-state
+      [status]="store.roadmap.error()?.status"
+      [message]="store.errorMessage() ?? ''"
+      [canRetry]="true"
+      (retry)="retry()"
+    />
+  } @else if (!ready()) {
+    <app-loading-skeleton variant="detail" [rows]="6" />
+  } @else {
+    <div class="roadmap">
+      <div class="roadmap__toolbar">
+        <div class="roadmap__group" role="group" aria-label="Agrupar por">
+          @for (choice of groupChoices; track choice.value) {
+            <button
+              type="button"
+              class="roadmap__choice"
+              [class.roadmap__choice--active]="store.groupBy() === choice.value"
+              [attr.aria-pressed]="store.groupBy() === choice.value"
+              [attr.data-testid]="'roadmap-group-' + choice.value"
+              (click)="store.setGroupBy(choice.value)"
+            >
+              {{ choice.label }}
+            </button>
+          }
+        </div>
+
+        <div class="roadmap__group" role="group" aria-label="Filtrar por estado">
+          @for (choice of filterChoices; track choice.value) {
+            <button
+              type="button"
+              class="roadmap__chip"
+              [class.roadmap__chip--active]="store.filter() === choice.value"
+              [attr.aria-pressed]="store.filter() === choice.value"
+              [attr.data-testid]="'roadmap-filter-' + choice.value"
+              (click)="store.setFilter(choice.value)"
+            >
+              {{ choice.label }}
+            </button>
+          }
+        </div>
+
+        <div class="roadmap__search">
+          <app-search-input
+            placeholder="Buscar en la hoja de ruta"
+            ariaLabel="Buscar en la hoja de ruta"
+            [value]="store.query()"
+            (valueChange)="store.setQuery($event)"
+          />
+        </div>
+
+        @if (!isPhone()) {
+          <div class="roadmap__group roadmap__group--end" role="group" aria-label="Vista">
+            @for (choice of viewChoices; track choice.value) {
+              <button
+                type="button"
+                class="roadmap__choice"
+                [class.roadmap__choice--active]="view() === choice.value"
+                [attr.aria-pressed]="view() === choice.value"
+                [attr.data-testid]="'roadmap-view-' + choice.value"
+                (click)="view.set(choice.value)"
+              >
+                {{ choice.label }}
+              </button>
+            }
+          </div>
+        }
+        @if (showTimeline()) {
+          <div class="roadmap__group" role="group" aria-label="Escala de tiempo">
+            @for (choice of zoomChoices; track choice.value) {
+              <button
+                type="button"
+                class="roadmap__choice"
+                [class.roadmap__choice--active]="zoom() === choice.value"
+                [attr.aria-pressed]="zoom() === choice.value"
+                [attr.data-testid]="'roadmap-zoom-' + choice.value"
+                (click)="zoom.set(choice.value)"
+              >
+                {{ choice.label }}
+              </button>
+            }
+          </div>
+        }
+      </div>
+
+      @if (!hasAny()) {
+        <div class="roadmap__empty">
+          @if (filtering()) {
+            <app-empty-state
+              title="Nada coincide con los filtros"
+              description="Prueba con otra búsqueda o muestra todos los elementos."
+            />
+          } @else {
+            <img
+              class="roadmap__empty-image"
+              src="/images/modules/module-roadmap.webp"
+              alt=""
+              width="480"
+              height="320"
+              decoding="async"
+            />
+            <app-empty-state
+              [title]="emptyTitle()"
+              description="Crea épicas con fechas, o versiones y sprints, y aparecerán aquí en el tiempo."
+            />
+          }
+        </div>
+      } @else {
+        @if (showTimeline()) {
+          @if (rows().length > 0) {
+            <app-timeline
+              class="roadmap__timeline"
+              [rows]="rows()"
+              [scale]="scale()"
+              [bands]="bands()"
+              [dependencies]="dependencies()"
+              [reorderable]="reorderable()"
+              [columnTitle]="columnTitle()"
+              label="Hoja de ruta del proyecto"
+              (rowActivated)="activate($event)"
+              (reordered)="reorder($event)"
+            />
+          } @else {
+            <p class="roadmap__note" data-testid="roadmap-no-dated">
+              Ningún elemento tiene fechas todavía.
+            </p>
+          }
+        } @else if (isPhone()) {
+          <ul class="roadmap__cards" aria-label="Elementos de la hoja de ruta">
+            @for (bar of store.bars(); track bar.id) {
+              <li class="roadmap__card" [attr.data-testid]="'roadmap-card-' + bar.id">
+                @if (linkOf(bar); as link) {
+                  <a class="roadmap__card-title" [routerLink]="link">{{ bar.title }}</a>
+                } @else {
+                  <span class="roadmap__card-title">{{ bar.title }}</span>
+                }
+                <span class="roadmap__card-meta">{{ status(bar) }} - {{ range(bar) }}</span>
+                <app-progress-bar
+                  [value]="bar.progress.percent"
+                  [tone]="tone(bar)"
+                  label="Progreso"
+                />
+              </li>
+            }
+          </ul>
+        } @else {
+          <div class="roadmap__table-wrap">
+            <table class="roadmap__table" data-testid="roadmap-table">
+              <caption class="roadmap__sr-only">
+                Hoja de ruta del proyecto
+              </caption>
+              <thead>
+                <tr>
+                  <th scope="col">{{ columnTitle() }}</th>
+                  <th scope="col">Estado</th>
+                  <th scope="col">Inicio</th>
+                  <th scope="col">Fin</th>
+                  <th scope="col">Progreso</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (bar of store.bars(); track bar.id) {
+                  <tr>
+                    <th scope="row" class="roadmap__cell-title">
+                      @if (linkOf(bar); as link) {
+                        <a class="roadmap__link" [routerLink]="link">
+                          @if (bar.key) {
+                            <span class="roadmap__key">{{ bar.key }}</span>
+                          }
+                          {{ bar.title }}
+                        </a>
+                      } @else {
+                        {{ bar.title }}
+                      }
+                    </th>
+                    <td>{{ status(bar) }}</td>
+                    <td>{{ day(bar.start) }}</td>
+                    <td>{{ day(bar.end) }}</td>
+                    <td class="roadmap__cell-progress">
+                      <app-progress-bar
+                        [value]="bar.progress.percent"
+                        [tone]="tone(bar)"
+                        [label]="'Progreso de ' + bar.title"
+                      />
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+
+        @if (undated().length > 0 && !(view() === 'table' || isPhone())) {
+          <section
+            class="roadmap__undated"
+            aria-labelledby="roadmap-undated-title"
+            data-testid="roadmap-undated"
+          >
+            <h2 class="roadmap__undated-title" id="roadmap-undated-title">
+              Sin fechas ({{ undated().length }})
+            </h2>
+            <p class="roadmap__undated-hint">
+              Añade fechas de inicio y fin a estos elementos para verlos en la línea de tiempo.
+            </p>
+            <ul class="roadmap__undated-list">
+              @for (bar of undated(); track bar.id) {
+                <li class="roadmap__undated-item">
+                  @if (linkOf(bar); as link) {
+                    <a class="roadmap__link" [routerLink]="link">
+                      @if (bar.key) {
+                        <span class="roadmap__key">{{ bar.key }}</span>
+                      }
+                      {{ bar.title }}
+                    </a>
+                  } @else {
+                    <span>{{ bar.title }}</span>
+                  }
+                  <span class="roadmap__undated-status">{{ status(bar) }}</span>
+                </li>
+              }
+            </ul>
+          </section>
+        }
+      }
+    </div>
+  }
+</app-page-container>

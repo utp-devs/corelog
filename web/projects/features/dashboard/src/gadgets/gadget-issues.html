@@ -1,0 +1,80 @@
+@if (data(); as list) {
+  @if (list.items.length === 0) {
+    <app-empty-state [title]="emptyText()" />
+  } @else {
+    <div class="gadget-issues">
+      <div class="gadget-issues__scroll" data-scroll-x>
+        <table class="gadget-issues__table">
+          <caption class="gadget-issues__caption">
+            {{
+              title()
+            }}
+          </caption>
+          <thead>
+            <tr>
+              @for (column of columns(); track column.key) {
+                <th scope="col">{{ column.label }}</th>
+              }
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of list.items; track row.id) {
+              <tr [attr.data-testid]="'gadget-issue-' + row.key">
+                @for (column of columns(); track column.key) {
+                  <td [class]="'gadget-issues__cell gadget-issues__cell--' + column.key">
+                    @switch (column.key) {
+                      @case ('key') {
+                        <app-issue-key
+                          [issueKey]="row.key"
+                          [href]="link(row)"
+                          [resolved]="row.statusCategory === 'done'"
+                        />
+                      }
+                      @case ('summary') {
+                        <a
+                          class="gadget-issues__link"
+                          [routerLink]="link(row)"
+                          [title]="row.summary"
+                          >{{ row.summary }}</a
+                        >
+                      }
+                      @case ('status') {
+                        <app-tone-tag [label]="row.status" [tone]="tone(row)" />
+                      }
+                      @case ('priority') {
+                        @if (priority(row); as ref) {
+                          <app-priority-tag [priority]="ref" />
+                        } @else {
+                          {{ row.priority }}
+                        }
+                      }
+                      @case ('type') {
+                        {{ row.type }}
+                      }
+                      @case ('assignee') {
+                        {{ row.assignee || 'Sin asignar' }}
+                      }
+                      @case ('due') {
+                        <span [class.gadget-issues__overdue]="overdue(row)">{{
+                          due(row) || '-'
+                        }}</span>
+                      }
+                      @case ('updated') {
+                        {{ updated(row) }}
+                      }
+                    }
+                  </td>
+                }
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      @if (list.total > list.items.length) {
+        <p class="gadget-issues__more">
+          Mostrando {{ list.items.length }} de {{ list.total }} incidencias.
+        </p>
+      }
+    </div>
+  }
+}

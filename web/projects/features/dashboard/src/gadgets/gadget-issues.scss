@@ -1,0 +1,79 @@
+@use '../../../../ui/styles/mixins' as m;
+
+.gadget-issues {
+  @include m.flex-column(2);
+  min-width: 0;
+
+  &__scroll {
+    overflow-x: auto;
+  }
+
+  &__caption {
+    @include m.visually-hidden;
+  }
+
+  &__table {
+    width: 100%;
+    border-collapse: collapse;
+
+    th,
+    td {
+      padding: var(--cl-space-2) var(--cl-space-3);
+      border-bottom: 1px solid var(--cl-divider);
+      text-align: left;
+      vertical-align: middle;
+      font-size: var(--cl-font-body);
+      white-space: nowrap;
+    }
+
+    th {
+      font-size: var(--cl-font-small);
+      font-weight: var(--cl-weight-semibold);
+      color: var(--cl-text-subtle);
+    }
+
+    tbody tr:last-child td {
+      border-bottom: 0;
+    }
+  }
+
+  &__cell--summary {
+    min-width: 12rem;
+    max-width: 22rem;
+    white-space: normal;
+  }
+
+  &__link {
+    display: inline-flex;
+    align-items: center;
+
+    @include m.respond-down(768px) {
+      min-height: var(--cl-control-h-md);
+    }
+
+    color: var(--cl-text);
+    text-decoration: none;
+
+    &:hover {
+      color: var(--cl-brand);
+      text-decoration: underline;
+    }
+
+    &:focus-visible {
+      outline: none;
+      box-shadow: var(--cl-shadow-focus);
+      border-radius: var(--cl-radius-sm);
+    }
+  }
+
+  &__overdue {
+    color: var(--cl-danger-text);
+    font-weight: var(--cl-weight-medium);
+  }
+
+  &__more {
+    margin: 0;
+    font-size: var(--cl-font-small);
+    color: var(--cl-text-subtle);
+  }
+}

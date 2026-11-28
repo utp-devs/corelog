@@ -1,0 +1,165 @@
+<app-page-container variant="wide" pageName="dashboards" [ready]="ready()" [fill]="true">
+  <app-page-header
+    title="Paneles"
+    subtitle="Crea paneles con los gadgets que necesitas y compártelos con tu equipo."
+  >
+    <div appPageHeaderActions>
+      <button
+        type="button"
+        class="dashboards__create"
+        data-testid="dashboards-create"
+        (click)="createOpen.set(true)"
+      >
+        <i class="pi pi-plus" aria-hidden="true"></i>
+        <span>Crear panel</span>
+      </button>
+    </div>
+  </app-page-header>
+
+  <div class="dashboards__toolbar">
+    <div class="dashboards__tabs" role="group" aria-label="Qué paneles ver">
+      @for (choice of tabs; track choice.value) {
+        <button
+          type="button"
+          class="dashboards__tab"
+          [class.dashboards__tab--active]="tab() === choice.value"
+          [attr.aria-pressed]="tab() === choice.value"
+          [attr.data-testid]="'dashboards-tab-' + choice.value"
+          (click)="tab.set(choice.value)"
+        >
+          {{ choice.label }}
+        </button>
+      }
+    </div>
+    <div class="dashboards__search">
+      <app-search-input
+        placeholder="Buscar paneles"
+        ariaLabel="Buscar paneles"
+        [value]="query()"
+        (valueChange)="query.set($event)"
+      />
+    </div>
+  </div>
+
+  @if (store.listError(); as message) {
+    <app-error-state [message]="message" [canRetry]="true" (retry)="retry()" />
+  } @else if (!store.page.hasValue()) {
+    <app-loading-skeleton variant="table" [rows]="6" />
+  } @else if (visible().length === 0) {
+    <div class="dashboards__empty">
+      @if (isFiltering()) {
+        <app-empty-state
+          title="No hay paneles que coincidan"
+          description="Prueba con otra búsqueda o cambia de pestaña."
+        />
+      } @else {
+        <app-empty-state
+          image="empty-issues"
+          title="Aún no tienes paneles"
+          description="Crea tu primer panel para reunir en un solo sitio lo que más te importa."
+        />
+      }
+    </div>
+  } @else {
+    <ul class="dashboards__list" aria-label="Paneles" data-testid="dashboards-list">
+      @for (dashboard of visible(); track dashboard.id) {
+        <li class="dashboards__item" [attr.data-testid]="'dashboard-row-' + dashboard.id">
+          <button
+            type="button"
+            class="dashboards__star"
+            [class.dashboards__star--on]="dashboard.isFavorite"
+            [attr.aria-pressed]="dashboard.isFavorite"
+            [attr.aria-label]="
+              (dashboard.isFavorite ? 'Quitar de favoritos ' : 'Marcar como favorito ') +
+              dashboard.name
+            "
+            [appTooltip]="dashboard.isFavorite ? 'Quitar de favoritos' : 'Marcar como favorito'"
+            (click)="toggleFavorite(dashboard)"
+          >
+            <i
+              class="pi"
+              [class]="dashboard.isFavorite ? 'pi pi-star-fill' : 'pi pi-star'"
+              aria-hidden="true"
+            ></i>
+          </button>
+          <div class="dashboards__main">
+            <a class="dashboards__name" [routerLink]="['/dashboards', dashboard.id]">{{
+              dashboard.name
+            }}</a>
+            <span class="dashboards__meta">
+              {{ dashboard.gadgetCount }}
+              {{ dashboard.gadgetCount === 1 ? 'gadget' : 'gadgets' }}
+              - de {{ dashboard.ownerName }} - actualizado el {{ date(dashboard.updatedAt) }}
+            </span>
+            @if (dashboard.description) {
+              <span class="dashboards__description">{{ dashboard.description }}</span>
+            }
+          </div>
+          <span class="dashboards__badges">
+            @if (dashboard.isDefault) {
+              <span class="dashboards__badge dashboards__badge--brand">Principal</span>
+            }
+            @if (dashboard.shared) {
+              <span class="dashboards__badge">Compartido</span>
+            }
+            @if (!dashboard.canEdit) {
+              <span class="dashboards__badge">Solo lectura</span>
+            }
+          </span>
+          <button
+            type="button"
+            class="dashboards__more"
+            aria-haspopup="menu"
+            [attr.aria-label]="'Acciones de ' + dashboard.name"
+            appTooltip="Acciones"
+            [attr.data-testid]="'dashboard-actions-' + dashboard.id"
+            (click)="openMenu($event, dashboard, rowMenu)"
+          >
+            <i class="pi pi-ellipsis-h" aria-hidden="true"></i>
+          </button>
+        </li>
+      }
+    </ul>
+  }
+
+  <p-menu #rowMenu [model]="menuItems()" [popup]="true" appendTo="body" />
+
+  <app-dashboard-form-dialog
+    mode="create"
+    [open]="createOpen()"
+    [busy]="formBusy()"
+    [error]="formError()"
+    (submitted)="create($event)"
+    (closeRequested)="createOpen.set(false)"
+  />
+  <app-dashboard-form-dialog
+    mode="edit"
+    [open]="renaming() !== null"
+    [name]="renaming()?.name ?? ''"
+    [description]="renaming()?.description ?? ''"
+    [busy]="formBusy()"
+    [error]="formError()"
+    (submitted)="rename($event)"
+    (closeRequested)="renaming.set(null)"
+  />
+  <app-dashboard-share-dialog
+    [open]="sharing() !== null"
+    [dashboardName]="sharing()?.name ?? ''"
+    [organizationId]="sharing()?.organizationId ?? ''"
+    [shares]="shareDetail()?.shares ?? []"
+    [busy]="shareBusy()"
+    [error]="shareError()"
+    (saved)="saveShares($event)"
+    (closeRequested)="sharing.set(null)"
+  />
+  <app-confirm-danger-modal
+    [open]="deleting() !== null"
+    title="Eliminar el panel"
+    description="Se borrará el panel con todos sus gadgets y dejará de estar compartido. No se puede deshacer."
+    [confirmation]="deleting()?.name ?? ''"
+    confirmText="Eliminar panel"
+    [loading]="deleteBusy()"
+    (confirmed)="confirmDelete()"
+    (cancelled)="deleting.set(null)"
+  />
+</app-page-container>

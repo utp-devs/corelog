@@ -1,0 +1,110 @@
+<app-dialog
+  size="lg"
+  heading="Compartir el panel"
+  [subtitle]="dashboardName()"
+  [open]="open()"
+  (closeRequested)="closeRequested.emit()"
+>
+  <div class="share-dialog">
+    @if (error(); as message) {
+      <p-message severity="error" [closable]="false" role="alert" data-testid="share-error">{{
+        message
+      }}</p-message>
+    }
+
+    <section class="share-dialog__section" aria-labelledby="share-current-title">
+      <h3 class="share-dialog__title" id="share-current-title">Quién tiene acceso</h3>
+      @if (draft().length === 0) {
+        <p class="share-dialog__empty">
+          El panel es privado: solo tú puedes verlo. Añade personas, equipos o proyectos para
+          compartirlo.
+        </p>
+      } @else {
+        <ul class="share-dialog__list" data-testid="share-list">
+          @for (share of draft(); track share.type + share.targetId; let i = $index) {
+            <li class="share-dialog__item">
+              <span class="share-dialog__who">
+                <span class="share-dialog__name">{{ share.targetName }}</span>
+                <span class="share-dialog__kind">{{ typeLabel(share.type) }}</span>
+              </span>
+              <app-select-field
+                class="share-dialog__permission"
+                size="compact"
+                [ariaLabel]="'Permiso de ' + share.targetName"
+                [options]="permissionOptions"
+                [ngModel]="share.permission"
+                (ngModelChange)="setPermissionOf(i, $event)"
+              />
+              <button
+                type="button"
+                class="share-dialog__remove"
+                [attr.aria-label]="'Quitar el acceso de ' + share.targetName"
+                (click)="remove(i)"
+              >
+                <i class="pi pi-times" aria-hidden="true"></i>
+              </button>
+            </li>
+          }
+        </ul>
+      }
+    </section>
+
+    <section class="share-dialog__section" aria-labelledby="share-add-title">
+      <h3 class="share-dialog__title" id="share-add-title">Añadir acceso</h3>
+      <div class="share-dialog__add">
+        <app-select-field
+          ariaLabel="Compartir con"
+          [options]="typeOptions"
+          [ngModel]="newType()"
+          (ngModelChange)="setType($event)"
+          data-testid="share-type"
+        />
+        @if (needsTarget()) {
+          <app-select-field
+            ariaLabel="Destino"
+            placeholder="Elegir..."
+            [options]="targetOptions()"
+            [ngModel]="newTarget()"
+            (ngModelChange)="newTarget.set($event)"
+            data-testid="share-target"
+          />
+        }
+        <app-select-field
+          ariaLabel="Permiso"
+          [options]="permissionOptions"
+          [ngModel]="newPermission()"
+          (ngModelChange)="newPermission.set($event ?? 'view')"
+        />
+        <p-button
+          type="button"
+          label="Añadir"
+          severity="secondary"
+          [disabled]="!canAdd()"
+          data-testid="share-add"
+          (onClick)="add()"
+        />
+      </div>
+      <p class="share-dialog__hint">
+        Cada persona ve solo las incidencias de los proyectos a los que ya tiene acceso.
+      </p>
+    </section>
+  </div>
+
+  <p-button
+    dialogFooter
+    type="button"
+    label="Cancelar"
+    severity="secondary"
+    [disabled]="busy()"
+    (onClick)="closeRequested.emit()"
+  />
+  <p-button
+    dialogFooter
+    type="button"
+    label="Guardar"
+    data-testid="share-save"
+    [loading]="busy()"
+    [disabled]="!dirty()"
+    (onClick)="save()"
+  />
+</app-dialog>
