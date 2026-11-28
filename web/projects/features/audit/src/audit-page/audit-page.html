@@ -1,0 +1,172 @@
+<app-page-container variant="wide" pageName="audit" [ready]="!firstLoad()" [fill]="true">
+  <app-page-header banner="settings" [title]="title" [subtitle]="subtitle">
+    <p-button
+      appPageHeaderActions
+      label="Exportar CSV"
+      icon="pi pi-download"
+      severity="secondary"
+      [outlined]="true"
+      data-testid="audit-export"
+      [loading]="exporting()"
+      [disabled]="forbidden() || !store.loaded()"
+      (onClick)="exportCsv()"
+    />
+  </app-page-header>
+
+  <form
+    class="audit-page__filters"
+    aria-label="Filtros de auditoría"
+    data-testid="audit-filters"
+    (submit)="$event.preventDefault(); apply()"
+  >
+    <app-field-row label="Persona" [optional]="true">
+      <app-user-picker
+        ariaLabel="Filtrar por persona"
+        placeholder="Cualquier persona"
+        [users]="people().slice()"
+        [(value)]="actor"
+        (search)="searchPeople($event)"
+      />
+    </app-field-row>
+    <app-field-row #typeRow label="Tipo de elemento" [optional]="true">
+      <app-select-field
+        [inputId]="typeRow.controlId"
+        [options]="entityOptions"
+        [ngModelOptions]="{ standalone: true }"
+        [ngModel]="entityType()"
+        (ngModelChange)="entityType.set($event ?? '')"
+      />
+    </app-field-row>
+    <app-field-row label="Acción" [optional]="true" helper="Por ejemplo, issue.created">
+      <input
+        pInputText
+        appFieldControl
+        type="text"
+        autocomplete="off"
+        spellcheck="false"
+        data-testid="audit-action"
+        [value]="action()"
+        (input)="action.set($any($event.target).value)"
+      />
+    </app-field-row>
+    <app-field-row #fromRow label="Desde" [optional]="true">
+      <app-date-field
+        [inputId]="fromRow.controlId"
+        [ngModelOptions]="{ standalone: true }"
+        [ngModel]="from()"
+        (ngModelChange)="from.set($event)"
+      />
+    </app-field-row>
+    <app-field-row
+      #toRow
+      label="Hasta"
+      [optional]="true"
+      [error]="rangeInvalid() ? 'La fecha final es anterior a la inicial.' : undefined"
+    >
+      <app-date-field
+        [inputId]="toRow.controlId"
+        [invalid]="rangeInvalid()"
+        [ngModelOptions]="{ standalone: true }"
+        [ngModel]="to()"
+        (ngModelChange)="to.set($event)"
+      />
+    </app-field-row>
+    <div class="audit-page__buttons">
+      <p-button
+        type="submit"
+        label="Filtrar"
+        icon="pi pi-filter"
+        data-testid="audit-apply"
+        [disabled]="rangeInvalid()"
+      />
+      <p-button
+        type="button"
+        label="Limpiar"
+        severity="secondary"
+        [text]="true"
+        data-testid="audit-clear"
+        (onClick)="clear()"
+      />
+    </div>
+  </form>
+
+  @if (exportError(); as message) {
+    <p class="audit-page__error" role="alert">{{ message }}</p>
+  }
+
+  @if (forbidden()) {
+    <app-error-state
+      title="No tienes acceso al registro de auditoría"
+      message="Solo las personas propietarias y administradoras pueden consultarlo."
+      [status]="403"
+    />
+  } @else if (store.error() && store.entries().length === 0) {
+    <app-error-state [message]="loadFailed" [canRetry]="true" (retry)="store.retry()" />
+  } @else if (firstLoad()) {
+    <app-loading-skeleton variant="table" [rows]="6" />
+  } @else if (store.isEmpty()) {
+    <p class="audit-page__empty" role="status" data-testid="audit-empty">
+      <i class="pi pi-search" aria-hidden="true"></i>
+      <span>
+        <strong>No hay registros con estos filtros.</strong>
+        Prueba con otro periodo o quita algún filtro.
+      </span>
+    </p>
+  } @else {
+    <div class="audit-page__table-wrap" [attr.aria-busy]="store.loading()">
+      <table class="audit-page__table" data-testid="audit-table">
+        <caption class="u-visually-hidden">
+          Registro de auditoría, del más reciente al más antiguo
+        </caption>
+        <thead>
+          <tr>
+            <th scope="col">Fecha</th>
+            <th scope="col">Persona</th>
+            <th scope="col" class="audit-page__col-action">Acción</th>
+            <th scope="col" class="audit-page__col-entity">Elemento</th>
+            <th scope="col">Resumen</th>
+            <th scope="col"><span class="u-visually-hidden">Detalle</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (entry of store.entries(); track entry.id) {
+            <tr class="audit-page__row" data-testid="audit-row">
+              <td class="audit-page__date">{{ formatDate(entry.createdAt) }}</td>
+              <td>{{ entry.actorName || 'Sistema' }}</td>
+              <td class="audit-page__col-action">
+                <code class="audit-page__code">{{ entry.action }}</code>
+              </td>
+              <td class="audit-page__col-entity">{{ entityLabel(entry.entityType) }}</td>
+              <td class="audit-page__summary">{{ entry.summary }}</td>
+              <td class="audit-page__more">
+                <button
+                  type="button"
+                  class="audit-page__detail"
+                  data-testid="audit-open"
+                  [attr.aria-label]="'Ver el detalle: ' + entry.summary"
+                  (click)="selected.set(entry)"
+                >
+                  <i class="pi pi-angle-right" aria-hidden="true"></i>
+                </button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    @if (store.hasMore()) {
+      <div class="audit-page__footer">
+        <p-button
+          label="Cargar más"
+          severity="secondary"
+          [outlined]="true"
+          data-testid="audit-more"
+          [loading]="store.loading()"
+          (onClick)="store.loadMore()"
+        />
+      </div>
+    }
+  }
+
+  <app-audit-drawer [entry]="selected()" (closeRequested)="selected.set(null)" />
+</app-page-container>

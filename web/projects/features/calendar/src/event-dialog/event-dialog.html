@@ -1,0 +1,220 @@
+<app-dialog
+  size="md"
+  [heading]="heading()"
+  [open]="open()"
+  [dismissable]="!busy()"
+  (closeRequested)="closeRequested.emit()"
+>
+  <form class="event-dialog" novalidate [formGroup]="form" (ngSubmit)="submit()">
+    @if (isRecurring()) {
+      <fieldset class="event-dialog__scope" data-testid="event-scope">
+        <legend class="event-dialog__legend">Qué quieres editar</legend>
+        <label class="event-dialog__choice">
+          <input
+            type="radio"
+            name="event-scope"
+            [checked]="scope() === 'occurrence'"
+            [disabled]="!occurrence()"
+            (change)="setScope('occurrence')"
+          />
+          Solo esta ocurrencia
+        </label>
+        <label class="event-dialog__choice">
+          <input
+            type="radio"
+            name="event-scope"
+            [checked]="scope() === 'series'"
+            (change)="setScope('series')"
+          />
+          Toda la serie
+        </label>
+      </fieldset>
+    }
+
+    <app-field-row
+      #titleRow
+      label="Título"
+      [required]="true"
+      [control]="form.controls.title"
+      [messages]="messages.title"
+      [submitted]="submitted()"
+    >
+      <input
+        pInputText
+        appFieldControl
+        data-autofocus
+        data-testid="event-title"
+        autocomplete="off"
+        formControlName="title"
+        [attr.maxlength]="titleMax"
+      />
+    </app-field-row>
+
+    <label class="event-dialog__check">
+      <input type="checkbox" formControlName="allDay" data-testid="event-all-day" />
+      Todo el día
+    </label>
+
+    <div class="event-dialog__when">
+      <app-field-row #startRow label="Inicio" [required]="true">
+        <div class="event-dialog__pair">
+          <app-date-field
+            class="event-dialog__date"
+            formControlName="startDate"
+            [inputId]="startRow.controlId"
+            [showClear]="false"
+          />
+          @if (!isAllDay()) {
+            <input
+              class="event-dialog__time"
+              type="time"
+              formControlName="startTime"
+              aria-label="Hora de inicio"
+              data-testid="event-start-time"
+            />
+          }
+        </div>
+      </app-field-row>
+      <app-field-row #endRow label="Fin" [required]="true">
+        <div class="event-dialog__pair">
+          <app-date-field
+            class="event-dialog__date"
+            formControlName="endDate"
+            [inputId]="endRow.controlId"
+            [showClear]="false"
+          />
+          @if (!isAllDay()) {
+            <input
+              class="event-dialog__time"
+              type="time"
+              formControlName="endTime"
+              aria-label="Hora de fin"
+              data-testid="event-end-time"
+            />
+          }
+        </div>
+      </app-field-row>
+    </div>
+    @if (form.errors?.['endBeforeStart']) {
+      <p class="event-dialog__error" role="alert">El fin debe ser posterior al inicio.</p>
+    }
+
+    @if (!occurrenceOnly()) {
+      <app-field-row #zoneRow label="Zona horaria">
+        <app-select-field
+          formControlName="timezone"
+          [inputId]="zoneRow.controlId"
+          [options]="zoneOptions()"
+          filter="on"
+        />
+      </app-field-row>
+
+      <app-field-row label="Repetición">
+        <app-recurrence-editor [(value)]="recurrence" [startDate]="startDay()" />
+      </app-field-row>
+    }
+
+    <app-field-row label="Lugar" [optional]="true">
+      <input
+        pInputText
+        appFieldControl
+        autocomplete="off"
+        formControlName="location"
+        [attr.maxlength]="locationMax"
+      />
+    </app-field-row>
+
+    <app-field-row label="Descripción" [optional]="true">
+      <textarea
+        pTextarea
+        appFieldControl
+        rows="3"
+        formControlName="description"
+        [attr.maxlength]="descriptionMax"
+      ></textarea>
+    </app-field-row>
+
+    <app-field-row label="Color">
+      <div class="event-dialog__colors" role="radiogroup" aria-label="Color del evento">
+        @for (color of colors; track color.value) {
+          <button
+            type="button"
+            role="radio"
+            class="event-dialog__swatch"
+            [class]="'event-dialog__swatch event-dialog__swatch--' + color.value"
+            [attr.aria-checked]="form.controls.color.value === color.value"
+            [attr.aria-label]="color.label"
+            [attr.title]="color.label"
+            (click)="form.controls.color.setValue(color.value)"
+          >
+            @if (form.controls.color.value === color.value) {
+              <i class="pi pi-check" aria-hidden="true"></i>
+            }
+          </button>
+        }
+      </div>
+    </app-field-row>
+
+    @if (!occurrenceOnly()) {
+      <app-field-row #visibilityRow label="Quién puede verlo">
+        <app-select-field
+          formControlName="visibility"
+          [inputId]="visibilityRow.controlId"
+          [options]="visibilityOptions"
+        />
+      </app-field-row>
+
+      @if (needsProject()) {
+        <app-field-row #projectRow label="Proyecto" [required]="true">
+          <app-select-field
+            formControlName="projectId"
+            placeholder="Elige un proyecto"
+            [inputId]="projectRow.controlId"
+            [options]="projects()"
+          />
+        </app-field-row>
+      }
+
+      <app-field-row label="Invitados" [optional]="true">
+        <app-user-picker
+          ariaLabel="Invitar a una persona"
+          placeholder="Buscar y añadir personas"
+          [allowClear]="false"
+          [users]="people().slice()"
+          [(value)]="pickerValue"
+        />
+        @if (attendees().length > 0) {
+          <ul class="event-dialog__guests" aria-label="Personas invitadas">
+            @for (person of attendees(); track person.id) {
+              <li class="event-dialog__guest">
+                {{ person.name }}
+                <button
+                  type="button"
+                  class="event-dialog__remove"
+                  [attr.aria-label]="'Quitar a ' + person.name"
+                  (click)="removeAttendee(person.id)"
+                >
+                  <i class="pi pi-times" aria-hidden="true"></i>
+                </button>
+              </li>
+            }
+          </ul>
+        }
+      </app-field-row>
+    }
+
+    @if (error(); as message) {
+      <p class="event-dialog__error" role="alert" data-testid="event-error">{{ message }}</p>
+    }
+  </form>
+
+  <p-button dialogFooter label="Cancelar" severity="secondary" (onClick)="closeRequested.emit()" />
+  <p-button
+    dialogFooter
+    label="Guardar"
+    data-testid="event-save"
+    [loading]="busy()"
+    [disabled]="invalid() && submitted()"
+    (onClick)="submit()"
+  />
+</app-dialog>

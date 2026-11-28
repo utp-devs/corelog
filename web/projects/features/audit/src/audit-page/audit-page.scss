@@ -1,0 +1,171 @@
+@use '../../../../ui/styles/mixins' as m;
+@use '../../../../ui/field-row/src/control' as c;
+
+.audit-page {
+  &__filters {
+    display: grid;
+    gap: var(--cl-space-4);
+    grid-template-columns: minmax(0, 1fr);
+    align-items: start;
+    padding: var(--cl-space-4);
+    border: 1px solid var(--cl-border);
+    border-radius: var(--cl-radius-lg);
+    background: var(--cl-bg-surface);
+
+    @include m.respond-up(768px) {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    @include m.respond-up(1280px) {
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+    }
+  }
+
+  &__buttons {
+    @include m.cluster(2);
+    grid-column: 1 / -1;
+  }
+
+  &__error {
+    margin: 0;
+    color: var(--cl-danger-text);
+  }
+
+  &__empty {
+    @include m.flex-row(3);
+    margin: 0;
+    padding: var(--cl-space-4);
+    border-radius: var(--cl-radius-md);
+    background: var(--cl-bg-sunken);
+  }
+
+  &__table-wrap {
+    min-width: 0;
+    border: 1px solid var(--cl-border);
+    border-radius: var(--cl-radius-lg);
+    background: var(--cl-bg-surface);
+    overflow-x: auto;
+  }
+
+  &__table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--cl-font-body);
+
+    th {
+      padding: var(--cl-space-2) var(--cl-space-3);
+      border-bottom: 1px solid var(--cl-border);
+      background: var(--cl-bg-sunken);
+      color: var(--cl-text-subtle);
+      font-size: var(--cl-font-small);
+      font-weight: var(--cl-weight-semibold);
+      text-align: left;
+      white-space: nowrap;
+    }
+
+    td {
+      padding: var(--cl-space-2) var(--cl-space-3);
+      border-bottom: 1px solid var(--cl-border);
+      vertical-align: top;
+    }
+  }
+
+  &__row:last-child td {
+    border-bottom: 0;
+  }
+
+  &__date {
+    color: var(--cl-text-subtle);
+    white-space: nowrap;
+  }
+
+  &__summary {
+    min-width: 14rem;
+    overflow-wrap: anywhere;
+
+    @include m.respond-down(768px) {
+      min-width: 0;
+    }
+  }
+
+  &__code {
+    font-family: var(--cl-font-mono, monospace);
+    font-size: var(--cl-font-small);
+  }
+
+  &__more {
+    width: var(--cl-control-h-md);
+    text-align: right;
+  }
+
+  &__detail {
+    @include m.touch-target;
+    border: 0;
+    border-radius: var(--cl-radius-full);
+    background: transparent;
+    color: var(--cl-text-subtle);
+    cursor: pointer;
+
+    &:hover {
+      background: var(--cl-bg-hover);
+      color: var(--cl-text);
+    }
+
+    &:focus-visible {
+      @include c.focus-ring;
+    }
+  }
+
+  // Narrow screens hide the action and element columns (they are in the detail drawer).
+  &__col-action,
+  &__col-entity {
+    @include m.respond-down(1024px) {
+      display: none;
+    }
+  }
+
+  // Phones read each entry as a small card instead of a table row.
+  &__table {
+    @include m.respond-down(768px) {
+      display: block;
+
+      thead {
+        @include m.visually-hidden;
+      }
+
+      tbody,
+      tr,
+      td {
+        display: block;
+      }
+
+      td {
+        padding: 0;
+        border: 0;
+      }
+    }
+  }
+
+  &__row {
+    @include m.respond-down(768px) {
+      position: relative;
+      padding: var(--cl-space-3) calc(var(--cl-control-h-md) + var(--cl-space-2)) var(--cl-space-3)
+        var(--cl-space-3);
+      border-bottom: 1px solid var(--cl-border);
+    }
+  }
+
+  &__more {
+    @include m.respond-down(768px) {
+      position: absolute;
+      top: 50%;
+      right: var(--cl-space-1);
+      width: auto;
+      transform: translateY(-50%);
+    }
+  }
+
+  &__footer {
+    @include m.flex-row(0, center, center);
+  }
+}

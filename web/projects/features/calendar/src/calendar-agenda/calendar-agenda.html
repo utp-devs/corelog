@@ -1,0 +1,45 @@
+<div class="calendar-agenda" data-testid="calendar-agenda">
+  @for (day of days(); track day.iso) {
+    <section
+      class="calendar-agenda__day"
+      [class.calendar-agenda__day--today]="day.iso === today"
+      [attr.aria-label]="dayTitle(day.date)"
+    >
+      <h3 class="calendar-agenda__date">
+        {{ dayTitle(day.date) }}
+        @if (day.iso === today) {
+          <span class="calendar-agenda__today">hoy</span>
+        }
+      </h3>
+      <ul class="calendar-agenda__items">
+        @for (item of day.items; track item.kind + item.sourceId + item.startsAt) {
+          <li>
+            <button
+              type="button"
+              class="calendar-agenda__item"
+              [attr.aria-label]="label(item)"
+              [style.--chip-color]="color(item)"
+              (click)="itemSelected.emit(item)"
+            >
+              <i [class]="kindMeta[item.kind].icon" aria-hidden="true"></i>
+              <span class="calendar-agenda__main">
+                <span class="calendar-agenda__title" [attr.title]="item.title">{{
+                  item.title
+                }}</span>
+                <span class="calendar-agenda__meta">
+                  {{ time(item) }} · {{ kindMeta[item.kind].label }}
+                  @if (item.projectKey) {
+                    · {{ item.projectKey }}
+                  }
+                  @if (item.recurring) {
+                    · se repite
+                  }
+                </span>
+              </span>
+            </button>
+          </li>
+        }
+      </ul>
+    </section>
+  }
+</div>

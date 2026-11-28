@@ -1,0 +1,213 @@
+@use '../../../../ui/styles/mixins' as m;
+@use '../../../../ui/field-row/src/control' as c;
+
+:host {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+}
+
+.calendar-time-grid {
+  --gutter: 3.5rem;
+  --hour-h: 3.5rem;
+
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  border: 1px solid var(--cl-border);
+  border-radius: var(--cl-radius-lg);
+  background: var(--cl-bg-surface);
+  overflow: hidden;
+
+  &__head,
+  &__allday {
+    display: grid;
+    grid-template-columns: var(--gutter) repeat(var(--columns), minmax(0, 1fr));
+    border-bottom: 1px solid var(--cl-border);
+  }
+
+  &__head {
+    background: var(--cl-bg-sunken);
+  }
+
+  &__gutter {
+    color: var(--cl-text-subtle);
+    font-size: var(--cl-font-caption);
+
+    &--label {
+      padding: var(--cl-space-2) var(--cl-space-1);
+      text-align: right;
+    }
+  }
+
+  &__day {
+    @include m.flex-column(0, center);
+    min-height: var(--cl-control-h-lg);
+    padding: var(--cl-space-2);
+    border: 0;
+    border-left: 1px solid var(--cl-border);
+    background: transparent;
+    color: var(--cl-text);
+    font: inherit;
+    cursor: pointer;
+
+    &:hover {
+      background: var(--cl-bg-hover);
+    }
+
+    &:focus-visible {
+      @include c.focus-ring;
+    }
+
+    &--today .calendar-time-grid__number {
+      background: var(--cl-brand);
+      color: var(--cl-text-on-brand);
+    }
+  }
+
+  &__weekday {
+    color: var(--cl-text-subtle);
+    font-size: var(--cl-font-small);
+    text-transform: uppercase;
+  }
+
+  &__number {
+    min-width: var(--cl-control-h-md);
+    border-radius: var(--cl-radius-full);
+    font-size: var(--cl-font-h3);
+    font-weight: var(--cl-weight-semibold);
+    line-height: var(--cl-control-h-md);
+    text-align: center;
+  }
+
+  &__allday-cell {
+    @include m.flex-column(1);
+    min-width: 0;
+    min-height: var(--cl-control-h-md);
+    padding: var(--cl-space-1);
+    border-left: 1px solid var(--cl-border);
+  }
+
+  &__chip,
+  &__event {
+    box-sizing: border-box;
+    min-width: 0;
+    border: 0;
+    border-left: 3px solid var(--chip-color, var(--cl-brand));
+    border-radius: var(--cl-radius-sm);
+    background: color-mix(in srgb, var(--chip-color, var(--cl-brand)) 16%, var(--cl-bg-surface));
+    color: var(--cl-text);
+    font: inherit;
+    font-size: var(--cl-font-small);
+    text-align: left;
+    cursor: pointer;
+
+    &:hover {
+      background: color-mix(in srgb, var(--chip-color, var(--cl-brand)) 28%, var(--cl-bg-surface));
+    }
+
+    &:focus-visible {
+      @include c.focus-ring;
+      z-index: 3;
+    }
+  }
+
+  &__chip {
+    @include m.flex-row(1);
+    min-height: var(--cl-control-h-sm);
+    padding: 0 var(--cl-space-2);
+  }
+
+  &__chip-title,
+  &__event-title {
+    @include m.truncate;
+    min-width: 0;
+  }
+
+  &__scroll {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+  }
+
+  &__body {
+    display: grid;
+    grid-template-columns: var(--gutter) repeat(var(--columns), minmax(0, 1fr));
+    height: calc(var(--hour-h) * 24);
+  }
+
+  &__hours {
+    display: grid;
+    grid-template-rows: repeat(24, 1fr);
+  }
+
+  &__hour {
+    padding-right: var(--cl-space-1);
+    color: var(--cl-text-subtle);
+    font-size: var(--cl-font-caption);
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+    line-height: 1;
+    padding-top: var(--cl-space-1);
+  }
+
+  &__column {
+    position: relative;
+    border-left: 1px solid var(--cl-border);
+    background-image: repeating-linear-gradient(
+      to bottom,
+      transparent 0,
+      transparent calc(var(--hour-h) - 1px),
+      var(--cl-border) calc(var(--hour-h) - 1px),
+      var(--cl-border) var(--hour-h)
+    );
+    cursor: pointer;
+
+    &--today {
+      background-color: var(--cl-brand-subtle);
+    }
+  }
+
+  &__now {
+    position: absolute;
+    top: var(--top);
+    right: 0;
+    left: 0;
+    z-index: 2;
+    height: 2px;
+    background: var(--cl-danger);
+    pointer-events: none;
+
+    &::before {
+      content: '';
+      position: absolute;
+      top: -4px;
+      left: -4px;
+      width: 10px;
+      height: 10px;
+      border-radius: var(--cl-radius-full);
+      background: var(--cl-danger);
+    }
+  }
+
+  &__event {
+    @include m.flex-column(0);
+    position: absolute;
+    top: var(--top);
+    left: var(--left);
+    width: calc(var(--width) - 2px);
+    height: var(--height);
+    min-height: var(--cl-control-h-sm);
+    padding: var(--cl-space-1) var(--cl-space-2);
+    overflow: hidden;
+  }
+
+  &__event-time {
+    @include m.truncate;
+    color: var(--cl-text-subtle);
+    font-size: var(--cl-font-caption);
+  }
+}

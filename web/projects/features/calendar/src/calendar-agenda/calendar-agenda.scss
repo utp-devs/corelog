@@ -1,0 +1,88 @@
+@use '../../../../ui/styles/mixins' as m;
+@use '../../../../ui/field-row/src/control' as c;
+
+:host {
+  display: block;
+  flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
+  overflow-y: auto;
+}
+
+.calendar-agenda {
+  @include m.flex-column(4);
+
+  &__day {
+    @include m.flex-column(2);
+    min-width: 0;
+
+    &--today .calendar-agenda__date {
+      color: var(--cl-brand);
+    }
+  }
+
+  &__date {
+    @include m.flex-row(2);
+    margin: 0;
+    padding-bottom: var(--cl-space-1);
+    border-bottom: 1px solid var(--cl-border);
+    font-size: var(--cl-font-body);
+    font-weight: var(--cl-weight-semibold);
+  }
+
+  &__today {
+    font-size: var(--cl-font-caption);
+    text-transform: uppercase;
+  }
+
+  &__items {
+    @include m.flex-column(2);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  &__item {
+    @include m.flex-row(3);
+    box-sizing: border-box;
+    width: 100%;
+    min-height: var(--cl-control-h-lg);
+    padding: var(--cl-space-2) var(--cl-space-3);
+    border: 1px solid var(--cl-border);
+    border-left: 4px solid var(--chip-color, var(--cl-brand));
+    border-radius: var(--cl-radius-md);
+    background: var(--cl-bg-surface);
+    color: var(--cl-text);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+
+    &:hover {
+      background: var(--cl-bg-hover);
+    }
+
+    &:focus-visible {
+      @include c.focus-ring;
+    }
+
+    .pi {
+      flex: none;
+      color: var(--chip-color, var(--cl-brand));
+    }
+  }
+
+  &__main {
+    @include m.flex-column(0);
+    min-width: 0;
+  }
+
+  &__title {
+    @include m.truncate;
+    font-weight: var(--cl-weight-medium);
+  }
+
+  &__meta {
+    color: var(--cl-text-subtle);
+    font-size: var(--cl-font-small);
+  }
+}

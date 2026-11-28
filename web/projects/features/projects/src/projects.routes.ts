@@ -19,6 +19,10 @@ export const PROJECT_DETAIL_CHILDREN: Routes = [
     loadComponent: () =>
       import('./project-calendar/project-calendar-page').then((m) => m.ProjectCalendarPage),
   },
+  {
+    path: 'reports',
+    loadChildren: () => import('@corelog/features/reports').then((m) => m.REPORTS_ROUTES),
+  },
   ...PROJECT_SETTINGS_ROUTES,
 ];
 

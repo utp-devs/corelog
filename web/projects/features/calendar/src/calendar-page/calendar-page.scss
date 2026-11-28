@@ -1,0 +1,21 @@
+@use '../../../../ui/styles/mixins' as m;
+
+.calendar-page {
+  @include m.flex-column(4);
+  flex: 1 1 auto;
+  min-height: 0;
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  padding-inline: var(--cl-gutter);
+  &--grid {
+    // Exactly the room the page frame leaves, so the month grid and the hour grid scroll inside it. Phones let the page scroll.
+    height: calc(100dvh - var(--cl-topbar-h) - var(--cl-gutter) - var(--cl-space-10));
+    min-height: 32rem;
+
+    @include m.respond-down(768px) {
+      height: auto;
+      min-height: 0;
+    }
+  }
+}

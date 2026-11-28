@@ -1,0 +1,96 @@
+<div
+  class="calendar-time-grid"
+  [attr.data-testid]="'calendar-' + mode()"
+  [style.--columns]="columns().length"
+>
+  <div class="calendar-time-grid__head" role="row">
+    <span class="calendar-time-grid__gutter" aria-hidden="true"></span>
+    @for (column of columns(); track column.iso) {
+      <button
+        type="button"
+        class="calendar-time-grid__day"
+        [class.calendar-time-grid__day--today]="column.iso === today"
+        [attr.aria-label]="'Ver el día ' + headerLabel(column.date)"
+        [attr.aria-current]="column.iso === today ? 'date' : null"
+        (click)="dayOpened.emit(column.date)"
+      >
+        <span class="calendar-time-grid__weekday">{{ weekday(column.date) }}</span>
+        <span class="calendar-time-grid__number">{{ column.date.getDate() }}</span>
+      </button>
+    }
+  </div>
+
+  <div class="calendar-time-grid__allday" role="row" data-testid="calendar-allday">
+    <span class="calendar-time-grid__gutter calendar-time-grid__gutter--label">Todo el día</span>
+    @for (column of columns(); track column.iso) {
+      <div
+        class="calendar-time-grid__allday-cell"
+        role="gridcell"
+        (click)="onAllDayClick($event, column.date)"
+      >
+        @for (item of column.allDay; track item.kind + item.sourceId + item.startsAt) {
+          <button
+            type="button"
+            class="calendar-time-grid__chip"
+            [attr.aria-label]="label(item)"
+            [style.--chip-color]="color(item)"
+            (click)="itemSelected.emit(item)"
+          >
+            <i [class]="kindMeta[item.kind].icon" aria-hidden="true"></i>
+            <span class="calendar-time-grid__chip-title" [attr.title]="item.title">{{
+              item.title
+            }}</span>
+          </button>
+        }
+      </div>
+    }
+  </div>
+
+  <div class="calendar-time-grid__scroll">
+    <div class="calendar-time-grid__body">
+      <div class="calendar-time-grid__hours" aria-hidden="true">
+        @for (hour of hours; track hour) {
+          <span class="calendar-time-grid__hour">{{ hourLabel(hour) }}</span>
+        }
+      </div>
+      @for (column of columns(); track column.iso) {
+        <div
+          class="calendar-time-grid__column"
+          role="gridcell"
+          [class.calendar-time-grid__column--today]="column.iso === today"
+          [attr.aria-label]="headerLabel(column.date)"
+          (click)="onSlotClick($event, column.date)"
+        >
+          @if (column.iso === today) {
+            <span
+              class="calendar-time-grid__now"
+              aria-hidden="true"
+              [style.--top]="nowPercent() + '%'"
+            ></span>
+          }
+          @for (
+            placement of column.placements;
+            track placement.item.kind + placement.item.sourceId + placement.item.startsAt
+          ) {
+            <button
+              type="button"
+              class="calendar-time-grid__event"
+              [attr.aria-label]="label(placement.item)"
+              [style.--chip-color]="color(placement.item)"
+              [style.--top]="placement.top + '%'"
+              [style.--height]="placement.height + '%'"
+              [style.--left]="placement.left + '%'"
+              [style.--width]="placement.width + '%'"
+              (click)="itemSelected.emit(placement.item)"
+            >
+              <span class="calendar-time-grid__event-title" [attr.title]="placement.item.title">{{
+                placement.item.title
+              }}</span>
+              <span class="calendar-time-grid__event-time">{{ time(placement.item) }}</span>
+            </button>
+          }
+        </div>
+      }
+    </div>
+  </div>
+</div>

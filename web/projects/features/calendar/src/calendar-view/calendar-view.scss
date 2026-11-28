@@ -1,0 +1,135 @@
+@use '../../../../ui/styles/mixins' as m;
+@use '../../../../ui/field-row/src/control' as c;
+
+:host {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+}
+
+.calendar-view {
+  @include m.flex-column(3);
+  flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
+
+  &__toolbar {
+    @include m.cluster(3, center, space-between);
+  }
+
+  &__nav,
+  &__actions {
+    @include m.cluster(2);
+    min-width: 0;
+  }
+
+  &__arrow {
+    @include m.touch-target;
+    border: 1px solid var(--cl-border-strong);
+    border-radius: var(--cl-radius-full);
+    background: var(--cl-bg-surface);
+    color: var(--cl-text);
+    cursor: pointer;
+
+    &:hover {
+      background: var(--cl-bg-hover);
+    }
+
+    &:focus-visible {
+      @include c.focus-ring;
+    }
+  }
+
+  &__title {
+    min-width: 10rem;
+    margin: 0 var(--cl-space-2);
+    font-size: var(--cl-font-h3);
+    font-weight: var(--cl-weight-semibold);
+  }
+
+  &__filters {
+    @include m.cluster(3, center, space-between);
+  }
+
+  &__legend {
+    @include m.cluster(2);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  &__group {
+    @include m.flex-row(2);
+    min-height: var(--cl-control-h-md);
+    padding: 0 var(--cl-space-3);
+    border: 1px solid var(--cl-border-strong);
+    border-radius: var(--cl-radius-full);
+    background: var(--cl-bg-surface);
+    color: var(--cl-text);
+    font: inherit;
+    font-size: var(--cl-font-small);
+    cursor: pointer;
+
+    &:hover {
+      background: var(--cl-bg-hover);
+    }
+
+    &:focus-visible {
+      @include c.focus-ring;
+    }
+
+    &--off {
+      color: var(--cl-text-subtle);
+      text-decoration: line-through;
+
+      .calendar-view__dot {
+        background: transparent;
+      }
+    }
+  }
+
+  &__dot {
+    width: var(--cl-space-3);
+    height: var(--cl-space-3);
+    border: 2px solid var(--chip-color);
+    border-radius: var(--cl-radius-full);
+    background: var(--chip-color);
+  }
+
+  &__projects {
+    min-width: 16rem;
+    max-width: 100%;
+  }
+
+  &__notice,
+  &__empty {
+    @include m.flex-row(3);
+    margin: 0;
+    padding: var(--cl-space-3) var(--cl-space-4);
+    border-radius: var(--cl-radius-md);
+    background: var(--cl-bg-sunken);
+    color: var(--cl-text);
+    font-size: var(--cl-font-small);
+  }
+
+  &__content {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    gap: var(--cl-space-3);
+    min-height: 0;
+    min-width: 0;
+  }
+
+  &__delete-copy {
+    margin: 0;
+  }
+
+  &__error {
+    margin: var(--cl-space-3) 0 0;
+    color: var(--cl-danger-text);
+    font-size: var(--cl-font-small);
+  }
+}

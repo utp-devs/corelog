@@ -1,0 +1,154 @@
+@use '../../../../ui/styles/mixins' as m;
+@use '../../../../ui/field-row/src/control' as c;
+
+.event-dialog {
+  @include m.flex-column(4);
+  min-width: 0;
+
+  &__scope {
+    @include m.flex-column(2);
+    margin: 0;
+    padding: var(--cl-space-3);
+    border: 1px solid var(--cl-border);
+    border-radius: var(--cl-radius-md);
+    background: var(--cl-bg-sunken);
+  }
+
+  &__legend {
+    padding: 0 var(--cl-space-1);
+    font-size: var(--cl-font-small);
+    font-weight: var(--cl-weight-medium);
+  }
+
+  &__choice,
+  &__check {
+    @include m.cluster(2);
+    min-height: var(--cl-control-h-md);
+  }
+
+  &__when {
+    display: grid;
+    gap: var(--cl-space-4);
+    grid-template-columns: minmax(0, 1fr);
+
+    @include m.respond-up(768px) {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  &__pair {
+    @include m.flex-row(2);
+    min-width: 0;
+  }
+
+  &__date {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  &__time {
+    @include c.control-box(var(--cl-control-h-md));
+    flex: none;
+    width: 7.5rem;
+
+    &:focus-visible {
+      @include c.focus-ring;
+    }
+  }
+
+  &__colors {
+    @include m.cluster(2);
+  }
+
+  &__swatch {
+    @include m.touch-target;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid transparent;
+    border-radius: var(--cl-radius-full);
+    background: var(--swatch);
+    color: var(--cl-text-on-brand);
+    cursor: pointer;
+
+    &:focus-visible {
+      @include c.focus-ring;
+    }
+
+    &[aria-checked='true'] {
+      border-color: var(--cl-text);
+    }
+
+    &--blue,
+    &--indigo {
+      --swatch: var(--cl-chart-1);
+    }
+
+    &--orange {
+      --swatch: var(--cl-chart-2);
+    }
+
+    &--green {
+      --swatch: var(--cl-chart-3);
+    }
+
+    &--purple {
+      --swatch: var(--cl-chart-4);
+    }
+
+    &--pink,
+    &--red {
+      --swatch: var(--cl-chart-5);
+    }
+
+    &--gray {
+      --swatch: var(--cl-chart-6);
+    }
+
+    &--amber {
+      --swatch: var(--cl-chart-7);
+    }
+
+    &--teal {
+      --swatch: var(--cl-chart-8);
+    }
+  }
+
+  &__guests {
+    @include m.cluster(2);
+    margin: var(--cl-space-2) 0 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  &__guest {
+    @include m.flex-row(1);
+    padding: 0 var(--cl-space-1) 0 var(--cl-space-3);
+    border-radius: var(--cl-radius-full);
+    background: var(--cl-bg-selected);
+    font-size: var(--cl-font-small);
+  }
+
+  &__remove {
+    @include m.touch-target;
+    border: 0;
+    border-radius: var(--cl-radius-full);
+    background: transparent;
+    color: var(--cl-text-subtle);
+    cursor: pointer;
+
+    &:hover {
+      background: var(--cl-bg-hover);
+    }
+
+    &:focus-visible {
+      @include c.focus-ring;
+    }
+  }
+
+  &__error {
+    margin: 0;
+    color: var(--cl-danger-text);
+    font-size: var(--cl-font-small);
+  }
+}

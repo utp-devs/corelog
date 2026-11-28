@@ -1,0 +1,66 @@
+<app-dialog
+  size="md"
+  heading="Suscribirse al calendario (ICS)"
+  subtitle="Mira tus eventos en Google Calendar, Outlook o Apple Calendar."
+  [open]="open()"
+  (closeRequested)="closeRequested.emit()"
+>
+  <div class="feed-dialog" data-testid="feed-dialog">
+    @if (secret(); as created) {
+      <p class="feed-dialog__note" role="status">
+        Copia esta dirección ahora y pégala en tu aplicación de calendario. Por seguridad no podrás
+        volver a verla.
+      </p>
+      <div class="feed-dialog__url">
+        <input
+          class="feed-dialog__input"
+          type="text"
+          readonly
+          aria-label="Dirección de la suscripción"
+          data-testid="feed-url"
+          [value]="created.url"
+          (focus)="$any($event.target).select()"
+        />
+        <p-button
+          [label]="copied() ? 'Copiado' : 'Copiar'"
+          icon="pi pi-copy"
+          data-testid="feed-copy"
+          (onClick)="copy(created.url)"
+        />
+      </div>
+    } @else if (state()?.enabled) {
+      <p class="feed-dialog__note" data-testid="feed-enabled">
+        Tu suscripción está activa. La dirección solo se muestra al crearla; si la perdiste, crea
+        una nueva (la anterior dejará de funcionar).
+      </p>
+    } @else {
+      <p class="feed-dialog__note" data-testid="feed-disabled">
+        Todavía no tienes una suscripción. Crea una dirección privada para ver tus eventos en otras
+        aplicaciones.
+      </p>
+    }
+
+    @if (error(); as message) {
+      <p class="feed-dialog__error" role="alert">{{ message }}</p>
+    }
+  </div>
+
+  @if (state()?.enabled || secret()) {
+    <p-button
+      dialogFooter
+      label="Revocar"
+      severity="danger"
+      [outlined]="true"
+      data-testid="feed-revoke"
+      [disabled]="busy()"
+      (onClick)="revoke.emit()"
+    />
+  }
+  <p-button
+    dialogFooter
+    [label]="state()?.enabled || secret() ? 'Crear una nueva dirección' : 'Crear dirección'"
+    data-testid="feed-generate"
+    [loading]="busy()"
+    (onClick)="generate.emit()"
+  />
+</app-dialog>

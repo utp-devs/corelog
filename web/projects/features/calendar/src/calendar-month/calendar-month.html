@@ -1,0 +1,85 @@
+<div
+  class="calendar-month"
+  role="grid"
+  aria-label="Calendario del mes"
+  data-testid="calendar-month"
+>
+  <div class="calendar-month__head" role="row">
+    @for (header of headers; track header) {
+      <div class="calendar-month__weekday" role="columnheader">{{ header }}</div>
+    }
+  </div>
+  <div class="calendar-month__body">
+    @for (week of weeks(); track week[0].iso) {
+      <div class="calendar-month__week" role="row">
+        @for (day of week; track day.iso) {
+          @let items = itemsOf(day.iso);
+          <div
+            class="calendar-month__day"
+            role="gridcell"
+            [class.calendar-month__day--outside]="!day.inMonth"
+            [class.calendar-month__day--today]="day.iso === today"
+            [attr.data-day]="day.iso"
+            [attr.tabindex]="day.iso === tabStop() ? 0 : -1"
+            [attr.aria-label]="dayLabel(day.date, items.length)"
+            [attr.aria-current]="day.iso === today ? 'date' : null"
+            (keydown)="onKeydown($event, day.date)"
+            (click)="onCellClick($event, day.date)"
+            (focus)="focusedIso.set(day.iso)"
+          >
+            <div class="calendar-month__top">
+              <button
+                type="button"
+                class="calendar-month__number"
+                tabindex="-1"
+                [attr.aria-label]="'Ver el día ' + dayLabel(day.date, 0)"
+                (click)="dayOpened.emit(day.date)"
+              >
+                {{ day.date.getDate() }}
+              </button>
+              @if (day.iso === today) {
+                <span class="calendar-month__today">hoy</span>
+              }
+            </div>
+            <ul class="calendar-month__items">
+              @for (
+                item of items.slice(0, maxChips);
+                track item.kind + item.sourceId + item.startsAt
+              ) {
+                <li>
+                  <button
+                    type="button"
+                    class="calendar-month__chip"
+                    [attr.aria-label]="label(item)"
+                    [style.--chip-color]="color(item)"
+                    (click)="itemSelected.emit(item)"
+                  >
+                    <i [class]="kindMeta[item.kind].icon" aria-hidden="true"></i>
+                    @if (time(item); as start) {
+                      <span class="calendar-month__time">{{ start }}</span>
+                    }
+                    <span class="calendar-month__title" [attr.title]="item.title">{{
+                      item.title
+                    }}</span>
+                  </button>
+                </li>
+              }
+              @if (items.length > maxChips) {
+                <li>
+                  <button
+                    type="button"
+                    class="calendar-month__more"
+                    [attr.aria-label]="'Ver los ' + items.length + ' elementos del día'"
+                    (click)="dayOpened.emit(day.date)"
+                  >
+                    +{{ items.length - maxChips }} más
+                  </button>
+                </li>
+              }
+            </ul>
+          </div>
+        }
+      </div>
+    }
+  </div>
+</div>

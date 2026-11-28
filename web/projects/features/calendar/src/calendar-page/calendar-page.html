@@ -1,0 +1,9 @@
+<app-page-container variant="fluid" pageName="calendar" [ready]="true" [fill]="grid()">
+  <div class="calendar-page" [class.calendar-page--grid]="grid()">
+    <app-page-header
+      title="Calendario"
+      subtitle="Tus eventos y las fechas de incidencias, sprints y versiones, en un solo lugar."
+    />
+    <app-calendar-view />
+  </div>
+</app-page-container>

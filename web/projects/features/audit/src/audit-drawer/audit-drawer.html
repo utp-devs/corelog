@@ -1,0 +1,92 @@
+<app-side-panel
+  size="lg"
+  heading="Detalle del registro"
+  [open]="entry() !== null"
+  (closeRequested)="closeRequested.emit()"
+>
+  @if (entry(); as item) {
+    <div class="audit-drawer" data-testid="audit-drawer">
+      <p class="audit-drawer__summary" data-testid="audit-summary">{{ item.summary }}</p>
+
+      <dl class="audit-drawer__facts">
+        <div class="audit-drawer__fact">
+          <dt>Fecha</dt>
+          <dd>{{ formatDate(item.createdAt) }}</dd>
+        </div>
+        <div class="audit-drawer__fact">
+          <dt>Persona</dt>
+          <dd>{{ item.actorName || 'Sistema' }}</dd>
+        </div>
+        <div class="audit-drawer__fact">
+          <dt>Acción</dt>
+          <dd>
+            <code>{{ item.action }}</code>
+          </dd>
+        </div>
+        <div class="audit-drawer__fact">
+          <dt>Elemento</dt>
+          <dd>
+            {{ item.entityType }}
+            @if (item.entityId) {
+              <code>{{ item.entityId }}</code>
+            }
+          </dd>
+        </div>
+        @if (item.ip) {
+          <div class="audit-drawer__fact">
+            <dt>Dirección IP</dt>
+            <dd>{{ item.ip }}</dd>
+          </div>
+        }
+        @if (item.userAgent) {
+          <div class="audit-drawer__fact">
+            <dt>Navegador</dt>
+            <dd>{{ item.userAgent }}</dd>
+          </div>
+        }
+        @if (item.requestId) {
+          <div class="audit-drawer__fact">
+            <dt>Id de la solicitud</dt>
+            <dd>
+              <code data-testid="audit-request-id">{{ item.requestId }}</code>
+            </dd>
+          </div>
+        }
+      </dl>
+
+      <section aria-labelledby="audit-drawer-changes">
+        <h3 class="audit-drawer__heading" id="audit-drawer-changes">Cambios</h3>
+        @if (changedRows().length === 0) {
+          <p class="audit-drawer__none">Este registro no guardó valores anteriores ni nuevos.</p>
+        } @else {
+          <table class="audit-drawer__diff" data-testid="audit-diff">
+            <thead>
+              <tr>
+                <th scope="col">Campo</th>
+                <th scope="col">Antes</th>
+                <th scope="col">Después</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of changedRows(); track row.field) {
+                <tr [attr.data-change]="row.change">
+                  <th scope="row">
+                    {{ row.field }}
+                    <span class="audit-drawer__tag">{{ changeLabel[row.change] }}</span>
+                  </th>
+                  <td>{{ row.before ?? '-' }}</td>
+                  <td>{{ row.after ?? '-' }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        }
+        @if (unchangedCount() > 0) {
+          <p class="audit-drawer__none">
+            {{ unchangedCount() }} {{ unchangedCount() === 1 ? 'campo' : 'campos' }} sin cambios.
+          </p>
+        }
+      </section>
+    </div>
+  }
+</app-side-panel>

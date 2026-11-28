@@ -1,0 +1,242 @@
+<section class="calendar-view" aria-label="Calendario" data-testid="calendar-view">
+  <div class="calendar-view__toolbar">
+    <div class="calendar-view__nav">
+      <button
+        type="button"
+        class="calendar-view__arrow"
+        aria-label="Anterior"
+        appTooltip="Anterior"
+        data-testid="calendar-prev"
+        (click)="store.shift(-1)"
+      >
+        <i class="pi pi-chevron-left" aria-hidden="true"></i>
+      </button>
+      <button
+        type="button"
+        class="calendar-view__arrow"
+        aria-label="Siguiente"
+        appTooltip="Siguiente"
+        data-testid="calendar-next"
+        (click)="store.shift(1)"
+      >
+        <i class="pi pi-chevron-right" aria-hidden="true"></i>
+      </button>
+      <h2 class="calendar-view__title" aria-live="polite" data-testid="calendar-title">
+        {{ title() }}
+      </h2>
+      <p-button
+        label="Hoy"
+        severity="secondary"
+        [outlined]="true"
+        data-testid="calendar-today"
+        (onClick)="store.today()"
+      />
+    </div>
+
+    <div class="calendar-view__actions">
+      <div role="group" aria-label="Vista del calendario" data-testid="calendar-views">
+        <p-selectbutton
+          optionLabel="label"
+          optionValue="value"
+          [options]="viewOptions()"
+          [allowEmpty]="false"
+          [ngModel]="store.view()"
+          (ngModelChange)="setView($event)"
+        />
+      </div>
+      <p-button
+        label="Suscribirse (ICS)"
+        icon="pi pi-rss"
+        severity="secondary"
+        [outlined]="true"
+        data-testid="calendar-feed"
+        (onClick)="openFeed()"
+      />
+      <p-button
+        label="Nuevo evento"
+        icon="pi pi-plus"
+        data-testid="calendar-new"
+        (onClick)="newEvent()"
+      />
+    </div>
+  </div>
+
+  <div class="calendar-view__filters">
+    <ul class="calendar-view__legend" aria-label="Qué mostrar">
+      @for (group of groups; track group) {
+        <li>
+          <button
+            type="button"
+            class="calendar-view__group"
+            [class.calendar-view__group--off]="!isGroupOn(group)"
+            [attr.aria-pressed]="isGroupOn(group)"
+            [attr.data-testid]="'calendar-group-' + group"
+            [style.--chip-color]="groupMeta[group].color"
+            (click)="store.toggleGroup(group)"
+          >
+            <span class="calendar-view__dot" aria-hidden="true"></span>
+            {{ groupMeta[group].label }}
+          </button>
+        </li>
+      }
+    </ul>
+    @if (!projectId()) {
+      <p-multiselect
+        class="calendar-view__projects"
+        display="chip"
+        placeholder="Todos los proyectos"
+        optionLabel="label"
+        optionValue="value"
+        appendTo="body"
+        ariaLabel="Filtrar por proyecto"
+        [options]="projectOptions()"
+        [filter]="projectOptions().length > 6"
+        [maxSelectedLabels]="2"
+        [showClear]="true"
+        [ngModel]="selectedProjects()"
+        (ngModelChange)="setProjects($event ?? [])"
+      />
+    }
+  </div>
+
+  @if (store.truncated()) {
+    <p class="calendar-view__notice" role="status">
+      Hay demasiados elementos en este periodo y solo se muestran los primeros. Acota el periodo o
+      filtra por proyecto.
+    </p>
+  }
+
+  <div class="calendar-view__content" [attr.aria-busy]="store.window.loading()">
+    @if (failed()) {
+      <app-error-state [message]="loadFailed" [canRetry]="true" (retry)="store.load()" />
+    } @else if (firstLoad()) {
+      <app-loading-skeleton variant="detail" [rows]="5" />
+    } @else {
+      @switch (store.view()) {
+        @case ('month') {
+          <app-calendar-month
+            [anchor]="store.anchor()"
+            [itemsByDay]="store.itemsByDay()"
+            (itemSelected)="select($event)"
+            (dayActivated)="newEvent($event)"
+            (dayOpened)="openDay($event)"
+            (outOfRange)="store.setAnchor($event)"
+          />
+        }
+        @case ('agenda') {
+          <app-calendar-agenda
+            [anchor]="store.anchor()"
+            [itemsByDay]="store.itemsByDay()"
+            (itemSelected)="select($event)"
+          />
+          @if (store.isEmpty()) {
+            <p class="calendar-view__empty" role="status">
+              <i class="pi pi-calendar" aria-hidden="true"></i>
+              <span>
+                <strong>No hay nada en este periodo.</strong>
+                Crea un evento o cambia de mes.
+              </span>
+            </p>
+          }
+        }
+        @default {
+          <app-calendar-time-grid
+            [mode]="store.view() === 'day' ? 'day' : 'week'"
+            [anchor]="store.anchor()"
+            [itemsByDay]="store.itemsByDay()"
+            (itemSelected)="select($event)"
+            (slotActivated)="newEvent($event.date, $event.allDay)"
+            (dayOpened)="openDay($event)"
+          />
+        }
+      }
+    }
+  </div>
+</section>
+
+<app-event-panel
+  [open]="panelItem() !== null"
+  [item]="panelItem()"
+  [detail]="panelDetail()"
+  [loading]="panelLoading()"
+  [error]="panelError()"
+  [busy]="panelBusy()"
+  (edit)="editEvent()"
+  (remove)="askDelete()"
+  (respond)="respond($event)"
+  (closeRequested)="closePanel()"
+/>
+
+<app-event-dialog
+  [open]="dialogOpen()"
+  [event]="dialogEvent()"
+  [occurrence]="occurrence()"
+  [occurrenceTimes]="occurrenceTimes()"
+  [start]="dialogStart()"
+  [projectId]="projectId()"
+  [projects]="projectOptions()"
+  [people]="people()"
+  [timezone]="timezone"
+  [busy]="dialogBusy()"
+  [error]="dialogError()"
+  (save)="saveEvent($event)"
+  (closeRequested)="closeDialog()"
+/>
+
+@if (isRecurring()) {
+  <app-dialog
+    size="sm"
+    heading="Eliminar evento repetido"
+    subtitle="Elige qué quieres eliminar."
+    [open]="deleteOpen()"
+    [stacked]="true"
+    (closeRequested)="cancelDelete()"
+  >
+    <p class="calendar-view__delete-copy" data-testid="delete-choice">
+      Este evento se repite. Puedes cancelar solo esta ocurrencia o eliminar toda la serie.
+    </p>
+    @if (deleteError(); as message) {
+      <p class="calendar-view__error" role="alert">{{ message }}</p>
+    }
+    <p-button dialogFooter label="Cancelar" severity="secondary" (onClick)="cancelDelete()" />
+    <p-button
+      dialogFooter
+      label="Solo esta ocurrencia"
+      severity="danger"
+      [outlined]="true"
+      data-testid="delete-occurrence"
+      [loading]="deleteBusy()"
+      (onClick)="confirmDelete('occurrence')"
+    />
+    <p-button
+      dialogFooter
+      label="Toda la serie"
+      severity="danger"
+      data-testid="delete-series"
+      [loading]="deleteBusy()"
+      (onClick)="confirmDelete('series')"
+    />
+  </app-dialog>
+} @else {
+  <app-confirm-modal
+    title="Eliminar evento"
+    description="El evento se eliminará para todas las personas invitadas. Esta acción no se puede deshacer."
+    confirmText="Eliminar"
+    [danger]="true"
+    [open]="deleteOpen()"
+    [loading]="deleteBusy()"
+    (confirmed)="confirmDelete('series')"
+    (cancelled)="cancelDelete()"
+  />
+}
+
+<app-feed-dialog
+  [open]="feedOpen()"
+  [state]="store.feed.value() ?? null"
+  [secret]="feedSecret()"
+  [busy]="feedBusy()"
+  [error]="feedError()"
+  (generate)="generateFeed()"
+  (revoke)="revokeFeed()"
+  (closeRequested)="feedOpen.set(false)"
+/>

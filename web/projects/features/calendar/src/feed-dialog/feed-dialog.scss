@@ -1,0 +1,32 @@
+@use '../../../../ui/styles/mixins' as m;
+@use '../../../../ui/field-row/src/control' as c;
+
+.feed-dialog {
+  @include m.flex-column(4);
+  min-width: 0;
+
+  &__note {
+    margin: 0;
+  }
+
+  &__url {
+    @include m.cluster(2);
+  }
+
+  &__input {
+    @include c.control-box(var(--cl-control-h-md));
+    flex: 1 1 14rem;
+    font-family: var(--cl-font-mono, monospace);
+    font-size: var(--cl-font-small);
+
+    &:focus-visible {
+      @include c.focus-ring;
+    }
+  }
+
+  &__error {
+    margin: 0;
+    color: var(--cl-danger-text);
+    font-size: var(--cl-font-small);
+  }
+}

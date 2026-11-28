@@ -1,0 +1,107 @@
+@use '../../../../ui/styles/mixins' as m;
+@use '../../../../ui/field-row/src/control' as c;
+
+.event-panel {
+  @include m.flex-column(4);
+  min-width: 0;
+
+  &__status {
+    margin: 0;
+    color: var(--cl-text-subtle);
+  }
+
+  &__error {
+    margin: 0;
+    color: var(--cl-danger-text);
+  }
+
+  &__facts {
+    @include m.flex-column(3);
+    margin: 0;
+  }
+
+  &__fact {
+    @include m.flex-row(3, flex-start);
+
+    dt {
+      flex: none;
+      width: var(--cl-space-6);
+      color: var(--cl-text-subtle);
+    }
+
+    dd {
+      min-width: 0;
+      margin: 0;
+      overflow-wrap: anywhere;
+    }
+  }
+
+  &__description {
+    margin: 0;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+
+  &__section {
+    @include m.flex-column(2);
+  }
+
+  &__heading {
+    margin: 0;
+    font-size: var(--cl-font-body);
+    font-weight: var(--cl-weight-semibold);
+  }
+
+  &__guests {
+    @include m.flex-column(1);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  &__guest {
+    @include m.flex-row(2, center, space-between);
+  }
+
+  &__answer {
+    color: var(--cl-text-subtle);
+    font-size: var(--cl-font-small);
+
+    &[data-response='accepted'] {
+      color: var(--cl-success-text);
+    }
+
+    &[data-response='declined'] {
+      color: var(--cl-danger-text);
+    }
+  }
+
+  &__rsvp {
+    @include m.cluster(2);
+  }
+
+  &__choice {
+    @include m.touch-target;
+    padding: 0 var(--cl-space-4);
+    border: 1px solid var(--cl-border-strong);
+    border-radius: var(--cl-radius-full);
+    background: var(--cl-bg-surface);
+    color: var(--cl-text);
+    font: inherit;
+    cursor: pointer;
+
+    &:hover:not(:disabled) {
+      background: var(--cl-bg-hover);
+    }
+
+    &:focus-visible {
+      @include c.focus-ring;
+    }
+
+    &--on {
+      border-color: var(--cl-brand);
+      background: var(--cl-brand);
+      color: var(--cl-text-on-brand);
+    }
+  }
+}

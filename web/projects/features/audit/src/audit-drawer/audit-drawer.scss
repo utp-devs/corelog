@@ -1,0 +1,101 @@
+@use '../../../../ui/styles/mixins' as m;
+
+.audit-drawer {
+  @include m.flex-column(4);
+  min-width: 0;
+
+  &__summary {
+    margin: 0;
+    font-size: var(--cl-font-body-strong);
+    font-weight: var(--cl-weight-medium);
+    overflow-wrap: anywhere;
+  }
+
+  &__facts {
+    @include m.flex-column(2);
+    margin: 0;
+  }
+
+  &__fact {
+    display: grid;
+    gap: var(--cl-space-3);
+    grid-template-columns: 9rem minmax(0, 1fr);
+
+    dt {
+      color: var(--cl-text-subtle);
+      font-size: var(--cl-font-small);
+    }
+
+    dd {
+      margin: 0;
+      overflow-wrap: anywhere;
+    }
+
+    code {
+      font-family: var(--cl-font-mono, monospace);
+      font-size: var(--cl-font-small);
+    }
+  }
+
+  &__heading {
+    margin: 0 0 var(--cl-space-2);
+    font-size: var(--cl-font-body);
+    font-weight: var(--cl-weight-semibold);
+  }
+
+  &__none {
+    margin: var(--cl-space-2) 0 0;
+    color: var(--cl-text-subtle);
+    font-size: var(--cl-font-small);
+  }
+
+  &__diff {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--cl-font-small);
+
+    th,
+    td {
+      padding: var(--cl-space-2);
+      border-bottom: 1px solid var(--cl-border);
+      text-align: left;
+      vertical-align: top;
+      overflow-wrap: anywhere;
+    }
+
+    thead th {
+      color: var(--cl-text-subtle);
+    }
+
+    tbody th {
+      font-weight: var(--cl-weight-medium);
+    }
+
+    tr[data-change='added'] td:last-child {
+      background: var(--cl-success-bg);
+      color: var(--cl-success-text);
+    }
+
+    tr[data-change='removed'] td:nth-child(2) {
+      background: var(--cl-danger-bg);
+      color: var(--cl-danger-text);
+    }
+
+    tr[data-change='changed'] td:nth-child(2) {
+      background: var(--cl-danger-bg);
+      color: var(--cl-danger-text);
+    }
+
+    tr[data-change='changed'] td:last-child {
+      background: var(--cl-success-bg);
+      color: var(--cl-success-text);
+    }
+  }
+
+  &__tag {
+    display: block;
+    color: var(--cl-text-subtle);
+    font-size: var(--cl-font-caption);
+    font-weight: var(--cl-weight-regular);
+  }
+}
