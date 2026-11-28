@@ -1,0 +1,52 @@
+<section
+  class="gadget-frame"
+  [class.gadget-frame--editing]="editing()"
+  [class.gadget-frame--flush]="flush()"
+  [attr.aria-labelledby]="titleId"
+  [attr.aria-busy]="state() === 'loading' || refreshing()"
+>
+  <header class="gadget-frame__header">
+    <div class="gadget-frame__heading">
+      <h3 class="gadget-frame__title" [id]="titleId">{{ title() }}</h3>
+      @if (subtitle()) {
+        <p class="gadget-frame__subtitle">{{ subtitle() }}</p>
+      }
+    </div>
+    <div class="gadget-frame__actions">
+      <ng-content select="[gadgetFrameActions]" />
+      @if (showRefresh()) {
+        <button
+          type="button"
+          class="gadget-frame__refresh"
+          [class.gadget-frame__refresh--busy]="refreshing()"
+          [attr.aria-label]="'Actualizar ' + title()"
+          appTooltip="Actualizar"
+          [disabled]="refreshing() || state() === 'loading'"
+          (click)="refresh.emit()"
+        >
+          <i class="pi pi-refresh" aria-hidden="true"></i>
+        </button>
+      }
+    </div>
+  </header>
+
+  <div class="gadget-frame__body">
+    @switch (state()) {
+      @case ('loading') {
+        <app-loading-skeleton variant="table" [rows]="4" />
+      }
+      @case ('error') {
+        <div class="gadget-frame__error" role="alert">
+          <i class="pi pi-exclamation-circle gadget-frame__error-icon" aria-hidden="true"></i>
+          <p class="gadget-frame__error-text">{{ errorMessage() }}</p>
+          <button type="button" class="gadget-frame__retry" (click)="refresh.emit()">
+            Reintentar
+          </button>
+        </div>
+      }
+      @default {
+        <ng-content />
+      }
+    }
+  </div>
+</section>

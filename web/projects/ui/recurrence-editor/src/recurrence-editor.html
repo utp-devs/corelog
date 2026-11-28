@@ -1,0 +1,104 @@
+<div class="recurrence-editor" data-testid="recurrence-editor">
+  <div class="recurrence-editor__row">
+    <app-select-field
+      class="recurrence-editor__frequency"
+      ariaLabel="Repetición"
+      [options]="frequencies"
+      [ngModel]="value().freq"
+      (ngModelChange)="setFrequency($event)"
+    />
+    @if (repeats()) {
+      <label class="recurrence-editor__interval">
+        <span>Cada</span>
+        <input
+          class="recurrence-editor__number"
+          type="number"
+          inputmode="numeric"
+          min="1"
+          [attr.max]="maxInterval"
+          aria-label="Intervalo de repetición"
+          [value]="value().interval"
+          (change)="setInterval($any($event.target).value)"
+        />
+        <span>{{ unit() }}</span>
+      </label>
+    }
+  </div>
+
+  @if (value().freq === 'WEEKLY') {
+    <div class="recurrence-editor__days" role="group" aria-label="Días de la semana">
+      @for (day of weekdays; track day.code) {
+        <button
+          type="button"
+          class="recurrence-editor__day"
+          [class.recurrence-editor__day--on]="value().weekdays.includes(day.code)"
+          [attr.aria-pressed]="value().weekdays.includes(day.code)"
+          [attr.aria-label]="day.label"
+          [attr.data-testid]="'weekday-' + day.code"
+          (click)="toggleWeekday(day.code)"
+        >
+          {{ day.short }}
+        </button>
+      }
+    </div>
+  }
+
+  @if (repeats()) {
+    <fieldset class="recurrence-editor__end">
+      <legend class="recurrence-editor__legend">Termina</legend>
+      <label class="recurrence-editor__choice">
+        <input
+          type="radio"
+          [name]="uid + '-end'"
+          [checked]="endKind() === 'never'"
+          (change)="setEndKind('never')"
+        />
+        Nunca
+      </label>
+      <label class="recurrence-editor__choice">
+        <input
+          type="radio"
+          [name]="uid + '-end'"
+          [checked]="endKind() === 'count'"
+          (change)="setEndKind('count')"
+        />
+        Después de
+        <input
+          class="recurrence-editor__number"
+          type="number"
+          inputmode="numeric"
+          min="1"
+          [attr.max]="maxCount"
+          aria-label="Número de repeticiones"
+          data-testid="recurrence-count"
+          [disabled]="endKind() !== 'count'"
+          [value]="count()"
+          (change)="setCount($any($event.target).value)"
+        />
+        veces
+      </label>
+      <label class="recurrence-editor__choice">
+        <input
+          type="radio"
+          [name]="uid + '-end'"
+          [checked]="endKind() === 'until'"
+          (change)="setEndKind('until')"
+        />
+        El
+        <app-date-field
+          class="recurrence-editor__until"
+          ariaLabel="Fecha de fin de la repetición"
+          [showClear]="false"
+          [disabled]="endKind() !== 'until'"
+          [ngModel]="untilDate()"
+          (ngModelChange)="setUntil($event)"
+        />
+      </label>
+    </fieldset>
+  }
+
+  <p class="recurrence-editor__summary" aria-live="polite" data-testid="recurrence-summary">
+    <i class="pi pi-refresh" aria-hidden="true"></i>
+    {{ summary() }}
+  </p>
+</div>

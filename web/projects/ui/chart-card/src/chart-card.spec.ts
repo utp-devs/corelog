@@ -180,3 +180,59 @@ describe('ChartCard', () => {
     delete document.documentElement.dataset['theme'];
   });
 });
+
+@Component({
+  imports: [ChartCard],
+  template: `
+    <app-chart-card
+      title="Informe"
+      [table]="table"
+      [labels]="labels"
+      [series]="series"
+      chartType="line"
+      ariaLabel="Resumen del informe"
+      [showDataToggle]="false"
+      [stacked]="true"
+      [horizontal]="true"
+      size="lg"
+    />
+  `,
+})
+class ReportHost {
+  readonly table: ChartTable = { headers: [], rows: [] };
+  readonly labels = ['a', 'b'];
+  readonly series: ChartCardSeries[] = [
+    { label: 'Restante', data: [3, 1], color: 'var(--cl-chart-1)', fill: true, stepped: true },
+    { label: 'Ideal', data: [3, 0], dashed: true, type: 'line', pointsOnly: true },
+  ];
+}
+
+describe('ChartCard report options', () => {
+  beforeEach(() => {
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(null);
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+  });
+
+  afterEach(() => {
+    TestBed.resetTestingModule();
+    vi.restoreAllMocks();
+  });
+
+  it('exposes the chart as an image with its label and hides the data table and toggle', () => {
+    TestBed.configureTestingModule({ imports: [ReportHost] });
+    const fixture = TestBed.createComponent(ReportHost);
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    const body = el.querySelector('.chart-card__body');
+    expect(body?.getAttribute('role')).toBe('img');
+    expect(body?.getAttribute('aria-label')).toBe('Resumen del informe');
+    expect(body?.classList.contains('chart-card__body--lg')).toBe(true);
+    expect(el.querySelector('table')).toBeNull();
+    expect(toggleButton(el)).toBeUndefined();
+  });
+
+  it('leaves the chart without a role when no label is given', () => {
+    const el = create().nativeElement as HTMLElement;
+    expect(el.querySelector('.chart-card__body')?.hasAttribute('role')).toBe(false);
+  });
+});

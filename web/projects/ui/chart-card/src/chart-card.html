@@ -8,7 +8,7 @@
     </div>
     <div class="chart-card__actions">
       <ng-content select="[chartCardActions]" />
-      @if (!isEmpty()) {
+      @if (!isEmpty() && showDataToggle()) {
         <button
           type="button"
           class="chart-card__toggle"
@@ -48,36 +48,43 @@
         }
       </ul>
     } @else {
-      <div class="chart-card__body">
+      <div
+        class="chart-card__body"
+        [class.chart-card__body--lg]="size() === 'lg'"
+        [attr.role]="ariaLabel() ? 'img' : null"
+        [attr.aria-label]="ariaLabel() ?? null"
+      >
         <canvas #canvas aria-hidden="true"></canvas>
       </div>
     }
-    <table
-      [id]="tableId"
-      class="chart-card__table"
-      [class.chart-card__table--hidden]="!showData()"
-      [attr.aria-label]="'Datos: ' + title()"
-    >
-      <thead>
-        <tr>
-          @for (header of table().headers; track $index) {
-            <th scope="col">{{ header }}</th>
-          }
-        </tr>
-      </thead>
-      <tbody>
-        @for (row of table().rows; track $index) {
+    @if (showDataToggle()) {
+      <table
+        [id]="tableId"
+        class="chart-card__table"
+        [class.chart-card__table--hidden]="!showData()"
+        [attr.aria-label]="'Datos: ' + title()"
+      >
+        <thead>
           <tr>
-            @for (cell of row; track $index; let first = $first) {
-              @if (first) {
-                <th scope="row">{{ cell }}</th>
-              } @else {
-                <td>{{ cell }}</td>
-              }
+            @for (header of table().headers; track $index) {
+              <th scope="col">{{ header }}</th>
             }
           </tr>
-        }
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          @for (row of table().rows; track $index) {
+            <tr>
+              @for (cell of row; track $index; let first = $first) {
+                @if (first) {
+                  <th scope="row">{{ cell }}</th>
+                } @else {
+                  <td>{{ cell }}</td>
+                }
+              }
+            </tr>
+          }
+        </tbody>
+      </table>
+    }
   }
 </section>

@@ -1,0 +1,369 @@
+@use '../../styles/mixins' as m;
+
+:host {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+}
+
+.timeline {
+  --timeline-label-w: clamp(10rem, 28vw, 18rem);
+
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  border: 1px solid var(--cl-border);
+  border-radius: var(--cl-radius-lg);
+  background: var(--cl-bg-surface);
+  box-shadow: var(--cl-elev-raised);
+
+  &:focus-visible {
+    outline: none;
+    box-shadow: var(--cl-shadow-focus);
+  }
+
+  &__grid {
+    display: grid;
+    grid-template-columns: var(--timeline-label-w) var(--timeline-canvas-w);
+    grid-template-rows: var(--cl-space-10) 1fr;
+    min-height: 100%;
+    width: max-content;
+    min-width: 100%;
+  }
+
+  &__corner {
+    @include m.flex-row(0, center, flex-start);
+    position: sticky;
+    top: 0;
+    left: 0;
+    z-index: 4;
+    padding: 0 var(--cl-space-3);
+    border-right: 1px solid var(--cl-border);
+    border-bottom: 1px solid var(--cl-border);
+    background: var(--cl-bg-sunken);
+    font-size: var(--cl-font-small);
+    font-weight: var(--cl-weight-semibold);
+    color: var(--cl-text-subtle);
+  }
+
+  &__axis {
+    position: sticky;
+    top: 0;
+    z-index: 3;
+    border-bottom: 1px solid var(--cl-border);
+    background: var(--cl-bg-sunken);
+  }
+
+  &__tick {
+    @include m.flex-row(0, center, flex-start);
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: var(--timeline-x);
+    width: var(--timeline-w);
+    padding: 0 var(--cl-space-2);
+    border-left: 1px solid var(--cl-border);
+    font-size: var(--cl-font-small);
+    color: var(--cl-text-subtle);
+    white-space: nowrap;
+  }
+
+  &__today-flag {
+    position: absolute;
+    top: var(--cl-space-1);
+    left: var(--timeline-x);
+    transform: translateX(-50%);
+    padding: 0 var(--cl-space-2);
+    border-radius: var(--cl-radius-full);
+    background: var(--cl-danger-text);
+    color: var(--cl-bg-surface);
+    font-size: var(--cl-font-caption);
+    font-weight: var(--cl-weight-semibold);
+  }
+
+  &__labels {
+    position: sticky;
+    left: 0;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid var(--cl-border);
+    background: var(--cl-bg-surface);
+  }
+
+  &__bands-label {
+    @include m.flex-row(0, center, flex-start);
+    flex: none;
+    height: var(--timeline-bands-h);
+    padding: 0 var(--cl-space-3);
+    border-bottom: 1px solid var(--cl-divider);
+    font-size: var(--cl-font-small);
+    color: var(--cl-text-subtle);
+  }
+
+  &__rows {
+    display: flex;
+    flex-direction: column;
+  }
+
+  &__label {
+    @include m.flex-row(1, center, flex-start);
+    height: var(--timeline-row-h);
+    padding: 0 var(--cl-space-2) 0 var(--cl-space-3);
+    border-bottom: 1px solid var(--cl-divider);
+    background: var(--cl-bg-surface);
+  }
+
+  &__handle {
+    @include m.flex-row(0, center, center);
+    flex: none;
+    width: var(--cl-control-h-sm);
+    height: var(--cl-control-h-sm);
+    margin-left: calc(var(--cl-space-2) * -1);
+    border-radius: var(--cl-radius-md);
+    color: var(--cl-text-subtle);
+    cursor: grab;
+
+    &:hover {
+      background: var(--cl-bg-hover);
+    }
+  }
+
+  &__title {
+    @include m.flex-row(2, center, flex-start);
+    flex: 1 1 auto;
+    min-width: 0;
+    height: 100%;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--cl-text);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+
+    &:hover .timeline__name {
+      text-decoration: underline;
+    }
+
+    &:focus-visible {
+      outline: none;
+      box-shadow: var(--cl-shadow-focus);
+      border-radius: var(--cl-radius-sm);
+    }
+  }
+
+  &__key {
+    flex: none;
+    font-size: var(--cl-font-small);
+    font-weight: var(--cl-weight-semibold);
+    color: var(--cl-text-subtle);
+  }
+
+  &__name {
+    @include m.truncate;
+    min-width: 0;
+  }
+
+  &__move {
+    @include m.flex-row(0, center, flex-end);
+    flex: none;
+  }
+
+  &__move-button {
+    @include m.flex-row(0, center, center);
+    width: var(--cl-control-h-sm);
+    height: var(--cl-control-h-sm);
+    border: 0;
+    border-radius: var(--cl-radius-md);
+    background: transparent;
+    color: var(--cl-text-subtle);
+    font-size: var(--cl-font-small);
+    cursor: pointer;
+
+    &:hover:not(:disabled) {
+      background: var(--cl-bg-hover);
+      color: var(--cl-text);
+    }
+
+    &:focus-visible {
+      outline: none;
+      box-shadow: var(--cl-shadow-focus);
+    }
+
+    &:disabled {
+      opacity: 0.4;
+      cursor: default;
+    }
+
+    @media (pointer: coarse) {
+      width: var(--cl-control-h-md);
+      height: var(--cl-control-h-md);
+    }
+  }
+
+  &__preview {
+    padding: var(--cl-space-2) var(--cl-space-3);
+    border: 1px solid var(--cl-border-strong);
+    border-radius: var(--cl-radius-md);
+    background: var(--cl-bg-elevated);
+    box-shadow: var(--cl-elev-overlay);
+    color: var(--cl-text);
+  }
+
+  &__canvas {
+    position: relative;
+    min-height: var(--timeline-canvas-h);
+  }
+
+  &__line {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: var(--timeline-x);
+    border-left: 1px solid var(--cl-divider);
+    pointer-events: none;
+  }
+
+  &__today {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: var(--timeline-x);
+    z-index: 1;
+    border-left: 2px solid var(--cl-danger-text);
+    pointer-events: none;
+  }
+
+  &__band {
+    @include m.flex-row(0, center, flex-start);
+    position: absolute;
+    top: var(--timeline-y);
+    left: var(--timeline-x);
+    width: var(--timeline-w);
+    height: calc(var(--timeline-band-h) - var(--cl-space-1));
+    padding: 0 var(--cl-space-2);
+    overflow: hidden;
+    border-radius: var(--cl-radius-sm);
+    font-size: var(--cl-font-small);
+    font-weight: var(--cl-weight-medium);
+
+    &--version {
+      border-left: 3px solid var(--cl-brand);
+      background: var(--cl-brand-subtle);
+      color: var(--cl-cat-progress-text);
+    }
+
+    &--sprint {
+      border: 1px solid var(--cl-border);
+      background: var(--cl-bg-sunken);
+      color: var(--cl-text);
+    }
+  }
+
+  &__band-text {
+    @include m.truncate;
+  }
+
+  &__bar {
+    @include m.flex-row(0, center, flex-start);
+    position: absolute;
+    top: var(--timeline-y);
+    left: var(--timeline-x);
+    z-index: 1;
+    width: var(--timeline-w);
+    height: var(--timeline-bar-h);
+    padding: 0 var(--cl-space-2);
+    overflow: hidden;
+    border: 1px solid var(--cl-cat-todo);
+    border-radius: var(--cl-radius-md);
+    background: var(--cl-cat-todo-bg);
+    color: var(--cl-cat-todo-text);
+    font-size: var(--cl-font-small);
+    font-weight: var(--cl-weight-medium);
+    text-align: left;
+    cursor: pointer;
+
+    &--progress {
+      border-color: var(--cl-cat-progress);
+      background: var(--cl-cat-progress-bg);
+      color: var(--cl-cat-progress-text);
+    }
+
+    &--done {
+      border-color: var(--cl-cat-done);
+      background: var(--cl-cat-done-bg);
+      color: var(--cl-cat-done-text);
+    }
+
+    &--clipped-start {
+      border-top-left-radius: 0;
+      border-bottom-left-radius: 0;
+    }
+
+    &--clipped-end {
+      border-top-right-radius: 0;
+      border-bottom-right-radius: 0;
+    }
+
+    &:hover {
+      box-shadow: var(--cl-elev-raised);
+    }
+  }
+
+  &__bar-text {
+    @include m.truncate;
+    position: relative;
+  }
+
+  &__bar-progress {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: var(--timeline-progress);
+    height: var(--cl-space-1);
+    background: var(--cl-cat-todo);
+  }
+
+  &__bar--progress &__bar-progress {
+    background: var(--cl-cat-progress);
+  }
+
+  &__bar--done &__bar-progress {
+    background: var(--cl-cat-done);
+  }
+
+  &__links {
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 2;
+    pointer-events: none;
+  }
+
+  &__link {
+    fill: none;
+    stroke: var(--cl-text-subtle);
+    stroke-width: 1.5;
+  }
+
+  &__arrow {
+    fill: var(--cl-text-subtle);
+  }
+}
+
+@media print {
+  .timeline {
+    overflow: visible;
+    border: 0;
+    box-shadow: none;
+
+    &__corner,
+    &__axis,
+    &__labels {
+      position: static;
+    }
+  }
+}

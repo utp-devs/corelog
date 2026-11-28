@@ -1,0 +1,159 @@
+<div class="timeline" data-scroll-x role="region" [attr.aria-label]="label()" tabindex="0">
+  <div
+    class="timeline__grid"
+    [style.--timeline-canvas-w.px]="scale().width"
+    [style.--timeline-row-h.px]="rowHeight"
+    [style.--timeline-bar-h.px]="barHeight"
+    [style.--timeline-band-h.px]="bandHeight"
+    [style.--timeline-bands-h.px]="bandsHeight()"
+    [style.--timeline-canvas-h.px]="canvasHeight()"
+  >
+    <div class="timeline__corner">{{ columnTitle() }}</div>
+    <div class="timeline__axis" aria-hidden="true">
+      @for (tick of scale().ticks; track tick.day) {
+        <span
+          class="timeline__tick"
+          [style.--timeline-x.px]="tick.x"
+          [style.--timeline-w.px]="tick.width"
+          >{{ tick.label }}</span
+        >
+      }
+      @if (scale().todayX !== null) {
+        <span class="timeline__today-flag" [style.--timeline-x.px]="scale().todayX">Hoy</span>
+      }
+    </div>
+
+    <div class="timeline__labels">
+      @if (bandsHeight() > 0) {
+        <div class="timeline__bands-label">Versiones y sprints</div>
+      }
+      <div
+        class="timeline__rows"
+        cdkDropList
+        cdkDropListLockAxis="y"
+        [cdkDropListDisabled]="!reorderable()"
+        [cdkDropListData]="rows()"
+        (cdkDropListDropped)="drop($event)"
+      >
+        @for (row of rows(); track row.id; let i = $index; let first = $first; let last = $last) {
+          <div class="timeline__label" cdkDrag [cdkDragDisabled]="!reorderable()">
+            @if (reorderable()) {
+              <span
+                class="timeline__handle"
+                cdkDragHandle
+                aria-hidden="true"
+                appTooltip="Arrastra para reordenar"
+              >
+                <i class="pi pi-bars"></i>
+              </span>
+            }
+            <button
+              type="button"
+              class="timeline__title"
+              [attr.data-testid]="'timeline-row-' + row.id"
+              [attr.aria-label]="row.title + '. ' + row.description"
+              (click)="rowActivated.emit(row.id)"
+            >
+              @if (row.key) {
+                <span class="timeline__key">{{ row.key }}</span>
+              }
+              <span class="timeline__name" [attr.title]="row.title">{{ row.title }}</span>
+            </button>
+            @if (reorderable()) {
+              <span class="timeline__move">
+                <button
+                  type="button"
+                  class="timeline__move-button"
+                  [disabled]="first"
+                  [attr.aria-label]="'Subir ' + row.title"
+                  appTooltip="Subir"
+                  (click)="move(i, -1)"
+                >
+                  <i class="pi pi-chevron-up" aria-hidden="true"></i>
+                </button>
+                <button
+                  type="button"
+                  class="timeline__move-button"
+                  [disabled]="last"
+                  [attr.aria-label]="'Bajar ' + row.title"
+                  appTooltip="Bajar"
+                  (click)="move(i, 1)"
+                >
+                  <i class="pi pi-chevron-down" aria-hidden="true"></i>
+                </button>
+              </span>
+            }
+            <div *cdkDragPreview class="timeline__preview">{{ row.title }}</div>
+          </div>
+        }
+      </div>
+    </div>
+
+    <div class="timeline__canvas">
+      @for (tick of scale().ticks; track tick.day) {
+        <span class="timeline__line" aria-hidden="true" [style.--timeline-x.px]="tick.x"></span>
+      }
+      @if (scale().todayX !== null) {
+        <span
+          class="timeline__today"
+          aria-hidden="true"
+          data-testid="timeline-today"
+          [style.--timeline-x.px]="scale().todayX"
+        ></span>
+      }
+      @for (placed of placedBands(); track placed.band.id) {
+        <span
+          class="timeline__band"
+          [class.timeline__band--version]="placed.band.kind === 'version'"
+          [class.timeline__band--sprint]="placed.band.kind === 'sprint'"
+          [style.--timeline-x.px]="placed.x"
+          [style.--timeline-y.px]="placed.y"
+          [style.--timeline-w.px]="placed.width"
+          [appTooltip]="placed.band.label"
+          data-testid="timeline-band"
+        >
+          <span class="timeline__band-text" [attr.title]="placed.band.label">{{
+            placed.band.label
+          }}</span>
+        </span>
+      }
+      @for (bar of bars(); track bar.row.id) {
+        <button
+          type="button"
+          tabindex="-1"
+          aria-hidden="true"
+          class="timeline__bar"
+          [class.timeline__bar--todo]="bar.row.category === 'todo'"
+          [class.timeline__bar--progress]="bar.row.category === 'in_progress'"
+          [class.timeline__bar--done]="bar.row.category === 'done'"
+          [class.timeline__bar--clipped-start]="bar.clippedStart"
+          [class.timeline__bar--clipped-end]="bar.clippedEnd"
+          [style.--timeline-x.px]="bar.x"
+          [style.--timeline-y.px]="bar.y"
+          [style.--timeline-w.px]="bar.width"
+          [style.--timeline-progress]="bar.row.percent + '%'"
+          [appTooltip]="bar.row.title + ' - ' + bar.row.description"
+          [attr.data-testid]="'timeline-bar-' + bar.row.id"
+          (click)="rowActivated.emit(bar.row.id)"
+        >
+          <span class="timeline__bar-text" [attr.title]="bar.row.title">{{ bar.row.title }}</span>
+          <span class="timeline__bar-progress"></span>
+        </button>
+      }
+      @if (paths().length > 0) {
+        <svg
+          class="timeline__links"
+          aria-hidden="true"
+          focusable="false"
+          [attr.width]="scale().width"
+          [attr.height]="canvasHeight()"
+        >
+          @for (path of paths(); track path.from + path.to) {
+            <path class="timeline__link" [attr.d]="path.d" data-testid="timeline-dependency" />
+            <polygon class="timeline__arrow" [attr.points]="path.arrow" />
+          }
+        </svg>
+      }
+    </div>
+  </div>
+</div>

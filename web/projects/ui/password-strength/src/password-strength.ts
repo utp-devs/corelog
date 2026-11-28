@@ -10,6 +10,8 @@ import { passwordLevelLabel, scorePassword } from '@corelog/core';
 })
 export class PasswordStrength {
   readonly password = input('');
+  /** One line: the meter and its text side by side, for forms with little vertical room. */
+  readonly compact = input(false);
 
   protected readonly segments = [1, 2, 3, 4];
   protected readonly level = computed(() => scorePassword(this.password()));
