@@ -1,11 +1,13 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { NotificationStore } from '@corelog/core';
+import { NotificationStore, NotificationStream, SecurityAlertActions } from '@corelog/core';
 import { of } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { NotificationsBell } from './notifications-bell';
+
+const streamStart = vi.fn();
 
 function setup(unread: number) {
   const store = {
@@ -19,7 +21,12 @@ function setup(unread: number) {
   };
   TestBed.configureTestingModule({
     imports: [NotificationsBell],
-    providers: [provideRouter([]), { provide: NotificationStore, useValue: store }],
+    providers: [
+      provideRouter([]),
+      { provide: NotificationStore, useValue: store },
+      { provide: NotificationStream, useValue: { start: streamStart } },
+      { provide: SecurityAlertActions, useValue: {} },
+    ],
   });
   const fixture = TestBed.createComponent(NotificationsBell);
   fixture.detectChanges();
@@ -42,6 +49,7 @@ describe('NotificationsBell', () => {
     );
     expect(bell).not.toBeNull();
     expect(store.startPolling).toHaveBeenCalled();
+    expect(streamStart).toHaveBeenCalled();
   });
 
   it('keeps the plain label when nothing is unread', () => {

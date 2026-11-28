@@ -10,6 +10,8 @@ import {
   FavoritesStore,
   NotificationService,
   NotificationStore,
+  NotificationStream,
+  SecurityAlertActions,
   ProjectStore,
   SearchApiService,
   TeamStore,
@@ -228,6 +230,8 @@ async function render(
       },
       { provide: NotificationService, useValue: { error: vi.fn() } },
       { provide: TeamStore, useValue: { teams: signal([]), fetchTeams: vi.fn() } },
+      { provide: NotificationStream, useValue: { start: vi.fn() } },
+      { provide: SecurityAlertActions, useValue: {} },
       {
         provide: NotificationStore,
         useValue: {

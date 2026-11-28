@@ -68,4 +68,39 @@
       font-weight: var(--cl-weight-semibold);
     }
   }
+
+  &__icon {
+    margin-inline-end: var(--cl-space-2);
+    color: var(--cl-danger-text);
+  }
+
+  &__actions {
+    @include m.cluster(2);
+    padding: var(--cl-space-1) var(--cl-space-3) var(--cl-space-2);
+  }
+
+  &__action {
+    min-height: var(--cl-control-h-sm);
+    padding: 0 var(--cl-space-3);
+    border: 1px solid var(--cl-brand);
+    border-radius: var(--cl-radius-md);
+    background: var(--cl-bg-surface);
+    color: var(--cl-brand);
+    font: inherit;
+    cursor: pointer;
+
+    &--danger {
+      border-color: var(--cl-danger);
+      color: var(--cl-danger-text);
+    }
+
+    &:focus-visible {
+      outline: none;
+      box-shadow: var(--cl-shadow-focus);
+    }
+
+    @media (pointer: coarse) {
+      min-height: var(--cl-control-h-lg);
+    }
+  }
 }

@@ -52,6 +52,12 @@ describe('ApiTokenApiService', () => {
       .expectOne('/api/v1/me/api-tokens')
       .flush({ data: [{ id: 't1', name: 'A', created_at: 'x', revoked_at: 'y' }] });
     expect(names).toEqual(['A']);
+    service.list(true).subscribe();
+    const all = http.expectOne(
+      (r) => r.url === '/api/v1/me/api-tokens' && r.params.has('include_revoked'),
+    );
+    expect(all.request.params.get('include_revoked')).toBe('true');
+    all.flush({ data: [] });
     service.revoke('t1').subscribe();
     http.expectOne({ method: 'DELETE', url: '/api/v1/me/api-tokens/t1' }).flush(null);
   });

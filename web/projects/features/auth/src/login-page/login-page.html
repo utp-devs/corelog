@@ -78,6 +78,9 @@
       [attr.aria-busy]="submitting()"
       (ngSubmit)="onSubmit()"
     >
+      @if (sessionClosedNotice; as notice) {
+        <app-auth-alert tone="info" data-testid="login-session-closed">{{ notice }}</app-auth-alert>
+      }
       @if (formError(); as message) {
         <app-auth-alert tone="error">{{ message }}</app-auth-alert>
       }

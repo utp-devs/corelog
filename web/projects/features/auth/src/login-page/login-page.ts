@@ -61,6 +61,11 @@ export class LoginPage {
   private readonly assign = inject(LOCATION_ASSIGN);
 
   protected readonly returnUrl = inject(ActivatedRoute).snapshot.queryParamMap.get('returnUrl');
+  /** Shown when the session was closed from another device. */
+  protected readonly sessionClosedNotice =
+    inject(ActivatedRoute).snapshot.queryParamMap.get('reason') === 'session_revoked'
+      ? 'Tu sesión fue cerrada desde otro dispositivo'
+      : null;
   protected readonly registerQuery: Readonly<Record<string, string>> = this.returnUrl
     ? { returnUrl: this.returnUrl }
     : {};

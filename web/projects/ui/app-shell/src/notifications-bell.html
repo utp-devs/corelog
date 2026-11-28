@@ -29,15 +29,35 @@
     } @else {
       <ul class="notifications-bell__list">
         @for (item of items(); track item.id) {
-          <li>
+          <li [attr.data-testid]="isSecurity(item) ? 'notification-security' : null">
             <button
               type="button"
               class="notifications-bell__item"
               [class.notifications-bell__item--unread]="!item.read"
               (click)="open(item, panel)"
             >
+              @if (isSecurity(item)) {
+                <i class="pi pi-shield notifications-bell__icon" aria-hidden="true"></i>
+              }
               {{ item.message }}
             </button>
+            @if (isSecurity(item)) {
+              <div class="notifications-bell__actions">
+                @for (action of actionsOf(item); track action.label) {
+                  <button
+                    type="button"
+                    class="notifications-bell__action"
+                    [class.notifications-bell__action--danger]="isNotMe(action)"
+                    [attr.data-testid]="
+                      isNotMe(action) ? 'notification-not-me' : 'notification-view'
+                    "
+                    (click)="runAction(item, action, panel)"
+                  >
+                    {{ action.label }}
+                  </button>
+                }
+              </div>
+            }
           </li>
         }
       </ul>

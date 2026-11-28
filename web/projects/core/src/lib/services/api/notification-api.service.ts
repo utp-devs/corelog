@@ -7,19 +7,11 @@ import { normalizeIssueLink } from '../../config/issue-paths';
 import type {
   AppNotification,
   EmailNotificationMode,
+  NotificationDto,
   NotificationPreferences,
   NotificationPreferencesChange,
 } from '../../models/notification.model';
 import { backgroundRequest, silentRequest } from '../../utils/silent-request';
-
-interface NotificationDto {
-  readonly id: string;
-  readonly kind: string;
-  readonly message: string;
-  readonly link: string;
-  readonly read: boolean;
-  readonly created_at: string;
-}
 
 interface PreferencesDto {
   readonly in_app: boolean;
@@ -31,7 +23,7 @@ interface DataEnvelope<T> {
   readonly data: T;
 }
 
-function toNotification(dto: NotificationDto): AppNotification {
+export function toNotification(dto: NotificationDto): AppNotification {
   return {
     id: dto.id,
     kind: dto.kind,
@@ -39,6 +31,7 @@ function toNotification(dto: NotificationDto): AppNotification {
     link: normalizeIssueLink(dto.link),
     read: dto.read,
     createdAt: dto.created_at,
+    ...(dto.data ? { data: dto.data } : {}),
   };
 }
 

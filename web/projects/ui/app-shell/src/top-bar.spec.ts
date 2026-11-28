@@ -10,6 +10,8 @@ import {
   AvatarApiService,
   FavoritesStore,
   NotificationStore,
+  NotificationStream,
+  SecurityAlertActions,
   ProjectStore,
   SearchApiService,
   TeamStore,
@@ -112,6 +114,8 @@ describe('TopBar', () => {
           },
         },
         { provide: TeamStore, useValue: { teams: signal([]), fetchTeams: vi.fn() } },
+        { provide: NotificationStream, useValue: { start: vi.fn() } },
+        { provide: SecurityAlertActions, useValue: {} },
         {
           provide: NotificationStore,
           useValue: {
@@ -263,6 +267,8 @@ describe('TopBar responsive layout', () => {
           },
         },
         { provide: TeamStore, useValue: { teams: signal([]), fetchTeams: vi.fn() } },
+        { provide: NotificationStream, useValue: { start: vi.fn() } },
+        { provide: SecurityAlertActions, useValue: {} },
         {
           provide: NotificationStore,
           useValue: {

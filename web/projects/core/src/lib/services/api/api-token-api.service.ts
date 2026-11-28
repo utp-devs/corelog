@@ -37,10 +37,12 @@ export class ApiTokenApiService {
   private readonly http = inject(HttpClient);
   private readonly baseUrl = inject(API_URL);
 
-  list(): Observable<readonly ApiToken[]> {
+  /** Active and expired tokens. Revoked ones come back only with `includeRevoked`. */
+  list(includeRevoked = false): Observable<readonly ApiToken[]> {
     return this.http
       .get<{ data: ApiTokenDto[] | null }>(`${this.baseUrl}/me/api-tokens`, {
         context: silentRequest(),
+        params: includeRevoked ? { include_revoked: 'true' } : {},
       })
       .pipe(map((body) => (body.data ?? []).map(toToken)));
   }

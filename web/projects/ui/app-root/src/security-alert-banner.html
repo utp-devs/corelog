@@ -1,0 +1,57 @@
+@if (alert(); as current) {
+  <div class="security-alert" role="alert" data-testid="security-alert">
+    <i class="pi pi-shield security-alert__icon" aria-hidden="true"></i>
+    <div class="security-alert__body">
+      @if (closed()) {
+        <p class="security-alert__title">Cerramos la sesión desconocida</p>
+        <p class="security-alert__message">
+          Te recomendamos cambiar tu contraseña por si alguien más la conoce.
+        </p>
+        <div class="security-alert__actions">
+          <button
+            type="button"
+            class="security-alert__button security-alert__button--primary"
+            data-testid="security-alert-change-password"
+            (click)="changePassword()"
+          >
+            Cambiar contraseña
+          </button>
+          <button
+            type="button"
+            class="security-alert__button"
+            data-testid="security-alert-close"
+            (click)="dismiss()"
+          >
+            Cerrar
+          </button>
+        </div>
+      } @else {
+        <p class="security-alert__title">{{ current.title }}</p>
+        <p class="security-alert__message">{{ current.message }}</p>
+        <div class="security-alert__actions">
+          @for (action of buttons(); track action.label) {
+            <button
+              type="button"
+              class="security-alert__button"
+              [class.security-alert__button--danger]="isNotMe(action)"
+              [disabled]="busy()"
+              [attr.data-testid]="isNotMe(action) ? 'security-alert-not-me' : 'security-alert-view'"
+              (click)="run(action)"
+            >
+              {{ action.label }}
+            </button>
+          }
+        </div>
+      }
+    </div>
+    <button
+      type="button"
+      class="security-alert__dismiss"
+      aria-label="Descartar aviso"
+      data-testid="security-alert-dismiss"
+      (click)="dismiss()"
+    >
+      <i class="pi pi-times" aria-hidden="true"></i>
+    </button>
+  </div>
+}

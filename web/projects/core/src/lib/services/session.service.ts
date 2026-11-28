@@ -47,6 +47,12 @@ export class SessionService {
     this.redirectToLogin();
   }
 
+  /** Ends the session because it was closed from another device and tells the login page why. */
+  endRevoked(): void {
+    this.clear();
+    this.navigate(`${this.loginUrl}?reason=session_revoked`);
+  }
+
   redirectToLogin(): void {
     const location = this.document.defaultView?.location;
     const returnUrl = location ? `${location.pathname}${location.search}` : '/';

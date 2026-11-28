@@ -101,6 +101,34 @@ describe('ApiTokensSection', () => {
     confirm?.click();
     await settle(fixture);
     expect(service.revoke).toHaveBeenCalledWith('t1');
-    expect(el.textContent).toContain('Revocado');
+    expect(el.querySelectorAll('[data-testid="token-item"]')).toHaveLength(0);
+    expect(el.querySelector('[data-testid="token-empty"]')).not.toBeNull();
+  });
+
+  it('requests the revoked tokens only when the toggle is on and shows them dimmed', async () => {
+    const revoked: ApiToken = {
+      ...TOKEN,
+      id: 't9',
+      name: 'Viejo',
+      revokedAt: '2026-02-03T10:00:00Z',
+    };
+    const list = vi.fn((include?: boolean) => of(include ? [TOKEN, revoked] : [TOKEN]));
+    const { fixture, el } = setup([TOKEN], { list });
+    expect(list).toHaveBeenLastCalledWith(false);
+    expect(el.querySelectorAll('[data-testid="token-item"]')).toHaveLength(1);
+
+    const toggle = el.querySelector<HTMLInputElement>('[data-testid="token-show-revoked"]')!;
+    expect(toggle.checked).toBe(false);
+    toggle.click();
+    await settle(fixture);
+
+    expect(list).toHaveBeenLastCalledWith(true);
+    const items = el.querySelectorAll('[data-testid="token-item"]');
+    expect(items).toHaveLength(2);
+    expect(items[1].classList).toContain('api-tokens__item--revoked');
+    expect(items[1].textContent).toContain('Revocado');
+    expect(items[1].querySelector('[data-testid="token-revoked-at"]')?.textContent).toContain(
+      '03/02/2026',
+    );
   });
 });

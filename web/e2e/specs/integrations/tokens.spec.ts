@@ -56,12 +56,24 @@ test.describe('tokens de acceso personales', () => {
       .getByRole('button')
       .click();
     await page.getByRole('button', { name: 'Revocar token' }).click();
-    await expect(page.getByTestId('token-item').filter({ hasText: name })).toContainText(
-      'Revocado',
-    );
+    await expect(page.getByTestId('token-item').filter({ hasText: name })).toHaveCount(0);
 
-    const list = await owner.get('me/api-tokens');
-    const rows = ((await list.json()) as { data: ApiTokenRow[] }).data;
+    // Revoked tokens are hidden from the list, also after a reload.
+    await page.reload();
+    await expect(page.getByTestId('token-new')).toBeVisible();
+    await expect(page.getByTestId('token-item').filter({ hasText: name })).toHaveCount(0);
+    const visible = await owner.get('me/api-tokens');
+    const visibleRows = ((await visible.json()) as { data: ApiTokenRow[] }).data;
+    expect(visibleRows.find((row) => row.name === name)).toBeUndefined();
+
+    // The secondary toggle brings them back, dimmed and with their revocation date.
+    await page.getByTestId('token-show-revoked').check();
+    const revoked = page.getByTestId('token-item').filter({ hasText: name });
+    await expect(revoked).toContainText('Revocado');
+    await expect(revoked.getByTestId('token-revoked-at')).toBeVisible();
+
+    const all = await owner.get('me/api-tokens?include_revoked=true');
+    const rows = ((await all.json()) as { data: ApiTokenRow[] }).data;
     expect(rows.find((row) => row.name === name)?.revoked_at).toBeTruthy();
   });
 

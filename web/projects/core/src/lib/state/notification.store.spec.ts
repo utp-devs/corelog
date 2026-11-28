@@ -244,3 +244,32 @@ describe('NotificationStore', () => {
     backend.verify();
   });
 });
+
+describe('NotificationStore live updates', () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  function item(id: string, extra: Partial<AppNotification> = {}): AppNotification {
+    return { ...notification(id, false), ...extra };
+  }
+
+  it('hides the new-login alert of the current session from the list', () => {
+    const { store, session } = setup();
+    session.startSession(`h.${btoa(JSON.stringify({ jti: 's-own' }))}.s`);
+    store.list.set([
+      item('a', { kind: 'security.new_login', data: { session_id: 's-own' } }),
+      item('b', { kind: 'security.new_login', data: { session_id: 's-other' } }),
+      item('c'),
+    ]);
+    expect(store.items().map((n) => n.id)).toEqual(['b', 'c']);
+  });
+
+  it('counts a pushed notification once and ignores read ones in the badge', () => {
+    const { store } = setup();
+    store.receive(item('a'));
+    store.receive(item('a'));
+    store.receive(item('b', { read: true }));
+    expect(store.unreadCount()).toBe(1);
+  });
+});

@@ -81,6 +81,9 @@ export class ApiTokensSection {
     () => this.tokens().filter((t) => tokenState(t) === 'active').length,
   );
 
+  /** Secondary toggle: also list the revoked tokens (hidden by default). */
+  protected readonly showRevoked = signal(false);
+
   protected readonly formOpen = signal(false);
   protected readonly saving = signal(false);
   protected readonly formError = signal<string | null>(null);
@@ -118,13 +121,18 @@ export class ApiTokensSection {
 
   protected load(): void {
     this.status.set('loading');
-    this.api.list().subscribe({
+    this.api.list(this.showRevoked()).subscribe({
       next: (tokens) => {
         this.tokens.set(tokens);
         this.status.set('ready');
       },
       error: () => this.status.set('error'),
     });
+  }
+
+  protected setShowRevoked(show: boolean): void {
+    this.showRevoked.set(show);
+    this.load();
   }
 
   protected openForm(): void {
@@ -173,7 +181,9 @@ export class ApiTokensSection {
     try {
       await firstValueFrom(this.api.revoke(token.id));
       this.tokens.update((list) =>
-        list.map((t) => (t.id === token.id ? { ...t, revokedAt: new Date().toISOString() } : t)),
+        this.showRevoked()
+          ? list.map((t) => (t.id === token.id ? { ...t, revokedAt: new Date().toISOString() } : t))
+          : list.filter((t) => t.id !== token.id),
       );
       this.notifications.success(`El token «${token.name}» quedó revocado.`);
       this.revoking.set(null);
