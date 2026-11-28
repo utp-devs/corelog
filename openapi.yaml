@@ -41,6 +41,12 @@ tags:
     description: Informes de proyecto (burndown, velocidad, flujo, tiempo, carga y versiones) y su exportacion CSV
   - name: legal
     description: Documentos legales versionados y consentimiento de cada usuario
+  - name: integrations
+    description: Tokens de acceso personales y webhooks salientes
+  - name: automation
+    description: Reglas de automatizacion y su historial de ejecuciones
+  - name: import-export
+    description: Importacion de incidencias desde CSV y exportaciones de un proyecto
   - name: audit
     description: Registro de auditoria inmutable y recuperacion de contrasena
   - name: health
@@ -3423,14 +3429,17 @@ paths:
                 type: object
                 properties:
                   in_app: {type: boolean}
+                  email: {type: string, enum: [immediate, daily, off]}
+                  notify_own_actions: {type: boolean}
         '401':
           $ref: '#/components/responses/Unauthorized'
     put:
       tags: [issues]
       summary: Actualizar las preferencias de avisos
       description: >-
-        Con in_app en false no se guardan avisos nuevos en la aplicacion. El correo electronico
-        todavia no esta implementado.
+        Con in_app en false no se guardan avisos nuevos en la aplicacion. email define el correo: immediate
+        (cada aviso), daily (un resumen diario) u off. notify_own_actions permite recibir avisos de las propias
+        acciones. Las preferencias siempre prevalecen sobre el esquema de notificaciones.
       operationId: updateNotificationPreferences
       security:
         - bearerAuth: []
@@ -3443,6 +3452,8 @@ paths:
               required: [in_app]
               properties:
                 in_app: {type: boolean}
+                email: {type: string, enum: [immediate, daily, off]}
+                notify_own_actions: {type: boolean}
       responses:
         '200':
           description: Preferencias guardadas
@@ -3496,6 +3507,189 @@ paths:
           description: Marcadas
         '401':
           $ref: '#/components/responses/Unauthorized'
+  /projects/{project}/notification-scheme:
+    get:
+      tags: [issues]
+      operationId: getProjectNotificationScheme
+      summary: Esquema de notificaciones en vigor de un proyecto
+      description: >-
+        Requiere edit_project. Devuelve las 13 reglas (evento, destinatarios, canales) que aplican al proyecto: las
+        propias, completadas con el esquema por defecto de la organizacion y con el esquema base. overridden indica
+        que la regla es propia del proyecto. Sin cambios propios, is_default es true.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/NotificationProjectId'
+      responses:
+        '200': {$ref: '#/components/responses/NotificationScheme'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+    put:
+      tags: [issues]
+      operationId: putProjectNotificationScheme
+      summary: Guardar las reglas de notificacion de un proyecto
+      description: >-
+        Requiere edit_project. Reemplaza las reglas propias del proyecto; los eventos no incluidos siguen el esquema
+        de la organizacion. Codigo de validacion notification.scheme_invalid.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/NotificationProjectId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/NotificationSchemeRequest'}
+      responses:
+        '200': {$ref: '#/components/responses/NotificationScheme'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+    delete:
+      tags: [issues]
+      operationId: resetProjectNotificationScheme
+      summary: Restablecer el esquema de notificaciones de un proyecto
+      description: Requiere edit_project. Elimina las reglas propias y devuelve el esquema heredado.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/NotificationProjectId'
+      responses:
+        '200': {$ref: '#/components/responses/NotificationScheme'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+  /organizations/{org}/notification-scheme:
+    get:
+      tags: [issues]
+      operationId: getOrganizationNotificationScheme
+      summary: Esquema de notificaciones por defecto de una organizacion
+      description: Cualquier miembro puede leerlo. Sin cambios de la organizacion, is_default es true y rige el esquema base.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/NotificationOrgId'
+      responses:
+        '200': {$ref: '#/components/responses/NotificationScheme'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+    put:
+      tags: [issues]
+      operationId: putOrganizationNotificationScheme
+      summary: Guardar el esquema de notificaciones por defecto de la organizacion
+      description: Propietarios y administradores. Los proyectos sin reglas propias lo heredan.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/NotificationOrgId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/NotificationSchemeRequest'}
+      responses:
+        '200': {$ref: '#/components/responses/NotificationScheme'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+    delete:
+      tags: [issues]
+      operationId: resetOrganizationNotificationScheme
+      summary: Restablecer el esquema de notificaciones de la organizacion
+      description: Propietarios y administradores. Vuelve al esquema base.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/NotificationOrgId'
+      responses:
+        '200': {$ref: '#/components/responses/NotificationScheme'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+  /admin/email-outbox:
+    get:
+      tags: [issues]
+      operationId: adminListEmailOutbox
+      summary: Cola de correo saliente
+      description: >-
+        Solo administradores de la plataforma. Lista los correos de la cola, los mas recientes primero; la
+        direccion del destinatario se muestra enmascarada. Estados: pending, sent, dead (6 intentos fallidos).
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema: {type: string, enum: [pending, sent, dead]}
+        - name: page
+          in: query
+          schema: {type: integer, minimum: 1}
+        - name: page_size
+          in: query
+          schema: {type: integer, minimum: 1, maximum: 100}
+      responses:
+        '200':
+          description: Pagina de correos
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: {$ref: '#/components/schemas/EmailOutboxEntry'}
+                  meta:
+                    type: object
+                    properties:
+                      page: {type: integer}
+                      page_size: {type: integer}
+                      total: {type: integer}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+  /admin/email-outbox/{id}/retry:
+    post:
+      tags: [issues]
+      operationId: adminRetryEmailOutbox
+      summary: Reintentar un correo muerto
+      description: Solo administradores de la plataforma. Vuelve a poner en cola un correo en estado dead con el contador de intentos en cero.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: {type: string, format: uuid}
+      responses:
+        '204':
+          description: Correo en cola otra vez
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+  /admin/jobs:
+    get:
+      tags: [issues]
+      operationId: adminListJobs
+      summary: Trabajos programados y su ultima ejecucion
+      description: Solo administradores de la plataforma. Un unico nodo (el lider) ejecuta los trabajos; cada ejecucion queda registrada.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Trabajos registrados
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: {$ref: '#/components/schemas/ScheduledJob'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
   /calendar/events:
     get:
       tags: [issues]
@@ -8825,6 +9019,656 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '422':
           $ref: '#/components/responses/ValidationError'
+  /me/api-tokens:
+    get:
+      tags: [integrations]
+      summary: "Listar los tokens de acceso personales"
+      description: "Requiere una sesion: un token de acceso no puede gestionar tokens. Nunca devuelve el valor secreto."
+      operationId: listApiTokens
+      responses:
+        '200':
+          description: "Tokens del usuario, el mas reciente primero"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: {$ref: '#/components/schemas/ApiToken'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+    post:
+      tags: [integrations]
+      summary: "Crear un token de acceso personal"
+      description: "Devuelve el token en claro una sola vez (campo token, formato cl_pat_ mas 40 caracteres). Maximo 20 tokens activos. Alcances: read (solo lectura), write (lectura y escritura), admin (solo administradores de la plataforma). Codigos: api_token.invalid_input, api_token.limit_reached (409), api_token.admin_scope_forbidden, api_token.session_required."
+      operationId: createApiToken
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, scopes]
+              properties:
+                name: {type: string, maxLength: 80}
+                scopes:
+                  type: array
+                  items: {type: string, enum: [read, write, admin]}
+                expires_at: {type: string, format: date-time, nullable: true}
+      responses:
+        '201':
+          description: "Token creado"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: {$ref: '#/components/schemas/ApiToken'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+  /me/api-tokens/{id}:
+    delete:
+      tags: [integrations]
+      summary: "Revocar un token de acceso"
+      operationId: revokeApiToken
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+      responses:
+        '204': {description: Token revocado}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+  /organizations/{org}/webhooks:
+    get:
+      tags: [integrations]
+      summary: "Listar los webhooks de una organizacion"
+      description: "Propietarios y administradores de la organizacion. Filtro opcional project_id."
+      operationId: listWebhooks
+      parameters:
+        - {name: org, in: path, required: true, schema: {type: string, format: uuid}}
+        - {name: project_id, in: query, required: false, schema: {type: string, format: uuid}}
+      responses:
+        '200':
+          description: "Webhooks"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: {$ref: '#/components/schemas/Webhook'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+    post:
+      tags: [integrations]
+      summary: "Crear un webhook"
+      description: "Devuelve el secreto de firma una sola vez (campo secret). Eventos: issue.created, issue.updated, issue.transitioned, issue.deleted, issue.restored, comment.created, sprint.started, sprint.completed, version.released o *. Cada entrega lleva X-CoreLog-Signature (sha256= HMAC-SHA256 de \"timestamp.cuerpo\"), X-CoreLog-Timestamp, X-CoreLog-Event y X-CoreLog-Delivery. Codigos: webhook.invalid, webhook.invalid_filter, webhook.project_not_found."
+      operationId: createWebhook
+      parameters:
+        - {name: org, in: path, required: true, schema: {type: string, format: uuid}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, url, events]
+              properties:
+                name: {type: string}
+                url: {type: string}
+                events: {type: array, items: {type: string}}
+                filter_query: {type: string, nullable: true}
+                project_id: {type: string, format: uuid, nullable: true}
+                enabled: {type: boolean}
+      responses:
+        '201':
+          description: "Webhook creado"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: {$ref: '#/components/schemas/Webhook'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+  /organizations/{org}/webhooks/{id}:
+    get:
+      tags: [integrations]
+      summary: "Obtener un webhook"
+      operationId: getWebhook
+      parameters:
+        - {name: org, in: path, required: true, schema: {type: string, format: uuid}}
+        - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+      responses:
+        '200':
+          description: "Webhook"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: {$ref: '#/components/schemas/Webhook'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+    patch:
+      tags: [integrations]
+      summary: "Modificar un webhook"
+      description: "Un filter_query vacio elimina el filtro."
+      operationId: updateWebhook
+      parameters:
+        - {name: org, in: path, required: true, schema: {type: string, format: uuid}}
+        - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: {type: string}
+                url: {type: string}
+                events: {type: array, items: {type: string}}
+                filter_query: {type: string}
+                enabled: {type: boolean}
+      responses:
+        '200':
+          description: "Webhook actualizado"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: {$ref: '#/components/schemas/Webhook'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+    delete:
+      tags: [integrations]
+      summary: "Eliminar un webhook y sus entregas"
+      operationId: deleteWebhook
+      parameters:
+        - {name: org, in: path, required: true, schema: {type: string, format: uuid}}
+        - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+      responses:
+        '204': {description: Webhook eliminado}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+  /organizations/{org}/webhooks/{id}/test:
+    post:
+      tags: [integrations]
+      summary: "Enviar un ping de prueba"
+      description: "Envia el evento ping de forma sincrona y devuelve la entrega registrada. Un fallo no se reintenta."
+      operationId: testWebhook
+      parameters:
+        - {name: org, in: path, required: true, schema: {type: string, format: uuid}}
+        - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+      responses:
+        '200':
+          description: "Entrega del ping"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: {$ref: '#/components/schemas/WebhookDelivery'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+  /organizations/{org}/webhooks/{id}/rotate-secret:
+    post:
+      tags: [integrations]
+      summary: "Rotar el secreto de firma"
+      description: "Devuelve el nuevo secreto una sola vez; el anterior deja de ser valido."
+      operationId: rotateWebhookSecret
+      parameters:
+        - {name: org, in: path, required: true, schema: {type: string, format: uuid}}
+        - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+      responses:
+        '200':
+          description: "Nuevo secreto"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      secret: {type: string}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+  /organizations/{org}/webhooks/{id}/deliveries:
+    get:
+      tags: [integrations]
+      summary: "Entregas recientes de un webhook"
+      operationId: listWebhookDeliveries
+      parameters:
+        - {name: org, in: path, required: true, schema: {type: string, format: uuid}}
+        - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+        - {name: limit, in: query, required: false, schema: {type: integer, minimum: 1, maximum: 100}}
+      responses:
+        '200':
+          description: "Entregas, la mas reciente primero"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: {$ref: '#/components/schemas/WebhookDelivery'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+  /organizations/{org}/webhooks/{id}/deliveries/{delivery}/redeliver:
+    post:
+      tags: [integrations]
+      summary: "Reenviar una entrega"
+      description: "Encola una copia del cuerpo de la entrega original."
+      operationId: redeliverWebhook
+      parameters:
+        - {name: org, in: path, required: true, schema: {type: string, format: uuid}}
+        - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+        - {name: delivery, in: path, required: true, schema: {type: string, format: uuid}}
+      responses:
+        '202':
+          description: "Entrega encolada"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: {$ref: '#/components/schemas/WebhookDelivery'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+  /projects/{project}/automation-rules:
+    get:
+      tags: [automation]
+      summary: "Listar las reglas de automatizacion de un proyecto"
+      description: "Requiere el permiso manage_automation (responsables del proyecto y administradores de la organizacion)."
+      operationId: listAutomationRules
+      parameters:
+        - {name: project, in: path, required: true, schema: {type: string, format: uuid}}
+      responses:
+        '200':
+          description: "Reglas"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: {$ref: '#/components/schemas/AutomationRule'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+    post:
+      tags: [automation]
+      summary: "Crear una regla de automatizacion"
+      description: "Disparadores: issue_created, issue_updated (field), issue_transitioned (from, to), comment_added, sprint_started, sprint_completed, scheduled (every_minutes, query). Condiciones: query, field_equals, field_in, actor_role, issue_type. Acciones: transition_issue, assign_issue, set_field, add_comment, add_label, remove_label, create_subtask, send_webhook, send_notification. Valores inteligentes permitidos en los textos: issue.key, issue.summary, issue.status, issue.priority, issue.type, actor.name, project.key, project.name, trigger.from, trigger.to, rule.name. Codigos: automation.invalid_rule, automation.invalid_query."
+      operationId: createAutomationRule
+      parameters:
+        - {name: project, in: path, required: true, schema: {type: string, format: uuid}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AutomationRuleInput'
+      responses:
+        '201':
+          description: "Regla creada"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: {$ref: '#/components/schemas/AutomationRule'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+  /automation-rules/validate:
+    post:
+      tags: [automation]
+      summary: "Validar una regla sin guardarla (simulacion)"
+      description: "Devuelve los errores de la definicion y, con issue_id de muestra, el texto de las acciones que se ejecutarian."
+      operationId: validateAutomationRule
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [project_id, trigger, actions]
+              properties:
+                project_id: {type: string, format: uuid}
+                issue_id: {type: string, format: uuid, nullable: true}
+                name: {type: string}
+                trigger: {type: object}
+                conditions: {type: array, items: {type: object}}
+                actions: {type: array, items: {type: object}}
+      responses:
+        '200':
+          description: "Resultado de la validacion"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      valid: {type: boolean}
+                      errors: {type: array, items: {type: string}}
+                      planned_actions: {type: array, items: {type: string}}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+  /automation-rules/{id}:
+    get:
+      tags: [automation]
+      summary: "Obtener una regla"
+      operationId: getAutomationRule
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+      responses:
+        '200':
+          description: "Regla"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: {$ref: '#/components/schemas/AutomationRule'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+    patch:
+      tags: [automation]
+      summary: "Modificar una regla"
+      description: "Con version, una edicion sobre una version antigua responde 409 automation.version_conflict."
+      operationId: updateAutomationRule
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: {type: string}
+                enabled: {type: boolean}
+                version: {type: integer}
+                trigger: {type: object}
+                conditions: {type: array, items: {type: object}}
+                actions: {type: array, items: {type: object}}
+      responses:
+        '200':
+          description: "Regla actualizada"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: {$ref: '#/components/schemas/AutomationRule'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+    delete:
+      tags: [automation]
+      summary: "Eliminar una regla y su historial"
+      operationId: deleteAutomationRule
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+      responses:
+        '204': {description: Regla eliminada}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+  /automation-rules/{id}/enable:
+    post:
+      tags: [automation]
+      summary: "Activar una regla"
+      operationId: enableAutomationRule
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+      responses:
+        '200':
+          description: "Regla activada"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: {$ref: '#/components/schemas/AutomationRule'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+  /automation-rules/{id}/disable:
+    post:
+      tags: [automation]
+      summary: "Desactivar una regla"
+      operationId: disableAutomationRule
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+      responses:
+        '200':
+          description: "Regla desactivada"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: {$ref: '#/components/schemas/AutomationRule'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+  /automation-rules/{id}/runs:
+    get:
+      tags: [automation]
+      summary: "Ejecuciones de una regla"
+      operationId: listAutomationRuns
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+        - {name: status, in: query, required: false, schema: {type: string, enum: [success, skipped, failed]}}
+        - {name: limit, in: query, required: false, schema: {type: integer, minimum: 1, maximum: 200}}
+      responses:
+        '200':
+          description: "Ejecuciones, la mas reciente primero"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: {$ref: '#/components/schemas/AutomationRun'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+  /projects/{project}/import/csv:
+    post:
+      tags: [import-export]
+      summary: "Subir un CSV y obtener la vista previa"
+      description: "Multipart con el campo file (maximo 10 MiB, UTF-8 con o sin BOM, delimitador detectado). Requiere edit_project. Codigos: import.file_too_large, import.invalid_encoding, import.empty_file, import.too_many_rows, import.invalid_csv."
+      operationId: uploadImportCsv
+      parameters:
+        - {name: project, in: path, required: true, schema: {type: string, format: uuid}}
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file: {type: string, format: binary}
+      responses:
+        '201':
+          description: "Vista previa y trabajo creado"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: {$ref: '#/components/schemas/ImportPreview'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+  /projects/{project}/import/csv/{job}/start:
+    post:
+      tags: [import-export]
+      summary: "Iniciar la importacion con el mapeo final"
+      description: "Con dry_run solo se validan las filas. Codigos: import.invalid_mapping, import.already_started (409)."
+      operationId: startImportCsv
+      parameters:
+        - {name: project, in: path, required: true, schema: {type: string, format: uuid}}
+        - {name: job, in: path, required: true, schema: {type: string, format: uuid}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [mapping]
+              properties:
+                mapping:
+                  type: object
+                  additionalProperties: {type: string}
+                dry_run: {type: boolean}
+      responses:
+        '202':
+          description: "Importacion encolada"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: {$ref: '#/components/schemas/ImportJob'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+  /projects/{project}/import/jobs:
+    get:
+      tags: [import-export]
+      summary: "Importaciones de un proyecto"
+      operationId: listImportJobs
+      parameters:
+        - {name: project, in: path, required: true, schema: {type: string, format: uuid}}
+      responses:
+        '200':
+          description: "Importaciones, la mas reciente primero"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: {$ref: '#/components/schemas/ImportJob'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+  /projects/{project}/import/jobs/{job}:
+    get:
+      tags: [import-export]
+      summary: "Progreso de una importacion"
+      description: "Incluye los primeros 50 errores por fila; el informe completo se descarga en errors.csv."
+      operationId: getImportJob
+      parameters:
+        - {name: project, in: path, required: true, schema: {type: string, format: uuid}}
+        - {name: job, in: path, required: true, schema: {type: string, format: uuid}}
+      responses:
+        '200':
+          description: "Importacion"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: {$ref: '#/components/schemas/ImportJob'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+  /projects/{project}/import/jobs/{job}/errors.csv:
+    get:
+      tags: [import-export]
+      summary: "Informe de errores por fila en CSV"
+      operationId: downloadImportErrors
+      parameters:
+        - {name: project, in: path, required: true, schema: {type: string, format: uuid}}
+        - {name: job, in: path, required: true, schema: {type: string, format: uuid}}
+      responses:
+        '200':
+          description: "CSV con las columnas fila y errores"
+          content:
+            text/csv:
+              schema:
+                type: string
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+  /projects/{project}/export/issues.csv:
+    get:
+      tags: [import-export]
+      summary: "Exportar las incidencias de un proyecto a CSV"
+      description: "Filtro CoreQL opcional. Requiere export_issues; solo incluye lo que el usuario puede ver. Las celdas que empiezan por = + - @ se prefijan con una comilla simple."
+      operationId: exportProjectIssuesCsv
+      parameters:
+        - {name: project, in: path, required: true, schema: {type: string, format: uuid}}
+        - {name: filter, in: query, required: false, schema: {type: string}}
+      responses:
+        '200':
+          description: "CSV de incidencias"
+          content:
+            text/csv:
+              schema:
+                type: string
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+  /projects/{project}/export/project.json:
+    get:
+      tags: [import-export]
+      summary: "Copia de seguridad completa de un proyecto en JSON"
+      description: "Proyecto, incidencias, comentarios, registros de trabajo y vinculos con limites de tamano (truncated indica recorte). Solo responsables y administradores (edit_project)."
+      operationId: exportProjectJson
+      parameters:
+        - {name: project, in: path, required: true, schema: {type: string, format: uuid}}
+      responses:
+        '200':
+          description: "Copia en JSON"
+          content:
+            application/json:
+              schema:
+                type: object
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
 components:
   securitySchemes:
     bearerAuth:
@@ -8832,6 +9676,16 @@ components:
       scheme: bearer
       bearerFormat: JWT
   parameters:
+    NotificationProjectId:
+      name: project
+      in: path
+      required: true
+      schema: {type: string, format: uuid}
+    NotificationOrgId:
+      name: org
+      in: path
+      required: true
+      schema: {type: string, format: uuid}
     AuditActor:
       name: actor
       in: query
@@ -8948,6 +9802,14 @@ components:
         type: string
         minLength: 1
   responses:
+    NotificationScheme:
+      description: Esquema de notificaciones en vigor
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              data: {$ref: '#/components/schemas/NotificationScheme'}
     RateLimited:
       description: Demasiadas solicitudes (auth.rate_limited) o cuenta bloqueada temporalmente (auth.account_locked). Incluye Retry-After en segundos.
       headers:
@@ -9020,6 +9882,223 @@ components:
           schema:
             $ref: '#/components/schemas/ErrorResponse'
   schemas:
+    ApiToken:
+      type: object
+      properties:
+        id: {type: string, format: uuid}
+        name: {type: string}
+        prefix: {type: string, description: Primeros caracteres del token para reconocerlo}
+        scopes: {type: array, items: {type: string, enum: [read, write, admin]}}
+        expires_at: {type: string, format: date-time, nullable: true}
+        last_used_at: {type: string, format: date-time, nullable: true}
+        revoked_at: {type: string, format: date-time, nullable: true}
+        created_at: {type: string, format: date-time}
+        token: {type: string, description: Token en claro; solo aparece en la respuesta de creacion}
+    Webhook:
+      type: object
+      properties:
+        id: {type: string, format: uuid}
+        organization_id: {type: string, format: uuid}
+        project_id: {type: string, format: uuid, nullable: true}
+        name: {type: string}
+        url: {type: string}
+        events: {type: array, items: {type: string}}
+        filter_query: {type: string, nullable: true}
+        enabled: {type: boolean}
+        created_by: {type: string, format: uuid, nullable: true}
+        created_at: {type: string, format: date-time}
+        updated_at: {type: string, format: date-time}
+        secret: {type: string, description: Secreto de firma; solo aparece al crear}
+    WebhookDelivery:
+      type: object
+      properties:
+        id: {type: string, format: uuid}
+        webhook_id: {type: string, format: uuid}
+        event_id: {type: integer, nullable: true}
+        event: {type: string}
+        payload: {type: object, description: 'Sobre v1: version, id, event, occurred_at, organization_id, project, issue, actor, changes'}
+        status: {type: string, enum: [pending, success, failed, dead]}
+        attempts: {type: integer}
+        next_attempt_at: {type: string, format: date-time, nullable: true}
+        response_status: {type: integer, nullable: true}
+        response_excerpt: {type: string}
+        duration_ms: {type: integer}
+        created_at: {type: string, format: date-time}
+    AutomationRuleInput:
+      type: object
+      required: [name, trigger, actions]
+      properties:
+        name: {type: string, maxLength: 120}
+        enabled: {type: boolean}
+        trigger:
+          type: object
+          required: [type]
+          properties:
+            type: {type: string, enum: [issue_created, issue_updated, issue_transitioned, comment_added, sprint_started, sprint_completed, scheduled]}
+            field: {type: string}
+            from: {type: string}
+            to: {type: string}
+            every_minutes: {type: integer, minimum: 5}
+            query: {type: string}
+        conditions:
+          type: array
+          items:
+            type: object
+            required: [type]
+            properties:
+              type: {type: string, enum: [query, field_equals, field_in, actor_role, issue_type]}
+              query: {type: string}
+              field: {type: string}
+              value: {type: string}
+              values: {type: array, items: {type: string}}
+              role: {type: string}
+        actions:
+          type: array
+          items:
+            type: object
+            required: [type]
+            properties:
+              type: {type: string, enum: [transition_issue, assign_issue, set_field, add_comment, add_label, remove_label, create_subtask, send_webhook, send_notification]}
+              status: {type: string}
+              who: {type: string}
+              user_id: {type: string}
+              team_id: {type: string}
+              field: {type: string}
+              value: {type: string}
+              text: {type: string}
+              label: {type: string}
+              url: {type: string}
+    AutomationRule:
+      allOf:
+        - $ref: '#/components/schemas/AutomationRuleInput'
+        - type: object
+          properties:
+            id: {type: string, format: uuid}
+            organization_id: {type: string, format: uuid}
+            project_id: {type: string, format: uuid, nullable: true}
+            created_by: {type: string, format: uuid, nullable: true}
+            version: {type: integer}
+            run_count: {type: integer}
+            last_run_at: {type: string, format: date-time, nullable: true}
+            created_at: {type: string, format: date-time}
+            updated_at: {type: string, format: date-time}
+    AutomationRun:
+      type: object
+      properties:
+        id: {type: string, format: uuid}
+        rule_id: {type: string, format: uuid}
+        event_id: {type: integer, nullable: true}
+        issue_id: {type: string, format: uuid, nullable: true}
+        status: {type: string, enum: [success, skipped, failed]}
+        detail: {type: string}
+        created_at: {type: string, format: date-time}
+    ImportPreview:
+      type: object
+      properties:
+        job_id: {type: string, format: uuid}
+        columns: {type: array, items: {type: string}}
+        sample_rows: {type: array, items: {type: array, items: {type: string}}}
+        suggested_mapping: {type: object, additionalProperties: {type: string}}
+        total_rows: {type: integer}
+        delimiter: {type: string}
+    ImportJob:
+      type: object
+      properties:
+        id: {type: string, format: uuid}
+        project_id: {type: string, format: uuid}
+        user_id: {type: string, format: uuid}
+        source: {type: string, enum: [csv]}
+        status: {type: string, enum: [queued, validating, running, done, failed]}
+        total_rows: {type: integer}
+        processed_rows: {type: integer}
+        created_rows: {type: integer}
+        error_rows: {type: integer}
+        dry_run: {type: boolean}
+        file_name: {type: string}
+        mapping: {type: object, additionalProperties: {type: string}}
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              row: {type: integer}
+              errors: {type: array, items: {type: string}}
+        created_at: {type: string, format: date-time}
+        finished_at: {type: string, format: date-time, nullable: true}
+    NotificationRecipient:
+      type: object
+      required: [type]
+      properties:
+        type: {type: string, enum: [reporter, assignee, watchers, project_lead, component_lead, mentioned, reply_target, user, team, role]}
+        id: {type: string, format: uuid, description: Solo para user y team}
+        role: {type: string, description: Solo para role; nombre de rol del proyecto}
+    NotificationRuleInput:
+      type: object
+      required: [event, recipients, channels]
+      properties:
+        event: {type: string, enum: [issue_created, issue_assigned, issue_commented, issue_mentioned, issue_transitioned, issue_resolved, issue_updated, comment_edited, worklog_logged, version_released, sprint_started, sprint_completed, filter_subscription]}
+        recipients:
+          type: array
+          maxItems: 30
+          items: {$ref: '#/components/schemas/NotificationRecipient'}
+        channels:
+          type: array
+          items: {type: string, enum: [in_app, email]}
+    NotificationRule:
+      allOf:
+        - $ref: '#/components/schemas/NotificationRuleInput'
+        - type: object
+          properties:
+            overridden: {type: boolean, description: La regla es propia de este ambito}
+    NotificationSchemeRequest:
+      type: object
+      required: [rules]
+      properties:
+        rules:
+          type: array
+          items: {$ref: '#/components/schemas/NotificationRuleInput'}
+    NotificationScheme:
+      type: object
+      properties:
+        scope: {type: string, enum: [project, organization]}
+        organization_id: {type: string, format: uuid}
+        project_id: {type: string, format: uuid, nullable: true}
+        is_default: {type: boolean}
+        updated_at: {type: string, format: date-time, nullable: true}
+        rules:
+          type: array
+          items: {$ref: '#/components/schemas/NotificationRule'}
+    EmailOutboxEntry:
+      type: object
+      properties:
+        id: {type: string, format: uuid}
+        user_id: {type: string, format: uuid, nullable: true}
+        to: {type: string, description: Direccion enmascarada}
+        kind: {type: string}
+        subject: {type: string}
+        status: {type: string, enum: [pending, sent, dead]}
+        attempts: {type: integer}
+        next_attempt_at: {type: string, format: date-time}
+        last_error: {type: string}
+        created_at: {type: string, format: date-time}
+        sent_at: {type: string, format: date-time, nullable: true}
+    ScheduledJob:
+      type: object
+      properties:
+        name: {type: string}
+        schedule: {type: string, example: every 10s}
+        registered_at: {type: string, format: date-time}
+        last_seen_at: {type: string, format: date-time}
+        last_success_at: {type: string, format: date-time, nullable: true}
+        last_run:
+          type: object
+          nullable: true
+          properties:
+            status: {type: string, enum: [running, ok, error, abandoned]}
+            started_at: {type: string, format: date-time}
+            finished_at: {type: string, format: date-time, nullable: true}
+            duration_ms: {type: integer, nullable: true}
+            error: {type: string}
     DashboardCreateRequest:
       type: object
       required: [name]

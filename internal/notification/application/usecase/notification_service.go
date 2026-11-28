@@ -7,12 +7,20 @@ import (
 
 	"github.com/jhonsferg/corelog/internal/notification/application/port"
 	"github.com/jhonsferg/corelog/internal/notification/domain"
+	"github.com/jhonsferg/corelog/internal/platform/apperror"
 )
 
 const listLimit = 50
 
 type NotificationService struct {
-	repo port.Repository
+	repo   port.Repository
+	engine *Engine
+}
+
+// WithEngine routes the notices of known kinds (assignment, mention, reply) through the notification scheme.
+func (s *NotificationService) WithEngine(engine *Engine) *NotificationService {
+	s.engine = engine
+	return s
 }
 
 func NewNotificationService(repo port.Repository) *NotificationService {
@@ -24,6 +32,11 @@ var _ port.Service = (*NotificationService)(nil)
 // Notify guarda un aviso para el usuario indicado. Si el usuario desactivo los avisos en la aplicacion,
 // el aviso se descarta sin error: quien notifica no debe saber la preferencia del destinatario.
 func (s *NotificationService) Notify(ctx context.Context, userID uuid.UUID, kind, message, link string) error {
+	if s.engine != nil {
+		if handled, err := s.engine.NotifyLegacy(ctx, userID, kind, message, link); handled {
+			return err
+		}
+	}
 	notification, err := domain.New(userID, kind, message, link)
 	if err != nil {
 		return err
@@ -43,6 +56,12 @@ func (s *NotificationService) GetPreferences(ctx context.Context, userID uuid.UU
 }
 
 func (s *NotificationService) UpdatePreferences(ctx context.Context, userID uuid.UUID, prefs domain.Preferences) (domain.Preferences, error) {
+	if prefs.Email == "" {
+		prefs.Email = domain.EmailImmediate
+	}
+	if !prefs.Email.IsValid() {
+		return domain.Preferences{}, apperror.WithCode(apperror.KindValidation, "notification.preferences_invalid", "El modo de correo debe ser immediate, daily u off")
+	}
 	if err := s.repo.SavePreferences(ctx, userID, prefs); err != nil {
 		return domain.Preferences{}, err
 	}

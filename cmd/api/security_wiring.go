@@ -116,32 +116,34 @@ func newAuditModule(cfg *config.Config, db *sqlx.DB, orgs orgport.Service) *audi
 }
 
 // startSecurityRuntime runs the audit consumer over the domain events outbox (persisted cursor, at least
-// once, idempotent inserts) and the periodic cleanups until ctx is done.
+// once, idempotent inserts) until ctx is done. Its periodic cleanups run on the job scheduler.
 func startSecurityRuntime(ctx context.Context, cfg *config.Config, db *sqlx.DB, log *slog.Logger) error {
 	module := audit.NewModule(auditpostgres.NewRepository(db), nil, cfg.Security.AuditRetentionDays, cfg.Auth.JWTSecret, clock.RealClock{})
 	dispatcher, err := events.NewDispatcher(db, []events.Consumer{module.Consumer}, events.Options{Logger: log})
 	if err != nil {
 		return err
 	}
-	if jobs.Enabled() {
-		scheduler := jobs.NewScheduler(db, log)
-		clk := clock.RealClock{}
-		scheduler.Every("audit-retention", 24*time.Hour, func(ctx context.Context) error { return module.RetentionJob(ctx) })
-		lockouts := userpostgres.NewLockoutRepository(db)
-		resets, verifications := userpostgres.NewPasswordResetTokens(db), userpostgres.NewEmailVerificationTokens(db)
-		scheduler.Every("security-cleanup", time.Hour, func(ctx context.Context) error {
-			cutoff := clk.Now().Add(-24 * time.Hour)
-			if _, err := lockouts.PurgeStale(ctx, cutoff); err != nil {
-				return err
-			}
-			if _, err := resets.PurgeExpired(ctx, cutoff); err != nil {
-				return err
-			}
-			_, err := verifications.PurgeExpired(ctx, cutoff)
-			return err
-		})
-		scheduler.Start(ctx)
-		defer scheduler.Stop()
-	}
 	return dispatcher.Run(ctx, time.Second)
+}
+
+func init() { registerJobs(registerSecurityJobs) }
+
+// registerSecurityJobs adds the audit retention purge and the cleanup of expired tokens and lockouts.
+func registerSecurityJobs(s *jobs.Scheduler, d jobDeps) {
+	clk := clock.RealClock{}
+	module := audit.NewModule(auditpostgres.NewRepository(d.DB), nil, d.Cfg.Security.AuditRetentionDays, d.Cfg.Auth.JWTSecret, clk)
+	mustRegister(s, d.Log, "audit-retention", "every 24h", func(ctx context.Context) error { return module.RetentionJob(ctx) })
+	lockouts := userpostgres.NewLockoutRepository(d.DB)
+	resets, verifications := userpostgres.NewPasswordResetTokens(d.DB), userpostgres.NewEmailVerificationTokens(d.DB)
+	mustRegister(s, d.Log, "security-cleanup", "every 1h", func(ctx context.Context) error {
+		cutoff := clk.Now().Add(-24 * time.Hour)
+		if _, err := lockouts.PurgeStale(ctx, cutoff); err != nil {
+			return err
+		}
+		if _, err := resets.PurgeExpired(ctx, cutoff); err != nil {
+			return err
+		}
+		_, err := verifications.PurgeExpired(ctx, cutoff)
+		return err
+	})
 }

@@ -1,0 +1,7 @@
+﻿Summary;Description;Issue Type;Priority;Assignee;Labels;Due date;Story Points
+=cmd|' /C calc'!A0;Formula como texto;Task;High;lead@example.test;a,b;2026-12-01;3
+Segunda fila;"Con
+salto de linea";Bug;Low;;;;
+Sin tipo valido;x;Inexistente;;;;;
+;sin resumen;Task;;;;;
+Fecha mala;x;Task;;;;31-31-2026;

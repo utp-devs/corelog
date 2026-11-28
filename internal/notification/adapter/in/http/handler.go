@@ -17,6 +17,8 @@ import (
 type Handler struct {
 	service   port.Service
 	jwtSecret string
+	schemes   port.SchemeService
+	outbox    port.OutboxAdmin
 }
 
 func NewHandler(service port.Service, jwtSecret string) *Handler {
@@ -24,6 +26,7 @@ func NewHandler(service port.Service, jwtSecret string) *Handler {
 }
 
 func (h *Handler) RegisterRoutes(r chi.Router) {
+	h.registerExtraRoutes(r)
 	r.Route("/notifications", func(r chi.Router) {
 		r.Use(appmw.Authenticate(h.jwtSecret))
 		r.Get("/", h.List)
@@ -116,11 +119,23 @@ func (h *Handler) MarkAllRead(w http.ResponseWriter, r *http.Request) {
 }
 
 type preferencesRequest struct {
-	InApp *bool `json:"in_app"`
+	InApp            *bool   `json:"in_app"`
+	Email            *string `json:"email"`
+	NotifyOwnActions *bool   `json:"notify_own_actions"`
 }
 
 type preferencesResponse struct {
-	InApp bool `json:"in_app"`
+	InApp            bool   `json:"in_app"`
+	Email            string `json:"email"`
+	NotifyOwnActions bool   `json:"notify_own_actions"`
+}
+
+func toPreferencesResponse(p domain.Preferences) preferencesResponse {
+	mode := string(p.Email)
+	if mode == "" {
+		mode = string(domain.EmailImmediate)
+	}
+	return preferencesResponse{InApp: p.InApp, Email: mode, NotifyOwnActions: p.NotifyOwnActions}
 }
 
 func (h *Handler) GetPreferences(w http.ResponseWriter, r *http.Request) {
@@ -133,7 +148,7 @@ func (h *Handler) GetPreferences(w http.ResponseWriter, r *http.Request) {
 		httpresponse.Error(w, err)
 		return
 	}
-	httpresponse.JSON(w, http.StatusOK, preferencesResponse{InApp: prefs.InApp})
+	httpresponse.JSON(w, http.StatusOK, toPreferencesResponse(prefs))
 }
 
 func (h *Handler) UpdatePreferences(w http.ResponseWriter, r *http.Request) {
@@ -146,10 +161,22 @@ func (h *Handler) UpdatePreferences(w http.ResponseWriter, r *http.Request) {
 		httpresponse.Error(w, apperror.New(apperror.KindValidation, "in_app is required"))
 		return
 	}
-	prefs, err := h.service.UpdatePreferences(r.Context(), userID, domain.Preferences{InApp: *req.InApp})
+	current, err := h.service.GetPreferences(r.Context(), userID)
 	if err != nil {
 		httpresponse.Error(w, err)
 		return
 	}
-	httpresponse.JSON(w, http.StatusOK, preferencesResponse{InApp: prefs.InApp})
+	next := domain.Preferences{InApp: *req.InApp, Email: current.Email, NotifyOwnActions: current.NotifyOwnActions}
+	if req.Email != nil {
+		next.Email = domain.EmailMode(*req.Email)
+	}
+	if req.NotifyOwnActions != nil {
+		next.NotifyOwnActions = *req.NotifyOwnActions
+	}
+	prefs, err := h.service.UpdatePreferences(r.Context(), userID, next)
+	if err != nil {
+		httpresponse.Error(w, err)
+		return
+	}
+	httpresponse.JSON(w, http.StatusOK, toPreferencesResponse(prefs))
 }

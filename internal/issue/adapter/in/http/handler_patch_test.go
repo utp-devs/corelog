@@ -213,7 +213,13 @@ func TestIssueHTTP_PatchDeleteAndView(t *testing.T) {
 	})
 
 	t.Run("409 stale precondition", func(t *testing.T) {
-		rec := call(http.MethodPatch, "/issues/"+id, `{"summary":"x","expected_updated_at":"`+updatedAt+`"}`, lead)
+		// An hour older than the stored value is stale whatever the clock resolution or the speed of the machine.
+		createdAt, err := time.Parse(time.RFC3339Nano, updatedAt)
+		if err != nil {
+			t.Fatalf("parse updated_at %q: %v", updatedAt, err)
+		}
+		stale := createdAt.Add(-time.Hour).Format(time.RFC3339Nano)
+		rec := call(http.MethodPatch, "/issues/"+id, `{"summary":"x","expected_updated_at":"`+stale+`"}`, lead)
 		if rec.Code != http.StatusConflict || decode(rec).Err.Code != "issue.stale" {
 			t.Fatalf("status %d body %s", rec.Code, rec.Body.String())
 		}

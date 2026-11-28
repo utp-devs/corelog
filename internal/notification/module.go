@@ -8,10 +8,12 @@ import (
 
 type Module struct {
 	Service port.Service
-	Handler *httpadapter.Handler
+	// Notifications is the concrete service, so the composition root can attach the scheme engine.
+	Notifications *usecase.NotificationService
+	Handler       *httpadapter.Handler
 }
 
 func NewModule(repo port.Repository, jwtSecret string) *Module {
 	service := usecase.NewNotificationService(repo)
-	return &Module{Service: service, Handler: httpadapter.NewHandler(service, jwtSecret)}
+	return &Module{Service: service, Notifications: service, Handler: httpadapter.NewHandler(service, jwtSecret)}
 }

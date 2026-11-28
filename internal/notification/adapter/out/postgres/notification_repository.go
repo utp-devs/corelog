@@ -46,7 +46,7 @@ func (r *NotificationRepository) Save(ctx context.Context, n *domain.Notificatio
 		VALUES (:user_id, :kind, :message, :link, :created_at)
 		RETURNING id`
 	row := notificationRow{UserID: n.UserID, Kind: n.Kind, Message: n.Message, Link: n.Link, CreatedAt: n.CreatedAt}
-	id, err := database.InsertReturningID(ctx, r.db, query, row)
+	id, err := database.InsertReturningID(ctx, database.Executor(ctx, r.db), query, row)
 	if err != nil {
 		return apperror.Wrap(apperror.KindInternal, "failed to save notification", err)
 	}
@@ -110,23 +110,32 @@ func (r *NotificationRepository) MarkAllRead(ctx context.Context, userID uuid.UU
 
 // GetPreferences devuelve los ajustes del usuario; sin fila aplican los valores por defecto.
 func (r *NotificationRepository) GetPreferences(ctx context.Context, userID uuid.UUID) (domain.Preferences, error) {
-	var inApp bool
-	err := r.db.GetContext(ctx, &inApp, `SELECT in_app FROM notification_preferences WHERE user_id = $1`, userID)
+	var row struct {
+		InApp            bool   `db:"in_app"`
+		EmailMode        string `db:"email_mode"`
+		NotifyOwnActions bool   `db:"notify_own_actions"`
+	}
+	err := sqlx.GetContext(ctx, database.Executor(ctx, r.db), &row, `SELECT in_app, email_mode, notify_own_actions FROM notification_preferences WHERE user_id = $1`, userID)
 	if errors.Is(err, sql.ErrNoRows) {
 		return domain.DefaultPreferences(), nil
 	}
 	if err != nil {
 		return domain.Preferences{}, apperror.Wrap(apperror.KindInternal, "failed to load notification preferences", err)
 	}
-	return domain.Preferences{InApp: inApp}, nil
+	return domain.Preferences{InApp: row.InApp, Email: domain.EmailMode(row.EmailMode), NotifyOwnActions: row.NotifyOwnActions}, nil
 }
 
 func (r *NotificationRepository) SavePreferences(ctx context.Context, userID uuid.UUID, prefs domain.Preferences) error {
+	mode := prefs.Email
+	if mode == "" {
+		mode = domain.EmailImmediate
+	}
 	const query = `
-		INSERT INTO notification_preferences (user_id, in_app, updated_at)
-		VALUES ($1, $2, now())
-		ON CONFLICT (user_id) DO UPDATE SET in_app = EXCLUDED.in_app, updated_at = now()`
-	if _, err := r.db.ExecContext(ctx, query, userID, prefs.InApp); err != nil {
+		INSERT INTO notification_preferences (user_id, in_app, email_mode, notify_own_actions, updated_at)
+		VALUES ($1, $2, $3, $4, now())
+		ON CONFLICT (user_id) DO UPDATE SET in_app = EXCLUDED.in_app, email_mode = EXCLUDED.email_mode,
+			notify_own_actions = EXCLUDED.notify_own_actions, updated_at = now()`
+	if _, err := database.Executor(ctx, r.db).ExecContext(ctx, query, userID, prefs.InApp, string(mode), prefs.NotifyOwnActions); err != nil {
 		return apperror.Wrap(apperror.KindInternal, "failed to save notification preferences", err)
 	}
 	return nil

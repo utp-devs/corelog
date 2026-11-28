@@ -61,7 +61,7 @@ func run() error {
 	dispatchCtx, stopDispatch := context.WithCancel(context.Background())
 	defer stopDispatch()
 	go func() {
-		if err := startCommentMentionDispatcher(dispatchCtx, db, log); err != nil {
+		if err := startCommentMentionDispatcher(dispatchCtx, cfg, db, log); err != nil {
 			log.Error("comment mention dispatcher stopped", "error", err)
 		}
 	}()
@@ -72,6 +72,16 @@ func run() error {
 			log.Error("audit dispatcher stopped", "error", err)
 		}
 	}()
+
+	// Webhook capture and automation rules consume the same outbox; deliveries and imports run in the background.
+	go func() {
+		if err := startIntegrationRuntime(dispatchCtx, db, log); err != nil {
+			log.Error("integration runtime stopped", "error", err)
+		}
+	}()
+
+	// One API instance (the leader) runs the scheduled jobs: email outbox, digests, filter subscriptions, cleanups.
+	go startJobs(dispatchCtx, cfg, db, log)
 
 	server := httpserver.New(cfg.Server, router)
 

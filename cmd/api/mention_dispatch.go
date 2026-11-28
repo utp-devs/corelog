@@ -13,6 +13,7 @@ import (
 	notificationpostgres "github.com/jhonsferg/corelog/internal/notification/adapter/out/postgres"
 	notificationport "github.com/jhonsferg/corelog/internal/notification/application/port"
 	notificationusecase "github.com/jhonsferg/corelog/internal/notification/application/usecase"
+	"github.com/jhonsferg/corelog/internal/platform/config"
 	"github.com/jhonsferg/corelog/internal/platform/events"
 )
 
@@ -28,16 +29,18 @@ func (b mentionBrowser) CanBrowse(ctx context.Context, userID, projectID uuid.UU
 	return b.perms.Can(ctx, userID, "user", projectID, "browse_project")
 }
 
-// startCommentMentionDispatcher delivers comment events to the mention consumer until ctx is done. The consumer
+// startCommentMentionDispatcher delivers comment events to the mention consumer, and every event to the scheme
+// consumer, until ctx is done. The consumer
 // keeps its own cursor, so restarts resume where they stopped.
-func startCommentMentionDispatcher(ctx context.Context, db *sqlx.DB, log *slog.Logger) error {
+func startCommentMentionDispatcher(ctx context.Context, cfg *config.Config, db *sqlx.DB, log *slog.Logger) error {
 	authorizer := authusecase.NewAuthorizer(authpostgres.NewRoleLookup(db)).WithSchemes(authpostgres.NewSchemeRepository(db))
+	engine := newNotificationEngine(cfg, db, authorizer)
 	consumer := notificationusecase.NewMentionConsumer(
-		notificationusecase.NewNotificationService(notificationpostgres.NewNotificationRepository(db)),
+		notificationusecase.NewNotificationService(notificationpostgres.NewNotificationRepository(db)).WithEngine(engine),
 		mentionBrowser{perms: issuePermissionChecker{authorizer: authorizer}},
 		notificationpostgres.NewMentionRepository(db),
 	)
-	dispatcher, err := events.NewDispatcher(db, []events.Consumer{consumer}, events.Options{Logger: log})
+	dispatcher, err := events.NewDispatcher(db, []events.Consumer{consumer, notificationusecase.NewSchemeConsumer(engine)}, events.Options{Logger: log})
 	if err != nil {
 		return err
 	}

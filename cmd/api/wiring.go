@@ -40,6 +40,7 @@ import (
 	"github.com/jhonsferg/corelog/internal/platform/events"
 	"github.com/jhonsferg/corelog/internal/platform/filestorage"
 	"github.com/jhonsferg/corelog/internal/platform/httpserver"
+	"github.com/jhonsferg/corelog/internal/platform/jobs"
 	"github.com/jhonsferg/corelog/internal/project"
 	projectpostgres "github.com/jhonsferg/corelog/internal/project/adapter/out/postgres"
 	projectport "github.com/jhonsferg/corelog/internal/project/application/port"
@@ -142,6 +143,7 @@ func buildRouter(cfg *config.Config, db *sqlx.DB, log *slog.Logger) (chi.Router,
 		JWTSecret:   cfg.Auth.JWTSecret,
 	})
 	notificationModule := notification.NewModule(notificationpostgres.NewNotificationRepository(db), cfg.Auth.JWTSecret)
+	wireNotifications(cfg, db, notificationModule, authorizer, projectAuthorizer, orgModule.Service)
 	issueModule := issue.NewModule(issueRepo, userDirectory, collaborationRepo, issueLinkRepo, watcherRepo, savedFilterRepo, cfg.Auth.JWTSecret, projectAuthorizer, notificationModule.Service, projectMemberRepo).WithTxManager(database.NewTxManager(db))
 	searchModule := search.NewModule(searchpostgres.NewSearchIndex(db), cfg.Auth.JWTSecret)
 	dashboardModule := dashboard.NewModule(dashboardpostgres.NewDashboardReader(db), cfg.Auth.JWTSecret)
@@ -204,6 +206,17 @@ func buildRouter(cfg *config.Config, db *sqlx.DB, log *slog.Logger) (chi.Router,
 
 	auditModule := newAuditModule(cfg, db, orgModule.Service)
 
+	integrations, err := wireIntegrations(integrationDeps{
+		cfg: cfg, db: db, log: log, issues: issueModule.Service, transitions: issueModule.Service.(issueport.TransitionService),
+		comments: issueusecase.NewCommentService(issueRepo, issuepostgres.NewCommentRepository(db), issuePermissionChecker{authorizer: authorizer},
+			projectAuthorizer, userDirectory, database.NewTxManager(db), events.NewPostgresPublisher(func(ctx context.Context) sqlx.ExtContext { return database.Executor(ctx, db) }), clock.RealClock{}),
+		search: searchModule.Issues, projectAuthorizer: projectAuthorizer, orgs: orgModule.Service, notifications: notificationModule.Service,
+	})
+	if err != nil {
+		return nil, err
+	}
+	currentIntegrations.Store(integrations)
+
 	router := httpserver.NewRouterWith(cfg.Server, routerOptions(cfg, log))
 	router.Route("/api/v1", func(r chi.Router) {
 		// In block mode, callers with pending legal consents are refused outside the consent endpoints.
@@ -216,6 +229,8 @@ func buildRouter(cfg *config.Config, db *sqlx.DB, log *slog.Logger) (chi.Router,
 		reportModule.Handler.RegisterRoutes(r)
 		roadmapModule.Handler.RegisterRoutes(r)
 		auditModule.Handler.RegisterRoutes(r)
+		integrations.register(r)
+		jobs.NewAdminHandler(db, cfg.Auth.JWTSecret).RegisterRoutes(r)
 	})
 	return router, nil
 }
